@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="260dp"
+    android:height="260dp"
+    android:viewportWidth="260"
+    android:viewportHeight="260">
+
+    <!-- Background circle -->
+    <path android:fillColor="#FFF4EC"
+        android:pathData="M130,20 A110,110 0 1,1 129.99,20 Z"/>
+
+    <!-- Left person body -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M72,180 C72,158 82,148 96,145 L96,185 L72,185 Z"/>
+    <!-- Left person head -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M96,118 A16,16 0 1,1 95.99,118 Z"/>
+
+    <!-- Right person body -->
+    <path android:fillColor="#FF6B35"
+        android:pathData="M188,180 C188,158 178,148 164,145 L164,185 L188,185 Z"/>
+    <!-- Right person head -->
+    <path android:fillColor="#FF6B35"
+        android:pathData="M164,118 A16,16 0 1,1 163.99,118 Z"/>
+
+    <!-- Center person body -->
+    <path android:fillColor="#1A6FE8"
+        android:pathData="M108,185 C108,158 118,146 130,144 C142,146 152,158 152,185 Z"/>
+    <!-- Center person head -->
+    <path android:fillColor="#1A6FE8"
+        android:pathData="M130,112 A20,20 0 1,1 129.99,112 Z"/>
+
+    <!-- Coin -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M130,68 A16,16 0 1,1 129.99,68 Z"/>
+    <path android:fillColor="#FFF4EC"
+        android:pathData="M126,68 L130,62 L134,68 L130,74 Z"/>
+
+    <!-- Stars -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M80,75 L82,81 L88,81 L83,85 L85,91 L80,87 L75,91 L77,85 L72,81 L78,81 Z"/>
+    <path android:fillColor="#FFB800"
+        android:pathData="M178,68 L179,72 L183,72 L180,74 L181,78 L178,76 L175,78 L176,74 L173,72 L177,72 Z"/>
+</vector>

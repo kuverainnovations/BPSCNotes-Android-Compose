@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="260dp"
+    android:height="260dp"
+    android:viewportWidth="260"
+    android:viewportHeight="260">
+
+    <!-- Background circle -->
+    <path android:fillColor="#E8F0FD"
+        android:pathData="M130,20 A110,110 0 1,1 129.99,20 Z"/>
+
+    <!-- Outer ring -->
+    <path android:fillColor="#BBCEF8"
+        android:pathData="M130,50 A80,80 0 1,1 129.99,50 Z"/>
+
+    <!-- Middle ring -->
+    <path android:fillColor="#7BA7F5"
+        android:pathData="M130,80 A50,50 0 1,1 129.99,80 Z"/>
+
+    <!-- Bullseye -->
+    <path android:fillColor="#1A6FE8"
+        android:pathData="M130,105 A25,25 0 1,1 129.99,105 Z"/>
+
+    <!-- Arrow shaft -->
+    <path android:fillColor="#FF6B35"
+        android:strokeColor="#FF6B35"
+        android:strokeWidth="4"
+        android:pathData="M160,70 L135,125"/>
+
+    <!-- Arrow head -->
+    <path android:fillColor="#FF6B35"
+        android:pathData="M155,62 L168,76 L153,78 Z"/>
+</vector>

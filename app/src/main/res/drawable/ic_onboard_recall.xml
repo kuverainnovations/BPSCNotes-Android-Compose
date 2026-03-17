@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/drawable/ic_onboard_recall.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="260dp"
+    android:height="260dp"
+    android:viewportWidth="260"
+    android:viewportHeight="260">
+
+    <!-- Background circle -->
+    <path android:fillColor="#E8FDF4"
+        android:pathData="M130,20 A110,110 0 1,1 129.99,20 Z"/>
+
+    <!-- Brain outline left -->
+    <path android:fillColor="#1A9E75"
+        android:pathData="M130,70 C100,70 80,88 80,110 C80,125 88,136 100,142
+                          C100,158 112,168 126,168 L130,168 L130,70 Z"/>
+
+    <!-- Brain outline right -->
+    <path android:fillColor="#27AE86"
+        android:pathData="M130,70 C160,70 180,88 180,110 C180,125 172,136 160,142
+                          C160,158 148,168 134,168 L130,168 L130,70 Z"/>
+
+    <!-- Center divider -->
+    <path android:fillColor="#E8FDF4"
+        android:strokeColor="#E8FDF4"
+        android:strokeWidth="3"
+        android:pathData="M130,72 L130,166"/>
+
+    <!-- Spark left -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M95,95 L100,105 L90,108 L100,112 L95,122 L108,112 L118,118 L112,105 L122,98 L108,100 Z"/>
+
+    <!-- Spark right -->
+    <path android:fillColor="#FFB800"
+        android:pathData="M165,95 L160,105 L170,108 L160,112 L165,122 L152,112 L142,118 L148,105 L138,98 L152,100 Z"/>
+
+    <!-- Loop arrow bottom -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#1A9E75"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M100,175 C100,195 160,195 160,175"/>
+    <path android:fillColor="#1A9E75"
+        android:pathData="M155,168 L165,178 L152,180 Z"/>
+</vector>
