@@ -1,496 +1,620 @@
 package com.example.bpscnotes.presentation.settings
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.Newspaper
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Whatshot
+import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
-import com.example.bpscnotes.data.mock.MockData
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
-
-// ─────────────────────────────────────────────────────────────
-// DATA MODELS
-// ─────────────────────────────────────────────────────────────
-
-data class SettingsToggle(
-    val key: String,
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val iconBg: Color,
-    val iconTint: Color,
-    val default: Boolean = true
-)
-
-data class SettingsAction(
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val iconBg: Color,
-    val iconTint: Color,
-    val trailingLabel: String = "",
-    val showArrow: Boolean = true,
-    val isDanger: Boolean = false
-)
-
-// ─────────────────────────────────────────────────────────────
-// MAIN SCREEN
-// ─────────────────────────────────────────────────────────────
 
 @Composable
 fun SettingsScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+    var selectedLanguage by remember { mutableStateOf("English") }
+    var showLanguageSheet by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var cacheCleared by remember { mutableStateOf(false) }
+    var notifQuiz by remember { mutableStateOf(true) }
+    var notifCurrentAffairs by remember { mutableStateOf(true) }
+    var notifStreak by remember { mutableStateOf(true) }
+    var notifJobs by remember { mutableStateOf(false) }
+    var notifGroupStudy by remember { mutableStateOf(true) }
 
-    // Toggle states
-    val toggleStates = remember {
-        mutableStateMapOf(
-            "dark_mode"         to false,
-            "offline_mode"      to false,
-            "auto_play"         to true,
-            "sound"             to true,
-            "haptics"           to true,
-            "study_reminder"    to true,
-        )
-    }
-
-    Column(
-        modifier = Modifier
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BpscColors.Surface)) {
+        Column(modifier = Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface)
-    ) {
-        SettingsHeader(onBack = { navController.popBackStack() })
+            .verticalScroll(rememberScrollState())) {
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Spacer(Modifier.height(4.dp))
-
-            // ── Account section
-            SettingsSectionLabel("Account")
-            AccountCard(
-                name   = user.name,
-                email  = user.email ?: user.mobile,
-                coins  = user.coinBalance,
-                onEdit = { navController.navigate(Screen.Profile.route) }
-            )
-
-            // ── Appearance section
-            SettingsSectionLabel("Appearance")
-            SettingsToggleGroup(
-                toggles = listOf(
-                    SettingsToggle("dark_mode",  "Dark Mode",      "Switch to dark theme",              Icons.Rounded.DarkMode,    Color(0xFF1A237E).copy(0.12f), Color(0xFF3949AB)),
-                ),
-                toggleStates = toggleStates
-            )
-
-            // ── Study Preferences
-            SettingsSectionLabel("Study Preferences")
-            SettingsToggleGroup(
-                toggles = listOf(
-                    SettingsToggle("study_reminder", "Daily Study Reminder", "Remind me to study every day",     Icons.Rounded.Alarm,       Color(0xFFE3F2FD), Color(0xFF1565C0)),
-                    SettingsToggle("auto_play",      "Auto-play Videos",     "Play next video automatically",    Icons.Rounded.PlayCircle,  Color(0xFFF3E5F5), Color(0xFF7B1FA2)),
-                ),
-                toggleStates = toggleStates
-            )
-
-            // ── Sound & Haptics
-            SettingsSectionLabel("Sound & Haptics")
-            SettingsToggleGroup(
-                toggles = listOf(
-                    SettingsToggle("sound",   "Sound Effects",  "Play sounds for actions & alerts", Icons.Rounded.VolumeUp,    Color(0xFFE8F5E9), Color(0xFF2E7D32)),
-                    SettingsToggle("haptics", "Haptic Feedback","Vibrate on taps & interactions",   Icons.Rounded.Vibration,   Color(0xFFFFF0EA), Color(0xFFE67E22)),
-                ),
-                toggleStates = toggleStates
-            )
-
-            // ── Storage & Data
-            SettingsSectionLabel("Storage & Data")
-            SettingsActionGroup(
-                actions = listOf(
-                    SettingsAction("Downloaded Content",  "Manage offline files",           Icons.Rounded.Download,      Color(0xFFEDE7F6), Color(0xFF7E57C2), trailingLabel = "128 MB"),
-                    SettingsAction("Clear Cache",         "Free up storage space",          Icons.Rounded.CleaningServices, Color(0xFFFFF3E0), Color(0xFFFF8F00), trailingLabel = "24 MB"),
-                    SettingsAction("Offline Mode",        "Access saved content offline",   Icons.Rounded.WifiOff,       Color(0xFFE8F5E9), Color(0xFF2E7D32)),
-                ),
-                onAction = { /* handle */ }
-            )
-
-            // ── About
-            SettingsSectionLabel("About")
-            SettingsActionGroup(
-                actions = listOf(
-                    SettingsAction("App Version",         "BPSCNotes v1.0.0",               Icons.Rounded.Info,          Color(0xFFE3F2FD), Color(0xFF1565C0), trailingLabel = "v1.0.0", showArrow = false),
-                    SettingsAction("Rate the App",        "Love the app? Leave a review!",  Icons.Rounded.Star,          Color(0xFFFFF8E1), Color(0xFFFF8F00)),
-                    SettingsAction("Share with Friends",  "Invite friends & earn 75 coins", Icons.Rounded.Share,         Color(0xFFE8F5E9), Color(0xFF2E7D32)),
-                    SettingsAction("Privacy Policy",      "How we handle your data",        Icons.Rounded.PrivacyTip,    Color(0xFFE8EAF6), Color(0xFF3949AB)),
-                    SettingsAction("Terms of Service",    "Our terms & conditions",         Icons.Rounded.Gavel,         Color(0xFFF5F5F5), Color(0xFF616161)),
-                    SettingsAction("Contact Support",     "Get help from our team",         Icons.Rounded.HeadsetMic,    Color(0xFFF3E5F5), Color(0xFF7B1FA2)),
-                ),
-                onAction = { /* handle */ }
-            )
-
-            // ── Danger zone
-            SettingsSectionLabel("Account Actions")
-            SettingsActionGroup(
-                actions = listOf(
-                    SettingsAction("Log Out",             "Sign out of your account",       Icons.Rounded.Logout,        Color(0xFFFCE4EC), Color(0xFFC62828), isDanger = true),
-                    SettingsAction("Delete Account",      "Permanently delete all data",    Icons.Rounded.DeleteForever, Color(0xFFFCE4EC), Color(0xFFC62828), isDanger = true),
-                ),
-                onAction = { title ->
-                    if (title == "Log Out") {
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
+            // Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF0A2472),
+                                Color(0xFF1565C0),
+                                Color(0xFF1E88E5)
+                            ), Offset(0f, 0f), Offset(400f, 400f)
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
+                    drawCircle(
+                        Color.White.copy(0.05f),
+                        160.dp.toPx(),
+                        Offset(size.width + 20.dp.toPx(), -50.dp.toPx())
+                    )
+                }
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(0.15f))
+                                .clickable { navController.popBackStack() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.ArrowBack,
+                                null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                "Settings",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                "Customize your experience",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(0.7f)
+                            )
                         }
                     }
                 }
-            )
+            }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // ── Language ─────────────────────────────────────
+            SettingsSectionTitle("🌐 Language & Region")
+            SettingsCard {
+                SettingsClickRow(
+                    icon = Icons.Rounded.Language,
+                    color = Color(0xFF1565C0),
+                    title = "App Language",
+                    subtitle = selectedLanguage,
+                    onClick = { showLanguageSheet = true }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Notifications ────────────────────────────────
+            SettingsSectionTitle("🔔 Notification Preferences")
+            SettingsCard {
+                SettingsToggleRow(
+                    Icons.Rounded.Quiz,
+                    Color(0xFF9B59B6),
+                    "Daily Quiz Reminder",
+                    "Get reminded to complete your daily quiz",
+                    notifQuiz
+                ) { notifQuiz = it }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsToggleRow(
+                    Icons.Rounded.Newspaper,
+                    Color(0xFF1565C0),
+                    "Current Affairs Alert",
+                    "New articles & daily current affairs",
+                    notifCurrentAffairs
+                ) { notifCurrentAffairs = it }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsToggleRow(
+                    Icons.Rounded.Whatshot,
+                    Color(0xFFE74C3C),
+                    "Streak Reminder",
+                    "Don't break your study streak!",
+                    notifStreak
+                ) { notifStreak = it }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsToggleRow(
+                    Icons.Rounded.Work,
+                    Color(0xFFE67E22),
+                    "Job Alert Notifications",
+                    "New govt job vacancies",
+                    notifJobs
+                ) { notifJobs = it }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsToggleRow(
+                    Icons.Rounded.Groups,
+                    Color(0xFF1ABC9C),
+                    "Group Study Alerts",
+                    "When friends join your study room",
+                    notifGroupStudy
+                ) { notifGroupStudy = it }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Storage ──────────────────────────────────────
+            SettingsSectionTitle("💾 Storage")
+            SettingsCard {
+                SettingsClickRow(
+                    icon = Icons.Rounded.CleaningServices,
+                    color = Color(0xFF1ABC9C),
+                    title = "Clear Cache",
+                    subtitle = if (cacheCleared) "Cache cleared successfully ✅" else "Free up space — approx 45 MB",
+                    onClick = { showClearCacheDialog = true }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsClickRow(
+                    icon = Icons.Rounded.Download,
+                    color = Color(0xFF9B59B6),
+                    title = "Manage Downloads",
+                    subtitle = "View and delete downloaded files",
+                    onClick = { navController.navigate(Screen.Downloads.route) }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── App Info ─────────────────────────────────────
+            SettingsSectionTitle("ℹ️ App Info")
+            SettingsCard {
+                SettingsClickRow(
+                    Icons.Rounded.Info,
+                    Color(0xFF1565C0),
+                    "App Version",
+                    "1.0.0 (Build 100)",
+                    onClick = {})
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsClickRow(
+                    Icons.Rounded.Policy,
+                    Color(0xFF9B59B6),
+                    "Privacy Policy",
+                    "View our privacy policy",
+                    onClick = {})
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsClickRow(
+                    Icons.Rounded.Description,
+                    Color(0xFFE67E22),
+                    "Terms of Service",
+                    "Read terms & conditions",
+                    onClick = {})
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsClickRow(
+                    Icons.Rounded.Star,
+                    Color(0xFFFFD700),
+                    "Rate the App",
+                    "Love BPSCNotes? Rate us ⭐",
+                    onClick = {})
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Danger zone ───────────────────────────────────
+            SettingsSectionTitle("⚠️ Danger Zone")
+            SettingsCard {
+                SettingsClickRow(
+                    icon = Icons.Rounded.Logout,
+                    color = Color(0xFFE74C3C),
+                    title = "Logout",
+                    subtitle = "Sign out of your account",
+                    titleColor = Color(0xFFE74C3C),
+                    onClick = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = BpscColors.Divider,
+                    thickness = 0.5.dp
+                )
+                SettingsClickRow(
+                    icon = Icons.Rounded.DeleteForever,
+                    color = Color(0xFFB71C1C),
+                    title = "Delete Account",
+                    subtitle = "Permanently delete your account and all data",
+                    titleColor = Color(0xFFB71C1C),
+                    onClick = { showDeleteDialog = true }
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "BPSCNotes · Only What Matters · v1.0.0",
+                style = MaterialTheme.typography.bodyMedium,
+                color = BpscColors.TextHint,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // Dialogs + Sheets
+        if (showLanguageSheet) LanguageSheet(
+            selected = selectedLanguage,
+            onSelect = { selectedLanguage = it; showLanguageSheet = false },
+            onDismiss = { showLanguageSheet = false })
+
+        if (showClearCacheDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearCacheDialog = false },
+                containerColor = Color.White, shape = RoundedCornerShape(20.dp),
+                title = { Text("Clear Cache?", fontWeight = FontWeight.Bold) },
+                text = { Text("This will free up approximately 45 MB. Your downloads and account data won't be affected.") },
+                confirmButton = {
+                    Button(
+                        onClick = { cacheCleared = true; showClearCacheDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1ABC9C)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Clear") }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { showClearCacheDialog = false },
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                containerColor = Color.White, shape = RoundedCornerShape(20.dp),
+                title = {
+                    Text(
+                        "Delete Account?",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB71C1C)
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "This action is permanent and cannot be undone. The following will be deleted:",
+                            color = BpscColors.TextPrimary
+                        )
+                        listOf(
+                            "Your profile and account data",
+                            "All progress and achievements",
+                            "Purchased subscriptions",
+                            "Earned coins and rewards"
+                        ).forEach { item ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("•", color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
+                                Text(
+                                    item,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = BpscColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteDialog = false; navController.navigate(Screen.Login.route) {
+                            popUpTo(0) {
+                                inclusive = true
+                            }
+                        }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Delete Forever") }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = false },
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Cancel") }
+                }
+            )
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// HEADER
+// LANGUAGE SHEET
 // ─────────────────────────────────────────────────────────────
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsHeader(onBack: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF051D56),
-                        Color(0xFF0A2472),
-                        Color(0xFF0D47A1),
-                        Color(0xFF1565C0),
-                        Color(0xFF1976D2),
-                    ),
-                    start = Offset(0f, 0f),
-                    end   = Offset(600f, 400f)
-                )
-            )
-            .statusBarsPadding()
+private fun LanguageSheet(selected: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
+    val languages = listOf(
+        Triple("English", "English", "🇬🇧"),
+        Triple("Hindi", "हिंदी", "🇮🇳"),
+        Triple("Bhojpuri", "भोजपुरी", "🎭"),
+        Triple("Maithili", "मैथिली", "📜"),
+    )
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        // Decorative blobs
-        androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
-            drawCircle(Color.White.copy(0.05f), 160.dp.toPx(), Offset(size.width + 30.dp.toPx(), -50.dp.toPx()))
-            drawCircle(Color.White.copy(0.04f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.75f))
-            val sp = 28.dp.toPx()
-            var x = sp
-            while (x < size.width) {
-                var y = sp
-                while (y < size.height) {
-                    drawCircle(Color.White.copy(0.05f), 1.dp.toPx(), Offset(x, y))
-                    y += sp
-                }
-                x += sp
-            }
-        }
-
-        // Shiny top accent line
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(2.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.White.copy(0.3f),
-                            Color.White.copy(0.7f),
-                            Color.White.copy(0.3f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(top = 14.dp, bottom = 18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
+                .navigationBarsPadding()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Back button — CircleShape matching reference
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(0.12f))
-                    .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-
             Text(
-                "Settings",
-                style      = MaterialTheme.typography.titleLarge,
-                color      = Color.White,
+                "Select Language",
+                style = MaterialTheme.typography.headlineSmall,
+                color = BpscColors.TextPrimary,
                 fontWeight = FontWeight.ExtraBold
             )
-
-            // Balance spacer
-            Spacer(Modifier.size(36.dp))
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// ACCOUNT CARD  — profile summary at top
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun AccountCard(
-    name: String,
-    email: String,
-    coins: Int,
-    onEdit: () -> Unit
-) {
-    Card(
-        modifier  = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF0D47A1), Color(0xFF1976D2))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text       = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
-                    style      = MaterialTheme.typography.titleMedium,
-                    color      = Color.White,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name,  style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,   fontWeight = FontWeight.ExtraBold)
-                Text(email, style = MaterialTheme.typography.bodyMedium,  color = BpscColors.TextSecondary)
-                Spacer(Modifier.height(4.dp))
+            HorizontalDivider(color = BpscColors.Divider)
+            languages.forEach { (key, display, flag) ->
+                val isSel = selected == key
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFFFFF8E1))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("🪙", fontSize = 11.sp)
-                    Text(
-                        "$coins Coins",
-                        style      = MaterialTheme.typography.labelSmall,
-                        color      = BpscColors.CoinGold,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-
-            // Edit profile button
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(BpscColors.PrimaryLight)
-                    .clickable(onClick = onEdit),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.Edit, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// SECTION LABEL
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun SettingsSectionLabel(title: String) {
-    Text(
-        title,
-        style      = MaterialTheme.typography.titleSmall,
-        color      = BpscColors.TextSecondary,
-        fontWeight = FontWeight.SemiBold,
-        modifier   = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
-    )
-}
-
-// ─────────────────────────────────────────────────────────────
-// TOGGLE GROUP
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun SettingsToggleGroup(
-    toggles: List<SettingsToggle>,
-    toggleStates: MutableMap<String, Boolean>
-) {
-    Card(
-        modifier  = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Column {
-            toggles.forEachIndexed { index, toggle ->
-                Row(
-                    modifier              = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 13.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(toggle.iconBg),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(toggle.icon, null, tint = toggle.iconTint, modifier = Modifier.size(20.dp))
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(toggle.title,    style = MaterialTheme.typography.bodyLarge,  color = BpscColors.TextPrimary,   fontWeight = FontWeight.SemiBold)
-                        Text(toggle.subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                    }
-                    Switch(
-                        checked         = toggleStates[toggle.key] ?: toggle.default,
-                        onCheckedChange = { toggleStates[toggle.key] = it },
-                        colors          = SwitchDefaults.colors(
-                            checkedThumbColor   = Color.White,
-                            checkedTrackColor   = toggle.iconTint,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = BpscColors.TextHint.copy(0.3f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isSel) BpscColors.PrimaryLight else BpscColors.Surface)
+                        .border(
+                            1.dp,
+                            if (isSel) BpscColors.Primary else BpscColors.Divider,
+                            RoundedCornerShape(14.dp)
                         )
-                    )
-                }
-                if (index < toggles.size - 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// ACTION GROUP
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun SettingsActionGroup(
-    actions: List<SettingsAction>,
-    onAction: (String) -> Unit
-) {
-    Card(
-        modifier  = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Column {
-            actions.forEachIndexed { index, action ->
-                Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAction(action.title) }
-                        .padding(horizontal = 16.dp, vertical = 13.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        .clickable { onSelect(key) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(action.iconBg),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(action.icon, null, tint = action.iconTint, modifier = Modifier.size(20.dp))
-                    }
-
+                    Text(flag, fontSize = 22.sp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            action.title,
-                            style      = MaterialTheme.typography.bodyLarge,
-                            color      = if (action.isDanger) Color(0xFFC62828) else BpscColors.TextPrimary,
-                            fontWeight = FontWeight.SemiBold
+                            key,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isSel) BpscColors.Primary else BpscColors.TextPrimary,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            action.subtitle,
+                            display,
                             style = MaterialTheme.typography.bodyMedium,
                             color = BpscColors.TextSecondary
                         )
                     }
-
-                    // Trailing — either a label or a chevron
-                    if (action.trailingLabel.isNotEmpty()) {
-                        Text(
-                            action.trailingLabel,
-                            style      = MaterialTheme.typography.bodyMedium,
-                            color      = BpscColors.TextHint,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    } else if (action.showArrow) {
-                        Icon(
-                            Icons.Rounded.KeyboardArrowRight,
-                            null,
-                            tint     = if (action.isDanger) Color(0xFFC62828) else BpscColors.TextHint,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                if (index < actions.size - 1) {
-                    HorizontalDivider(
-                        modifier  = Modifier.padding(horizontal = 16.dp),
-                        color     = BpscColors.Divider,
-                        thickness = 0.5.dp
+                    if (isSel) Icon(
+                        Icons.Rounded.CheckCircle,
+                        null,
+                        tint = BpscColors.Primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SHARED COMPOSABLES
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun SettingsSectionTitle(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleMedium,
+        color = BpscColors.TextSecondary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+    )
+}
+
+@Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+private fun SettingsClickRow(
+    icon: ImageVector, color: Color, title: String, subtitle: String,
+    titleColor: Color = BpscColors.TextPrimary, onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(color.copy(0.1f)), contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = titleColor,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = BpscColors.TextSecondary
+            )
+        }
+        Icon(
+            Icons.Rounded.ChevronRight,
+            null,
+            tint = BpscColors.TextHint,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(
+    icon: ImageVector, color: Color, title: String, subtitle: String,
+    checked: Boolean, onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(color.copy(0.1f)), contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = BpscColors.TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = BpscColors.TextSecondary
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = color
+            )
+        )
     }
 }

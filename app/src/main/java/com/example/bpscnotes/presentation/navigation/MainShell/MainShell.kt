@@ -20,6 +20,9 @@ import com.example.bpscnotes.presentation.navigation.BpscBottomNav
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
 import com.example.bpscnotes.presentation.profile.ProfileScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.rounded.AutoAwesome
 
 @Composable
 fun MainShell(rootNavController: NavHostController) {
@@ -56,7 +59,8 @@ fun MainShell(rootNavController: NavHostController) {
         bottomBar = {
             BpscBottomNav(
                 navController = bottomNavController,
-                items         = items
+                items         = items,
+                onFabClick    = { rootNavController.navigate(Screen.AiDoubt.createRoute()) }
             )
         }
     ) { innerPadding ->

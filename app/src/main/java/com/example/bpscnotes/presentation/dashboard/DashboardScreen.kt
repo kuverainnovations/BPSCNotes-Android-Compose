@@ -278,7 +278,7 @@ private fun DashboardHeader(
                             .clip(CircleShape)
                             .background(Color.White.copy(0.12f))
                             .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                            .clickable { navController.navigate(Screen.NotificationSettings.route) },
+                            .clickable { navController.navigate(Screen.NotificationsInbox.route) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -772,9 +772,9 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
         Spacer(Modifier.height(10.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work,     Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
-            SmallQuickCard("Downloads",   Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
-            SmallQuickCard("Premium",     Icons.Rounded.Star,     Color(0xFFFFF8E1), BpscColors.CoinGold, Modifier.weight(1f)) { navController.navigate(Screen.Subscription.route) }
+            SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work,        Color(0xFFFFF0EA), Color(0xFFE67E22),    Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
+            SmallQuickCard("Downloads",    Icons.Rounded.Download,    Color(0xFFEDE7F6), Color(0xFF7E57C2),    Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
+            SmallQuickCard("AI\nTutor",    Icons.Rounded.AutoAwesome, Color(0xFFEDE7F6), Color(0xFF7C4DFF),    Modifier.weight(1f)) { navController.navigate(Screen.AiDoubt.createRoute()) }
         }
     }
 }
@@ -1099,6 +1099,7 @@ private fun BpscDrawer(
         Triple(Icons.Rounded.Newspaper,    "Daily Current Affairs", Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.Star,         "Paid Content",          Screen.Subscription.route),
         Triple(Icons.Rounded.Download,     "Downloads",             Screen.Downloads.route),
+        Triple(Icons.Rounded.AutoAwesome, "AI Tutor", Screen.AiDoubt.route),
         Triple(Icons.Rounded.Work,         "Latest Govt Vacancies", Screen.JobVacancies.route),
         Triple(Icons.Rounded.Psychology,   "Active Recall",         Screen.ActiveRecall.route),
         Triple(Icons.Rounded.Groups,       "E- Library",            Screen.ReadingRooms.route),

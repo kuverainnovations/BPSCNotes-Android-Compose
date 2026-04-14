@@ -53,8 +53,27 @@ sealed class Screen(val route: String) {
     object Subscription   : Screen("subscription")
 
     // Settings
-    object NotificationSettings : Screen("notification_settings")
+    object NotificationsInbox    : Screen("notifications_inbox")
     object Settings             : Screen("settings")
+
+    // AI Tutor
+    object AiDoubt : Screen("ai_doubt?subject={subject}") {
+        fun createRoute(subject: String = "") =
+            "ai_doubt?subject=${subject.encodeUrl()}"
+    }
+
+    // AI Features
+    object AiMcq : Screen("ai_mcq?subject={subject}&topic={topic}") {
+        fun createRoute(subject: String = "General", topic: String = "BPSC GK") =
+            "ai_mcq?subject=${subject.encodeUrl()}&topic=${topic.encodeUrl()}"
+    }
+
+    object AiCaSummary : Screen("ai_ca_summary")
+
+    object AiStudyPlan : Screen("ai_study_plan")
+
+    object ExamSelection : Screen("exam_selection")
+    object NotificationSettings  : Screen("notification_settings")
 }
 
 fun String.encodeUrl() = java.net.URLEncoder.encode(this, "UTF-8")

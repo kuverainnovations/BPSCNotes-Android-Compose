@@ -68,6 +68,7 @@ fun OtpScreen(navController: NavHostController, mobile: String) {
     val verifySuccess by viewModel.verifySuccess.observeAsState(false)
     val resendSuccess by viewModel.resendSuccess.observeAsState(false)
 
+
     // Countdown timer
     var secondsLeft by remember { mutableIntStateOf(30) }
     var canResend by remember { mutableStateOf(false) }
@@ -83,9 +84,8 @@ fun OtpScreen(navController: NavHostController, mobile: String) {
 
     LaunchedEffect(verifySuccess) {
         if (verifySuccess) {
-            navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.Login.route) { inclusive = true }
-            }
+            navController.navigate(Screen.ExamSelection.route)
+            { popUpTo(Screen.Login.route) { inclusive = true } }
         }
     }
 

@@ -37,9 +37,6 @@ enum class NotifType {
     STREAK, RANK, COINS, LIVE_CLASS, SYSTEM
 }
 
-// ─────────────────────────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────────────────────────
 
 private fun mockNotifications() = listOf(
     NotificationItem("n1",  "🔴 LIVE Class Starting Now",

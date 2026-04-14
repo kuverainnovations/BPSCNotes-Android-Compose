@@ -15,7 +15,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Let Compose draw behind status bar and nav bar
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         enableEdgeToEdge()

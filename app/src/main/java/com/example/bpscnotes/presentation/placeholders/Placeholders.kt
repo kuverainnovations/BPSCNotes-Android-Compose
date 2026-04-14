@@ -13,9 +13,3 @@ fun PlaceholderScreen(title: String) {
         Text(text = "$title\n(Coming Soon)", style = MaterialTheme.typography.headlineSmall)
     }
 }
-
-// ✅ Still placeholders — not built yet
-@Composable fun SubscriptionScreen(nav: NavHostController)= PlaceholderScreen("Subscription")
-@Composable fun DownloadsScreen(nav: NavHostController)   = PlaceholderScreen("Downloads")
-@Composable fun CourseDetailScreen(nav: NavHostController, courseId: String) = PlaceholderScreen("Course Detail")
-@Composable fun NotesReaderScreen(nav: NavHostController, noteId: String)    = PlaceholderScreen("Notes Reader")
