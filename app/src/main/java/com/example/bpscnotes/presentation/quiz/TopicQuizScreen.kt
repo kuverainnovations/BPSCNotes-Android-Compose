@@ -25,7 +25,7 @@ fun TopicQuizScreen(
     topicTitle: String
 ) {
     // Filter questions matching this subject from mock data
-    val topicQuestions = mockQuizSessions
+   /* val topicQuestions = mockQuizSessions
         .flatMap { it.questions }
         .filter { it.subject.equals(subject, ignoreCase = true) }
         .ifEmpty {
@@ -138,7 +138,7 @@ fun TopicQuizScreen(
                 }
             }
         }
-    }
+    }*/
 }
 
 @Composable

@@ -195,7 +195,7 @@ fun CoinWalletScreen(navController: NavHostController) {
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         // ── Gold hero header
-        item { CoinHeroHeader(coins = user.coinBalance, onBack = { navController.popBackStack() }) }
+        item { CoinHeroHeader(coins = user.coins, onBack = { navController.popBackStack() }) }
 
         // ── Tab row
         item { CoinTabRow(selectedTab = selectedTab, tabs = tabs, onSelect = { selectedTab = it }) }

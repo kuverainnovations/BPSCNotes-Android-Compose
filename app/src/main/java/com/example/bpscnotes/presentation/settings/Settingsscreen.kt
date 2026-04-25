@@ -87,7 +87,7 @@ fun SettingsScreen(navController: NavHostController) {
             AccountCard(
                 name   = user.name,
                 email  = user.email ?: user.mobile,
-                coins  = user.coinBalance,
+                coins  = user.coins,
                 onEdit = { navController.navigate(Screen.Profile.route) }
             )
 
@@ -265,7 +265,7 @@ private fun SettingsHeader(onBack: () -> Unit) {
 @Composable
 private fun AccountCard(
     name: String,
-    email: String,
+    email: String?,
     coins: Int,
     onEdit: () -> Unit
 ) {
@@ -306,7 +306,7 @@ private fun AccountCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(name,  style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,   fontWeight = FontWeight.ExtraBold)
-                Text(email, style = MaterialTheme.typography.bodyMedium,  color = BpscColors.TextSecondary)
+                Text(email?:"", style = MaterialTheme.typography.bodyMedium,  color = BpscColors.TextSecondary)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier

@@ -11,10 +11,7 @@ object MockData {
         name = "Rahul Kumar",
         mobile = "9876543210",
         email = "rahul@example.com",
-        profilePic = null,
-        coinBalance = 142,
         isSubscribed = true,
-        subscriptionExpiry = "2025-12-31",
         createdAt = "2024-01-15"
     )
 

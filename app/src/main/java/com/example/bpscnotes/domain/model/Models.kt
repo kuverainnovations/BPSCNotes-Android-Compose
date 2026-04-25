@@ -51,7 +51,7 @@ data class Course(
     val id: String,
     val title: String,
     val subject: String,
-    val instructor: String,
+    val instructor: String?,
     val totalLessons: Int,
     val completedLessons: Int,
     val thumbnail: String?,

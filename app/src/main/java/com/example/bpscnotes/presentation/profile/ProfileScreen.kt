@@ -135,7 +135,7 @@ fun ProfileScreen(navController: NavHostController) {
             ProfileHeader(
                 name = user.name,
                 email = user.email ?: user.mobile,
-                coins = user.coinBalance,
+                coins = user.coins,
                 rank = 3,
                 rankTitle = "Gold Achiever",
                 onEditClick = { navController.navigate(Screen.Settings.route) },
@@ -177,7 +177,7 @@ fun ProfileScreen(navController: NavHostController) {
 @Composable
 private fun ProfileHeader(
     name: String,
-    email: String,
+    email: String?,
     coins: Int,
     rank: Int,
     rankTitle: String,
@@ -351,7 +351,7 @@ private fun ProfileHeader(
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                email,
+                email?:"",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.72f)
             )

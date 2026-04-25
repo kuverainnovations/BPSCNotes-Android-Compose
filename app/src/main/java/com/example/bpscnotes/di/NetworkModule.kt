@@ -2,6 +2,11 @@ package com.example.bpscnotes.di
 
 import com.example.bpscnotes.core.network.AuthInterceptor
 import com.example.bpscnotes.data.remote.api.AuthApiService
+import com.example.bpscnotes.data.remote.api.BannersApiService
+import com.example.bpscnotes.data.remote.api.CoursesApiService
+import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
+import com.example.bpscnotes.data.remote.api.QuizzesApiService
+import com.example.bpscnotes.data.remote.api.UserStatsApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,7 +37,7 @@ object NetworkModule {
     @Provides @Singleton
     fun provideRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl("https://api.bpscnotes.in/v1/")
+            .baseUrl("http://192.168.66.186:5000/api/v1/")
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -40,4 +45,30 @@ object NetworkModule {
     @Provides @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApiService =
         retrofit.create(AuthApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCurrentAffairsApi(retrofit: Retrofit): CurrentAffairsApiService =
+        retrofit.create(CurrentAffairsApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCoursesApi(retrofit: Retrofit): CoursesApiService =
+        retrofit.create(CoursesApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideQuizzesApi(retrofit: Retrofit): QuizzesApiService =
+        retrofit.create(QuizzesApiService::class.java)
+    @Provides
+    @Singleton
+    fun provideBannerApi(retrofit: Retrofit): BannersApiService =
+        retrofit.create(BannersApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideUserStatsApi(retrofit: Retrofit): UserStatsApiService =
+        retrofit.create(UserStatsApiService::class.java)
+
+
 }

@@ -76,6 +76,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.shared.BookmarkViewModel
 
 // ── Extended mock data ────────────────────────────────────────
+/*
 data class CAArticle(
     val id: String,
     val headline: String,
@@ -90,6 +91,7 @@ data class CAArticle(
     val isMains: Boolean,
     val tags: List<String>,
 )
+*/
 
 val mockCAArticles = listOf(
     CAArticle(

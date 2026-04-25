@@ -1,16 +1,18 @@
 package com.example.bpscnotes.core.network
 
-import kotlinx.coroutines.runBlocking
+import com.example.bpscnotes.data.local.TokenStore
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
-import com.example.bpscnotes.data.local.TokenStore
 
 class AuthInterceptor @Inject constructor(
     private val tokenStore: TokenStore
 ) : Interceptor {
+
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = runBlocking { tokenStore.getToken() }
+        // getToken() is now plain synchronous — no runBlocking needed
+        val token = tokenStore.getToken()
+
         val request = chain.request().newBuilder()
             .apply {
                 if (!token.isNullOrEmpty()) {
@@ -18,6 +20,14 @@ class AuthInterceptor @Inject constructor(
                 }
             }
             .build()
-        return chain.proceed(request)
+
+        val response = chain.proceed(request)
+
+        // If server rejects token, clear session so app can redirect to login
+        if (response.code == 401) {
+            tokenStore.clearToken()
+        }
+
+        return response
     }
 }
