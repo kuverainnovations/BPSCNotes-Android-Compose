@@ -9,6 +9,7 @@ import com.example.bpscnotes.presentation.auth.onboarding.OnboardingScreen
 import com.example.bpscnotes.presentation.auth.otp.OtpScreen
 import com.example.bpscnotes.presentation.auth.register.RegisterScreen
 import com.example.bpscnotes.presentation.auth.splash.SplashScreen
+import com.example.bpscnotes.presentation.course.CourseDetailScreen
 import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
 import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
@@ -18,7 +19,6 @@ import com.example.bpscnotes.presentation.mylearning.MyLearningScreen
 import com.example.bpscnotes.presentation.navigation.MainShell.MainShell
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.nofification.NotificationSettingsScreen
-import com.example.bpscnotes.presentation.placeholders.CourseDetailScreen
 import com.example.bpscnotes.presentation.placeholders.DownloadsScreen
 import com.example.bpscnotes.presentation.placeholders.NotesReaderScreen
 import com.example.bpscnotes.presentation.placeholders.SubscriptionScreen

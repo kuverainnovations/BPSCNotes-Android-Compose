@@ -34,7 +34,7 @@ data class CoursesResponseData(
 )
 
 // ══════════════════════════════════════════════════════════════
-// QUIZ DTOs  (lightweight — for dashboard preview & list)
+// QUIZ DTOs
 // ══════════════════════════════════════════════════════════════
 
 data class QuizPreviewDto(
@@ -59,7 +59,6 @@ data class QuizzesResponseData(
     val quizzes: List<QuizPreviewDto> = emptyList()
 )
 
-// Full quiz detail — questions included
 data class QuizQuestionDto(
     val id: String,
     @SerializedName("question_text") val questionText: String,
@@ -67,7 +66,7 @@ data class QuizQuestionDto(
     @SerializedName("option_b") val optionB: String,
     @SerializedName("option_c") val optionC: String,
     @SerializedName("option_d") val optionD: String,
-    @SerializedName("correct_option") val correctOption: String,   // "a" | "b" | "c" | "d"
+    @SerializedName("correct_option") val correctOption: String,
     val explanation: String? = null,
     val subject: String? = null,
     val difficulty: String = "medium",
@@ -86,7 +85,7 @@ data class QuizSubmitRequest(
 
 data class QuizAnswerRequest(
     val questionId: String,
-    val answer: String   // "a" | "b" | "c" | "d"
+    val answer: String
 )
 
 data class QuizResultDto(
@@ -147,12 +146,12 @@ data class BannersResponseData(
 )
 
 // ══════════════════════════════════════════════════════════════
-// USER STATS DTOs  (for dashboard: weekly activity, accuracy)
+// USER STATS DTOs
 // ══════════════════════════════════════════════════════════════
 
 data class WeeklyActivityDto(
-    val date: String,    // "Mon", "Tue", etc. or ISO date
-    val activity: Int    // 0-100 score
+    val date: String,
+    val activity: Int
 )
 
 data class UserStatsData(
@@ -162,6 +161,48 @@ data class UserStatsData(
     @SerializedName("longest_streak") val longestStreak: Int = 0,
     val accuracy: Double = 0.0,
     @SerializedName("quizzes_attempted") val quizzesAttempted: Int = 0
+)
+
+// ══════════════════════════════════════════════════════════════
+// DAILY TARGETS DTOs  — GET /api/v1/users/daily-targets
+//
+// Backend response shape:
+// {
+//   "success": true,
+//   "data": {
+//     "targets": [
+//       {
+//         "id": "...",
+//         "title": "Polity - Fundamental Rights",
+//         "subject": "Polity",
+//         "is_completed": false,
+//         "total_questions": 10,
+//         "attempted_questions": 0,
+//         "estimated_minutes": 25,
+//         "difficulty": "medium",       // "easy" | "medium" | "hard"
+//         "time_slot": "morning",       // "morning" | "afternoon" | "night"
+//         "is_carried_forward": false
+//       }
+//     ]
+//   }
+// }
+// ══════════════════════════════════════════════════════════════
+
+data class DailyTargetDto(
+    val id: String,
+    val title: String,
+    val subject: String,
+    @SerializedName("is_completed")         val isCompleted: Boolean = false,
+    @SerializedName("total_questions")      val totalQuestions: Int = 10,
+    @SerializedName("attempted_questions")  val attemptedQuestions: Int = 0,
+    @SerializedName("estimated_minutes")    val estimatedMinutes: Int = 25,
+    val difficulty: String = "medium",      // "easy" | "medium" | "hard"
+    @SerializedName("time_slot")            val timeSlot: String = "morning",  // "morning" | "afternoon" | "night"
+    @SerializedName("is_carried_forward")   val isCarriedForward: Boolean = false
+)
+
+data class DailyTargetsResponseData(
+    val targets: List<DailyTargetDto> = emptyList()
 )
 
 // ══════════════════════════════════════════════════════════════
@@ -248,4 +289,11 @@ interface UserStatsApiService {
 
     @GET("users/stats")
     suspend fun getStats(): ApiResponse<UserStatsData>
+}
+
+/** GET /api/v1/users/daily-targets */
+interface DailyTargetsApiService {
+
+    @GET("users/daily-targets")
+    suspend fun getDailyTargets(): ApiResponse<DailyTargetsResponseData>
 }

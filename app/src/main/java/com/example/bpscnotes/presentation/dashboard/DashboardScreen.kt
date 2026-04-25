@@ -18,6 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,22 +42,19 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.BannerDto
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.data.remote.api.DailyTargetDto
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
+import com.example.bpscnotes.data.remote.api.UserStatsData
 import com.example.bpscnotes.data.remote.dto.UserDto
-import com.example.bpscnotes.domain.model.DailyTarget
 import com.example.bpscnotes.domain.model.DayProgress
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.shared.BookmarkViewModel
 import kotlinx.coroutines.launch
 
-// Placeholder targets until Daily Targets API is implemented
-private val placeholderTargets = listOf(
-    DailyTarget("t1", "Polity - Fundamental Rights", "Polity",    true,  10, 10),
-    DailyTarget("t2", "History - Mughal Empire",     "History",   true,  10,  7),
-    DailyTarget("t3", "Geography - River Systems",   "Geography", false, 10,  0),
-    DailyTarget("t4", "Economy - Fiscal Policy",     "Economy",   false, 10,  0),
-    DailyTarget("t5", "Science - Environment",       "Science",   false, 10,  0),
-)
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTE: NO static data anywhere in this file.
+//       Every value comes from DashboardViewModel.uiState.
+// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,202 +66,224 @@ fun DashboardScreen(
     val state         by dashboardViewModel.uiState.collectAsState()
     val bookmarkedIds by bookmarkViewModel.bookmarkedIds.collectAsState()
 
-    val userName   = state.user?.name  ?: ""
-    val userCoins  = state.user?.coins ?: 0
-    val userStreak = state.user?.streak ?: 0
-
-    val targets    = placeholderTargets
-    val weeklyData = state.weeklyActivity.ifEmpty {
-        listOf("Mon","Tue","Wed","Thu","Fri","Sat","Sun").map { DayProgress(it, 0) }
-    }
-    val completed  = targets.count { it.isCompleted }
-
     val drawerState      = rememberDrawerState(DrawerValue.Closed)
     val scope            = rememberCoroutineScope()
     var showTargetSheet by remember { mutableStateOf(false) }
 
-    // Show global error snackbar
-    state.error?.let { err ->
-        LaunchedEffect(err) {
-            // Error is shown inline — clear after display
-            dashboardViewModel.clearError()
-        }
-    }
+    // Pull-to-refresh support
+    val pullRefreshState = rememberPullToRefreshState()
 
-    ModalNavigationDrawer(
-        drawerState    = drawerState,
-        gesturesEnabled = true,
-        drawerContent  = {
-            BpscDrawer(
-                user          = state.user,
-                onClose       = { scope.launch { drawerState.close() } },
-                navController = navController
-            )
-        }
+    PullToRefreshBox(
+        state = pullRefreshState,
+        isRefreshing = state.isLoading,
+        onRefresh = { dashboardViewModel.refresh() }
     ) {
-        Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
-            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-                // ── Header with REAL user stats ──────────────────
-                DashboardHeader(
-                    name          = userName,
-                    coins         = userCoins,
-                    streak        = userStreak,
-                    rank          = state.user?.rank,
-                    studyMinutes  = state.stats?.totalStudyMinutes ?: state.user?.totalStudyMinutes ?: 0,
-                    accuracy      = state.stats?.accuracy ?: state.user?.accuracy ?: 0.0,
-                    greeting      = dashboardViewModel.getGreeting(),
-                    targets       = targets,
-                    onMenuClick   = { scope.launch { drawerState.open() } },
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = true,
+            drawerContent = {
+                BpscDrawer(
+                    user = state.user,
+                    onClose = { scope.launch { drawerState.close() } },
                     navController = navController
                 )
+            }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BpscColors.Surface)
+            ) {
+                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
-                // ── Refresh error strip ───────────────────────────
-                if (state.error != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3CD))
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("⚠️", fontSize = 14.sp)
-                        Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404), modifier = Modifier.weight(1f))
-                        TextButton(onClick = { dashboardViewModel.refresh() }) {
-                            Text("Retry", color = BpscColors.Primary)
-                        }
+                    // ── Header (all values from state.user + state.stats) ──────
+                    DashboardHeader(
+                        user = state.user,
+                        stats = state.stats,
+                        greeting = dashboardViewModel.getGreeting(),
+                        targets = state.dailyTargets,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        navController = navController
+                    )
+
+                    // ── Global error banner ────────────────────────────────────
+                    if (state.error != null) {
+                        ErrorBanner(message = state.error!!) { dashboardViewModel.refresh() }
                     }
+
+                    // ── Loading indicator (first load only) ────────────────────
+                    if (state.isLoading && state.courses.isEmpty()) {
+                        LoadingSection()
+                    }
+
+                    // ── Banners ────────────────────────────────────────────────
+                    BannerSection(
+                        banners = state.banners,
+                        isLoading = state.isLoading,
+                        navController = navController
+                    )
+
+                    // ── Today's target card ────────────────────────────────────
+                    TodayTargetCard(
+                        targets = state.dailyTargets,
+                        isLoading = state.isLoading,
+                        onCreateTarget = { showTargetSheet = true },
+                        onClick = { navController.navigate(Screen.DailyTargets.route) }
+                    )
+
+                    // ── Weekly consistency (no fake fallback) ──────────────────
+                    WeeklyConsistencyCard(
+                        data = state.weeklyActivity,
+                        streak = state.stats?.currentStreak ?: state.user?.streak ?: 0,
+                        isLoading = state.isLoading
+                    )
+
+                    // ── Daily quizzes ──────────────────────────────────────────
+                    DailyQuizSection(
+                        quizzes = state.dailyQuizzes,
+                        isLoading = state.isLoading,
+                        navController = navController
+                    )
+
+                    // ── Quick access ───────────────────────────────────────────
+                    QuickAccessSection(
+                        navController = navController,
+                        bookmarkCount = bookmarkedIds.size
+                    )
+
+                    // ── Recommended courses ────────────────────────────────────
+                    RecommendedSection(
+                        courses = state.courses,
+                        isLoading = state.isLoading,
+                        navController = navController
+                    )
+
+                    MyScheduleSection(navController = navController)
+                    AchievementsSection()
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
 
-                // ── Banners — always shown (skeleton while loading) ───
-                BannerCarousel(
-                    banners     = state.banners,
-                    isLoading   = state.isLoading,
-                    navController = navController
-                )
 
-                // ── Today's target card ───────────────────────────
-                TodayTargetCard(
-                    completed      = completed,
-                    total          = targets.size,
-                    targets        = targets,
-                    onCreateTarget = { showTargetSheet = true },
-                    onClick        = { navController.navigate(Screen.DailyTargets.route) }
-                )
 
-                // ── Weekly consistency ────────────────────────────
-                WeeklyConsistencyCard(data = weeklyData, streak = userStreak)
-
-                // ── Daily quizzes — always shown (skeleton while loading) ─
-                DailyQuizSection(
-                    quizzes     = state.dailyQuizzes,
-                    isLoading   = state.isLoading,
-                    navController = navController
-                )
-
-                // ── Quick access ──────────────────────────────────
-                QuickAccessSection(
-                    navController = navController,
-                    bookmarkCount = bookmarkedIds.size
-                )
-
-                // ── Courses — always shown (skeleton while loading) ───
-                RecommendedSection(
-                    courses     = state.courses,
-                    isLoading   = state.isLoading,
-                    navController = navController
-                )
-
-                MyScheduleSection(navController = navController)
-                AchievementsSection()
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-
-            if (showTargetSheet) {
-                CreateTargetSheet(onDismiss = { showTargetSheet = false })
+                if (showTargetSheet) {
+                    CreateTargetSheet(onDismiss = { showTargetSheet = false })
+                }
             }
         }
     }
 }
 
-// ── LOADING SKELETON ──────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR BANNER
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun ShimmerBox(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.background(Color(0xFFEEEEEE), RoundedCornerShape(8.dp)))
-}
-
-@Composable
-private fun SectionSkeleton() {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        ShimmerBox(modifier = Modifier.width(140.dp).height(20.dp))
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            repeat(3) {
-                ShimmerBox(modifier = Modifier.width(168.dp).height(140.dp).clip(RoundedCornerShape(16.dp)))
-            }
+private fun ErrorBanner(message: String, onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFFF3CD))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("⚠️", fontSize = 14.sp)
+        Text(
+            message,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = Color(0xFF856404),
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = onRetry) {
+            Text("Retry", color = BpscColors.Primary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
-// ── BANNER CAROUSEL ───────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// LOADING SHIMMER
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun BannerCarousel(
+private fun LoadingSection() {
+    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        repeat(4) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFEEEEEE))
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BANNER SECTION — with proper click navigation
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun BannerSection(
     banners: List<BannerDto>,
     isLoading: Boolean,
     navController: NavHostController
 ) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        if (isLoading && banners.isEmpty()) {
-            // Skeleton
-            Row(
-                modifier              = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                repeat(2) { ShimmerBox(modifier = Modifier.width(300.dp).height(100.dp).clip(RoundedCornerShape(20.dp))) }
-            }
-            return@Column
-        }
-        if (banners.isEmpty()) return@Column
-
+    // Skeleton while loading
+    if (isLoading && banners.isEmpty()) {
         LazyRow(
-            contentPadding        = PaddingValues(horizontal = 16.dp),
+            contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(banners, key = { it.id }) { banner ->
-                Card(
-                    modifier  = Modifier.width(300.dp).height(100.dp).clickable {
-                        handleBannerClick(banner, navController)
-                    },
-                    shape     = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+            items(2) {
+                Box(
+                    modifier = Modifier
+                        .width(300.dp).height(100.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFFE0E0E0))
+                )
+            }
+        }
+        return
+    }
+    if (banners.isEmpty()) return
+
+    LazyRow(
+        contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(banners, key = { it.id }) { banner ->
+            Card(
+                modifier  = Modifier
+                    .width(300.dp).height(100.dp)
+                    .clickable { navigateBanner(banner, navController) },
+                shape     = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0D47A1), Color(0xFF1976D2)),
+                            Offset(0f, 0f), Offset(400f, 200f)
+                        )
+                    ).padding(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF0D47A1), Color(0xFF1976D2)),
-                                Offset(0f, 0f), Offset(400f, 200f)
-                            )
-                        ).padding(16.dp)
-                    ) {
-                        Canvas(Modifier.matchParentSize()) {
-                            drawCircle(Color.White.copy(0.07f), 80.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
+                    Canvas(Modifier.matchParentSize()) {
+                        drawCircle(Color.White.copy(0.07f), 80.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
+                    }
+                    Column {
+                        Text(
+                            banner.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                        banner.subtitle?.let {
+                            Spacer(Modifier.height(4.dp))
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
-                        Column {
-                            Text(
-                                banner.title,
-                                style      = MaterialTheme.typography.titleMedium,
-                                color      = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                maxLines   = 1,
-                                overflow   = TextOverflow.Ellipsis
-                            )
-                            banner.subtitle?.let {
-                                Spacer(Modifier.height(4.dp))
-                                Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                        Box(modifier = Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White.copy(0.15f)).padding(6.dp)) {
-                            Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        }
+                    }
+                    Box(modifier = Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White.copy(0.15f)).padding(6.dp)) {
+                        Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(14.dp))
                     }
                 }
             }
@@ -269,26 +291,27 @@ private fun BannerCarousel(
     }
 }
 
-/** Navigate based on banner type/action_link */
-private fun handleBannerClick(banner: BannerDto, navController: NavHostController) {
+/** Navigate based on banner.actionLink or banner.type */
+private fun navigateBanner(banner: BannerDto, nav: NavHostController) {
+    val link = banner.actionLink
     when {
-        banner.actionLink?.startsWith("/course/") == true -> {
-            val id = banner.actionLink.removePrefix("/course/")
-            navController.navigate(Screen.CourseDetail.createRoute(id))
-        }
-        banner.actionLink?.startsWith("/quiz/") == true -> {
-            val id = banner.actionLink.removePrefix("/quiz/")
-            navController.navigate(Screen.DailyQuiz.createRoute(id))
-        }
-        banner.type == "course"  -> navController.navigate(Screen.MyLearning.route)
-        banner.type == "quiz"    -> navController.navigate(Screen.MockTests.route)
-        banner.type == "job"     -> navController.navigate(Screen.JobVacancies.route)
-        banner.type == "subscription" -> navController.navigate(Screen.Subscription.route)
-        else                     -> navController.navigate(Screen.MyLearning.route)
+        link != null && link.startsWith("/course/") ->
+            nav.navigate(Screen.CourseDetail.createRoute(link.removePrefix("/course/")))
+        link != null && link.startsWith("/quiz/") ->
+            nav.navigate(Screen.DailyQuiz.createRoute(link.removePrefix("/quiz/")))
+        link != null && link.startsWith("/current-affairs") ->
+            nav.navigate(Screen.CurrentAffairs.route)
+        banner.type == "course"       -> nav.navigate(Screen.MyLearning.route)
+        banner.type == "quiz"         -> nav.navigate(Screen.MockTests.route)
+        banner.type == "subscription" -> nav.navigate(Screen.Subscription.route)
+        banner.type == "job"          -> nav.navigate(Screen.JobVacancies.route)
+        else                          -> nav.navigate(Screen.MyLearning.route)
     }
 }
 
-// ── DAILY QUIZ SECTION ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// DAILY QUIZ SECTION
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun DailyQuizSection(
     quizzes: List<QuizPreviewDto>,
@@ -297,7 +320,7 @@ private fun DailyQuizSection(
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
-            modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
@@ -307,69 +330,58 @@ private fun DailyQuizSection(
             }
         }
 
-        if (isLoading && quizzes.isEmpty()) {
-            SectionSkeleton()
-            return@Column
-        }
-
-        if (quizzes.isEmpty()) {
-            Box(
-                modifier         = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight).padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No quizzes today. Check back later!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        when {
+            isLoading && quizzes.isEmpty() -> {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(3) {
+                        Box(modifier = Modifier.width(190.dp).height(110.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFFE0E0E0)))
+                    }
+                }
             }
-            return@Column
-        }
-
-        LazyRow(
-            contentPadding        = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(quizzes, key = { it.id }) { quiz ->
-                Card(
-                    modifier  = Modifier.width(190.dp)
-                        .clickable { navController.navigate(Screen.DailyQuiz.createRoute(quiz.id)) },
-                    shape     = RoundedCornerShape(18.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                quiz.type.replaceFirstChar { it.uppercase() },
-                                style    = MaterialTheme.typography.labelSmall,
-                                color    = BpscColors.Primary,
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                                    .background(BpscColors.PrimaryLight)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                            if (quiz.isAttempted) {
-                                Text(
-                                    "✓ Done",
-                                    style    = MaterialTheme.typography.labelSmall,
-                                    color    = BpscColors.Success,
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                                        .background(BpscColors.Success.copy(0.1f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+            quizzes.isEmpty() -> {
+                EmptyState(
+                    emoji    = "📝",
+                    message  = "No quizzes today. Check back later!",
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+            else -> {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(quizzes, key = { it.id }) { quiz ->
+                        Card(
+                            modifier  = Modifier.width(190.dp).clickable {
+                                navController.navigate(Screen.DailyQuiz.createRoute(quiz.id))
+                            },
+                            shape     = RoundedCornerShape(18.dp),
+                            colors    = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        quiz.type.replaceFirstChar { it.uppercase() },
+                                        style    = MaterialTheme.typography.labelSmall,
+                                        color    = BpscColors.Primary,
+                                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                    if (quiz.isAttempted) {
+                                        Text(
+                                            "✓ Done",
+                                            style    = MaterialTheme.typography.labelSmall,
+                                            color    = BpscColors.Success,
+                                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.Success.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Text(quiz.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                                Spacer(Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                                    if (quiz.coinsReward > 0) Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
+                                }
                             }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            quiz.title,
-                            style      = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines   = 2,
-                            overflow   = TextOverflow.Ellipsis,
-                            lineHeight = 18.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
-                            Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
-                            if (quiz.coinsReward > 0) Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
                         }
                     }
                 }
@@ -378,23 +390,30 @@ private fun DailyQuizSection(
     }
 }
 
-// ── HEADER with REAL stats ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// HEADER — real stats from API
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun DashboardHeader(
-    name: String,
-    coins: Int,
-    streak: Int,
-    rank: Int?,
-    studyMinutes: Int,
-    accuracy: Double,
+    user: UserDto?,
+    stats: UserStatsData?,
     greeting: String,
-    targets: List<DailyTarget>,
+    targets: List<DailyTargetDto>,
     onMenuClick: () -> Unit,
     navController: NavHostController
 ) {
+    // Computed values — all from API, never hardcoded
+    val name         = user?.name ?: ""
+    val coins        = user?.coins ?: 0
+    val streak       = stats?.currentStreak ?: user?.streak ?: 0
+    val rank         = user?.rank
+    val studyMinutes = stats?.totalStudyMinutes ?: user?.totalStudyMinutes ?: 0
+    val accuracy     = stats?.accuracy ?: user?.accuracy ?: 0.0
+
     val completed = targets.count { it.isCompleted }
-    val progress by animateFloatAsState(
-        targetValue   = if (targets.isNotEmpty()) completed.toFloat() / targets.size else 0f,
+    val total     = targets.size
+    val progress  by animateFloatAsState(
+        targetValue   = if (total > 0) completed.toFloat() / total else 0f,
         animationSpec = tween(1200),
         label         = "ring"
     )
@@ -410,11 +429,10 @@ private fun DashboardHeader(
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(Color.White.copy(0.05f), 200.dp.toPx(), Offset(size.width + 50.dp.toPx(), -70.dp.toPx()))
             drawCircle(Color.White.copy(0.04f), 110.dp.toPx(), Offset(size.width - 10.dp.toPx(), size.height * 0.5f))
-            drawCircle(Color.White.copy(0.06f), 70.dp.toPx(), Offset(-25.dp.toPx(), size.height * 0.78f))
+            drawCircle(Color.White.copy(0.06f), 70.dp.toPx(),  Offset(-25.dp.toPx(), size.height * 0.78f))
             drawArc(Color.White.copy(0.03f), 150f, 160f, false,
                 Offset(size.width - 130.dp.toPx(), size.height * 0.15f),
-                androidx.compose.ui.geometry.Size(160.dp.toPx(), 160.dp.toPx()),
-                style = Stroke(40.dp.toPx()))
+                androidx.compose.ui.geometry.Size(160.dp.toPx(), 160.dp.toPx()), style = Stroke(40.dp.toPx()))
             val sp = 28.dp.toPx(); var x = sp
             while (x < size.width) { var y = sp
                 while (y < size.height) { drawCircle(Color.White.copy(0.05f), 1.dp.toPx(), Offset(x, y)); y += sp }; x += sp }
@@ -447,6 +465,8 @@ private fun DashboardHeader(
                 }
             }
             Spacer(Modifier.height(22.dp))
+
+            // Hero row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -455,7 +475,8 @@ private fun DashboardHeader(
                     }
                     Text(
                         if (name.isNotEmpty()) "${name.split(" ").first()} 👋" else "Aspirant 👋",
-                        style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp
+                        style = MaterialTheme.typography.headlineMedium, color = Color.White,
+                        fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp
                     )
                     Spacer(Modifier.height(2.dp))
                     Row(modifier = Modifier.clip(RoundedCornerShape(22.dp)).background(Color(0xFFFF8F00).copy(0.18f)).border(0.5.dp, Color(0xFFFFB300).copy(0.4f), RoundedCornerShape(22.dp)).padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -466,6 +487,7 @@ private fun DashboardHeader(
                         )
                     }
                 }
+                // Progress ring (targets completion)
                 Box(modifier = Modifier.size(90.dp), contentAlignment = Alignment.Center) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val stroke = 7.dp.toPx(); val inset = stroke / 2
@@ -482,20 +504,20 @@ private fun DashboardHeader(
             }
             Spacer(Modifier.height(18.dp))
 
-            // ── Stats strip — REAL data ────────────────────────
-            val studyHours = studyMinutes / 60
-            val rankText   = if (rank != null) "#$rank" else "--"
-            val accText    = if (accuracy > 0) "${accuracy.toInt()}%" else "--"
-            val hoursText  = if (studyHours > 0) "${studyHours}h" else "--"
+            // ── Stats strip — ALL values from API ─────────────────────────
+            val rankText  = if (rank != null) "#$rank" else "--"
+            val hoursText = if (studyMinutes > 0) "${studyMinutes / 60}h" else "--"
+            val accText   = if (accuracy > 0.0) "${accuracy.toInt()}%" else "--"
+            val topicsText = if (total > 0) "$completed/$total" else "--"
 
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(Brush.verticalGradient(listOf(Color.White.copy(0.16f), Color.White.copy(0.08f)))).border(0.5.dp, Brush.verticalGradient(listOf(Color.White.copy(0.35f), Color.Transparent)), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).padding(horizontal = 4.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                HeaderStat("📚", "${targets.count { it.isCompleted }}/${targets.size}", "Topics")
+                HeaderStat("📚", topicsText, "Topics")
                 HeaderStatDivider()
-                HeaderStat("🏆", rankText, "My Rank")
+                HeaderStat("🏆", rankText,  "My Rank")
                 HeaderStatDivider()
-                HeaderStat("⏱️", hoursText, "Study")
+                HeaderStat("⏱️", hoursText,  "Study")
                 HeaderStatDivider()
-                HeaderStat("✅", accText, "Accuracy")
+                HeaderStat("✅", accText,   "Accuracy")
             }
         }
     }
@@ -510,17 +532,32 @@ private fun HeaderStat(icon: String, value: String, label: String) {
     }
 }
 
-@Composable private fun HeaderStatDivider() {
+@Composable
+private fun HeaderStatDivider() {
     Box(modifier = Modifier.width(0.5.dp).height(36.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.White.copy(0.28f), Color.Transparent))))
 }
 
-// ── TODAY'S TARGET CARD ───────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// TODAY'S TARGET CARD — from state.dailyTargets (API)
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun TodayTargetCard(completed: Int, total: Int, targets: List<DailyTarget>, onCreateTarget: () -> Unit, onClick: () -> Unit) {
-    val progress  = if (total > 0) completed.toFloat() / total else 0f
-    val animProg by animateFloatAsState(progress, tween(1000), label = "prog")
+private fun TodayTargetCard(
+    targets: List<DailyTargetDto>,
+    isLoading: Boolean,
+    onCreateTarget: () -> Unit,
+    onClick: () -> Unit
+) {
+    val completed  = targets.count { it.isCompleted }
+    val total      = targets.size
+    val progress   = if (total > 0) completed.toFloat() / total else 0f
+    val animProg  by animateFloatAsState(progress, tween(1000), label = "prog")
 
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-12).dp).shadow(12.dp, RoundedCornerShape(24.dp)).clickable(onClick = onClick), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(0.dp)) {
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-12).dp).shadow(12.dp, RoundedCornerShape(24.dp)).clickable(onClick = onClick),
+        shape     = RoundedCornerShape(24.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -529,7 +566,11 @@ private fun TodayTargetCard(completed: Int, total: Int, targets: List<DailyTarge
                     }
                     Column {
                         Text("Today's Focus", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
-                        Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        when {
+                            isLoading && targets.isEmpty() -> Text("Loading...", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                            total == 0                     -> Text("No targets set", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                            else                           -> Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                 }
                 Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -537,21 +578,36 @@ private fun TodayTargetCard(completed: Int, total: Int, targets: List<DailyTarge
                     Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
                 }
             }
+
             Spacer(Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(BpscColors.PrimaryLight)) {
                 Box(modifier = Modifier.fillMaxWidth(animProg).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF1565C0), Color(0xFF42A5F5)))))
             }
             Spacer(Modifier.height(16.dp))
-            targets.take(3).forEach { t ->
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(if (t.isCompleted) BpscColors.Success.copy(0.12f) else BpscColors.Surface), contentAlignment = Alignment.Center) {
-                        Icon(if (t.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null, tint = if (t.isCompleted) BpscColors.Success else BpscColors.TextHint, modifier = Modifier.size(16.dp))
+
+            when {
+                isLoading && targets.isEmpty() -> {
+                    repeat(3) {
+                        Box(modifier = Modifier.fillMaxWidth().height(24.dp).padding(vertical = 2.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFFEEEEEE)))
                     }
-                    Text(t.title, style = MaterialTheme.typography.bodyMedium, color = if (t.isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Text(t.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 8.dp, vertical = 3.dp))
+                }
+                targets.isEmpty() -> {
+                    Text("No targets for today. Create one below!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                }
+                else -> {
+                    targets.take(3).forEach { t ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(if (t.isCompleted) BpscColors.Success.copy(0.12f) else BpscColors.Surface), contentAlignment = Alignment.Center) {
+                                Icon(if (t.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null, tint = if (t.isCompleted) BpscColors.Success else BpscColors.TextHint, modifier = Modifier.size(16.dp))
+                            }
+                            Text(t.title, style = MaterialTheme.typography.bodyMedium, color = if (t.isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(t.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 8.dp, vertical = 3.dp))
+                        }
+                    }
+                    if (targets.size > 3) Text("+${targets.size - 3} more topics", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Primary, modifier = Modifier.padding(top = 6.dp))
                 }
             }
-            if (targets.size > 3) Text("+${targets.size - 3} more topics", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Primary, modifier = Modifier.padding(top = 6.dp))
+
             Spacer(Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(13.dp)).border(1.5.dp, BpscColors.Primary, RoundedCornerShape(13.dp)).clickable(onClick = onCreateTarget), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -563,9 +619,15 @@ private fun TodayTargetCard(completed: Int, total: Int, targets: List<DailyTarge
     }
 }
 
-// ── WEEKLY CONSISTENCY CARD ───────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// WEEKLY CONSISTENCY — no dummy fallback
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun WeeklyConsistencyCard(data: List<DayProgress>, streak: Int) {
+private fun WeeklyConsistencyCard(
+    data: List<DayProgress>,
+    streak: Int,
+    isLoading: Boolean
+) {
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -578,39 +640,62 @@ private fun WeeklyConsistencyCard(data: List<DayProgress>, streak: Int) {
                     Text(if (streak > 0) "$streak streak" else "0 streak", style = MaterialTheme.typography.labelSmall, color = BpscColors.Accent, fontWeight = FontWeight.ExtraBold)
                 }
             }
-            if (data.isNotEmpty()) {
-                Spacer(Modifier.height(22.dp))
-                Row(modifier = Modifier.fillMaxWidth().height(140.dp)) {
-                    Column(modifier = Modifier.width(28.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                        listOf("90", "60", "30", "0").forEach { Text(it, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp) }
+
+            Spacer(Modifier.height(16.dp))
+
+            when {
+                // Loading state
+                isLoading && data.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
                     }
-                    val maxVal = 100f
-                    Canvas(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        val w = size.width; val h = size.height; val count = data.size
-                        if (count < 2) return@Canvas
-                        val stepX = w / (count - 1).toFloat()
-                        val points = data.mapIndexed { i, d -> Offset(i * stepX, h - (d.score / maxVal) * h) }
-                        val fillPath = Path().apply { moveTo(points.first().x, h); points.forEach { lineTo(it.x, it.y) }; lineTo(points.last().x, h); close() }
-                        drawPath(fillPath, Brush.verticalGradient(listOf(BpscColors.Primary.copy(0.18f), BpscColors.Primary.copy(0f)), 0f, h))
-                        val linePath = Path()
-                        points.forEachIndexed { i, pt ->
-                            if (i == 0) linePath.moveTo(pt.x, pt.y)
-                            else { val prev = points[i-1]; val cx1 = prev.x + (pt.x - prev.x)*0.5f; val cx2 = pt.x - (pt.x - prev.x)*0.5f; linePath.cubicTo(cx1, prev.y, cx2, pt.y, pt.x, pt.y) }
-                        }
-                        drawPath(linePath, Color(0xFF1565C0), style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
-                        listOf(0.25f, 0.5f, 0.75f).forEach { r -> drawLine(Color(0xFFF0F0F0), Offset(0f, h*r), Offset(w, h*r), 1.dp.toPx()) }
-                        points.forEachIndexed { i, pt ->
-                            val isToday = i == count - 1
-                            drawCircle(if (isToday) BpscColors.Accent else BpscColors.Primary, if (isToday) 7.dp.toPx() else 4.5.dp.toPx(), pt)
-                            drawCircle(Color.White, if (isToday) 3.5.dp.toPx() else 2.dp.toPx(), pt)
+                }
+                // Empty state (stats API returned no data)
+                data.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("📊", fontSize = 32.sp)
+                            Text("No activity data yet", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text("Start studying to see your progress", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth().padding(start = 28.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    data.forEachIndexed { i, d ->
-                        val isToday = i == data.size - 1
-                        Text(d.day, style = MaterialTheme.typography.labelSmall, color = if (isToday) BpscColors.Primary else BpscColors.TextSecondary, fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Normal, fontSize = 10.sp)
+                // Chart (real API data)
+                else -> {
+                    Row(modifier = Modifier.fillMaxWidth().height(140.dp)) {
+                        Column(modifier = Modifier.width(28.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                            listOf("90", "60", "30", "0").forEach { label ->
+                                Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+                            }
+                        }
+                        val maxVal = 100f
+                        Canvas(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            val w = size.width; val h = size.height; val count = data.size
+                            if (count < 2) return@Canvas
+                            val stepX = w / (count - 1).toFloat()
+                            val points = data.mapIndexed { i, d -> Offset(i * stepX, h - (d.score / maxVal) * h) }
+                            val fillPath = Path().apply { moveTo(points.first().x, h); points.forEach { lineTo(it.x, it.y) }; lineTo(points.last().x, h); close() }
+                            drawPath(fillPath, Brush.verticalGradient(listOf(BpscColors.Primary.copy(0.18f), BpscColors.Primary.copy(0f)), 0f, h))
+                            val linePath = Path()
+                            points.forEachIndexed { i, pt ->
+                                if (i == 0) linePath.moveTo(pt.x, pt.y)
+                                else { val prev = points[i-1]; val cx1 = prev.x + (pt.x - prev.x)*0.5f; val cx2 = pt.x - (pt.x - prev.x)*0.5f; linePath.cubicTo(cx1, prev.y, cx2, pt.y, pt.x, pt.y) }
+                            }
+                            drawPath(linePath, Color(0xFF1565C0), style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+                            listOf(0.25f, 0.5f, 0.75f).forEach { r -> drawLine(Color(0xFFF0F0F0), Offset(0f, h*r), Offset(w, h*r), 1.dp.toPx()) }
+                            points.forEachIndexed { i, pt ->
+                                val isToday = i == count - 1
+                                drawCircle(if (isToday) BpscColors.Accent else BpscColors.Primary, if (isToday) 7.dp.toPx() else 4.5.dp.toPx(), pt)
+                                drawCircle(Color.White, if (isToday) 3.5.dp.toPx() else 2.dp.toPx(), pt)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(modifier = Modifier.fillMaxWidth().padding(start = 28.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        data.forEachIndexed { i, d ->
+                            val isToday = i == data.size - 1
+                            Text(d.day, style = MaterialTheme.typography.labelSmall, color = if (isToday) BpscColors.Primary else BpscColors.TextSecondary, fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Normal, fontSize = 10.sp)
+                        }
                     }
                 }
             }
@@ -618,7 +703,9 @@ private fun WeeklyConsistencyCard(data: List<DayProgress>, streak: Int) {
     }
 }
 
-// ── QUICK ACCESS ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// QUICK ACCESS
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun QuickAccessSection(navController: NavHostController, bookmarkCount: Int) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
@@ -639,19 +726,21 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
         Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SmallQuickCard("Active\nRecall", Icons.Rounded.Psychology, BpscColors.PrimaryLight, BpscColors.Primary, Modifier.weight(1f)) { navController.navigate(Screen.ActiveRecall.route) }
-            SmallQuickCard("Mock\nTests", Icons.Rounded.Assignment, Color(0xFFFFF4EC), BpscColors.Accent, Modifier.weight(1f)) { navController.navigate(Screen.MockTests.route) }
+            SmallQuickCard("Mock\nTests",  Icons.Rounded.Assignment, Color(0xFFFFF4EC), BpscColors.Accent, Modifier.weight(1f)) { navController.navigate(Screen.MockTests.route) }
             SmallQuickCard("Group\nStudy", Icons.Rounded.Groups, Color(0xFFE8FDF4), BpscColors.Success, Modifier.weight(1f)) { navController.navigate(Screen.ReadingRooms.route) }
         }
         Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SmallQuickCard("Job\nAlerts", Icons.Rounded.Work, Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
-            SmallQuickCard("Downloads", Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
-            SmallQuickCard("Premium", Icons.Rounded.Star, Color(0xFFFFF8E1), BpscColors.CoinGold, Modifier.weight(1f)) { navController.navigate(Screen.Subscription.route) }
+            SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work, Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
+            SmallQuickCard("Downloads",   Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
+            SmallQuickCard("Premium",     Icons.Rounded.Star, Color(0xFFFFF8E1), BpscColors.CoinGold, Modifier.weight(1f)) { navController.navigate(Screen.Subscription.route) }
         }
     }
 }
 
-// ── RECOMMENDED COURSES — always shown ───────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// RECOMMENDED COURSES — always shows (skeleton / empty / list)
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun RecommendedSection(
     courses: List<CourseDto>,
@@ -665,26 +754,18 @@ private fun RecommendedSection(
                 Text("See all", color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
         }
-
-        if (isLoading && courses.isEmpty()) {
-            SectionSkeleton()
-            return@Column
-        }
-
-        if (courses.isEmpty()) {
-            Box(
-                modifier         = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight).padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No courses available right now.", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        when {
+            isLoading && courses.isEmpty() -> {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(3) { Box(modifier = Modifier.width(168.dp).height(170.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFFE0E0E0))) }
+                }
             }
-            return@Column
-        }
-
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(courses, key = { it.id }) { course ->
-                CourseCard(course = course, onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) })
+            courses.isEmpty() -> EmptyState("📚", "No courses available right now.", Modifier.padding(horizontal = 16.dp))
+            else -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(courses, key = { it.id }) { course ->
+                    // Course detail navigation unchanged — DO NOT MODIFY
+                    CourseCard(course = course, onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) })
+                }
             }
         }
     }
@@ -718,15 +799,19 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
     }
 }
 
-// ── SCHEDULE (static placeholder until Live Classes module) ───────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULE  (placeholder until Live Classes API — intentional, noted clearly)
+// ─────────────────────────────────────────────────────────────────────────────
 data class ScheduleItem(val title: String, val time: String, val icon: ImageVector, val isLive: Boolean = false, val color: Color)
+data class Achievement(val emoji: String, val label: String, val color: Color, val earned: Boolean)
 
 @Composable
 private fun MyScheduleSection(navController: NavHostController) {
+    // TODO: replace with Live Classes API when available
     val items = listOf(
-        ScheduleItem("LIVE Class: General Science", "Today at 5:00 PM",      Icons.Rounded.PlayCircle, true, Color(0xFFE74C3C)),
+        ScheduleItem("LIVE Class: General Science", "Today at 5:00 PM",      Icons.Rounded.PlayCircle, true,  Color(0xFFE74C3C)),
         ScheduleItem("Mock Test: BPSC Prelims",     "Tomorrow at 10:00 AM",  Icons.Rounded.Assignment, false, BpscColors.Accent),
-        ScheduleItem("Community & Doubt Solving",   "Join 15,000+ students", Icons.Rounded.Forum, false, BpscColors.Primary),
+        ScheduleItem("Community & Doubt Solving",   "Join 15,000+ students", Icons.Rounded.Forum,      false, BpscColors.Primary),
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         SectionHeader("My Schedule", "Upcoming events")
@@ -752,11 +837,9 @@ private fun MyScheduleSection(navController: NavHostController) {
     }
 }
 
-// ── ACHIEVEMENTS (static — data from user.achievements when available) ────────
-data class Achievement(val emoji: String, val label: String, val color: Color, val earned: Boolean)
-
 @Composable
 private fun AchievementsSection() {
+    // TODO: replace with user.achievements from profile API when available
     val achievements = listOf(Achievement("🔥", "7 Day\nStreak", BpscColors.Accent, true), Achievement("🏆", "Top 10\nRank", BpscColors.CoinGold, true), Achievement("📚", "100\nTopics", BpscColors.Primary, true), Achievement("⚡", "Speed\nStar", Color(0xFF9B59B6), false), Achievement("🎯", "Perfect\nScore", BpscColors.Success, false))
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         SectionHeader("Achievements"); Spacer(Modifier.height(14.dp))
@@ -774,7 +857,9 @@ private fun AchievementsSection() {
     }
 }
 
-// ── CREATE TARGET SHEET ───────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CREATE TARGET SHEET
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun CreateTargetSheet(onDismiss: () -> Unit) {
     var inputText by remember { mutableStateOf("") }
@@ -814,7 +899,9 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
     }
 }
 
-// ── DRAWER ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// DRAWER
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHostController) {
     val menuItems = listOf(
@@ -830,7 +917,6 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
         Triple(Icons.Rounded.Settings,      "Settings",              Screen.Settings.route),
     )
     val scrollState = rememberScrollState()
-
     ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp), drawerContainerColor = Color.White, windowInsets = WindowInsets(0,0,0,0), modifier = Modifier.width(300.dp).fillMaxHeight()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF051D56), Color(0xFF0D47A1), Color(0xFF1565C0)), Offset(0f,0f), Offset(300f,200f))).statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -889,10 +975,23 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
     }
 }
 
-// ── SHARED HELPERS ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SectionHeader(title: String, subtitle: String? = null) {
-    Column { Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold); if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary) }
+    Column {
+        Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+    }
+}
+
+@Composable
+private fun EmptyState(emoji: String, message: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight).padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(emoji, fontSize = 20.sp)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+    }
 }
 
 @Composable

@@ -5,6 +5,7 @@ import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.BannersApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
+import com.example.bpscnotes.data.remote.api.DailyTargetsApiService
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
 import dagger.Module
@@ -71,4 +72,7 @@ object NetworkModule {
         retrofit.create(UserStatsApiService::class.java)
 
 
+    @Provides @Singleton
+    fun provideDailyTargetsApi(r: Retrofit): DailyTargetsApiService =
+        r.create(DailyTargetsApiService::class.java)
 }
