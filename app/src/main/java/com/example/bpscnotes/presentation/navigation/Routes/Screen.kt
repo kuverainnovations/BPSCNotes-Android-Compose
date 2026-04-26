@@ -27,6 +27,19 @@ sealed class Screen(val route: String) {
     object DailyQuiz      : Screen("daily_quiz/{date}") {
         fun createRoute(date: String) = "daily_quiz/$date"
     }
+
+    // Quiz module (NEW — PRODUCTION FLOW)
+
+    object QuizList : Screen("quiz_list")
+
+    object QuizDetail : Screen("quiz_detail/{quizId}") {
+        fun createRoute(quizId: String) = "quiz_detail/$quizId"
+    }
+
+    object QuizPlayer : Screen("quiz_player/{quizId}") {
+        fun createRoute(quizId: String) = "quiz_player/$quizId"
+    }
+
     object TopicQuiz      : Screen("topic_quiz/{subject}/{topicTitle}") {
         fun createRoute(subject: String, topicTitle: String) =
             "topic_quiz/${subject.encodeUrl()}/${topicTitle.encodeUrl()}"

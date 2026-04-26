@@ -1,7 +1,6 @@
 package com.example.bpscnotes.presentation.mocktests
 
 import androidx.compose.animation.core.*
-import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -18,8 +17,10 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import kotlinx.coroutines.*
 
 enum class MockTestType { Full, SubjectWise, PreviousYear, Custom }
@@ -125,8 +126,52 @@ val mockLeaderboard = listOf(
 
 enum class MockTestState { Lobby, Instructions, Active, Analysis, Leaderboard }
 
+private fun QuizPreviewDto.toMockTest(): MockTest = MockTest(
+    id = id,
+    title = title,
+    subtitle = "${totalQuestions} Questions · ${durationMins} min · ${difficulty}",
+    type = when (type) {
+        "mock" -> MockTestType.Full
+        "topic" -> MockTestType.SubjectWise
+        "previous_year" -> MockTestType.PreviousYear
+        else -> MockTestType.Full
+    },
+    totalQuestions = totalQuestions,
+    durationMinutes = durationMins,
+    subject = subject.takeIf { it.isNotBlank() },
+    isPaid = false,
+    totalAttempts = attemptCount,
+    averageScore = avgScore.toFloat() ?: 0f,
+    isFeatured = false
+)
+
 @Composable
-fun MockTestsScreen(navController: NavHostController) {
+fun MockTestsScreen(navController: NavHostController,
+                    viewModel: MockTestsViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    val allTests = remember(state.allTests) {
+        state.allTests.map { it.toMockTest() }
+    }
+
+    if (state.isLoading && allTests.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (state.error != null && allTests.isEmpty()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Error: ${state.error}")
+            Button(onClick = { viewModel.retry() }) {
+                Text("Retry")
+            }
+        }
+        return
+    }
+
+
     var screenState     by remember { mutableStateOf(MockTestState.Lobby) }
     var selectedTest    by remember { mutableStateOf<MockTest?>(null) }
     var showCustomSheet by remember { mutableStateOf(false) }
@@ -137,6 +182,9 @@ fun MockTestsScreen(navController: NavHostController) {
     val reviewMarked  = remember { mutableStateListOf<String>() }
     var finalScore    by remember { mutableStateOf(0f) }
 
+
+
+
     when (screenState) {
         MockTestState.Lobby -> MockTestLobbyScreen(
             navController   = navController,
@@ -145,7 +193,8 @@ fun MockTestsScreen(navController: NavHostController) {
                 userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
                 screenState  = MockTestState.Instructions
             },
-            onCustomTest    = { showCustomSheet = true }
+            onCustomTest    = { showCustomSheet = true },
+            viewModel=viewModel
         )
         MockTestState.Instructions -> selectedTest?.let { test ->
             TestInstructionsScreen(
@@ -206,7 +255,14 @@ private fun MockTestLobbyScreen(
     navController: NavHostController,
     onStartTest: (MockTest) -> Unit,
     onCustomTest: () -> Unit,
+    viewModel: MockTestsViewModel,
 ) {
+
+    val state by viewModel.uiState.collectAsState()
+
+    val allTests = remember(state.allTests) {
+        state.allTests.map { it.toMockTest() }
+    }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
     val tabs = listOf("All", "Full Mock", "Mini Tests", "Prev. Year", "Custom")
 
@@ -268,13 +324,13 @@ private fun MockTestLobbyScreen(
                             .padding(horizontal = 4.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        LobbyChip("📝", "${mockTests.size}", "Tests")
+                        LobbyChip("📝", "${allTests.size}", "Tests")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        LobbyChip("✅", "3", "Attempted")
+                        LobbyChip("✅", state.userQuizzesAttempted.toString(), "Attempted")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        LobbyChip("🏆", "#3", "Best Rank")
+                        LobbyChip("🏆", "#${state.userRank ?: "--"}", "Best Rank")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        LobbyChip("📊", "72%", "Best Score")
+                        LobbyChip("📊", "${state.userAccuracy.toInt()}%", "Best Score")
                     }
 
                     Spacer(Modifier.height(12.dp))
@@ -306,7 +362,11 @@ private fun MockTestLobbyScreen(
                 }
             }
 
-            val filtered = if (selectedType == null) mockTests else mockTests.filter { it.type == selectedType }
+            val filtered = if (selectedType == null) {
+                allTests
+            } else {
+                allTests.filter { it.type == selectedType }
+            }
 
             LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),

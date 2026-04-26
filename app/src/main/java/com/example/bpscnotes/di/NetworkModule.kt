@@ -3,10 +3,14 @@ package com.example.bpscnotes.di
 import com.example.bpscnotes.core.network.AuthInterceptor
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.BannersApiService
+import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import com.example.bpscnotes.data.remote.api.DailyTargetsApiService
+import com.example.bpscnotes.data.remote.api.JobsApiService
+import com.example.bpscnotes.data.remote.api.LiveClassesApiService
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
+import com.example.bpscnotes.data.remote.api.StudyRoomsApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
 import dagger.Module
 import dagger.Provides
@@ -75,4 +79,10 @@ object NetworkModule {
     @Provides @Singleton
     fun provideDailyTargetsApi(r: Retrofit): DailyTargetsApiService =
         r.create(DailyTargetsApiService::class.java)
+
+    @Provides @Singleton fun provideLiveClassesApi(r: Retrofit): LiveClassesApiService = r.create(LiveClassesApiService::class.java)
+    @Provides @Singleton fun provideJobsApi(r: Retrofit): JobsApiService = r.create(JobsApiService::class.java)
+    @Provides @Singleton fun provideStudyRoomsApi(r: Retrofit): StudyRoomsApiService = r.create(StudyRoomsApiService::class.java)
+    @Provides @Singleton fun provideCoinsApi(r: Retrofit): CoinsApiService = r.create(CoinsApiService::class.java)
+
 }

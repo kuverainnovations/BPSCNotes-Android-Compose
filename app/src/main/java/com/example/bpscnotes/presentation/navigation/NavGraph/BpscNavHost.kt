@@ -1,6 +1,8 @@
 package com.example.bpscnotes.presentation.navigation.NavGraph
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
@@ -12,6 +14,7 @@ import com.example.bpscnotes.presentation.auth.splash.SplashScreen
 import com.example.bpscnotes.presentation.course.CourseDetailScreen
 import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
 import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
+import com.example.bpscnotes.presentation.dashboard.DashboardScreen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
 import com.example.bpscnotes.presentation.jobvacancies.JobVacanciesScreen
 import com.example.bpscnotes.presentation.mocktests.MockTestsScreen
@@ -24,6 +27,10 @@ import com.example.bpscnotes.presentation.placeholders.NotesReaderScreen
 import com.example.bpscnotes.presentation.placeholders.SubscriptionScreen
 import com.example.bpscnotes.presentation.profile.ProfileScreen
 import com.example.bpscnotes.presentation.quiz.DailyQuizScreen
+import com.example.bpscnotes.presentation.quiz.QuizDetailScreen
+import com.example.bpscnotes.presentation.quiz.QuizListScreen
+import com.example.bpscnotes.presentation.quiz.QuizPlayScreen
+import com.example.bpscnotes.presentation.quiz.QuizViewModel
 import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.settings.SettingsScreen
@@ -39,6 +46,16 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.Splash.route)     { SplashScreen(navController) }
         composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
         composable(Screen.Login.route)      { LoginScreen(navController) }
+
+
+            composable("splash") {
+                SplashScreen(navController)
+            }
+
+            composable("dashboard") {   // ✅ ADD THIS
+                DashboardScreen(navController)
+            }
+
 
         composable(
             Screen.Otp.route,
@@ -72,8 +89,20 @@ fun BpscNavHost(navController: NavHostController) {
         composable(
             Screen.DailyQuiz.route,
             arguments = listOf(navArgument("date") { type = NavType.StringType })
-        ) { DailyQuizScreen(navController, it.arguments?.getString("date") ?: "") }
+        ) { backStackEntry ->
 
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Main.route)
+            }
+
+            val viewModel: QuizViewModel = hiltViewModel(parentEntry)
+
+            DailyQuizScreen(
+                navController = navController,
+                date = backStackEntry.arguments?.getString("date") ?: "",
+                viewModel = viewModel
+            )
+        }
         /*composable(
             Screen.TopicQuiz.route,
             arguments = listOf(
@@ -87,6 +116,37 @@ fun BpscNavHost(navController: NavHostController) {
                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
             )
         }*/
+
+        // ✅ Quiz List Screen
+        composable(Screen.QuizList.route) {
+            QuizListScreen(navController)
+        }
+
+// ✅ Quiz Detail Screen
+        composable(
+            route = Screen.QuizDetail.route,
+            arguments = listOf(navArgument("quizId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+
+            QuizDetailScreen(
+                quizId = quizId,
+                navController = navController
+            )
+        }
+
+// ✅ Quiz Player Screen
+        composable(
+            route = Screen.QuizPlayer.route,
+            arguments = listOf(navArgument("quizId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+
+            QuizPlayScreen(
+                quizId = quizId,
+                navController = navController
+            )
+        }
 
         composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController) }
         composable(Screen.MockTests.route)     { MockTestsScreen(navController) }

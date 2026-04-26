@@ -93,8 +93,13 @@ fun CourseDetailScreen(
             val course   = state.course!!
             val chapters = state.chapters
 
-            val totalLessons    = chapters.sumOf { it.lessons.size }
-            val completedLessons = chapters.sumOf { ch -> ch.lessons.count { it.isCompleted } }
+            LaunchedEffect(chapters) {
+                if (expandedChapter == null && chapters.isNotEmpty()) {
+                    expandedChapter = chapters.first().id
+                }
+            }
+            val totalLessons    = chapters.sumOf { it.lessons?.size?:0 }
+            val completedLessons = chapters.sumOf { ch -> ch.lessons?.count { it.isCompleted == true }?:0 }
             val progress = if (totalLessons > 0) completedLessons.toFloat() / totalLessons else 0f
             val animProg by animateFloatAsState(progress, tween(1000), label = "prog")
 
@@ -139,7 +144,7 @@ fun CourseDetailScreen(
                             )
                             Spacer(Modifier.height(10.dp))
 
-                            Text(course.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+                                // Text(course.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
                             Spacer(Modifier.height(6.dp))
 
                             course.instructor?.let {
@@ -153,13 +158,13 @@ fun CourseDetailScreen(
                             // Stats strip
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                                 CourseStatChip("📚", "${totalLessons}", "Lessons")
-                                CourseStatChip("⏱️", "${course.totalHours.toInt()}h", "Total")
+                                CourseStatChip("⏱️", "${course.totalHours}h", "Total")
                                 CourseStatChip("⭐", "${course.rating}", "Rating")
                                 CourseStatChip("👥", "${course.enrollmentCount}", "Enrolled")
                             }
 
                             // Progress bar (if enrolled)
-                            if (course.isEnrolled && totalLessons > 0) {
+                            if (course.enrollment?.status=="active" && totalLessons > 0) {
                                 Spacer(Modifier.height(14.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
@@ -200,31 +205,32 @@ fun CourseDetailScreen(
                                     Text("FREE", style = MaterialTheme.typography.headlineMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
                                 }
                                 Text(
-                                    if (course.isEnrolled) "You're enrolled ✓" else if (course.isPaid) "One-time purchase" else "Enroll for free",
+                                    if (course.enrollment?.status=="active") "You're enrolled ✓" else if (course.isPaid) "One-time purchase" else "Enroll for free",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = BpscColors.TextSecondary
                                 )
                             }
                             Button(
                                 onClick  = {
-                                    if (!course.isEnrolled) viewModel.enroll(courseId)
+                                    if (course.enrollment?.status!="active") viewModel.enroll(courseId)
                                 },
                                 enabled  = !state.isEnrolling,
                                 shape    = RoundedCornerShape(14.dp),
                                 colors   = ButtonDefaults.buttonColors(
-                                    containerColor = if (course.isEnrolled) BpscColors.Success else BpscColors.Primary
+                                    containerColor = if (course.enrollment?.status=="active") BpscColors.Success else BpscColors.Primary
                                 ),
                                 modifier = Modifier.height(48.dp)
                             ) {
                                 if (state.isEnrolling) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                else Text(if (course.isEnrolled) "Continue" else "Enroll Now", fontWeight = FontWeight.Bold)
+                                else Text(if (course.enrollment?.status=="active") "Continue" else "Enroll Now", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
 
                 // ── Chapters ───────────────────────────────────
-                if (chapters.isEmpty() && !state.isLoading) {
+                println(chapters+"hgjhj")
+                if (chapters.isEmpty()) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                             Text("No curriculum available yet.", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
@@ -240,8 +246,10 @@ fun CourseDetailScreen(
 
                     items(chapters, key = { it.id }) { chapter ->
                         val isExpanded = expandedChapter == chapter.id
-                        val doneLessons = chapter.lessons.count { it.isCompleted }
+                        val doneLessons = chapter.lessons?.count { it.isCompleted == true }
+                        val totalLessons = chapter.lessons?.size ?: 0
 
+                        Text("$doneLessons/$totalLessons completed")
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                             shape    = RoundedCornerShape(16.dp),
@@ -261,11 +269,11 @@ fun CourseDetailScreen(
                                         modifier         = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(BpscColors.PrimaryLight),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("${chapter.sortOrder + 1}", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                                        Text("${chapter.sortOrder}", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                                     }
                                     Column(Modifier.weight(1f)) {
                                         Text(chapter.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text("$doneLessons/${chapter.lessons.size} completed", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                                        Text("$doneLessons/${totalLessons} completed", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
                                     }
                                     Icon(if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = BpscColors.TextHint)
                                 }
@@ -273,7 +281,7 @@ fun CourseDetailScreen(
                                 // Lessons list
                                 if (isExpanded) {
                                     HorizontalDivider(color = BpscColors.Divider, modifier = Modifier.padding(horizontal = 16.dp))
-                                    chapter.lessons.sortedBy { it.sortOrder }.forEach { lesson ->
+                                    chapter.lessons?.forEach { lesson ->
                                         LessonRow(lesson = lesson)
                                     }
                                     Spacer(Modifier.height(4.dp))
@@ -305,19 +313,19 @@ private fun LessonRow(lesson: LessonDto) {
     ) {
         Box(
             modifier         = Modifier.size(32.dp).clip(CircleShape)
-                .background(if (lesson.isCompleted) BpscColors.Success.copy(0.1f) else BpscColors.Surface),
+                .background(if (lesson.isCompleted == true) BpscColors.Success.copy(0.1f) else BpscColors.Surface),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 when {
-                    lesson.isCompleted   -> Icons.Rounded.CheckCircle
+                    lesson.isCompleted == true -> Icons.Rounded.CheckCircle
                     lesson.isLocked      -> Icons.Rounded.Lock
                     lesson.type == "video" -> Icons.Rounded.PlayCircle
                     else                 -> Icons.Rounded.Article
                 },
                 contentDescription = null,
                 tint   = when {
-                    lesson.isCompleted -> BpscColors.Success
+                    lesson.isCompleted == true -> BpscColors.Success
                     lesson.isLocked    -> BpscColors.TextHint
                     else               -> BpscColors.Primary
                 },
@@ -352,7 +360,7 @@ data class ChapterDto(
     val id: String,
     val title: String,
     @SerializedName("sort_order") val sortOrder: Int = 0,
-    val lessons: List<LessonDto> = emptyList()
+    val lessons: List<LessonDto>? = null
 )
 
 data class LessonDto(
@@ -362,14 +370,19 @@ data class LessonDto(
     val type: String = "video",
     @SerializedName("is_free_preview") val isFreePreview: Boolean = false,
     @SerializedName("is_locked") val isLocked: Boolean = true,
-    @SerializedName("is_completed") val isCompleted: Boolean = false,
+    @SerializedName("is_completed") val isCompleted: Boolean? = null,
     @SerializedName("sort_order") val sortOrder: Int = 0
 )
 
 data class CourseDetailResponse(
+    @SerializedName("course")
     val course: CourseDto,
-    val chapters: List<ChapterDto> = emptyList()
+
+    @SerializedName("chapters")
+    val chapters: List<ChapterDto>? = null
 )
+
+
 
 // ── ViewModel ─────────────────────────────────────────────────
 

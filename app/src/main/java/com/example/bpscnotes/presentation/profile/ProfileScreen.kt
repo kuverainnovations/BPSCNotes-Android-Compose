@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -64,6 +65,14 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.mock.MockData
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import com.example.bpscnotes.presentation.profile.ProfileViewModel
+import com.example.bpscnotes.presentation.profile.DayStatus
+import com.example.bpscnotes.presentation.profile.WeekDayUi
+import com.example.bpscnotes.presentation.profile.SubjectProgress
+import com.example.bpscnotes.presentation.profile.BadgeItem
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -93,56 +102,80 @@ data class WeekDay(val label: String, val status: DayStatus)
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-fun ProfileScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+fun ProfileScreen(
+    navController: NavHostController,
+    viewModel: ProfileViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
 
-    // Sample data — replace with ViewModel state
-    val subjects = listOf(
-        SubjectProgress("Polity", "⚖️", 0.82f, Color(0xFF1565C0), Color(0xFFE3F2FD)),
-        SubjectProgress("History", "🏛️", 0.65f, Color(0xFFFF8F00), Color(0xFFFFF3E0)),
-        SubjectProgress("Geography", "🗺️", 0.48f, Color(0xFF2E7D32), Color(0xFFE8F5E9)),
-        SubjectProgress("Economy", "📊", 0.35f, Color(0xFF7B1FA2), Color(0xFFF3E5F5)),
-        SubjectProgress("Bihar GK", "🏔️", 0.71f, Color(0xFF00838F), Color(0xFFE0F7FA)),
-    )
-    val badges = listOf(
-        BadgeItem("🔥", "7-Day Streak", true, Color(0xFFFFF8E1)),
-        BadgeItem("⚡", "Speed Reader", true, Color(0xFFE3F2FD)),
-        BadgeItem("🎯", "Sharpshooter", true, Color(0xFFE8F5E9)),
-        BadgeItem("👑", "Top Ranker", false, Color(0xFFF3E5F5)),
-        BadgeItem("📚", "100 Topics", false, Color(0xFFFFF3E0)),
-    )
-    val weekDays = listOf(
-        WeekDay("Mon", DayStatus.DONE),
-        WeekDay("Tue", DayStatus.DONE),
-        WeekDay("Wed", DayStatus.DONE),
-        WeekDay("Thu", DayStatus.DONE),
-        WeekDay("Fri", DayStatus.DONE),
-        WeekDay("Sat", DayStatus.DONE),
-        WeekDay("Sun", DayStatus.TODAY),
-    )
+    val user     = state.user
+    val subjects = state.subjects
+    val badges   = state.badges
+    val weekDays = state.weekDays
 
+    // 🔄 Convert colorHex → Color
+    val uiSubjects = subjects.map {
+        com.example.bpscnotes.presentation.profile.SubjectProgress(
+            name = it.name,
+            emoji = it.emoji,
+            progress = it.progress,
+            color = it.color,
+            bgColor = it.bgColor
+        )
+    }
+
+    val uiBadges = badges.map {
+        BadgeItem(
+            emoji = it.emoji,
+            name = it.name,
+            earned = it.earned,
+            bgColor = it.bgColor
+        )
+    }
+
+    val uiWeekDays = weekDays.map {
+        WeekDay(it.label, it.status)
+    }
+
+    // ✅ Loading
+    if (state.isLoading && user == null) {
+        Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = BpscColors.Primary)
+        }
+        return
+    }
+
+    // ❌ Error
+    state.error?.let { err ->
+        if (user == null) {
+            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("⚠️", fontSize = 40.sp)
+                    Text(err)
+                }
+            }
+            return
+        }
+    }
+
+    // ✅ MAIN UI
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BpscColors.Surface)
+        modifier = Modifier.fillMaxSize().background(BpscColors.Surface)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         ) {
-            // ── Header (blue gradient hero)
+
             ProfileHeader(
-                name = user.name,
-                email = user.email ?: user.mobile,
-                coins = user.coins,
-                rank = 3,
+                name = user?.name ?: "",
+                email = user?.email ?: user?.mobile,
+                coins = user?.coins ?: 0,
+                rank = user?.rank ?: 0,
                 rankTitle = "Gold Achiever",
-                onEditClick = { navController.navigate(Screen.Settings.route) },
-                onShareClick = { /* share profile */ }
+                onEditClick = { navController.navigate("settings") },
+                onShareClick = {}
             )
 
-            // ── Content lifts over header with rounded top
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,18 +185,36 @@ fun ProfileScreen(navController: NavHostController) {
                     .padding(top = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 ProfileStatsRow(
-                    topicsCompleted = 2,
-                    topicsTotal = 5,
-                    rank = 3,
-                    studyHours = "6.8h",
-                    accuracy = 87
+                    topicsCompleted = 0,
+                    topicsTotal = 0,
+                    rank = user?.rank ?: 0,
+                    studyHours = "${(user?.totalStudyMinutes ?: 0) / 60}h",
+                    accuracy = user?.accuracy?.toDoubleOrNull()?.toInt() ?: 0
                 )
-                RankProgressCard(rank = 3, rankTitle = "Gold Achiever", points = 2340, nextPoints = 3000)
-                WeeklyStreakCard(weekDays = weekDays, streakCount = 7)
-                SubjectProgressCard(subjects = subjects, navController = navController)
-                BadgesCard(badges = badges)
-                ProfileSettingsRow(navController = navController)
+
+                RankProgressCard(
+                    rank = user?.rank ?: 0,
+                    rankTitle = "Gold Achiever",
+                    points = user?.coins ?: 0,
+                    nextPoints = 3000
+                )
+
+                WeeklyStreakCard(
+                    weekDays = uiWeekDays,
+                    streakCount = user?.streak ?: 0
+                )
+
+                SubjectProgressCard(
+                    subjects = uiSubjects,
+                    navController = navController
+                )
+
+                BadgesCard(badges = uiBadges)
+
+                ProfileSettingsRow(navController)
+
                 Spacer(Modifier.height(60.dp))
             }
         }
@@ -416,7 +467,7 @@ private fun ProfileStatsRow(
     topicsTotal: Int,
     rank: Int,
     studyHours: String,
-    accuracy: Int
+    accuracy: Int?
 ) {
     Row(
         modifier = Modifier

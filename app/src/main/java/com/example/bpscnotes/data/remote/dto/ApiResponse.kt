@@ -1,5 +1,7 @@
 package com.example.bpscnotes.data.remote.dto
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * Generic API response wrapper.
  *
@@ -14,8 +16,14 @@ package com.example.bpscnotes.data.remote.dto
  *   suspend fun getCourses(): ApiResponse<CoursesResponseData>
  *   val courses = response.data?.courses ?: emptyList()
  */
+
 data class ApiResponse<T>(
-    val success: Boolean = false,
-    val message: String  = "",
-    val data: T?         = null
+    @SerializedName("success")
+    val success: Boolean,
+
+    @SerializedName("message")
+    val message: String,
+
+    @SerializedName("data")
+    val data: T?
 )

@@ -59,6 +59,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,6 +74,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -95,6 +97,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import kotlinx.coroutines.delay
@@ -287,7 +290,10 @@ val mockRooms = listOf(
 // MAIN — STATE MACHINE
 // ─────────────────────────────────────────────────────────────
 @Composable
-fun ReadingRoomsScreen(navController: NavHostController) {
+fun ReadingRoomsScreen(
+    navController: NavHostController,
+    viewModel: ReadingRoomsViewModel = hiltViewModel()
+) {
     var activeRoom by remember { mutableStateOf<StudyRoom?>(null) }
 
     if (activeRoom != null) {
@@ -298,6 +304,7 @@ fun ReadingRoomsScreen(navController: NavHostController) {
     } else {
         RoomLobbyScreen(
             navController = navController,
+            viewModel = viewModel,
             onJoinRoom = { activeRoom = it }
         )
     }
@@ -309,24 +316,63 @@ fun ReadingRoomsScreen(navController: NavHostController) {
 @Composable
 private fun RoomLobbyScreen(
     navController: NavHostController,
+    viewModel: ReadingRoomsViewModel,
     onJoinRoom: (StudyRoom) -> Unit,
 ) {
+
+    val vmState by viewModel.uiState.collectAsState()
     var selectedSubject by remember { mutableStateOf(RoomSubject.All) }
     var searchQuery by remember { mutableStateOf("") }
     var showCreateSheet by remember { mutableStateOf(false) }
     var showJoinSheet by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val filtered = mockRooms.filter { room ->
+    val allRooms = vmState.rooms.map { dto ->
+        StudyRoom(
+            id = dto.id,
+            name = dto.name,
+            subject = RoomSubject.values().firstOrNull {
+                it.name.equals(dto.subject, true)
+            } ?: RoomSubject.All,
+            type = if (dto.isPrivate) RoomType.Private else RoomType.Public,
+            activeUsers = dto.currentMembers,
+            maxUsers = dto.maxMembers,
+            todayFocus = dto.todayFocus,
+            streak = 0,
+            adminName = dto.hostName,
+            isFeatured = dto.isFeatured,
+            tags = dto.tags ?: emptyList(),
+            members = emptyList(),
+            messages = emptyList(),
+            pomodoroMinutes = dto.durationMins ?: 25
+        )
+    }
+
+    val filtered = allRooms.filter { room ->
         val matchesSub = selectedSubject == RoomSubject.All || room.subject == selectedSubject
         val matchesSearch = searchQuery.isEmpty() ||
-                room.name.contains(searchQuery, ignoreCase = true) ||
-                room.todayFocus.contains(searchQuery, ignoreCase = true) ||
-                room.tags.any { it.contains(searchQuery, ignoreCase = true) }
+                room.name.contains(searchQuery, true) ||
+                room.todayFocus.contains(searchQuery, true) ||
+                room.tags.any { it.contains(searchQuery, true) }
         matchesSub && matchesSearch
     }
+
     val featured = filtered.filter { it.isFeatured }
     val others = filtered.filter { !it.isFeatured }
+
+    if (vmState.isLoading && allRooms.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (vmState.error != null && allRooms.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(vmState.error!!)
+        }
+        return
+    }
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -583,7 +629,9 @@ private fun RoomLobbyScreen(
                             userScrollEnabled = false
                         ) {
                             items(featured) { room ->
-                                FeaturedRoomCard(room = room, onJoin = { onJoinRoom(room) })
+                                FeaturedRoomCard(room = room, onJoin = { viewModel.joinRoom(room.id) {
+                                    onJoinRoom(room)
+                                } })
                             }
                         }
                     }
@@ -611,7 +659,9 @@ private fun RoomLobbyScreen(
                     }
                 }
                 items(others.ifEmpty { filtered }) { room ->
-                    RoomListCard(room = room, onJoin = { onJoinRoom(room) })
+                    RoomListCard(room = room, onJoin = { viewModel.joinRoom(room.id) {
+                        onJoinRoom(room)
+                    } })
                 }
             }
         }

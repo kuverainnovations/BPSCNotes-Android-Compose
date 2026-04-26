@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.dashboard
 
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,11 +40,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.BannerDto
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.data.remote.api.DailyTargetDto
+import com.example.bpscnotes.data.remote.api.LiveClassDto
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.UserStatsData
 import com.example.bpscnotes.data.remote.dto.UserDto
@@ -73,10 +79,21 @@ fun DashboardScreen(
     // Pull-to-refresh support
     val pullRefreshState = rememberPullToRefreshState()
 
+    /*LaunchedEffect(Unit) {
+        dashboardViewModel.refresh()
+    }*/
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            dashboardViewModel.refresh()
+        }
+    }
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = state.isLoading,
-        onRefresh = { dashboardViewModel.refresh() }
+        onRefresh = { /*dashboardViewModel.refresh()*/ }
     ) {
 
 
@@ -160,15 +177,25 @@ fun DashboardScreen(
                         navController = navController
                     )
 
-                    MyScheduleSection(navController = navController)
-                    AchievementsSection()
+                    MyScheduleSection(
+                        liveClasses = state.liveClasses,
+                        navController = navController
+                    )
+
+                    AchievementsSection(
+                        achievements = state.achievements
+                    )
                     Spacer(modifier = Modifier.height(32.dp))
                 }
 
 
 
                 if (showTargetSheet) {
-                    CreateTargetSheet(onDismiss = { showTargetSheet = false })
+                    if (state.dailyTargets.size >= 10) {
+                        Toast.makeText(LocalContext.current, "Max 10 targets allowed", Toast.LENGTH_SHORT).show()
+                        return@Box
+                    }
+                    CreateTargetSheet(viewModel = dashboardViewModel, onDismiss = { showTargetSheet = false })
                 }
             }
         }
@@ -298,11 +325,11 @@ private fun navigateBanner(banner: BannerDto, nav: NavHostController) {
         link != null && link.startsWith("/course/") ->
             nav.navigate(Screen.CourseDetail.createRoute(link.removePrefix("/course/")))
         link != null && link.startsWith("/quiz/") ->
-            nav.navigate(Screen.DailyQuiz.createRoute(link.removePrefix("/quiz/")))
+            nav.navigate(Screen.QuizDetail.createRoute(link.removePrefix("/quiz/")))
         link != null && link.startsWith("/current-affairs") ->
             nav.navigate(Screen.CurrentAffairs.route)
         banner.type == "course"       -> nav.navigate(Screen.MyLearning.route)
-        banner.type == "quiz"         -> nav.navigate(Screen.MockTests.route)
+        banner.type == "quiz"         -> nav.navigate(Screen.QuizList.route)
         banner.type == "subscription" -> nav.navigate(Screen.Subscription.route)
         banner.type == "job"          -> nav.navigate(Screen.JobVacancies.route)
         else                          -> nav.navigate(Screen.MyLearning.route)
@@ -325,7 +352,8 @@ private fun DailyQuizSection(
             verticalAlignment     = Alignment.CenterVertically
         ) {
             SectionHeader("Today's Quizzes")
-            TextButton(onClick = { navController.navigate(Screen.MockTests.route) }) {
+            TextButton(onClick = {
+                navController.navigate(Screen.QuizList.route)}) {
                 Text("See all", color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
         }
@@ -350,7 +378,7 @@ private fun DailyQuizSection(
                     items(quizzes, key = { it.id }) { quiz ->
                         Card(
                             modifier  = Modifier.width(190.dp).clickable {
-                                navController.navigate(Screen.DailyQuiz.createRoute(quiz.id))
+                                navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
                             },
                             shape     = RoundedCornerShape(18.dp),
                             colors    = CardDefaults.cardColors(containerColor = Color.White),
@@ -507,7 +535,15 @@ private fun DashboardHeader(
             // ── Stats strip — ALL values from API ─────────────────────────
             val rankText  = if (rank != null) "#$rank" else "--"
             val hoursText = if (studyMinutes > 0) "${studyMinutes / 60}h" else "--"
-            val accText   = if (accuracy > 0.0) "${accuracy.toInt()}%" else "--"
+            val accuracyValue = stats?.accuracy
+                ?: user?.accuracy?.toDoubleOrNull()
+                ?: 0.0
+
+            val accText = if (accuracyValue > 0.0) {
+                "${accuracyValue.toInt()}%"
+            } else {
+                "--"
+            }
             val topicsText = if (total > 0) "$completed/$total" else "--"
 
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(Brush.verticalGradient(listOf(Color.White.copy(0.16f), Color.White.copy(0.08f)))).border(0.5.dp, Brush.verticalGradient(listOf(Color.White.copy(0.35f), Color.Transparent)), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).padding(horizontal = 4.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -775,7 +811,7 @@ private fun RecommendedSection(
 private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
     val subjectColors = mapOf("Bihar GK" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)))
     val (accent, bg) = subjectColors[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-    val progress = if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
+    val progress = if (course.totalLessons > 0) course.enrollment?.completed_lessons?.toFloat() ?: 0f else 0f
     Card(modifier = Modifier.width(168.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
         Column {
             Box(modifier = Modifier.fillMaxWidth().height(96.dp).background(bg), contentAlignment = Alignment.Center) {
@@ -806,30 +842,46 @@ data class ScheduleItem(val title: String, val time: String, val icon: ImageVect
 data class Achievement(val emoji: String, val label: String, val color: Color, val earned: Boolean)
 
 @Composable
-private fun MyScheduleSection(navController: NavHostController) {
-    // TODO: replace with Live Classes API when available
-    val items = listOf(
-        ScheduleItem("LIVE Class: General Science", "Today at 5:00 PM",      Icons.Rounded.PlayCircle, true,  Color(0xFFE74C3C)),
-        ScheduleItem("Mock Test: BPSC Prelims",     "Tomorrow at 10:00 AM",  Icons.Rounded.Assignment, false, BpscColors.Accent),
-        ScheduleItem("Community & Doubt Solving",   "Join 15,000+ students", Icons.Rounded.Forum,      false, BpscColors.Primary),
-    )
+private fun MyScheduleSection(
+    liveClasses: List<LiveClassDto>,
+    navController: NavHostController
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         SectionHeader("My Schedule", "Upcoming events")
         Spacer(Modifier.height(12.dp))
-        items.forEach { item ->
-            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.width(4.dp).height(72.dp).background(item.color, RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp)))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(item.color.copy(0.1f)), contentAlignment = Alignment.Center) { Icon(item.icon, null, tint = item.color, modifier = Modifier.size(22.dp)) }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(item.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(item.time, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                        }
-                        if (item.isLive) Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFE74C3C)).padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
-                            Text("LIVE", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        }
+
+        if (liveClasses.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BpscColors.PrimaryLight)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No upcoming classes scheduled",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextSecondary
+                )
+            }
+            return
+        }
+
+        liveClasses.forEach { liveClass ->
+            val isLive = liveClass.isLive
+
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Row(modifier = Modifier.padding(14.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("${liveClass.instructor}: ${liveClass.title}")
+                        Text(liveClass.scheduledAt)
+                    }
+
+                    if (isLive) {
+                        Text("LIVE", color = Color.Red)
                     }
                 }
             }
@@ -838,19 +890,20 @@ private fun MyScheduleSection(navController: NavHostController) {
 }
 
 @Composable
-private fun AchievementsSection() {
-    // TODO: replace with user.achievements from profile API when available
-    val achievements = listOf(Achievement("🔥", "7 Day\nStreak", BpscColors.Accent, true), Achievement("🏆", "Top 10\nRank", BpscColors.CoinGold, true), Achievement("📚", "100\nTopics", BpscColors.Primary, true), Achievement("⚡", "Speed\nStar", Color(0xFF9B59B6), false), Achievement("🎯", "Perfect\nScore", BpscColors.Success, false))
+private fun AchievementsSection(
+    achievements: List<AchievementItem>
+) {
+    if (achievements.isEmpty()) return
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        SectionHeader("Achievements"); Spacer(Modifier.height(14.dp))
+        SectionHeader("Achievements")
+        Spacer(Modifier.height(14.dp))
+
         LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             items(achievements) { a ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.size(68.dp).clip(CircleShape).background(if (a.earned) a.color.copy(0.12f) else BpscColors.Divider).border(2.dp, if (a.earned) a.color.copy(0.6f) else BpscColors.TextHint.copy(0.3f), CircleShape), contentAlignment = Alignment.Center) {
-                        Text(a.emoji, fontSize = 28.sp, modifier = Modifier.alpha(if (a.earned) 1f else 0.3f))
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(a.label, style = MaterialTheme.typography.labelSmall, color = if (a.earned) BpscColors.TextPrimary else BpscColors.TextHint, fontWeight = if (a.earned) FontWeight.SemiBold else FontWeight.Normal, lineHeight = 14.sp, textAlign = TextAlign.Center)
+                    Text(a.emoji, fontSize = 28.sp)
+                    Text(a.label)
                 }
             }
         }
@@ -860,7 +913,7 @@ private fun AchievementsSection() {
 // ─────────────────────────────────────────────────────────────────────────────
 // CREATE TARGET SHEET
 // ─────────────────────────────────────────────────────────────────────────────
-@Composable
+/*@Composable
 fun CreateTargetSheet(onDismiss: () -> Unit) {
     var inputText by remember { mutableStateOf("") }
     val addedItems = remember { mutableStateListOf<String>() }
@@ -897,7 +950,7 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
             }
         }
     }
-}
+}*/
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DRAWER
@@ -906,7 +959,7 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHostController) {
     val menuItems = listOf(
         Triple(Icons.Rounded.TrackChanges,  "Daily Targets Module",  Screen.DailyTargets.route),
-        Triple(Icons.Rounded.Quiz,          "Daily Quizzes",         Screen.MockTests.route),
+        Triple(Icons.Rounded.Quiz,          "Daily Quizzes",         Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     "Daily Current Affairs", Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.Star,          "Paid Content",          Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",             Screen.Downloads.route),

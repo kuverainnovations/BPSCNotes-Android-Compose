@@ -59,6 +59,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -95,6 +96,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import com.example.bpscnotes.presentation.mylearning.MyLearningViewModel
+import com.example.bpscnotes.data.remote.api.CourseDto
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -142,6 +147,42 @@ data class LibraryItem(
     val isTrending: Boolean = false, val isPinned: Boolean = false,
     val isDownloaded: Boolean = false, val uploadedDate: String,
     val description: String, val tags: List<String> = emptyList(),
+)
+
+
+private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
+    id = id,
+    title = title,
+    instructor = instructor ?: "BPSCNotes",
+    subject = subject,
+    price = price,
+    originalPrice = originalPrice,
+    totalLessons = totalLessons,
+    totalHours = totalHours.toFloatOrNull() ?: 0f,
+    rating = rating.toFloatOrNull() ?: 0f,
+    reviewCount = review_count,
+    studentsEnrolled = enrollmentCount,
+    bpscRelevance = 0,
+    syllabusCoverage = 0,
+    isPaid = isPaid,
+    isFeatured = is_featured,
+    tags = exam_tags,
+    trialLessonTitle = trial_lesson_title ?: "",
+    description = description ?: ""
+)
+
+private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
+    id = id,
+    title = title,
+    instructor = instructor ?: "BPSCNotes",
+    subject = subject,
+    totalLessons = totalLessons,
+    completedLessons = enrollment?.completed_lessons?:0,
+    totalMinutes = ((totalHours.toFloatOrNull() ?: (0f * 60))).toInt(),
+    studiedMinutes = enrollment?.completed_lessons ?: (0 * 10), // approx or backend later
+    lastStudied = "Recently",
+    status = if ((enrollment?.completed_lessons ?: 0) == totalLessons) CourseStatus.Completed else CourseStatus.InProgress,
+    isPaid = isPaid
 )
 
 // ── Mock data ─────────────────────────────────────────────────
@@ -272,7 +313,7 @@ val mockStoreItems = listOf(
     ),
 )
 
-val mockLearningCourses = listOf(
+/*val mockLearningCourses = listOf(
     LearningCourse(
         "lc1",
         "BPSC 70th Complete Preparation Course",
@@ -328,7 +369,7 @@ val mockLearningCourses = listOf(
         CourseStatus.InProgress,
         false
     ),
-)
+)*/
 
 val mockLibraryItems = listOf(
     LibraryItem(
@@ -424,14 +465,36 @@ val librarySubjects = listOf(
 @Composable
 fun MyLearningScreen(
     navController: NavHostController,
-    startTab: Int = 0
+    startTab: Int = 0,
+    viewModel: MyLearningViewModel = hiltViewModel()
 ) {
+    val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(startTab) }
-    val userCoins = 142
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(BpscColors.Surface)) {
+    val userCoins = state.userCoins
+
+    val storeItems = remember(state.storeCourses) {
+        state.storeCourses.map { it.toStoreItem() }
+    }
+
+    val learningCourses = remember(state.enrolledCourses) {
+        state.enrolledCourses.map { it.toLearningCourse() }
+    }
+
+    // ✅ Loading
+    if (state.isLoading && storeItems.isEmpty()) {
+        Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = BpscColors.Primary)
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BpscColors.Surface)
+    ) {
+
 
         // ── Header ───────────────────────────────────────────
         Box(
@@ -529,8 +592,8 @@ fun MyLearningScreen(
         }
 
         when (selectedTab) {
-            0 -> StoreTab(navController = navController, userCoins = userCoins)
-            1 -> MyCoursesTab(navController = navController)
+            0 -> StoreTab(navController = navController, userCoins = userCoins,courses=storeItems)
+            1 -> MyCoursesTab(navController = navController,courses=learningCourses)
         }
     }
 }
@@ -539,14 +602,15 @@ fun MyLearningScreen(
 // STORE TAB  (same as before — no change needed)
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun StoreTab(navController: NavHostController, userCoins: Int) {
+private fun StoreTab(navController: NavHostController, userCoins: Int, courses: List<StoreItem>
+) {
     var selectedSubject by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf<StoreItem?>(null) }
     val wishlist = remember { mutableStateListOf<String>() }
     val focusManager = LocalFocusManager.current
 
-    val filtered = mockStoreItems.filter { course ->
+    val filtered = courses.filter { course ->
         val matchesSub = selectedSubject == "All" || course.subject == selectedSubject
         val matchesSearch = searchQuery.isEmpty() ||
                 course.title.contains(searchQuery, ignoreCase = true) ||
@@ -695,7 +759,7 @@ private fun StoreTab(navController: NavHostController, userCoins: Int) {
 // MY COURSES TAB  (Courses + Study Materials sub-tabs)
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun MyCoursesTab(navController: NavHostController) {
+private fun MyCoursesTab(navController: NavHostController, courses: List<LearningCourse>) {
     var subTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -733,7 +797,7 @@ private fun MyCoursesTab(navController: NavHostController) {
         }
 
         when (subTab) {
-            0 -> EnrolledCoursesContent(navController = navController)
+            0 -> EnrolledCoursesContent(navController = navController,courses=courses)
             1 -> StudyMaterialsContent()
         }
     }
@@ -743,12 +807,12 @@ private fun MyCoursesTab(navController: NavHostController) {
 // SUB-TAB 1 — ENROLLED COURSES
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun EnrolledCoursesContent(navController: NavHostController) {
+private fun EnrolledCoursesContent(navController: NavHostController, courses: List<LearningCourse>) {
     var selectedFilter by remember { mutableIntStateOf(0) }
     val wishlist = remember { mutableStateListOf<String>() }
     val filters = listOf("All", "In Progress", "Completed", "Wishlist")
 
-    val filtered = mockLearningCourses.filter { course ->
+    val filtered = courses.filter { course ->
         when (selectedFilter) {
             1 -> course.status == CourseStatus.InProgress
             2 -> course.status == CourseStatus.Completed
@@ -757,12 +821,12 @@ private fun EnrolledCoursesContent(navController: NavHostController) {
         }
     }
 
-    val inProgress = mockLearningCourses.filter { it.status == CourseStatus.InProgress }
-    val completed = mockLearningCourses.filter { it.status == CourseStatus.Completed }
-    val certificates = mockLearningCourses.filter { it.hasCertificate }
-    val totalProgress = if (mockLearningCourses.isNotEmpty())
-        mockLearningCourses.sumOf { it.completedLessons }
-            .toFloat() / mockLearningCourses.sumOf { it.totalLessons }
+    val inProgress = courses.filter { it.status == CourseStatus.InProgress }
+    val completed = courses.filter { it.status == CourseStatus.Completed }
+    val certificates = courses.filter { it.hasCertificate }
+    val totalProgress = if (courses.isNotEmpty())
+        courses.sumOf { it.completedLessons }
+            .toFloat() / courses.sumOf { it.totalLessons }
     else 0f
     val animProg by animateFloatAsState(totalProgress, tween(1200), label = "tp")
 
@@ -817,7 +881,7 @@ private fun EnrolledCoursesContent(navController: NavHostController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    LearningStatItem("📚", "${mockLearningCourses.size}", "Enrolled")
+                    LearningStatItem("📚", "${courses.size}", "Enrolled")
                     LearningStatItem("▶️", "${inProgress.size}", "In Progress")
                     LearningStatItem("✅", "${completed.size}", "Completed")
                     LearningStatItem("🏆", "${certificates.size}", "Certs")

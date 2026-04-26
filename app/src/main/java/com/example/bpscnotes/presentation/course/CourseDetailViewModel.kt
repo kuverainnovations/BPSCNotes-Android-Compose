@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.CoursesApiService
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,24 +27,37 @@ class CourseDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val response = api.getCourseDetail(courseId)
-                // Backend returns ApiResponse<CourseDetailResponse>
-                // We cast through Gson's linked tree map approach
-                val raw = response.data
-                if (raw != null) {
-                    val gson = com.google.gson.Gson()
-                    val json = gson.toJson(raw)
-                    val detail = gson.fromJson(json, CourseDetailResponse::class.java)
+
+                val dataObj = response.data ?: run {
                     _uiState.update {
-                        it.copy(
-                            course = detail.course,
-                            chapters = detail.chapters
-                                .sortedBy { it.sortOrder }
-                                ?: emptyList(),
-                            isLoading = false
-                        )
+                        it.copy(isLoading = false, error = "No data")
                     }
-                } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Course not found") }
+                    return@launch
+                }
+
+                println("FINAL CHAPTERS123 = ${response.data}")
+
+
+                val gson = Gson()
+                val detail = gson.fromJson(dataObj, CourseDetailResponse::class.java)
+
+                println("FINAL CHAPTERS = ${detail.course.chapters[0].title}")
+
+                _uiState.update {
+                    it.copy(
+                        course = detail.course,
+                        chapters = detail.chapters
+                            ?.sortedBy { it.sortOrder }
+                            ?.map { chapter ->
+                                chapter.copy(
+                                    lessons = chapter.lessons
+                                        ?.sortedBy { it.sortOrder }
+                                        ?: emptyList()
+                                )
+                            } ?: emptyList(),
+                        isLoading = false
+                    )
+
                 }
             } catch (e: Exception) {
                 Log.e("CourseDetail", e.message ?: "", e)

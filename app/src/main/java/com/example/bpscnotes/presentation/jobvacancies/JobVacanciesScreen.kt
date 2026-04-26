@@ -1,7 +1,5 @@
 package com.example.bpscnotes.presentation.jobvacancies
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -21,8 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import java.util.concurrent.TimeUnit
 
 // ─────────────────────────────────────────────────────────────
@@ -37,16 +37,16 @@ enum class JobCategory(val label: String, val emoji: String, val color: Color, v
 }
 
 data class JobTimeline(
-    val notificationDate: String,
-    val applyStart: String,
-    val applyEnd: String,
-    val examDate: String?,
+    val notificationDate: String?="",
+    val applyStart: String?="",
+    val applyEnd: String?="",
+    val examDate: String?="",
 )
 
 data class JobVacancy(
     val id: String,
     val title: String,
-    val department: String,
+    val department: String?="",
     val category: JobCategory,
     val totalPosts: Int,
     val location: String,
@@ -60,7 +60,7 @@ data class JobVacancy(
     val isFeatured: Boolean = false,
     val isPartTime: Boolean = false,
     val workingHours: String? = null,   // for part-time
-    val nearbyDistricts: List<String> = emptyList(),
+    val nearbyDistricts: List<String>? = emptyList(),
     val description: String,
 )
 
@@ -69,6 +69,7 @@ private fun daysFromNow(days: Int): Long {
     return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(days.toLong())
 }
 
+/*
 val mockJobs = listOf(
     JobVacancy("j1", "BPSC 70th Combined Competitive Exam",
         "Bihar Public Service Commission", JobCategory.BPSC, 1929,
@@ -155,14 +156,67 @@ val mockJobs = listOf(
         "https://vidhansabha.bih.nic.in",
         description = "Bihar Vidhan Sabha Secretariat recruitment for various posts including PA, Stenographer, Assistant, and Security Personnel."),
 )
+*/
 
 val jobAlertCategories = listOf("BPSC", "Bihar Govt", "Central Govt", "Private", "Part-time")
+
+
+private fun JobVacancyDto.toUiModel(): JobVacancy {
+    val cat = when (category) {
+        "BPSC"         -> JobCategory.BPSC
+        "Bihar Govt"   -> JobCategory.BiharGovt
+        "Central Govt" -> JobCategory.CentralGovt
+        "Private"      -> JobCategory.Private
+        "Part-time"    -> JobCategory.PartTime
+        else           -> JobCategory.BiharGovt
+    }
+
+    val endMillis = try {
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .parse(applyEndDate)?.time ?: System.currentTimeMillis()
+    } catch (e: Exception) {
+        System.currentTimeMillis()
+    }
+
+    return JobVacancy(
+        id = id,
+        title = title,
+        department = department,
+        category = cat,
+        totalPosts = totalPosts?: 0,
+        location = location ?: "Unknown",
+        salaryRange = salaryRange?: "",
+        qualification = qualification?: "",
+        ageLimit = ageLimit?: "",
+        applyEndDate = endMillis ?: 0L,
+        timeline = JobTimeline(
+            notificationDate = notificationDate,
+            applyStart = applyStartDate,
+            applyEnd = applyEndDate,
+            examDate = examDate
+        ),
+        officialLink = officialLink?: "",
+        isNew = isNew,
+        isFeatured = isFeatured,
+        nearbyDistricts = nearbyDistricts,
+        description = ""
+    )
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // MAIN SCREEN
 // ─────────────────────────────────────────────────────────────
 @Composable
-fun JobVacanciesScreen(navController: NavHostController) {
+fun JobVacanciesScreen(navController: NavHostController ,
+                       viewModel: JobVacanciesViewModel = hiltViewModel()
+) {
+
+    val vmState by viewModel.uiState.collectAsState()
+
+
+
+
     var searchQuery      by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
     var selectedJob      by remember { mutableStateOf<JobVacancy?>(null) }
@@ -171,14 +225,37 @@ fun JobVacanciesScreen(navController: NavHostController) {
     var showAlertSheet   by remember { mutableStateOf(false) }
     val focusManager     = LocalFocusManager.current
 
-    val filtered = mockJobs.filter { job ->
-        val matchesCat    = selectedCategory == null || job.category == selectedCategory
+    val allJobs = remember(vmState.jobs) {
+        vmState.jobs.map { it.toUiModel() }
+    }
+
+    val filtered = allJobs.filter { job ->
+        val matchesCat = selectedCategory == null || job.category == selectedCategory
         val matchesSearch = searchQuery.isEmpty() ||
-                job.title.contains(searchQuery, ignoreCase = true) ||
-                job.department.contains(searchQuery, ignoreCase = true) ||
-                job.location.contains(searchQuery, ignoreCase = true)
+                job.title.contains(searchQuery, true) ||
+                job.department?.contains(searchQuery, true) == true ||
+                job.location.contains(searchQuery, true)
+
         matchesCat && matchesSearch
-    }.sortedWith(compareBy { it.applyEndDate }) // urgent first
+    }.sortedBy { it.applyEndDate }
+
+    if (vmState.isLoading && allJobs.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (vmState.error != null && allJobs.isEmpty()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(vmState.error!!)
+            Button(onClick = { viewModel.retry() }) {
+                Text("Retry")
+            }
+        }
+        return
+    }
+
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -385,7 +462,8 @@ fun JobVacanciesScreen(navController: NavHostController) {
             JobAlertSheet(
                 alertCategories = alertCategories,
                 onToggle = { cat -> if (alertCategories.contains(cat)) alertCategories.remove(cat) else alertCategories.add(cat) },
-                onDismiss = { showAlertSheet = false }
+                onDismiss = { showAlertSheet = false },
+                allJobs=allJobs
             )
         }
     }
@@ -440,7 +518,7 @@ private fun JobCard(
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 7.dp, vertical = 2.dp))
                     }
                     Text(job.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, lineHeight = 20.sp)
-                    Text(job.department, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(job.department?:"", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
 
                 // Bookmark
@@ -474,7 +552,7 @@ private fun JobCard(
                 ) {
                     Text("⏰", fontSize = 12.sp)
                     Text(job.workingHours, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF1ABC9C), fontWeight = FontWeight.SemiBold)
-                    if (job.nearbyDistricts.isNotEmpty()) {
+                    if (job.nearbyDistricts?.isNotEmpty() == true) {
                         Text("·", color = BpscColors.TextHint)
                         Text("📍 ${job.nearbyDistricts.take(2).joinToString(", ")}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                     }
@@ -557,7 +635,7 @@ private fun JobDetailSheet(
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 7.dp, vertical = 2.dp))
                     }
                     Text(job.title, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
-                    Text(job.department, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
+                    Text(job.department?:"", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
                     DeadlineCountdown(daysLeft = daysLeft)
                 }
             }
@@ -604,7 +682,7 @@ private fun JobDetailSheet(
                         DetailRow("📍", "Location", job.location)
                         DetailRow("💰", "Salary", job.salaryRange)
                         if (job.isPartTime && job.workingHours != null) DetailRow("⏰", "Working Hours", job.workingHours)
-                        if (job.isPartTime && job.nearbyDistricts.isNotEmpty()) DetailRow("📌", "Available Districts", job.nearbyDistricts.joinToString(", "))
+                        if (job.isPartTime && job.nearbyDistricts?.isNotEmpty() == true) DetailRow("📌", "Available Districts", job.nearbyDistricts.joinToString(", "))
                     }
                 }
 
@@ -677,7 +755,7 @@ private fun TimelineView(timeline: JobTimeline) {
                 }
                 Column(modifier = Modifier.padding(top = 6.dp, bottom = if (index < steps.size - 1) 14.dp else 0.dp)) {
                     Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(date, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(date?:"--", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -693,6 +771,7 @@ private fun JobAlertSheet(
     alertCategories: List<String>,
     onToggle: (String) -> Unit,
     onDismiss: () -> Unit,
+    allJobs: List<JobVacancy>,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -729,7 +808,7 @@ private fun JobAlertSheet(
                     Text(jobCat?.emoji ?: "📋", fontSize = 20.sp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(cat, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                        Text("${mockJobs.count { it.category.label == cat }} active jobs", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text("${allJobs.count { it.category.label == cat }} active jobs", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                     }
                     Switch(
                         checked = isOn, onCheckedChange = { onToggle(cat) },

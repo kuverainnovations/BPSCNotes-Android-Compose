@@ -21,6 +21,12 @@ import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.mock.MockData
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import com.example.bpscnotes.data.remote.api.CheckInDayDto
+import com.example.bpscnotes.data.remote.api.EarnTaskDto
+import com.example.bpscnotes.data.remote.api.mapIcon
+import com.example.bpscnotes.presentation.wallet.CoinWalletViewModel
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -64,181 +70,106 @@ data class CoinTransaction(
 )
 
 // ─────────────────────────────────────────────────────────────
-// MOCK DATA  — replace with ViewModel / repository
-// ─────────────────────────────────────────────────────────────
-
-private fun mockCheckInDays() = listOf(
-    CheckInDay("Mon", CheckInStatus.DONE),
-    CheckInDay("Tue", CheckInStatus.DONE),
-    CheckInDay("Wed", CheckInStatus.BONUS, "+5 Gold"),
-    CheckInDay("Thu", CheckInStatus.TODAY),
-    CheckInDay("Fri", CheckInStatus.LOCKED),
-    CheckInDay("Sat", CheckInStatus.LOCKED),
-    CheckInDay("Sun", CheckInStatus.LOCKED),
-)
-
-private fun mockEarnTasks() = listOf(
-    EarnTask(
-        id = "t1",
-        title = "Watch Video Ad",
-        subtitle = "Get 5 Coins",
-        coinsReward = 5,
-        icon = Icons.Rounded.PlayCircle,
-        iconBg = Color(0xFFE3F2FD), iconTint = Color(0xFF1565C0),
-        actionLabel = "CLAIM",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-        isAd = true
-    ),
-    EarnTask(
-        id = "t2",
-        title = "Complete Geography Quiz",
-        subtitle = "Get 10 Coins",
-        coinsReward = 10,
-        icon = Icons.Rounded.Quiz,
-        iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
-        actionLabel = "GO",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-    ),
-    EarnTask(
-        id = "t3",
-        title = "Share App with Friend",
-        subtitle = "Get 50 Coins",
-        coinsReward = 50,
-        icon = Icons.Rounded.Share,
-        iconBg = Color(0xFFE8F5E9), iconTint = Color(0xFF2E7D32),
-        actionLabel = "SHARE",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-    ),
-    EarnTask(
-        id = "t4",
-        title = "Complete Daily Target",
-        subtitle = "Get 20 Coins",
-        coinsReward = 20,
-        icon = Icons.Rounded.TrackChanges,
-        iconBg = Color(0xFFE3F2FD), iconTint = Color(0xFF1565C0),
-        actionLabel = "GO",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-    ),
-    EarnTask(
-        id = "t5",
-        title = "Watch 3 Video Ads",
-        subtitle = "Get 15 Coins",
-        coinsReward = 15,
-        icon = Icons.Rounded.OndemandVideo,
-        iconBg = Color(0xFFFFF3E0), iconTint = Color(0xFFE65100),
-        actionLabel = "WATCH",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-        isAd = true
-    ),
-    EarnTask(
-        id = "t6",
-        title = "7-Day Streak Bonus",
-        subtitle = "Get 50 Coins",
-        coinsReward = 50,
-        icon = Icons.Rounded.Whatshot,
-        iconBg = Color(0xFFFFF3E0), iconTint = Color(0xFFFF8F00),
-        actionLabel = "CLAIMED",
-        actionBg = Color(0xFFE8F5E9), actionTextColor = Color(0xFF2E7D32),
-        isCompleted = true
-    ),
-    EarnTask(
-        id = "t7",
-        title = "Join a Study Room",
-        subtitle = "Get 15 Coins",
-        coinsReward = 15,
-        icon = Icons.Rounded.Groups,
-        iconBg = Color(0xFFE0F7FA), iconTint = Color(0xFF00838F),
-        actionLabel = "JOIN",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-    ),
-    EarnTask(
-        id = "t8",
-        title = "Refer a Friend",
-        subtitle = "Get 75 Coins per referral",
-        coinsReward = 75,
-        icon = Icons.Rounded.CardGiftcard,
-        iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
-        actionLabel = "INVITE",
-        actionBg = Color(0xFFE59400), actionTextColor = Color.White,
-    ),
-)
-
-private fun mockTransactions() = listOf(
-    CoinTransaction("r1", "Daily Quiz Completed",  "Polity · Score 9/10",      +20,  TransactionType.EARNED, Icons.Rounded.Quiz,           Color(0xFFE3F2FD), Color(0xFF1565C0), "Today, 10:30 AM"),
-    CoinTransaction("r2", "7-Day Streak Bonus",    "Keep going!",               +50,  TransactionType.EARNED, Icons.Rounded.Whatshot,        Color(0xFFFFF3E0), Color(0xFFFF8F00), "Today, 8:00 AM"),
-    CoinTransaction("r3", "Redeemed: Mock Test",   "BPSC 70th Prelims",         -80,  TransactionType.SPENT,  Icons.Rounded.ShoppingCart,    Color(0xFFFCE4EC), Color(0xFFC62828), "Yesterday, 3:15 PM"),
-    CoinTransaction("r4", "Watched Video Ad",      "30-second ad completed",    +5,   TransactionType.EARNED, Icons.Rounded.PlayCircle,      Color(0xFFE3F2FD), Color(0xFF1565C0), "Yesterday, 1:00 PM"),
-    CoinTransaction("r5", "Top Rank Bonus",        "#3 on weekly board",        +100, TransactionType.EARNED, Icons.Rounded.EmojiEvents,     Color(0xFFFFF8E1), Color(0xFFFF8F00), "Mon, 11:59 PM"),
-    CoinTransaction("r6", "Redeemed: Polity Notes","Dr. R.K. Sharma Premium",   -50,  TransactionType.SPENT,  Icons.Rounded.ShoppingCart,    Color(0xFFFCE4EC), Color(0xFFC62828), "Sun, 5:00 PM"),
-    CoinTransaction("r7", "Referral Bonus",        "Friend joined: Priya S.",   +75,  TransactionType.EARNED, Icons.Rounded.CardGiftcard,    Color(0xFFF3E5F5), Color(0xFF7B1FA2), "Sat, 2:20 PM"),
-    CoinTransaction("r8", "Watched Video Ad",      "30-second ad completed",    +5,   TransactionType.EARNED, Icons.Rounded.PlayCircle,      Color(0xFFE3F2FD), Color(0xFF1565C0), "Sat, 11:00 AM"),
-)
-
-// ─────────────────────────────────────────────────────────────
 // MAIN SCREEN
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-fun CoinWalletScreen(navController: NavHostController) {
-    val user         = MockData.currentUser
-    val checkInDays  = remember { mockCheckInDays() }
-    val earnTasks    = remember { mockEarnTasks() }
-    val transactions = remember { mockTransactions() }
+fun CoinWalletScreen(
+    navController: NavHostController,
+    viewModel: CoinWalletViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Earn Coins", "History")
 
+    // ✅ Loading
+    if (state.isLoading && state.balance == 0) {
+        Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = BpscColors.CoinGold)
+        }
+        return
+    }
+
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BpscColors.Surface),
+        modifier = Modifier.fillMaxSize().background(BpscColors.Surface),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // ── Gold hero header
-        item { CoinHeroHeader(coins = user.coins, onBack = { navController.popBackStack() }) }
 
-        // ── Tab row
-        item { CoinTabRow(selectedTab = selectedTab, tabs = tabs, onSelect = { selectedTab = it }) }
+        // ✅ HEADER (API BALANCE)
+        item {
+            CoinHeroHeader(
+                coins = state.balance,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        item {
+            CoinTabRow(
+                selectedTab = selectedTab,
+                tabs = tabs,
+                onSelect = { selectedTab = it }
+            )
+        }
 
         when (selectedTab) {
 
-            // ── EARN TAB ─────────────────────────────────────
+            // ───── EARN TAB ─────
             0 -> {
-                // Daily check-in section
-                item {
-                    SectionHeader(
-                        title    = "Daily Check-in",
-                        subtitle = "Login daily to maintain streak"
-                    )
-                }
-                item { DailyCheckInCard(days = checkInDays) }
 
-                // Earn coins section
                 item {
                     SectionHeader(
-                        title    = "Earn Coins",
-                        subtitle = null,
-                        modifier = Modifier.padding(top = 8.dp)
+                        "Daily Check-in",
+                        "Login daily to maintain streak"
                     )
                 }
-                itemsIndexed(earnTasks) { index, task ->
-                    EarnTaskRow(index = index + 1, task = task)
+
+                item {
+                    DailyCheckInCard(
+                        days = state.checkInDays,
+                        onCheckIn = { viewModel.checkIn() },
+                        isLoading = state.isCheckingIn,
+                        doneToday = state.checkedInToday
+                    )
+                }
+
+                item {
+                    SectionHeader("Earn Coins", null)
+                }
+
+                items(state.earnTasks, key = { it.id }) { task ->
+                    EarnTaskRow(
+                        index = 0,
+                        task = task,
+                        onClick = { viewModel.claimTask(task.id) }
+                    )
+                }
+
+                if (state.earnTasks.isEmpty() && !state.isLoading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text("No tasks available", color = BpscColors.TextSecondary)
+                        }
+                    }
                 }
             }
 
-            // ── HISTORY TAB ──────────────────────────────────
+            // ───── HISTORY TAB ─────
             1 -> {
+
+
                 item {
-                    HistorySummaryRow(transactions = transactions)
+                    SectionHeader("Transaction History", null)
                 }
-                item {
-                    SectionHeader(
-                        title    = "Transaction History",
-                        subtitle = null
-                    )
-                }
-                items(transactions) { tx ->
-                    TransactionRow(transaction = tx)
+
+
+
+                if (state.transactions.isEmpty() && !state.isLoading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("No transactions yet")
+                        }
+                    }
                 }
             }
         }
@@ -480,7 +411,12 @@ private fun SectionHeader(title: String, subtitle: String?, modifier: Modifier =
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun DailyCheckInCard(days: List<CheckInDay>) {
+private fun DailyCheckInCard(
+    days: List<CheckInDayDto>,
+    onCheckIn: () -> Unit,
+    isLoading: Boolean,
+    doneToday: Boolean
+) {
     Card(
         modifier  = Modifier
             .fillMaxWidth()
@@ -517,14 +453,19 @@ private fun DailyCheckInCard(days: List<CheckInDay>) {
                         } else {
                             Spacer(Modifier.height(14.dp)) // keep alignment
                         }
-
+                        val status = when {
+                            day.isToday -> CheckInStatus.TODAY
+                            day.isDone -> CheckInStatus.DONE
+                            day.isBonus -> CheckInStatus.BONUS
+                            else -> CheckInStatus.LOCKED
+                        }
                         // Circle
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    when (day.status) {
+                                    when (status) {
                                         CheckInStatus.DONE   -> BpscColors.CoinGold
                                         CheckInStatus.BONUS  -> BpscColors.CoinGold
                                         CheckInStatus.TODAY  -> BpscColors.Surface
@@ -532,13 +473,13 @@ private fun DailyCheckInCard(days: List<CheckInDay>) {
                                     }
                                 )
                                 .border(
-                                    width  = if (day.status == CheckInStatus.TODAY) 2.dp else 0.dp,
-                                    color  = if (day.status == CheckInStatus.TODAY) BpscColors.CoinGold else Color.Transparent,
+                                    width  = if (status == CheckInStatus.TODAY) 2.dp else 0.dp,
+                                    color  = if (status == CheckInStatus.TODAY) BpscColors.CoinGold else Color.Transparent,
                                     shape  = CircleShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            when (day.status) {
+                            when (status) {
                                 CheckInStatus.DONE, CheckInStatus.BONUS -> {
                                     Icon(
                                         Icons.Rounded.Check,
@@ -570,12 +511,12 @@ private fun DailyCheckInCard(days: List<CheckInDay>) {
                         Text(
                             day.label,
                             style  = MaterialTheme.typography.labelSmall,
-                            color  = when (day.status) {
+                            color  = when (status) {
                                 CheckInStatus.DONE, CheckInStatus.BONUS -> BpscColors.TextPrimary
                                 CheckInStatus.TODAY  -> BpscColors.CoinGold
                                 CheckInStatus.LOCKED -> BpscColors.TextHint
                             },
-                            fontWeight = if (day.status == CheckInStatus.TODAY) FontWeight.Bold else FontWeight.Normal,
+                            fontWeight = if (status == CheckInStatus.TODAY) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 10.sp
                         )
                     }
@@ -590,7 +531,7 @@ private fun DailyCheckInCard(days: List<CheckInDay>) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun EarnTaskRow(index: Int, task: EarnTask) {
+private fun EarnTaskRow(index: Int, task: EarnTaskDto, onClick: () -> Unit){
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -617,11 +558,17 @@ private fun EarnTaskRow(index: Int, task: EarnTask) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                task.icon,
-                contentDescription = null,
+                mapIcon(task.icon),
+                 null,
                 tint     = task.iconTint,
                 modifier = Modifier.size(22.dp)
             )
+
+            Icon(Icons.Rounded.ArrowUpward,
+                null,
+                tint = BpscColors.Success,
+                modifier = Modifier.size(14.dp))
+
         }
 
         // Title + subtitle
