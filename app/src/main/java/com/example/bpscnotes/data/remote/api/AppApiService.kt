@@ -382,17 +382,17 @@ data class LiveClassDto(
 )
 
 data class LiveClassesResponseData(
-    @SerializedName("live_classes") val liveClasses: List<LiveClassDto> = emptyList()
+    @SerializedName("liveClasses") val liveClasses: List<LiveClassDto> = emptyList()
 )
 
 interface LiveClassesApiService {
-    @GET("live-classes")
+    @GET("users/live-classes")
     suspend fun getLiveClasses(
         @Query("limit") limit: Int = 5,
         @Query("status") status: String? = null
     ): ApiResponse<LiveClassesResponseData>
 
-    @POST("live-classes/{id}/register")
+    @POST("users/live-classes/{id}/register")
     suspend fun register(@Path("id") id: String): ApiResponse<Any>
 }
 
@@ -588,4 +588,68 @@ interface CoinsApiService {
 
     @POST("coins/tasks/{id}/claim")
     suspend fun claimTask(@Path("id") id: String): ApiResponse<Any>
+
+    // ══════════════════════════════════════════════════════════════
+// FLASHCARD DTOs — GET /flashcards
+//
+// Backend response shape:
+// {
+//   "success": true,
+//   "data": {
+//     "flashcards": [
+//       {
+//         "id": "...",
+//         "subject": "Polity",
+//         "topic": "Fundamental Rights",
+//         "question": "Which Article guarantees Right to Equality?",
+//         "answer": "Articles 14–18 ...",
+//         "hint": "Think about Part III ...",
+//         "example": "Article 14 was invoked in ...",
+//         "difficulty": "easy",
+//         "related_mcq": {
+//           "question": "Article 14 deals with?",
+//           "options": ["Right to Freedom", "Equality before Law", ...],
+//           "correct_index": 1
+//         }
+//       }
+//     ]
+//   }
+// }
+// ══════════════════════════════════════════════════════════════
+
+    data class FlashMcqDto(
+        val question: String,
+        val options: List<String>,
+        @SerializedName("correct_index") val correctIndex: Int
+    )
+
+    data class FlashcardDto(
+        val id: String,
+        val subject: String,
+        val topic: String,
+        val question: String,
+        val answer: String,
+        val hint: String = "",
+        val example: String = "",
+        val difficulty: String = "medium",                     // "easy" | "medium" | "hard"
+        @SerializedName("related_mcq") val relatedMcq: FlashMcqDto? = null
+    )
+
+    data class FlashcardsResponseData(
+        val flashcards: List<FlashcardDto> = emptyList()
+    )
+
+    interface FlashcardsApiService {
+        /**
+         * GET /flashcards
+         * Returns flashcards filtered by subject.
+         * subject = null → all subjects
+         */
+        @GET("flashcards")
+        suspend fun getFlashcards(
+            @Query("subject") subject: String? = null,
+            @Query("limit")   limit: Int = 100
+        ): ApiResponse<FlashcardsResponseData>
+    }
+
 }

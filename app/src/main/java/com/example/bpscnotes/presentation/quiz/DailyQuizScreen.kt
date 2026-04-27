@@ -183,12 +183,13 @@ private fun QuizLobbyScreen(
                             .padding(horizontal = 4.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        val accuracy = state.userProfile?.accuracy?.toInt()
                         val streak   = state.userProfile?.streak
                         val rank     = state.userProfile?.rank
                         val solved   = state.userProfile?.quizzesAttempted
+                        val accuracy = state.userProfile?.accuracy?.toDoubleOrNull() ?: 0.0
+                        val formatted = String.format("%.2f", accuracy)
 
-                        LobbyStatChip("🎯", if (accuracy != null) "$accuracy%" else "--", "Accuracy")
+                        LobbyStatChip("🎯", if (accuracy != null) "$formatted%" else "--", "Accuracy")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🔥", if (streak != null) "$streak" else "--", "Day Streak")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))

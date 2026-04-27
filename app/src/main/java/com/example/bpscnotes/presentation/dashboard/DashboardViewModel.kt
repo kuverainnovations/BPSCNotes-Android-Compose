@@ -37,6 +37,8 @@ data class AchievementItem(
     val emoji: String,
     val label: String,
     val earned: Boolean,
+    val progress: Int,
+    val max: Int,
     val colorHex: Long          // stored as Long to avoid needing Compose Color in ViewModel
 )
 
@@ -70,7 +72,13 @@ class DashboardViewModel @Inject constructor(
                 val bannersJob = async { safeGet("banners") { bannersApi.getBanners().data?.banners } }
                 val statsJob   = async { safeGet("stats")   { statsApi.getStats().data } }
                 val targetsJob = async { safeGet("targets") { targetsApi.getDailyTargets().data } }
-                val liveClassesJob = async { safeGet("live-classes") { liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses } }
+                val liveClassesJob = async { safeGet("live-classes") {
+                    liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses }
+
+                }
+                Log.e("TAG", "liveClasses: ${liveClassesJob.await()}")
+//                Log.e("TAG", "loadDashboard: ${liveClassesApi.getLiveClasses(/*limit = 3*/).data?.liveClasses}", )
+
 
                 val user       = userJob.await()
                 val courses    = coursesJob.await() ?: emptyList()
@@ -90,6 +98,8 @@ class DashboardViewModel @Inject constructor(
                 val weekly = stats?.weeklyActivity?.mapIndexed { i, w ->
                     DayProgress(dayLabels.getOrElse(i) { "D${i+1}" }, w.activity)
                 } ?: emptyList()
+
+
 // Derive achievements from user profile — no extra API call needed
                 val achievements = buildAchievements(user, stats)
 
@@ -103,6 +113,8 @@ class DashboardViewModel @Inject constructor(
                         stats          = stats,
                         dailyTargets   = targetsData?.targets ?: emptyList(),
                         targetSummary  = targetsData?.summary ?: DailyTargetsSummary(),
+                        liveClasses=liveClasses,
+                        achievements=achievements,
                         isLoading      = false
                     )
                 }
@@ -121,11 +133,14 @@ class DashboardViewModel @Inject constructor(
      */
 
     /** Achievements derived purely from user data — zero extra network calls */
-    private fun buildAchievements(user: UserDto?, stats: UserStatsData?): List<AchievementItem> {
+    private fun buildAchievements(
+        user: UserDto?,
+        stats: UserStatsData?
+    ): List<AchievementItem> {
+
         val streak   = stats?.currentStreak ?: user?.streak ?: 0
-        val rank     = user?.rank
+        val rank     = user?.rank ?: Int.MAX_VALUE
         val quizzes  = user?.quizzesAttempted ?: 0
-        val accuracy = stats?.accuracy ?: user?.accuracy ?: 0.0
         val studyMin = stats?.totalStudyMinutes ?: user?.totalStudyMinutes ?: 0
 
         val accuracyValue = stats?.accuracy
@@ -133,12 +148,60 @@ class DashboardViewModel @Inject constructor(
             ?: 0.0
 
         return listOf(
-            AchievementItem("🔥", "7 Day\nStreak",   streak >= 7,             0xFFFF6D00L),
-            AchievementItem("🏆", "Top 10\nRank",    rank != null && rank <= 10, 0xFFFFB300L),
-            AchievementItem("📚", "100\nTopics",     quizzes >= 100,          0xFF1565C0L),
-            AchievementItem("⚡", "Speed\nStar",     accuracyValue >= 90.0, 0xFF9B59B6L),
-            AchievementItem("🎯", "Perfect\nScore", accuracyValue >= 100.0, 0xFF2ECC71L),
-            AchievementItem("⏰", "10h Study",        studyMin >= 600,         0xFF00838FL),
+
+            AchievementItem(
+                emoji = "🔥",
+                label = "7 Day\nStreak",
+                earned = streak >= 7,
+                progress = streak,
+                max = 7,
+                colorHex = 0xFFFF6D00L
+            ),
+
+            AchievementItem(
+                emoji = "🏆",
+                label = "Top 10\nRank",
+                earned = rank <= 10,
+                progress = if (rank <= 10) 10 else 0,
+                max = 10,
+                colorHex = 0xFFFFB300L
+            ),
+
+            AchievementItem(
+                emoji = "📚",
+                label = "100\nTopics",
+                earned = quizzes >= 100,
+                progress = quizzes,
+                max = 100,
+                colorHex = 0xFF1565C0L
+            ),
+
+            AchievementItem(
+                emoji = "⚡",
+                label = "Speed\nStar",
+                earned = accuracyValue >= 90,
+                progress = accuracyValue.toInt(),
+                max = 90,
+                colorHex = 0xFF9B59B6L
+            ),
+
+            AchievementItem(
+                emoji = "🎯",
+                label = "Perfect\nScore",
+                earned = accuracyValue >= 100,
+                progress = accuracyValue.toInt(),
+                max = 100,
+                colorHex = 0xFF2ECC71L
+            ),
+
+            AchievementItem(
+                emoji = "⏰",
+                label = "10h Study",
+                earned = studyMin >= 600,
+                progress = studyMin,
+                max = 600,
+                colorHex = 0xFF00838FL
+            )
         )
     }
     fun createTargets(titles: List<String>) {

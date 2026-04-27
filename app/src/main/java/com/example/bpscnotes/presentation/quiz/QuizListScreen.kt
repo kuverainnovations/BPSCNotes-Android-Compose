@@ -111,7 +111,7 @@ fun QuizListScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     val p = state.userProfile
-                    LobbyStatChip("🎯", if (p != null) "${p.accuracy?.toInt()}%" else "--",    "Accuracy")
+                    LobbyStatChip("🎯", if (p != null) "${p.accuracy}%" else "--",    "Accuracy")
                     Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                     LobbyStatChip("🔥", if (p != null) "${p.streak}" else "--",               "Streak")
                     Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
