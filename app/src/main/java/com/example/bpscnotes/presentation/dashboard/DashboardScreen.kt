@@ -291,13 +291,21 @@ private fun BannerSection(
                 shape     = RoundedCornerShape(20.dp),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
+                val colors = parseGradientSafe(banner.bgGradient?:"") // "from-red-500 to-pink-600"
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.linearGradient(
-                                listOf(Color(0xFF0D47A1), Color(0xFF1976D2)),
-                                Offset(0f, 0f), Offset(400f, 200f)
+                                colors = colors.ifEmpty {
+                                    listOf(
+                                        Color(0xFF0D47A1),
+                                        Color(0xFF1976D2)
+                                    )
+                                },
+                                start = Offset(0f, 0f),
+                                end = Offset(400f, 200f)
                             )
                         )
                         .padding(16.dp)
@@ -329,6 +337,43 @@ private fun BannerSection(
         }
     }
 }
+
+fun parseGradientSafe(gradient: String?): List<Color> {
+    val map = mapOf(
+        "red-500" to Color(0xFFF44336),
+        "pink-600" to Color(0xFFD81B60),
+        "green-600" to Color(0xFF43A047),
+        "teal-600" to Color(0xFF00897B),
+        "yellow-500" to Color(0xFFFFC107),
+        "orange-500" to Color(0xFFFF9800),
+        "purple-600" to Color(0xFF8E24AA),
+        "purple-800" to Color(0xFF6A1B9A),
+    )
+
+    if (gradient.isNullOrEmpty()) {
+        return defaultGradient()
+    }
+
+    val parts = gradient.split(" ")
+
+    val from = parts.find { it.startsWith("from-") }?.removePrefix("from-")
+    val to = parts.find { it.startsWith("to-") }?.removePrefix("to-")
+
+    val fromColor = map[from]
+    val toColor = map[to]
+
+    return when {
+        fromColor != null && toColor != null -> listOf(fromColor, toColor)
+        fromColor != null -> listOf(fromColor, fromColor) // duplicate fallback
+        toColor != null -> listOf(toColor, toColor)
+        else -> defaultGradient()
+    }
+}
+
+fun defaultGradient() = listOf(
+    Color(0xFF0D47A1),
+    Color(0xFF1976D2)
+)
 
 /** Navigate based on banner.actionLink or banner.type */
 private fun navigateBanner(banner: BannerDto, nav: NavHostController) {
