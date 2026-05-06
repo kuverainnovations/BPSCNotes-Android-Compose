@@ -35,13 +35,13 @@ class CourseDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                println("FINAL CHAPTERS123 = ${response.data}")
-
-
                 val gson = Gson()
                 val detail = gson.fromJson(dataObj, CourseDetailResponse::class.java)
 
-                println("FINAL CHAPTERS = ${detail.course.chapters[0].title}")
+                if (detail?.course == null) {
+                    _uiState.update { it.copy(isLoading = false, error = "Course data is missing") }
+                    return@launch
+                }
 
                 _uiState.update {
                     it.copy(
@@ -57,7 +57,6 @@ class CourseDetailViewModel @Inject constructor(
                             } ?: emptyList(),
                         isLoading = false
                     )
-
                 }
             } catch (e: Exception) {
                 Log.e("CourseDetail", e.message ?: "", e)
