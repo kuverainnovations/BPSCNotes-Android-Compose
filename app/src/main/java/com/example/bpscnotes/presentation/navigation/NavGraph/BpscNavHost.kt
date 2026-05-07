@@ -5,6 +5,8 @@ import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
@@ -48,14 +50,6 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
         composable(Screen.Login.route)      { LoginScreen(navController) }
 
-
-            composable("splash") {
-                SplashScreen(navController)
-            }
-
-            composable("dashboard") {   // ✅ ADD THIS
-                DashboardScreen(navController)
-            }
 
 
         composable(

@@ -76,8 +76,6 @@ class DashboardViewModel @Inject constructor(
                     liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses }
 
                 }
-                Log.e("TAG", "liveClasses: ${liveClassesJob.await()}")
-//                Log.e("TAG", "loadDashboard: ${liveClassesApi.getLiveClasses(/*limit = 3*/).data?.liveClasses}", )
 
 
                 val user       = userJob.await()
@@ -348,6 +346,29 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refresh() = loadDashboard()
+
+    /**
+     * Lightweight refresh — only re-fetches daily targets.
+     * Called on Lifecycle.State.RESUMED so Dashboard stays in sync
+     * after returning from DailyTargetsScreen without a full reload.
+     */
+    fun refreshTargets() {
+        viewModelScope.launch {
+            try {
+                val freshData = safeGet("targets-resume") { targetsApi.getDailyTargets().data }
+                if (freshData != null) {
+                    _uiState.update {
+                        it.copy(
+                            dailyTargets  = freshData.targets,
+                            targetSummary = freshData.summary
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("DASHBOARD", "refreshTargets failed: \${e.message}", e)
+            }
+        }
+    }
 
     fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearTargetSuccess() { _uiState.update { it.copy(targetSuccess = null) } }

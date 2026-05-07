@@ -90,7 +90,7 @@ fun OtpScreen(
     }
 
     Column(
-        modifier            = Modifier.fillMaxSize().background(BpscColors.Surface).imePadding(),
+        modifier            = Modifier.fillMaxSize().background(BpscColors.Surface).statusBarsPadding().imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -245,7 +245,7 @@ private fun OtpBox(
                 shape = RoundedCornerShape(12.dp)
             )
             .background(
-                if (value.isNotEmpty()) BpscColors.PrimaryLight else Color.White,
+                if (value.isNotEmpty()) BpscColors.PrimaryLight else BpscColors.CardBg,
                 shape = RoundedCornerShape(12.dp)
             ),
         textStyle      = TextStyle(

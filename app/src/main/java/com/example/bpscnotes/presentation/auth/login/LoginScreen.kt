@@ -133,7 +133,7 @@ fun LoginScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp)
                 .offset(y = (-28).dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color.White)
+                .background(BpscColors.CardBg)
                 .padding(24.dp)
         ) {
             Text(
@@ -187,8 +187,13 @@ fun LoginScreen(navController: NavHostController) {
                 }),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BpscColors.Primary,
-                    unfocusedBorderColor = BpscColors.Divider,
+                    focusedBorderColor      = BpscColors.Primary,
+                    unfocusedBorderColor    = BpscColors.Divider,
+                    focusedTextColor        = BpscColors.TextPrimary,
+                    unfocusedTextColor      = BpscColors.TextPrimary,
+                    cursorColor             = BpscColors.Primary,
+                    focusedContainerColor   = BpscColors.CardBg,
+                    unfocusedContainerColor = BpscColors.CardBg,
                 )
             )
 

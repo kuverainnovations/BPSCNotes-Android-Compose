@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.navigation.MainShell
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -63,7 +64,9 @@ fun MainShell(rootNavController: NavHostController) {
         NavHost(
             navController    = bottomNavController,
             startDestination = Screen.Dashboard.route,
-            modifier         = Modifier.padding(innerPadding)
+            modifier = Modifier
+                //.padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController) }
             composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController) }

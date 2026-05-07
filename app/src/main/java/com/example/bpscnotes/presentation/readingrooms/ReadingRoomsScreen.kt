@@ -403,7 +403,7 @@ private fun RoomLobbyScreen(
                         Offset(-20.dp.toPx(), size.height * 0.7f)
                     )
                 }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp)) {
                     // Top row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -414,7 +414,7 @@ private fun RoomLobbyScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Box(
+                           /* Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
@@ -428,7 +428,7 @@ private fun RoomLobbyScreen(
                                     tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
-                            }
+                            }*/
                             Column {
                                 Text(
                                     "E- Library",

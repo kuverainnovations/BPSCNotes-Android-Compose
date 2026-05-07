@@ -506,7 +506,7 @@ fun MyLearningScreen(
                         Offset(0f, 0f), Offset(400f, 400f)
                     )
                 )
-                .statusBarsPadding()
+                //.statusBarsPadding()
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
                 drawCircle(
@@ -520,7 +520,7 @@ fun MyLearningScreen(
                     Offset(-20.dp.toPx(), size.height * 0.7f)
                 )
             }
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -621,7 +621,11 @@ private fun StoreTab(navController: NavHostController, userCoins: Int, courses: 
     val free = filtered.filter { !it.isPaid }
     val paid = filtered.filter { it.isPaid && !it.isFeatured }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+    ) {
         // Search
         Row(
             modifier = Modifier
@@ -762,7 +766,11 @@ private fun StoreTab(navController: NavHostController, userCoins: Int, courses: 
 private fun MyCoursesTab(navController: NavHostController, courses: List<LearningCourse>) {
     var subTab by remember { mutableIntStateOf(0) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+    ) {
         // Sub-tab bar
         Row(
             modifier = Modifier
@@ -862,6 +870,8 @@ private fun EnrolledCoursesContent(navController: NavHostController, courses: Li
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(BpscColors.Surface)
+                       // .statusBarsPadding()
+
                 ) {
                     Box(
                         modifier = Modifier
@@ -1609,6 +1619,7 @@ private fun LibraryDetailSheet(
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
+                //    .statusBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
