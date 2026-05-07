@@ -26,6 +26,8 @@ data class MockTestsUiState(
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
     val previousYears get() = allTests.filter { it.type == "previous_year" }
+    val featured        get() = allTests.filter { it.type == "mock" }.take(2)
+
 }
 
 @HiltViewModel

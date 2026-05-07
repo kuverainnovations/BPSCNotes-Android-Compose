@@ -58,11 +58,23 @@ fun SplashScreen(navController: NavHostController) {
         }
         delay(2200)
         val token = tokenStore.getToken()
-        val destination = if (token.isNullOrEmpty()) {
+        /*val destination = if (token.isNullOrEmpty()) {
             val isOnboarded = tokenStore.isOnboarded()
             if (isOnboarded) Screen.Login.route else Screen.Onboarding.route
         } else {
             Screen.Main.route
+        }*/
+
+        val destination = when {
+            // Not logged in — show intro slides first time, login otherwise
+            token.isNullOrEmpty() -> {
+                if (tokenStore.isOnboarded()) Screen.Login.route
+                else Screen.Onboarding.route
+            }
+            // Logged in but exam setup not done → go to exam setup
+            !tokenStore.isExamSetupDone() -> Screen.ExamSetup.route
+            // Fully set up → go to main app
+            else -> Screen.Main.route
         }
         navController.navigate(destination) {
             popUpTo(Screen.Splash.route) { inclusive = true }

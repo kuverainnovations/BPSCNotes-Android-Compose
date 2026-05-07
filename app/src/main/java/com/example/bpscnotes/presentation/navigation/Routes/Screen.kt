@@ -11,6 +11,8 @@ sealed class Screen(val route: String) {
     object Register     : Screen("register/{tempToken}") {
         fun createRoute(tempToken: String) = "register/${tempToken.encodeUrl()}"
     }
+    // NEW: exam setup after registration
+    object ExamSetup  : Screen("exam_setup")
 
     // Main shell
     object Main         : Screen("main")

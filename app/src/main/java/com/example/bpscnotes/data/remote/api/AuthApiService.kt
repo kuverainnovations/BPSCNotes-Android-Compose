@@ -1,11 +1,13 @@
 package com.example.bpscnotes.data.remote.api
 
+import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.example.bpscnotes.data.remote.dto.GetMeData
 import com.example.bpscnotes.data.remote.dto.RegisterRequest
 import com.example.bpscnotes.data.remote.dto.UserDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 
 // ── Auth API Service ──────────────────────────────────────────────────────────
 interface AuthApiService {
@@ -25,6 +27,13 @@ interface AuthApiService {
     /** Get currently logged-in user profile */
     @GET("auth/me")
     suspend fun getMe(): GetMeResponse
+
+    @GET("exams")
+    suspend fun getExams(): ApiResponse<ExamsResponseData>
+
+    // ── NEW: save user's exam target (requires auth) ───────────────
+    @PUT("users/exam-target")
+    suspend fun saveExamTarget(@Body body: ExamTargetRequest): ApiResponse<Any>
 }
 
 // ── Request / Response DTOs ───────────────────────────────────────────────────
@@ -69,3 +78,4 @@ data class GetMeResponse(
     val message: String,
     val data: GetMeData?          = null
 )
+

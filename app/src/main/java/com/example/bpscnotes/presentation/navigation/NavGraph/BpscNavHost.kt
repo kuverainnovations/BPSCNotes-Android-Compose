@@ -6,6 +6,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
+import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
 import com.example.bpscnotes.presentation.auth.onboarding.OnboardingScreen
 import com.example.bpscnotes.presentation.auth.otp.OtpScreen
@@ -77,6 +78,11 @@ fun BpscNavHost(navController: NavHostController) {
             RegisterScreen(navController = navController, tempToken = tempToken)
         }
 
+        // ── NEW: Exam Setup flow ──────────────────────────────────
+        // Reached after: Register success OR from Splash when examSetupDone=false
+        composable(Screen.ExamSetup.route) {
+            ExamSetupScreen(navController = navController)
+        }
         // ── Main shell ────────────────────────────────────────────
         composable(Screen.Main.route) {
             MainShell(rootNavController = navController)

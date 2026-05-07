@@ -652,4 +652,28 @@ interface CoinsApiService {
         ): ApiResponse<FlashcardsResponseData>
     }
 
+
+
+
 }
+
+// ── Exam DTOs ──────────────────────────────────────────────────
+
+data class ExamDto(
+    val name: String,
+    @SerializedName("full_name") val fullName: String,
+    val category: String,
+    val emoji: String = "🎯",
+    @SerializedName("sort_order") val sortOrder: Int = 0
+)
+
+data class ExamsResponseData(
+    val exams: List<ExamDto> = emptyList()
+)
+
+data class ExamTargetRequest(
+    @SerializedName("primaryExam")   val primaryExam: String,
+    @SerializedName("secondaryExam") val secondaryExam: String? = null,
+    @SerializedName("prepLevel")     val prepLevel: String,       // "beginner"|"intermediate"|"advanced"
+    @SerializedName("targetYear")    val targetYear: Int? = null
+)

@@ -58,7 +58,7 @@ fun RegisterScreen(
     LaunchedEffect(registerSuccess) {
         if (registerSuccess) {
             viewModel.onNavigationConsumed()
-            navController.navigate(Screen.Main.route) {
+            navController.navigate(Screen.ExamSetup.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
         }

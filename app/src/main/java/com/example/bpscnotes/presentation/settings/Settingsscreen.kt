@@ -16,10 +16,12 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.mock.MockData
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.example.bpscnotes.presentation.profile.ProfileViewModel
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -51,8 +53,13 @@ data class SettingsAction(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-fun SettingsScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+fun SettingsScreen(navController: NavHostController,
+                   viewModel: ProfileViewModel = hiltViewModel() ) {
+   // val user = MockData.currentUser
+
+    val state by viewModel.uiState.collectAsState()
+    val user = state.user   // UserDto from API — null while loading
+
 
     // Toggle states
     val toggleStates = remember {
@@ -85,9 +92,9 @@ fun SettingsScreen(navController: NavHostController) {
             // ── Account section
             SettingsSectionLabel("Account")
             AccountCard(
-                name   = user.name,
-                email  = user.email ?: user.mobile,
-                coins  = user.coins,
+                name   = user?.name,
+                email  = user?.email ?: user?.mobile,
+                coins  = user?.coins,
                 onEdit = { navController.navigate(Screen.Profile.route) }
             )
 
@@ -264,9 +271,9 @@ private fun SettingsHeader(onBack: () -> Unit) {
 
 @Composable
 private fun AccountCard(
-    name: String,
+    name: String?,
     email: String?,
-    coins: Int,
+    coins: Int?,
     onEdit: () -> Unit
 ) {
     Card(
@@ -297,7 +304,7 @@ private fun AccountCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text       = name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
+                    text       = name?.split(" ")?.mapNotNull { it.firstOrNull()?.toString() }?.take(2)?.joinToString("")?:"",
                     style      = MaterialTheme.typography.titleMedium,
                     color      = Color.White,
                     fontWeight = FontWeight.ExtraBold
@@ -305,7 +312,7 @@ private fun AccountCard(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(name,  style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,   fontWeight = FontWeight.ExtraBold)
+                Text(name?:"",  style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,   fontWeight = FontWeight.ExtraBold)
                 Text(email?:"", style = MaterialTheme.typography.bodyMedium,  color = BpscColors.TextSecondary)
                 Spacer(Modifier.height(4.dp))
                 Row(
