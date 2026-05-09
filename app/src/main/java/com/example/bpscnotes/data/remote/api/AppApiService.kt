@@ -21,43 +21,43 @@ import retrofit2.http.*
 
 data class CourseDto(
 
-val id: String,
-val title: String,
-val slug: String,
-val description: String?,
-val instructor: String?,
-val instructor_bio: String?,
-val subject: String,
-val price: Int,
-@SerializedName("original_price")
-val originalPrice: Int,
-@SerializedName("is_paid")
-val isPaid: Boolean,
-val is_featured: Boolean,
-val is_limited_offer: Boolean,
-val offer_ends_at: String?,
-val thumbnail_url: String?,
-@SerializedName("total_lessons")
-val totalLessons: Int,
-@SerializedName("total_hours")
-val totalHours: String,
-val rating: String,
-val review_count: Int,
-@SerializedName("enrollment_count")
-val enrollmentCount: Int,
-val bpsc_relevance: Int,
-val syllabus_coverage: Int,
-val language: String,
-val trial_lesson_title: String?,
-val exam_tags: List<String>,
-val status: String,
-val meta_keywords: String?,
-val created_by: String,
-val created_at: String,
-val updated_at: String,
-val enrollment: Enrollment?,
-val chapters: List<Chapter>,
-val reviews: List<Review>? // currently null
+    val id: String,
+    val title: String,
+    val slug: String,
+    val description: String?,
+    val instructor: String?,
+    val instructor_bio: String?,
+    val subject: String,
+    val price: Int,
+    @SerializedName("original_price")
+    val originalPrice: Int,
+    @SerializedName("is_paid")
+    val isPaid: Boolean,
+    val is_featured: Boolean,
+    val is_limited_offer: Boolean,
+    val offer_ends_at: String?,
+    val thumbnail_url: String?,
+    @SerializedName("total_lessons")
+    val totalLessons: Int,
+    @SerializedName("total_hours")
+    val totalHours: String,
+    val rating: String,
+    val review_count: Int,
+    @SerializedName("enrollment_count")
+    val enrollmentCount: Int,
+    val bpsc_relevance: Int,
+    val syllabus_coverage: Int,
+    val language: String,
+    val trial_lesson_title: String?,
+    val exam_tags: List<String>,
+    val status: String,
+    val meta_keywords: String?,
+    val created_by: String,
+    val created_at: String,
+    val updated_at: String,
+    val enrollment: Enrollment?,
+    val chapters: List<Chapter>,
+    val reviews: List<Review>? // currently null
 
 )
 data class Review(
@@ -239,11 +239,13 @@ data class WeeklyActivityDto(val date: String, val activity: Int)
 
 data class UserStatsData(
     @SerializedName("weekly_activity")     val weeklyActivity: List<WeeklyActivityDto> = emptyList(),
-    @SerializedName("total_study_minutes") val totalStudyMinutes: Int = 0,
-    @SerializedName("current_streak")      val currentStreak: Int = 0,
-    @SerializedName("longest_streak")      val longestStreak: Int = 0,
-    val accuracy: Double = 0.0,
-    @SerializedName("quizzes_attempted")   val quizzesAttempted: Int = 0
+    // Nullable so "?: user.field" fallback triggers when backend returns 0/null
+    @SerializedName("total_study_minutes") val totalStudyMinutes: Int? = null,
+    @SerializedName("current_streak")      val currentStreak: Int? = null,
+    @SerializedName("longest_streak")      val longestStreak: Int? = null,
+    val accuracy: Double? = null,
+    val rank: Int? = null,
+    @SerializedName("quizzes_attempted")   val quizzesAttempted: Int? = null
 )
 
 // ══════════════════════════════════════════════════════════════
@@ -309,9 +311,9 @@ interface CoursesApiService {
         @Query("exam")    exam: String? = null
     ): ApiResponse<CoursesResponseData>
 
-   /* @GET("courses/{id}")
-    suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<CourseDetailResponse>
-*/
+    /* @GET("courses/{id}")
+     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<CourseDetailResponse>
+ */
     @GET("courses/{id}")
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
     @POST("courses/{id}/enroll")
@@ -533,9 +535,9 @@ data class EarnTaskDto(
     @SerializedName("icon_bg") val iconBg: Color,
     @SerializedName("icon_tint") val iconTint: Color,
     @SerializedName("action_text_color") val actionTextColor: Color,
-    )
+)
 
- fun mapIcon(icon: String): ImageVector {
+fun mapIcon(icon: String): ImageVector {
     return when (icon) {
         "quiz"     -> Icons.Rounded.Quiz
         "study"    -> Icons.Rounded.MenuBook

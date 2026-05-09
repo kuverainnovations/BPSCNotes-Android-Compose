@@ -337,9 +337,9 @@ private fun RoomLobbyScreen(
             type = if (dto.isPrivate) RoomType.Private else RoomType.Public,
             activeUsers = dto.currentMembers,
             maxUsers = dto.maxMembers,
-            todayFocus = dto.todayFocus,
+            todayFocus = dto.todayFocus?: "General Study Discussion",
             streak = 0,
-            adminName = dto.hostName,
+            adminName = dto.hostName ?: "BPSCNotes Official",
             isFeatured = dto.isFeatured,
             tags = dto.tags ?: emptyList(),
             members = emptyList(),
@@ -403,7 +403,7 @@ private fun RoomLobbyScreen(
                         Offset(-20.dp.toPx(), size.height * 0.7f)
                     )
                 }
-                Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp)) {
+                Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 60.dp)) {
                     // Top row
                     Row(
                         modifier = Modifier.fillMaxWidth(),

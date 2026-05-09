@@ -137,10 +137,13 @@ class DashboardViewModel @Inject constructor(
     ): List<AchievementItem> {
 
         val streak   = stats?.currentStreak ?: user?.streak ?: 0
-        val rank     = user?.rank ?: Int.MAX_VALUE
-        val quizzes  = user?.quizzesAttempted ?: 0
+        // rank: Int? (null = not yet ranked)
+        val rank     = stats?.rank ?: user?.rank ?: Int.MAX_VALUE
+        val quizzes  = stats?.quizzesAttempted ?: user?.quizzesAttempted ?: 0
+        // totalStudyMinutes: stats is Int? (nullable) so fallback to user works correctly
         val studyMin = stats?.totalStudyMinutes ?: user?.totalStudyMinutes ?: 0
 
+        // accuracy: stats returns Double? (nullable), user returns String?
         val accuracyValue = stats?.accuracy
             ?: user?.accuracy?.toDoubleOrNull()
             ?: 0.0

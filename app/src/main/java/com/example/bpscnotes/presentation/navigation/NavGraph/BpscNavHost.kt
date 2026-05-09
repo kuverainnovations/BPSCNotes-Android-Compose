@@ -51,6 +51,14 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.Login.route)      { LoginScreen(navController) }
 
 
+            composable("splash") {
+                SplashScreen(navController)
+            }
+
+            composable("dashboard") {   // ✅ ADD THIS
+                DashboardScreen(navController)
+            }
+
 
         composable(
             Screen.Otp.route,

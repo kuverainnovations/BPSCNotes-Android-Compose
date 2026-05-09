@@ -520,7 +520,7 @@ fun MyLearningScreen(
                     Offset(-20.dp.toPx(), size.height * 0.7f)
                 )
             }
-            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp)) {
+            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 60.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

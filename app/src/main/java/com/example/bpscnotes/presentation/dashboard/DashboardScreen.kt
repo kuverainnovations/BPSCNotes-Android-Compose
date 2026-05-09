@@ -1399,7 +1399,7 @@ fun DashboardScreen(
                         )
                     )
                     .statusBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 20.dp)) {
+                    .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 60.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier
                             .size(50.dp)
