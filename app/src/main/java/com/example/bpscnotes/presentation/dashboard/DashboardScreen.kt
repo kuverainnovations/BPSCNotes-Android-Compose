@@ -110,28 +110,29 @@ fun DashboardScreen(
                 )
             }
         ) {
-            Box(
+            // ── FIX: outer Column so header is fixed, only body scrolls ──
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                   // .consumeWindowInsets(PaddingValues())
                     .background(BpscColors.Surface)
-            )  {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                      //  .statusBarsPadding()
-                        .verticalScroll(rememberScrollState())
-                ) {
+            ) {
+                // ── STICKY HEADER — never scrolls ──────────────────────────
+                DashboardHeader(
+                    user = state.user,
+                    stats = state.stats,
+                    greeting = dashboardViewModel.getGreeting(),
+                    targets = state.dailyTargets,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    navController = navController
+                )
 
-                    // ── Header (all values from state.user + state.stats) ──────
-                    DashboardHeader(
-                        user = state.user,
-                        stats = state.stats,
-                        greeting = dashboardViewModel.getGreeting(),
-                        targets = state.dailyTargets,
-                        onMenuClick = { scope.launch { drawerState.open() } },
-                        navController = navController
-                    )
+                // ── SCROLLABLE BODY ─────────────────────────────────────────
+                Box(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    ) {
 
                     // ── Global error banner ────────────────────────────────────
                     if (state.error != null) {
@@ -193,9 +194,11 @@ fun DashboardScreen(
                     AchievementsSection(
                         achievements = state.achievements
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
-
+                    // ── FIX: enough bottom padding to clear the bottom nav bar ──
+                    Spacer(modifier = Modifier
+                        .navigationBarsPadding()
+                        .height(80.dp))
+                    }  // end scrollable Column
 
 
                 if (showTargetSheet) {
@@ -211,7 +214,8 @@ fun DashboardScreen(
                         viewModel = dashboardViewModel,
                         onDismiss = { showTargetSheet = false })
                 }
-            }
+                }  // end Box(weight=1f)
+            }  // end outer Column
         }
 
     }
@@ -1399,7 +1403,7 @@ fun DashboardScreen(
                         )
                     )
                     .statusBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 60.dp)) {
+                    .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 30.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier
                             .size(50.dp)
@@ -1495,6 +1499,7 @@ fun DashboardScreen(
                         .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
                         Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text("Logout", style = MaterialTheme.typography.titleMedium)
                     }
+                    Spacer(Modifier.height(80.dp))
                 }
             }
         }

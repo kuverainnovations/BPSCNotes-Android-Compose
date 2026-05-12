@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.mylearning
 
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -483,7 +484,9 @@ fun MyLearningScreen(
 
     // ✅ Loading
     if (state.isLoading && storeItems.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+        Box(Modifier
+            .fillMaxSize()
+            .background(BpscColors.Surface), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.Primary)
         }
         return
@@ -520,7 +523,7 @@ fun MyLearningScreen(
                     Offset(-20.dp.toPx(), size.height * 0.7f)
                 )
             }
-            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 60.dp)) {
+            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 30.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -935,7 +938,7 @@ private fun EnrolledCoursesContent(navController: NavHostController, courses: Li
                 onContinue = { navController.navigate(Screen.CourseDetail.createRoute(continueWith.id)) })
             Spacer(Modifier.height(8.dp))
         }
-
+        Log.e("TAG", "EnrolledCoursesContent: $courses", )
         if (filtered.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
@@ -1619,7 +1622,7 @@ private fun LibraryDetailSheet(
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
-                //    .statusBarsPadding()
+                    //    .statusBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
