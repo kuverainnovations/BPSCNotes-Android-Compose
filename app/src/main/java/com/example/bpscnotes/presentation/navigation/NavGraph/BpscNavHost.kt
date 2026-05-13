@@ -36,6 +36,8 @@ import com.example.bpscnotes.presentation.quiz.QuizPlayScreen
 import com.example.bpscnotes.presentation.quiz.QuizViewModel
 import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
+import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
+import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
@@ -159,6 +161,10 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController) }
         composable(Screen.MockTests.route)     { MockTestsScreen(navController) }
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
+        // ── Tier Room System (Phase 1) ──────────────────────────
+        composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
+        composable(Screen.StudyFocus.route) { StudyFocusScreen(navController) }
+
         composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
         composable(Screen.MyLearning.route)    { MyLearningScreen(navController) }
 

@@ -11,6 +11,7 @@ import com.example.bpscnotes.data.remote.api.JobsApiService
 import com.example.bpscnotes.data.remote.api.LiveClassesApiService
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 import com.example.bpscnotes.data.remote.api.StudyRoomsApiService
+import com.example.bpscnotes.data.remote.api.TierRoomsApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
 import dagger.Module
 import dagger.Provides
@@ -91,5 +92,10 @@ object NetworkModule {
     @Provides @Singleton
     fun provideFlashcardsApi(r: Retrofit): CoinsApiService.FlashcardsApiService =
         r.create(CoinsApiService.FlashcardsApiService::class.java)
+
+    // ── Tier Rooms (Phase 1 — study sessions + tier progression) ──
+    @Provides @Singleton
+    fun provideTierRoomsApi(r: Retrofit): TierRoomsApiService =
+        r.create(TierRoomsApiService::class.java)
 
 }
