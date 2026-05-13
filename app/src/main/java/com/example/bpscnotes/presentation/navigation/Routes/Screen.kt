@@ -62,7 +62,9 @@ sealed class Screen(val route: String) {
     // Group study
     // ── Tier-Based Study Rooms (Phase 1) ───────────────────────
     object RoomsHub    : Screen("rooms_hub")
-    object StudyFocus  : Screen("study_focus")
+    object StudyFocus        : Screen("study_focus")
+    object Achievements      : Screen("achievements")
+    object WeeklyChallenges  : Screen("weekly_challenges")
     object ReadingRooms      : Screen("reading_rooms")
     object ReadingRoomActive : Screen("reading_room/{roomId}") {
         fun createRoute(id: String) = "reading_room/$id"

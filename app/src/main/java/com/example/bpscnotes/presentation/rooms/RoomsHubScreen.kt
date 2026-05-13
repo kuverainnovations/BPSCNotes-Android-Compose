@@ -55,6 +55,22 @@ fun RoomsHubScreen(
         }
     }
 
+    // Show promotion overlay when WS delivers promotion event
+    state.pendingPromotion?.let { promotion ->
+        // Build a RoomTierDto from promotion event for TierPromotionOverlay
+        val promoTier = state.allTiers.firstOrNull { it.tierKey == promotion.tierKey }
+        if (promoTier != null) {
+            TierPromotionOverlay(
+                newTier   = promoTier,
+                onDismiss = {
+                    tiersViewModel.clearPendingPromotion()
+                    tiersViewModel.loadMyTier()  // refresh tier card after promotion
+                }
+            )
+            return
+        }
+    }
+
     // If an active session exists → go straight to focus screen
     LaunchedEffect(sessionState.status) {
         if (sessionState.status == SessionStatus.ACTIVE || sessionState.status == SessionStatus.AFK) {
@@ -76,6 +92,26 @@ fun RoomsHubScreen(
                 isLoading     = state.isLoadingMyTier,
                 onBack        = { navController.popBackStack() }
             )
+
+            // ── Demotion Warning Banner ──────────────────────────
+            if (state.atRisk.isAtRisk && state.showDemotionBanner) {
+                DemotionWarningBanner(
+                    state      = AtRiskState(
+                        isAtRisk  = state.atRisk.isAtRisk,
+                        progress  = state.atRisk.progress,
+                        threshold = state.atRisk.threshold,
+                        tierKey   = state.atRisk.tierKey,
+                        tierName  = state.atRisk.tierName,
+                        tierEmoji = state.atRisk.tierEmoji,
+                    ),
+                    onDismiss  = { tiersViewModel.dismissDemotionBanner() },
+                    onStudyNow = {
+                        tiersViewModel.dismissDemotionBanner()
+                        sessionViewModel.startSession(mode = "study")
+                        navController.navigate(Screen.StudyFocus.route)
+                    }
+                )
+            }
 
             // ── Tier Map ──────────────────────────────────────
             if (state.isLoadingTiers) {
@@ -121,7 +157,7 @@ fun RoomsHubScreen(
                 selectedTabIndex = selectedTab,
                 containerColor   = Color.White,
                 contentColor     = BpscColors.Primary,
-               // dividerColor     = BpscColors.Divider,
+//                dividerColor     = BpscColors.Divider,
             ) {
                 tabs.forEachIndexed { i, tab ->
                     Tab(
@@ -260,16 +296,12 @@ private fun TierMapRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(tiers, key = { it.id }) { tier ->
-            val isUser = tier.tierKey != null && tier.tierKey == userTierKey
-            val isSelected = tier.tierKey != null && tier.tierKey == selectedTierKey
+            val isUser     = tier.tierKey == userTierKey
+            val isSelected = tier.tierKey == selectedTierKey
             val tierColor  = Color(android.graphics.Color.parseColor(tier.colorHex))
 
             Card(
-                modifier = Modifier.width(130.dp).clickable {
-                    tier.tierKey?.let {
-                        onSelectTier(it)
-                    }
-                }
+                modifier = Modifier.width(130.dp).clickable { onSelectTier(tier.tierKey) }
                     .then(if (isSelected) Modifier.border(2.dp, tierColor, RoundedCornerShape(16.dp)) else Modifier),
                 shape     = RoundedCornerShape(16.dp),
                 colors    = CardDefaults.cardColors(containerColor = if (isSelected) tierColor.copy(0.12f) else Color.White),
@@ -387,7 +419,7 @@ private fun MembersTab(members: List<TierMemberDto>, isLoading: Boolean) {
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(member.name?: "Unknown User", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                            Text(member.name, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                             if (member.isStudyingNow) {
                                 Row(modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(BpscColors.Success.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Box(Modifier.size(5.dp).clip(CircleShape).background(BpscColors.Success))

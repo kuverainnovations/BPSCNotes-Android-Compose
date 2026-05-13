@@ -15,7 +15,7 @@ import retrofit2.http.*
 
 data class RoomTierDto(
     val id: String,
-    @SerializedName("tierKey")       val tierKey: String,        // "silver"|"gold"|"premium"|"diamond"
+    @SerializedName("tier_key")       val tierKey: String,        // "silver"|"gold"|"premium"|"diamond"
     val name: String,
     val description: String?,
     @SerializedName("color_hex")      val colorHex: String,       // "#C0C0C0"
@@ -40,7 +40,7 @@ data class TierProgressItemDto(
 
 data class NextTierDto(
     val id: String,
-    @SerializedName("tierKey")   val tierKey: String,
+    @SerializedName("tier_key")   val tierKey: String,
     val name: String,
     @SerializedName("icon_emoji") val iconEmoji: String
 )
@@ -208,6 +208,16 @@ data class ActiveSessionResponseData(
 // RETROFIT INTERFACE
 // ════════════════════════════════════════════════════════════
 
+data class AtRiskData(
+    @SerializedName("isAtRisk")    val isAtRisk: Boolean = false,
+    @SerializedName("progress")    val progress: Float   = 0f,
+    @SerializedName("threshold")   val threshold: Float  = 50f,
+    @SerializedName("tierKey")     val tierKey: String   = "",
+    @SerializedName("tierName")    val tierName: String  = "",
+    @SerializedName("tierEmoji")   val tierEmoji: String = "",
+    @SerializedName("demotionGraceUntil") val demotionGraceUntil: String? = null
+)
+
 interface TierRoomsApiService {
 
     // ── Tier Rooms ───────────────────────────────────────────
@@ -297,4 +307,12 @@ interface TierRoomsApiService {
      */
     @GET("rooms/sessions/active")
     suspend fun getActiveSession(): ApiResponse<ActiveSessionResponseData>
+
+    /**
+     * GET /rooms/tiers/at-risk
+     * Returns whether the user is at risk of demotion.
+     * Called on RoomsHubScreen resume to show DemotionWarningBanner.
+     */
+    @GET("rooms/tiers/at-risk")
+    suspend fun getAtRiskStatus(): ApiResponse<AtRiskData>
 }

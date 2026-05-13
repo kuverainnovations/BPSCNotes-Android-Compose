@@ -102,6 +102,7 @@ fun DashboardScreen(
         ModalNavigationDrawer(
             drawerState = drawerState,
             gesturesEnabled = true,
+            //windowInsets = WindowInsets(0, 0, 0, 0),
             drawerContent = {
                 BpscDrawer(
                     user = state.user,

@@ -79,6 +79,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("io.socket:socket.io-client:2.1.0")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")

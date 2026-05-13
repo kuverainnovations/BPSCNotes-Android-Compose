@@ -4,6 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.*
+import com.example.bpscnotes.data.remote.TierRoomsSocketManager
+import com.example.bpscnotes.data.remote.PromotionEvent
+import com.example.bpscnotes.data.remote.DemotionEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -17,6 +20,15 @@ import javax.inject.Inject
 // Used by: RoomsHubScreen, TierRoomScreen
 // ════════════════════════════════════════════════════════════
 
+data class AtRiskUiState(
+    val isAtRisk:  Boolean = false,
+    val progress:  Float   = 0f,
+    val threshold: Float   = 50f,
+    val tierKey:   String  = "",
+    val tierName:  String  = "",
+    val tierEmoji: String  = "",
+)
+
 data class TierRoomsUiState(
     // All 4 tiers (Silver/Gold/Premium/Diamond)
     val allTiers: List<RoomTierDto>                 = emptyList(),
@@ -26,6 +38,8 @@ data class TierRoomsUiState(
     // User's current tier + progress
     val myTierData: MyTierResponseData?             = null,
     val isLoadingMyTier: Boolean                    = true,
+    val atRisk: AtRiskUiState                       = AtRiskUiState(),
+    val showDemotionBanner: Boolean                 = true,
     val myTierError: String?                        = null,
 
     // Leaderboard for currently viewed tier
@@ -42,11 +56,16 @@ data class TierRoomsUiState(
 
     // Which tier the user is currently browsing (may differ from their own tier)
     val selectedTierKey: String?                    = null,
+    // Real-time WebSocket state
+    val isSocketConnected: Boolean                  = false,
+    val pendingPromotion: PromotionEvent?            = null,
+    val pendingDemotion: DemotionEvent?              = null,
 )
 
 @HiltViewModel
 class TierRoomsViewModel @Inject constructor(
-    private val api: TierRoomsApiService
+    private val api:    TierRoomsApiService,
+    private val socket: TierRoomsSocketManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TierRoomsUiState())
@@ -58,6 +77,52 @@ class TierRoomsViewModel @Inject constructor(
 
     init {
         loadAll()
+        connectSocket()
+    }
+
+    private fun connectSocket() {
+        socket.connect()
+        viewModelScope.launch {
+            // Observe connection state
+            socket.isConnected.collect { connected ->
+                _uiState.update { it.copy(isSocketConnected = connected) }
+                if (connected) {
+                    // Join the user's own tier room on connect
+                    val tierKey = _uiState.value.myTierData?.currentTier?.tierKey
+                    if (tierKey != null) socket.joinTierRoom(tierKey)
+                }
+            }
+        }
+        // Observe live presence updates
+        viewModelScope.launch {
+            socket.presenceSnapshot.collect { snapshot ->
+                _uiState.update { state ->
+                    state.copy(allTiers = state.allTiers.map { tier ->
+                        val liveCount = snapshot[tier.tierKey]
+                        if (liveCount != null) tier.copy(activeSessions = liveCount) else tier
+                    })
+                }
+            }
+        }
+        // Observe promotion events
+        viewModelScope.launch {
+            socket.promotionEvents.collect { event ->
+                _uiState.update { it.copy(pendingPromotion = event) }
+            }
+        }
+        // Observe demotion events
+        viewModelScope.launch {
+            socket.demotionEvents.collect { event ->
+                _uiState.update { it.copy(pendingDemotion = event) }
+            }
+        }
+        // Observe leaderboard ticks — update in-memory leaderboard
+        viewModelScope.launch {
+            socket.leaderboardTicks.collect { tick ->
+                val selected = _uiState.value.selectedTierKey
+                if (tick.tierKey == selected) loadLeaderboard(selected)
+            }
+        }
     }
 
     // ── Load everything in parallel ───────────────────────────
@@ -86,6 +151,31 @@ class TierRoomsViewModel @Inject constructor(
     }
 
     // ── My tier + progress ────────────────────────────────────
+    fun loadAtRiskStatus() {
+        viewModelScope.launch {
+            try {
+                val res  = api.getAtRiskStatus()
+                val data = res.data ?: return@launch
+                _uiState.update { s -> s.copy(
+                    atRisk = AtRiskUiState(
+                        isAtRisk  = data.isAtRisk,
+                        progress  = data.progress,
+                        threshold = data.threshold,
+                        tierKey   = data.tierKey,
+                        tierName  = data.tierName,
+                        tierEmoji = data.tierEmoji,
+                    )
+                )}
+            } catch (e: Exception) {
+                android.util.Log.w("TierRoomsVM", "loadAtRisk: ${e.message}")
+            }
+        }
+    }
+
+    fun dismissDemotionBanner() {
+        _uiState.update { it.copy(showDemotionBanner = false) }
+    }
+
     fun loadMyTier() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMyTier = true, myTierError = null) }
@@ -155,9 +245,23 @@ class TierRoomsViewModel @Inject constructor(
         _uiState.update { it.copy(selectedTierKey = tierKey) }
         loadLeaderboard(tierKey)
         loadMembers(tierKey)
+        socket.joinTierRoom(tierKey)  // join WS room for live presence
+    }
+
+    fun clearPendingPromotion() {
+        _uiState.update { it.copy(pendingPromotion = null) }
+    }
+
+    fun clearPendingDemotion() {
+        _uiState.update { it.copy(pendingDemotion = null) }
     }
 
     fun clearErrors() {
         _uiState.update { it.copy(tiersError = null, myTierError = null, leaderboardError = null, membersError = null) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        socket.leaveTierRoom()
     }
 }

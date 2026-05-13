@@ -38,6 +38,8 @@ import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
+import com.example.bpscnotes.presentation.rooms.AchievementsScreen
+import com.example.bpscnotes.presentation.rooms.ChallengesScreen
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
@@ -52,14 +54,6 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
         composable(Screen.Login.route)      { LoginScreen(navController) }
 
-
-            composable("splash") {
-                SplashScreen(navController)
-            }
-
-            composable("dashboard") {   // ✅ ADD THIS
-                DashboardScreen(navController)
-            }
 
 
         composable(
@@ -163,7 +157,9 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
         // ── Tier Room System (Phase 1) ──────────────────────────
         composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
-        composable(Screen.StudyFocus.route) { StudyFocusScreen(navController) }
+        composable(Screen.StudyFocus.route)       { StudyFocusScreen(navController) }
+        composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
+        composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
 
         composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
         composable(Screen.MyLearning.route)    { MyLearningScreen(navController) }
