@@ -760,7 +760,7 @@ private fun TierRoomsGrid(
                         }
                     }
                     if (isSelected) {
-                      //  Icon(Icons.Rounded.KeyboardArrowRight, null, tint = tierColor, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Rounded.KeyboardArrowRight, null, tint = tierColor, modifier = Modifier.size(20.dp))
                     }
                 }
             }
