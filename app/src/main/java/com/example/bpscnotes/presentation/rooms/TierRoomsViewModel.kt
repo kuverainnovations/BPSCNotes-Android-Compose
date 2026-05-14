@@ -96,13 +96,25 @@ class TierRoomsViewModel @Inject constructor(
         }
         // Observe live presence updates
         viewModelScope.launch {
+            // Track previous counts so we know when someone joined/left
+            var prevCounts = emptyMap<String, Int>()
             socket.presenceSnapshot.collect { snapshot ->
+                // Update tier active counts in UI
                 _uiState.update { state ->
                     state.copy(allTiers = state.allTiers.map { tier ->
                         val liveCount = snapshot[tier.tierKey]
                         if (liveCount != null) tier.copy(activeSessions = liveCount) else tier
                     })
                 }
+                // If count changed for the currently viewed tier → re-fetch members list
+                // so isStudyingNow flags are accurate (e.g. Balu left → remove from list)
+                val currentTierKey = _uiState.value.selectedTierKey
+                val prevCount = prevCounts[currentTierKey] ?: -1
+                val newCount  = snapshot[currentTierKey] ?: -1
+                if (newCount != prevCount && newCount >= 0) {
+                    loadMembers(currentTierKey)
+                }
+                prevCounts = snapshot
             }
         }
         // Observe promotion events
