@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -61,11 +62,31 @@ fun RoomsHubScreen(
         }
     }
 
-    // Resume active session → navigate directly to focus screen
+    // Navigate to StudyFocus when session becomes ACTIVE.
+    // Use a var+key pattern so rotation doesn't re-trigger navigation.
+    // LaunchedEffect(Unit) runs once per composition entry (survives rotation
+    // because ViewModel is retained, but NavBackStack pops properly).
     LaunchedEffect(sessionState.status) {
-        if (sessionState.status == SessionStatus.ACTIVE ||
-            sessionState.status == SessionStatus.AFK) {
-            navController.navigate(Screen.StudyFocus.route) { launchSingleTop = true }
+        Log.d("ROOM_NAV", "status=${sessionState.status}")
+
+        when (sessionState.status) {
+            SessionStatus.ACTIVE, SessionStatus.AFK -> {
+                // Only navigate if we are not already on StudyFocus
+                val currentDest = navController.currentDestination?.route
+                Log.d("ROOM_NAV", "navigate route1=${Screen.StudyFocus.route}")
+                if (currentDest != Screen.StudyFocus.route) {
+                    Log.d("ROOM_NAV", "navigate route2=${Screen.StudyFocus.route}")
+                    navController.navigate(Screen.StudyFocus.route) {
+                        Log.d("ROOM_NAV", "navigate route3=${Screen.StudyFocus.route}")
+                        launchSingleTop = true
+                    }
+                }
+            }
+            SessionStatus.ERROR -> {
+                // Reset to IDLE so button becomes enabled again
+                sessionViewModel.clearError()
+            }
+            else -> { /* idle / ending / ended — stay on screen */ }
         }
     }
 
@@ -83,7 +104,9 @@ fun RoomsHubScreen(
         containerColor = Color(0xFF051D56)
     ) { scaffoldPadding ->
 
-        Box(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(scaffoldPadding)) {
 
             // ── Scrollable full screen ────────────────────────
             LazyColumn(
@@ -99,8 +122,10 @@ fun RoomsHubScreen(
                         sessionState = sessionState,
                         onBack       = { navController.popBackStack() },
                         onStart      = {
+                            // startSession() → status becomes STARTING → ACTIVE
+                            // The LaunchedEffect(sessionState.status) below handles navigation
+                            // once ACTIVE is confirmed. Do NOT navigate here directly.
                             sessionViewModel.startSession(mode = "study")
-                            navController.navigate(Screen.StudyFocus.route)
                         }
                     )
                 }
@@ -146,13 +171,53 @@ fun RoomsHubScreen(
 
                         // ── 3b. All 4 tier rooms ──────────────
                         Spacer(Modifier.height(12.dp))
+
+                        val myTier = state.myTierData
+
+                        if (myTier == null) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                            return@Column
+                        }
                         TierRoomsGrid(
                             tiers         = state.allTiers,
-                            userTierKey   = state.myTierData?.currentTier?.tierKey,
+                            userTierKey   = state.myTierData?.currentTier?.tier_Key,
                             selectedKey   = state.selectedTierKey,
                             isLoading     = state.isLoadingTiers,
                             onSelect      = { tiersViewModel.selectTier(it) }
                         )
+
+                        // ── 3b.5 Browsing banner ─────────────
+                        val selectedKey = state.selectedTierKey
+                        val myTierKey   = state.myTierData?.currentTier?.tier_Key
+                        if (selectedKey != null && myTierKey != null && selectedKey != myTierKey) {
+                            val selectedTier = state.allTiers.firstOrNull { it.tierKey == selectedKey }
+                            if (selectedTier != null) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    colors   = CardDefaults.cardColors(containerColor = BpscColors.PrimaryLight),
+                                    elevation = CardDefaults.cardElevation(0.dp)
+                                ) {
+                                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Rounded.Info, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
+                                        Text(
+                                            "Viewing ${selectedTier.name} leaderboard. Keep studying in ${state.myTierData?.currentTier?.name ?: "Silver"} to unlock this room.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = BpscColors.Primary, fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
 
                         // ── 3c. Quick action row ──────────────
                         QuickActionRow(
@@ -202,7 +267,8 @@ private fun HeroHeader(
     } catch (e: Exception) { BpscColors.CoinGold }
 
     Box(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .background(
                 Brush.linearGradient(
                     listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
@@ -211,7 +277,9 @@ private fun HeroHeader(
             )
             .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp)) {
+        Column(modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(top = 16.dp, bottom = 28.dp)) {
 
             // Top bar
             Row(
@@ -221,8 +289,11 @@ private fun HeroHeader(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(CircleShape)
-                            .background(Color.White.copy(0.12f)).clickable(onClick = onBack),
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .clickable(onClick = onBack),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -235,13 +306,17 @@ private fun HeroHeader(
                 // Socket status indicator
                 if (state.isSocketConnected) {
                     Row(
-                        modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
                             .background(BpscColors.Success.copy(0.2f))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(Modifier.size(6.dp).clip(CircleShape).background(BpscColors.Success))
+                        Box(Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(BpscColors.Success))
                         Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -250,7 +325,11 @@ private fun HeroHeader(
             Spacer(Modifier.height(20.dp))
 
             if (state.isLoadingMyTier) {
-                Box(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.08f)))
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(0.08f)))
             } else if (myTier != null) {
                 // ── My Tier Hero Card ─────────────────────────
                 Card(
@@ -269,7 +348,9 @@ private fun HeroHeader(
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 // Tier badge
                                 Box(
-                                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
                                         .background(tierColor.copy(0.25f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -288,7 +369,8 @@ private fun HeroHeader(
                             // Coin multiplier badge
                             Column(horizontalAlignment = Alignment.End) {
                                 Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
                                         .background(BpscColors.CoinGold.copy(0.2f))
                                         .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
@@ -313,7 +395,9 @@ private fun HeroHeader(
                             val animProg by animateFloatAsState(progress, tween(900), label = "prog")
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Box(
-                                    modifier = Modifier.fillMaxWidth().height(7.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(7.dp)
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(Color.White.copy(0.15f))
                                 ) {
@@ -322,7 +406,12 @@ private fun HeroHeader(
                                             .fillMaxWidth(animProg.coerceIn(0f, 1f))
                                             .fillMaxHeight()
                                             .background(
-                                                Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)),
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        Color(0xFF64B5F6),
+                                                        Color.White
+                                                    )
+                                                ),
                                                 RoundedCornerShape(4.dp)
                                             )
                                     )
@@ -341,7 +430,8 @@ private fun HeroHeader(
                         // User stats strip
                         state.myTierData?.userStats?.let { stats ->
                             Row(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color.White.copy(0.08f))
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -362,9 +452,14 @@ private fun HeroHeader(
             // ── START STUDYING BUTTON ─────────────────────────
             Button(
                 onClick  = onStart,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape    = RoundedCornerShape(16.dp),
-                enabled  = state.myTierData != null && sessionState.status == SessionStatus.IDLE,
+                // Enabled: idle OR error (retry). Disabled during STARTING/ENDING/ACTIVE.
+                enabled  = state.myTierData != null &&
+                        (sessionState.status == SessionStatus.IDLE ||
+                                sessionState.status == SessionStatus.ERROR),
                 colors   = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor   = Color(0xFF051D56),
@@ -386,8 +481,15 @@ private fun HeroHeader(
                     else -> {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
-                        val tierName = state.myTierData?.currentTier?.name ?: "Silver"
-                        Text("Start Studying · $tierName", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                        // Always start in user's OWN tier — not the browsed tier
+                        val myTierName = state.myTierData?.currentTier?.name ?: "Silver"
+                        val browsingOther = state.selectedTierKey != state.myTierData?.currentTier?.tier_Key
+                        Text(
+                            if (browsingOther) "Start Studying · $myTierName ↑"
+                            else "Start Studying · $myTierName",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold
+                        )
                     }
                 }
             }
@@ -411,7 +513,9 @@ private fun StatPill(icon: String, value: String, label: String) {
 private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
     val next = tierData.nextTier ?: return
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape    = RoundedCornerShape(18.dp),
         colors   = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -427,7 +531,8 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
                     fontWeight = FontWeight.ExtraBold)
                 val allDone = tierData.progressItems.all { it.done }
                 if (allDone) {
-                    Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                    Box(modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
                         .background(BpscColors.Success.copy(0.1f))
                         .padding(horizontal = 10.dp, vertical = 4.dp)) {
                         Text("✅ Ready to promote!", style = MaterialTheme.typography.labelSmall,
@@ -455,17 +560,27 @@ private fun ProgressConditionRow(item: TierProgressItemDto) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
-                else Box(Modifier.size(14.dp).clip(CircleShape).border(1.5.dp, BpscColors.Divider, CircleShape))
+                else Box(Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .border(1.5.dp, BpscColors.Divider, CircleShape))
                 Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
             }
             Text("${item.current.toInt()} / ${item.required.toInt()} ${item.unit}",
                 style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
         }
-        Box(modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(BpscColors.Divider)) {
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(BpscColors.Divider)) {
             Box(modifier = Modifier
                 .fillMaxWidth(animPct)
                 .fillMaxHeight()
-                .background(if (item.done) BpscColors.Success else BpscColors.Primary, RoundedCornerShape(3.dp)))
+                .background(
+                    if (item.done) BpscColors.Success else BpscColors.Primary,
+                    RoundedCornerShape(3.dp)
+                ))
         }
     }
 }
@@ -481,49 +596,92 @@ private fun TierRoomsGrid(
     isLoading:   Boolean,
     onSelect:    (String) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)) {
         Text("All Rooms", style = MaterialTheme.typography.titleMedium,
             color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(bottom = 10.dp))
 
         if (isLoading) {
             repeat(4) {
-                Box(Modifier.fillMaxWidth().height(68.dp).padding(bottom = 8.dp)
-                    .clip(RoundedCornerShape(14.dp)).background(BpscColors.Divider))
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BpscColors.Divider))
             }
             return@Column
         }
 
         tiers.forEach { tier ->
             val isUser     = tier.tierKey == userTierKey
-            val isSelected = tier.tierKey == selectedKey
+
+            Log.e("TAG", "TierRoomsGrid $isUser  ${tier.tierKey}   $userTierKey: ", )
             val tierColor  = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
-            val locked     = when (tier.tierKey) {
-                "gold"    -> userTierKey in listOf("silver")
-                "premium" -> userTierKey in listOf("silver", "gold")
-                "diamond" -> userTierKey in listOf("silver", "gold", "premium")
-                else      -> false
+            val currentLevel = when (userTierKey?.lowercase()) {
+                "silver"  -> 1
+                "gold"    -> 2
+                "premium" -> 3
+                "diamond" -> 4
+                else      -> 0
             }
+
+            val tierLevel = when (tier.tierKey.lowercase()) {
+                "silver"  -> 1
+                "gold"    -> 2
+                "premium" -> 3
+                "diamond" -> 4
+                else      -> Int.MAX_VALUE
+            }
+
+            val locked = tierLevel > currentLevel
+            val isSelected = tier.tierKey == selectedKey// && !locked
+
             val isHigherTier = locked && !isUser
 
             Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    .clickable { onSelect(tier.tierKey) }
-                    .then(if (isSelected) Modifier.border(2.dp, tierColor, RoundedCornerShape(14.dp)) else Modifier),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .clickable(enabled = !locked) {
+                        onSelect(tier.tierKey)
+                    }
+                    .then(
+                        if (isSelected) Modifier.border(
+                            2.dp,
+                            tierColor,
+                            RoundedCornerShape(14.dp)
+                        ) else Modifier
+                    ),
                 shape  = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) tierColor.copy(0.07f) else Color.White
+                    containerColor =
+                        when {
+                            locked -> Color(0xFFF5F5F5)
+                           // isSelected -> tierColor.copy(0.07f)
+                            else -> Color.White
+                        }
                 ),
-                elevation = CardDefaults.cardElevation(if (isSelected) 3.dp else 1.dp)
+                elevation = CardDefaults.cardElevation(/*if (isSelected) 3.dp else */1.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-                            .background(if (isHigherTier) BpscColors.Divider else tierColor.copy(0.12f)),
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isHigherTier) BpscColors.Divider else tierColor.copy(
+                                    0.12f
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isHigherTier) {
@@ -538,12 +696,20 @@ private fun TierRoomsGrid(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = if (isHigherTier) BpscColors.TextHint else BpscColors.TextPrimary,
                                 fontWeight = FontWeight.Bold)
-                            if (isUser) {
-                                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            when {
+                                isUser -> Box(modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(BpscColors.Success.copy(0.1f))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)) {
                                     Text("Your Room", style = MaterialTheme.typography.labelSmall,
                                         color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                                }
+                                isHigherTier -> Box(modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(BpscColors.TextHint.copy(0.12f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                    Text("Browse only", style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.TextHint, fontSize = 9.sp)
                                 }
                             }
                         }
@@ -558,10 +724,43 @@ private fun TierRoomsGrid(
                                 Text("🟢 ${tier.displayActive} live",
                                     style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
                             }
+
+                            Log.e("TAG", "TierRoomsGrid: $locked  ${tier.tierKey}", )
+
+                            Log.e(
+                                "ROOM_LOCK",
+                                "userTier=$userTierKey tier=${tier.tierKey} locked=$locked"
+                            )
+                            /* when {
+                                 locked -> {
+                                     Text(
+                                         "🔒 Locked",
+                                         style = MaterialTheme.typography.labelSmall,
+                                         color = BpscColors.TextHint
+                                     )
+                                 }
+
+
+                                 tier.displayActive > 0 -> {
+                                     Text(
+                                         "🟢 ${tier.displayActive} studying",
+                                         style = MaterialTheme.typography.labelSmall,
+                                         color = BpscColors.Success
+                                     )
+                                 }
+
+                                 else -> {
+                                     Text(
+                                         "No active sessions",
+                                         style = MaterialTheme.typography.labelSmall,
+                                         color = BpscColors.TextHint
+                                     )
+                                 }
+                             }*/
                         }
                     }
                     if (isSelected) {
-                        Icon(Icons.Rounded.KeyboardArrowRight, null, tint = tierColor, modifier = Modifier.size(20.dp))
+                      //  Icon(Icons.Rounded.KeyboardArrowRight, null, tint = tierColor, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -575,7 +774,9 @@ private fun TierRoomsGrid(
 @Composable
 private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
@@ -613,7 +814,9 @@ private fun LeaderboardSection(
     selectedTierKey: String?,
     onChangePeriod: (String) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)) {
         Text("Leaderboard", style = MaterialTheme.typography.titleMedium,
             color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(bottom = 10.dp))
@@ -637,7 +840,9 @@ private fun LeaderboardSection(
         }
 
         when {
-            isLoading -> Box(Modifier.fillMaxWidth().height(80.dp), Alignment.Center) {
+            isLoading -> Box(Modifier
+                .fillMaxWidth()
+                .height(80.dp), Alignment.Center) {
                 CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(24.dp))
             }
             entries.isEmpty() -> Card(
@@ -645,7 +850,9 @@ private fun LeaderboardSection(
                 shape    = RoundedCornerShape(14.dp),
                 colors   = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(20.dp),
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("🏆", fontSize = 36.sp)
@@ -675,7 +882,9 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto) {
 
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor), elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(medal, fontSize = if (entry.rankPosition <= 3) 18.sp else 12.sp,
                 fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
@@ -703,23 +912,32 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto) {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun MembersSection(members: List<TierMemberDto>, isLoading: Boolean) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text("Members Online", style = MaterialTheme.typography.titleMedium,
             color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(bottom = 10.dp))
         if (isLoading) {
-            Box(Modifier.fillMaxWidth().height(60.dp), Alignment.Center) {
+            Box(Modifier
+                .fillMaxWidth()
+                .height(60.dp), Alignment.Center) {
                 CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(24.dp))
             }
             return@Column
         }
         members.take(5).forEach { member ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 5.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                Box(modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(BpscColors.PrimaryLight),
                     contentAlignment = Alignment.Center) {
                     Text("Lv${member.xpLevel}", style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 9.sp)
@@ -730,7 +948,8 @@ private fun MembersSection(members: List<TierMemberDto>, isLoading: Boolean) {
                             color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))
                         if (member.isStudyingNow) {
-                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            Box(modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(BpscColors.Success.copy(0.1f))
                                 .padding(horizontal = 5.dp, vertical = 2.dp)) {
                                 Text("live", style = MaterialTheme.typography.labelSmall,

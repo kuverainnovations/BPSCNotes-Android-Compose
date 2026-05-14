@@ -38,8 +38,8 @@ import kotlin.math.sin
 @Composable
 fun StudyFocusScreen(
     navController: NavHostController,
-    viewModel: StudySessionViewModel = hiltViewModel()
-) {
+    viewModel: StudySessionViewModel
+){
     val state by viewModel.uiState.collectAsState()
     var showEndConfirm by remember { mutableStateOf(false) }
 
@@ -70,14 +70,38 @@ fun StudyFocusScreen(
     }
 
     // Show summary when session ends
-    LaunchedEffect(state.status) {
-        if (state.status == SessionStatus.ENDED) {
-            // Stay on screen to show summary sheet
-        }
-        if (state.status == SessionStatus.IDLE && state.summary == null) {
-            // Was IDLE from the start — shouldn't be here
+    LaunchedEffect(state.status, state.sessionId) {
+
+        // Only leave screen if:
+        // 1. no active session
+        // 2. no summary
+        // 3. not starting
+        val shouldExit =
+            state.status == SessionStatus.IDLE &&
+                    state.sessionId == null &&
+                    state.summary == null
+
+        if (shouldExit) {
             navController.popBackStack()
         }
+
+        if (state.status == SessionStatus.ERROR) {
+            navController.popBackStack()
+        }
+    }
+
+    if (
+        state.status == SessionStatus.IDLE &&
+        state.sessionId == null &&
+        state.summary == null
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     when (state.status) {
@@ -89,6 +113,21 @@ fun StudyFocusScreen(
                     navController.popBackStack()
                 }
             )
+        }
+        SessionStatus.STARTING -> {
+            // Show loading while API creates the session
+            Box(
+                modifier = Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)))
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(40.dp), strokeWidth = 3.dp)
+                    Text("Starting session…", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Connecting to study room", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
+                }
+            }
         }
         else -> {
             ActiveSessionContent(
@@ -112,7 +151,8 @@ private fun ActiveSessionContent(
 ) {
     // Elapsed time counter (local — increments every second)
     var elapsedSeconds by remember { mutableIntStateOf(state.activeMinutes * 60) }
-    LaunchedEffect(state.status) {
+    // Use "timer" key so it's distinct from the status navigation LaunchedEffect above
+    LaunchedEffect(state.status, "timer") {
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
             delay(1000L)
             elapsedSeconds++

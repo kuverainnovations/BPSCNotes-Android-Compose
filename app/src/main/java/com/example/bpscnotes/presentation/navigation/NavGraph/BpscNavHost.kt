@@ -40,6 +40,7 @@ import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
+import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
@@ -157,7 +158,21 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
         // ── Tier Room System (Phase 1) ──────────────────────────
         composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
-        composable(Screen.StudyFocus.route)       { StudyFocusScreen(navController) }
+
+        composable(Screen.StudyFocus.route) { backStackEntry ->
+
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.RoomsHub.route)
+            }
+
+            val sharedViewModel: StudySessionViewModel = hiltViewModel(parentEntry)
+
+            StudyFocusScreen(
+                navController = navController,
+                viewModel = sharedViewModel
+            )
+        }
+
         composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
         composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
 

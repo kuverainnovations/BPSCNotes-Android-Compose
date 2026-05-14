@@ -55,7 +55,8 @@ data class TierRoomsUiState(
     val membersError: String?                       = null,
 
     // Which tier the user is currently browsing (may differ from their own tier)
-    val selectedTierKey: String?                    = null,
+    // Default "silver" so leaderboard loads immediately without waiting for getMyTier
+    val selectedTierKey: String                     = "silver",
     // Real-time WebSocket state
     val isSocketConnected: Boolean                  = false,
     val pendingPromotion: PromotionEvent?            = null,
@@ -130,11 +131,15 @@ class TierRoomsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingTiers = true, isLoadingMyTier = true) }
 
-            val tiersJob   = async { loadTiers() }
-            val myTierJob  = async { loadMyTier() }
+            // Load tiers + my tier in parallel
+            // Also pre-load leaderboard for default "silver" tier so it's ready immediately
+            val tiersJob       = async { loadTiers() }
+            val myTierJob      = async { loadMyTier() }
+            val leaderboardJob = async { loadLeaderboard("silver") }
 
             tiersJob.await()
             myTierJob.await()
+            leaderboardJob.await()
         }
     }
 
@@ -182,16 +187,22 @@ class TierRoomsViewModel @Inject constructor(
             try {
                 val response = api.getMyTier()
                 val data     = response.data ?: throw Exception("Empty tier response")
+                
+                // Safety: fallback if tierKey is null from API
+                val tierKey = data.currentTier.tierKey ?: "silver"
+                
                 _uiState.update { s ->
                     s.copy(
                         myTierData      = data,
                         isLoadingMyTier = false,
-                        // Default selected tier = user's own tier
-                        selectedTierKey = s.selectedTierKey ?: data.currentTier.tierKey,
+                        // Update selectedTierKey to actual user tier
+                        selectedTierKey = tierKey,
                     )
                 }
-                // Load leaderboard for the user's tier
-                loadLeaderboard(data.currentTier.tierKey)
+                // Load leaderboard for user's actual tier
+                loadLeaderboard(tierKey)
+                // Also load members for the tab
+                loadMembers(tierKey)
             } catch (e: Exception) {
                 Log.e(TAG, "loadMyTier: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMyTier = false, myTierError = e.message ?: "Failed to load your tier") }
@@ -243,9 +254,9 @@ class TierRoomsViewModel @Inject constructor(
     // ── Select a tier to browse (does not change user's tier) ─
     fun selectTier(tierKey: String) {
         _uiState.update { it.copy(selectedTierKey = tierKey) }
-        loadLeaderboard(tierKey)
-        loadMembers(tierKey)
-        socket.joinTierRoom(tierKey)  // join WS room for live presence
+        loadLeaderboard(tierKey)   // show leaderboard for any tier (browse mode)
+        loadMembers(tierKey)       // show members of any tier
+        socket.joinTierRoom(tierKey)
     }
 
     fun clearPendingPromotion() {

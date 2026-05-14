@@ -16,6 +16,8 @@ import retrofit2.http.*
 data class RoomTierDto(
     val id: String,
     @SerializedName("tier_key")       val tierKey: String,
+    @SerializedName("tierKey")       val tier_Key: String?="null",
+
     val name: String?,
     val description: String?,
     @SerializedName("color_hex")      val colorHex: String = "#9E9E9E",
