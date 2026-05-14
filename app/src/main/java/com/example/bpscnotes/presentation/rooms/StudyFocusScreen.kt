@@ -41,6 +41,33 @@ fun StudyFocusScreen(
     viewModel: StudySessionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showEndConfirm by remember { mutableStateOf(false) }
+
+    // Intercept system back button — show confirmation instead of ending silently
+    androidx.activity.compose.BackHandler(
+        enabled = state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK
+    ) {
+        showEndConfirm = true
+    }
+
+    // Confirmation dialog
+    if (showEndConfirm) {
+        AlertDialog(
+            onDismissRequest = { showEndConfirm = false },
+            icon   = { Text("⏱️", fontSize = 32.sp) },
+            title  = { Text("End Session?", fontWeight = FontWeight.ExtraBold) },
+            text   = { Text("Your ${state.activeMinutes} active minutes will be saved and coins awarded.") },
+            confirmButton = {
+                Button(
+                    onClick = { showEndConfirm = false; viewModel.endSession() },
+                    colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) { Text("End Session") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndConfirm = false }) { Text("Keep Studying") }
+            }
+        )
+    }
 
     // Show summary when session ends
     LaunchedEffect(state.status) {
@@ -68,10 +95,7 @@ fun StudyFocusScreen(
                 state   = state,
                 onEnd   = { viewModel.endSession() },
                 onDismissAfk = { viewModel.dismissAfkWarning() },
-                onBack  = {
-                    // Back = end session confirmation
-                    viewModel.endSession()
-                }
+                onBack  = { showEndConfirm = true }
             )
         }
     }
@@ -328,7 +352,7 @@ private fun ActiveSessionContent(
 
                 // ── End Button ───────────────────────────────────
                 Button(
-                    onClick = onEnd,
+                    onClick = onBack,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     enabled = state.status != SessionStatus.ENDING,

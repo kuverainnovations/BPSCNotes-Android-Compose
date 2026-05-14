@@ -92,13 +92,13 @@ fun TierPromotionOverlay(
                         topLeft = Offset(inset, inset), size = sz)
                 }
                 Box(modifier = Modifier.size(96.dp).clip(CircleShape).background(tierColor.copy(0.15f)).border(2.dp, tierColor, CircleShape), contentAlignment = Alignment.Center) {
-                    Text(newTier.iconEmoji, fontSize = 44.sp)
+                    Text(newTier.iconEmoji?:"Empty", fontSize = 44.sp)
                 }
             }
 
             Text("🎉 Congratulations! 🎉", style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
             Text("You've been promoted to", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.8f))
-            Text(newTier.name, style = MaterialTheme.typography.displaySmall, color = tierColor, fontWeight = FontWeight.ExtraBold)
+            Text(newTier.name?:"Empty", style = MaterialTheme.typography.displaySmall, color = tierColor, fontWeight = FontWeight.ExtraBold)
             Text("${newTier.coinMultiplier}× coins/hour · ${newTier.xpMultiplier}× XP", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
 
             // Perks

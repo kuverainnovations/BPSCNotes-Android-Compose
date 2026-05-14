@@ -15,20 +15,28 @@ import retrofit2.http.*
 
 data class RoomTierDto(
     val id: String,
-    @SerializedName("tier_key")       val tierKey: String,        // "silver"|"gold"|"premium"|"diamond"
-    val name: String,
+    @SerializedName("tier_key")       val tierKey: String,
+    val name: String?,
     val description: String?,
-    @SerializedName("color_hex")      val colorHex: String,       // "#C0C0C0"
-    @SerializedName("icon_emoji")     val iconEmoji: String,      // "🥈"
-    @SerializedName("sort_order")     val sortOrder: Int,
-    @SerializedName("max_members")    val maxMembers: Int,
-    @SerializedName("coin_multiplier") val coinMultiplier: Double, // 1.0 | 1.5 | 2.0 | 3.0
-    @SerializedName("xp_multiplier")  val xpMultiplier: Double,
+    @SerializedName("color_hex")      val colorHex: String = "#9E9E9E",
+    @SerializedName("icon_emoji")     val iconEmoji: String?,
+    @SerializedName("sort_order")     val sortOrder: Int = 0,
+    @SerializedName("max_members")    val maxMembers: Int = 0,
+    @SerializedName("coin_multiplier") val coinMultiplier: Double = 1.0,
+    @SerializedName("xp_multiplier")  val xpMultiplier: Double = 1.0,
     val perks: List<String> = emptyList(),
+    // getAllTiers uses snake_case from DB aggregate
     @SerializedName("total_members")  val totalMembers: Int = 0,
     @SerializedName("active_sessions") val activeSessions: Int = 0,
+    // getMyTier currentTier uses camelCase — Gson picks first non-null
+    @SerializedName("memberCount")    val memberCount: Int = 0,
+    @SerializedName("activeNow")      val activeNow: Int = 0,
     @SerializedName("is_active")      val isActive: Boolean = true
-)
+) {
+    // Unified accessors — works for both getAllTiers and getMyTier responses
+    val displayMembers: Int get() = if (totalMembers > 0) totalMembers else memberCount
+    val displayActive: Int  get() = if (activeSessions > 0) activeSessions else activeNow
+}
 
 data class TierProgressItemDto(
     val label: String,      // "Study Hours" | "Streak" | "Quizzes" | "Accuracy"

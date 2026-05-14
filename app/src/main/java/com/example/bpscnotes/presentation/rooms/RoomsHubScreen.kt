@@ -1,6 +1,9 @@
 package com.example.bpscnotes.presentation.rooms
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -25,303 +28,366 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.*
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
-// ════════════════════════════════════════════════════════════
-// FILE: presentation/rooms/RoomsHubScreen.kt
-//
-// Entry screen for the Group Study feature.
-// Shows:
-//   - User's current tier card (with progress bar to next tier)
-//   - All 4 tier rooms as a horizontal map
-//   - [Enter Room] button → StudyFocusScreen
-//   - Leaderboard tab
-//   - Members tab
-// ════════════════════════════════════════════════════════════
-
 @Composable
 fun RoomsHubScreen(
     navController: NavHostController,
-    tiersViewModel: TierRoomsViewModel    = hiltViewModel(),
+    tiersViewModel: TierRoomsViewModel      = hiltViewModel(),
     sessionViewModel: StudySessionViewModel = hiltViewModel()
 ) {
-    val state         by tiersViewModel.uiState.collectAsState()
-    val sessionState  by sessionViewModel.uiState.collectAsState()
+    val state        by tiersViewModel.uiState.collectAsState()
+    val sessionState by sessionViewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Check for existing session on resume (app killed and restarted)
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             sessionViewModel.checkForExistingSession()
             tiersViewModel.loadMyTier()
+            tiersViewModel.loadAtRiskStatus()
         }
     }
 
-    // Show promotion overlay when WS delivers promotion event
+    // Promotion overlay — full screen
     state.pendingPromotion?.let { promotion ->
-        // Build a RoomTierDto from promotion event for TierPromotionOverlay
         val promoTier = state.allTiers.firstOrNull { it.tierKey == promotion.tierKey }
         if (promoTier != null) {
             TierPromotionOverlay(
                 newTier   = promoTier,
                 onDismiss = {
                     tiersViewModel.clearPendingPromotion()
-                    tiersViewModel.loadMyTier()  // refresh tier card after promotion
+                    tiersViewModel.loadMyTier()
                 }
             )
             return
         }
     }
 
-    // If an active session exists → go straight to focus screen
+    // Resume active session → navigate directly to focus screen
     LaunchedEffect(sessionState.status) {
-        if (sessionState.status == SessionStatus.ACTIVE || sessionState.status == SessionStatus.AFK) {
-            navController.navigate(Screen.StudyFocus.route) {
-                launchSingleTop = true
-            }
+        if (sessionState.status == SessionStatus.ACTIVE ||
+            sessionState.status == SessionStatus.AFK) {
+            navController.navigate(Screen.StudyFocus.route) { launchSingleTop = true }
         }
     }
 
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs         = listOf("Leaderboard", "Members")
+    // Error snackbar for session start failure
+    val snackbarHost = remember { SnackbarHostState() }
+    LaunchedEffect(sessionState.error) {
+        sessionState.error?.let {
+            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Short)
+            sessionViewModel.clearError()
+        }
+    }
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
+        containerColor = Color(0xFF051D56)
+    ) { scaffoldPadding ->
 
-            // ── Header ───────────────────────────────────────
-            RoomsHubHeader(
-                myTierData    = state.myTierData,
-                isLoading     = state.isLoadingMyTier,
-                onBack        = { navController.popBackStack() }
-            )
+        Box(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
 
-            // ── Demotion Warning Banner ──────────────────────────
-            if (state.atRisk.isAtRisk && state.showDemotionBanner) {
-                DemotionWarningBanner(
-                    state      = AtRiskState(
-                        isAtRisk  = state.atRisk.isAtRisk,
-                        progress  = state.atRisk.progress,
-                        threshold = state.atRisk.threshold,
-                        tierKey   = state.atRisk.tierKey,
-                        tierName  = state.atRisk.tierName,
-                        tierEmoji = state.atRisk.tierEmoji,
-                    ),
-                    onDismiss  = { tiersViewModel.dismissDemotionBanner() },
-                    onStudyNow = {
-                        tiersViewModel.dismissDemotionBanner()
-                        sessionViewModel.startSession(mode = "study")
-                        navController.navigate(Screen.StudyFocus.route)
-                    }
-                )
-            }
-
-            // ── Tier Map ──────────────────────────────────────
-            if (state.isLoadingTiers) {
-                Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(28.dp))
-                }
-            } else {
-                TierMapRow(
-                    tiers             = state.allTiers,
-                    userTierKey       = state.myTierData?.currentTier?.tierKey,
-                    selectedTierKey   = state.selectedTierKey,
-                    onSelectTier      = { tiersViewModel.selectTier(it) }
-                )
-            }
-
-            // ── Enter Room Button ─────────────────────────────
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Button(
-                    onClick = {
-                        val tierKey = state.selectedTierKey ?: state.myTierData?.currentTier?.tierKey
-                        sessionViewModel.startSession(roomId = null, mode = "study")
-                        navController.navigate(Screen.StudyFocus.route)
-                    },
-                    modifier  = Modifier.fillMaxWidth().height(52.dp),
-                    shape     = RoundedCornerShape(14.dp),
-                    colors    = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
-                    enabled   = state.myTierData != null && sessionState.status == SessionStatus.IDLE
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text  = when (sessionState.status) {
-                            SessionStatus.STARTING -> "Starting…"
-                            else                   -> "Start Studying in ${state.selectedTierKey?.replaceFirstChar { it.uppercase() } ?: "Silver"} Room"
-                        },
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-
-            // ── Tabs: Leaderboard | Members ───────────────────
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor   = Color.White,
-                contentColor     = BpscColors.Primary,
-//                dividerColor     = BpscColors.Divider,
+            // ── Scrollable full screen ────────────────────────
+            LazyColumn(
+                modifier            = Modifier.fillMaxSize(),
+                contentPadding      = PaddingValues(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                tabs.forEachIndexed { i, tab ->
-                    Tab(
-                        selected = selectedTab == i,
-                        onClick  = { selectedTab = i },
-                        text     = { Text(tab, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selectedTab == i) FontWeight.Bold else FontWeight.Normal) }
+
+                // ── 1. HERO HEADER ────────────────────────────
+                item(key = "header") {
+                    HeroHeader(
+                        state        = state,
+                        sessionState = sessionState,
+                        onBack       = { navController.popBackStack() },
+                        onStart      = {
+                            sessionViewModel.startSession(mode = "study")
+                            navController.navigate(Screen.StudyFocus.route)
+                        }
                     )
                 }
-            }
 
-            // ── Tab Content ───────────────────────────────────
-            when (selectedTab) {
-                0 -> LeaderboardTab(
-                    entries     = state.leaderboard,
-                    isLoading   = state.isLoadingLeaderboard,
-                    myUserId    = "",   // from TokenStore — pass if needed for highlight
-                    period      = state.leaderboardPeriod,
-                    onChangePeriod = { p ->
-                        val key = state.selectedTierKey ?: return@LeaderboardTab
-                        tiersViewModel.loadLeaderboard(key, p)
+                // ── 2. DEMOTION WARNING ───────────────────────
+                if (state.atRisk.isAtRisk && state.showDemotionBanner) {
+                    item(key = "demotion") {
+                        DemotionWarningBanner(
+                            state     = AtRiskState(
+                                isAtRisk  = state.atRisk.isAtRisk,
+                                progress  = state.atRisk.progress,
+                                threshold = state.atRisk.threshold,
+                                tierKey   = state.atRisk.tierKey,
+                                tierName  = state.atRisk.tierName,
+                                tierEmoji = state.atRisk.tierEmoji,
+                            ),
+                            onDismiss  = { tiersViewModel.dismissDemotionBanner() },
+                            onStudyNow = {
+                                tiersViewModel.dismissDemotionBanner()
+                                sessionViewModel.startSession(mode = "study")
+                                navController.navigate(Screen.StudyFocus.route)
+                            }
+                        )
                     }
-                )
-                1 -> MembersTab(
-                    members   = state.members,
-                    isLoading = state.isLoadingMembers
-                )
+                }
+
+                // ── 3. CONTENT AREA (white bg) ────────────────
+                item(key = "content_area") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                            .background(BpscColors.Surface)
+                            .padding(top = 8.dp)
+                    ) {
+
+                        // ── 3a. Progress breakdown ────────────
+                        state.myTierData?.let { tierData ->
+                            if (tierData.progressItems.isNotEmpty() && tierData.nextTier != null) {
+                                ProgressBreakdownCard(tierData = tierData)
+                            }
+                        }
+
+                        // ── 3b. All 4 tier rooms ──────────────
+                        Spacer(Modifier.height(12.dp))
+                        TierRoomsGrid(
+                            tiers         = state.allTiers,
+                            userTierKey   = state.myTierData?.currentTier?.tierKey,
+                            selectedKey   = state.selectedTierKey,
+                            isLoading     = state.isLoadingTiers,
+                            onSelect      = { tiersViewModel.selectTier(it) }
+                        )
+
+                        // ── 3c. Quick action row ──────────────
+                        QuickActionRow(
+                            onAchievements = { navController.navigate(Screen.Achievements.route) },
+                            onChallenges   = { navController.navigate(Screen.WeeklyChallenges.route) }
+                        )
+
+                        // ── 3d. Leaderboard ───────────────────
+                        LeaderboardSection(
+                            entries   = state.leaderboard,
+                            isLoading = state.isLoadingLeaderboard,
+                            period    = state.leaderboardPeriod,
+                            selectedTierKey = state.selectedTierKey,
+                            onChangePeriod = { p ->
+                                val key = state.selectedTierKey ?: return@LeaderboardSection
+                                tiersViewModel.loadLeaderboard(key, p)
+                            }
+                        )
+
+                        // ── 3e. Members online ────────────────
+                        if (state.members.isNotEmpty() || state.isLoadingMembers) {
+                            MembersSection(
+                                members   = state.members,
+                                isLoading = state.isLoadingMembers
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// ── Header ─────────────────────────────────────────────────────
-
+// ════════════════════════════════════════════════════════════
+// HERO HEADER
+// ════════════════════════════════════════════════════════════
 @Composable
-private fun RoomsHubHeader(
-    myTierData: MyTierResponseData?,
-    isLoading: Boolean,
-    onBack: () -> Unit
+private fun HeroHeader(
+    state:        TierRoomsUiState,
+    sessionState: StudySessionUiState,
+    onBack:       () -> Unit,
+    onStart:      () -> Unit
 ) {
+    val myTier = state.myTierData?.currentTier
+    val tierColor = try {
+        Color(android.graphics.Color.parseColor(myTier?.colorHex ?: "#9E9E9E"))
+    } catch (e: Exception) { BpscColors.CoinGold }
+
     Box(
         modifier = Modifier.fillMaxWidth()
-            .background(Brush.linearGradient(
-                listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                Offset(0f, 0f), Offset(400f, 300f)
-            ))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
+                    Offset(0f, 0f), Offset(500f, 500f)
+                )
+            )
             .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp)) {
+
+            // Top bar
             Row(
-                modifier              = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier         = Modifier.size(36.dp).clip(CircleShape)
-                            .background(Color.White.copy(0.15f)).clickable(onClick = onBack),
+                        modifier = Modifier.size(36.dp).clip(CircleShape)
+                            .background(Color.White.copy(0.12f)).clickable(onClick = onBack),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column {
-                        Text("Group Study", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Study together, grow faster", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                        Text("Group Study", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text("Study together, grow faster", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
+                    }
+                }
+                // Socket status indicator
+                if (state.isSocketConnected) {
+                    Row(
+                        modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                            .background(BpscColors.Success.copy(0.2f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(BpscColors.Success))
+                        Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // My Tier Progress Card
-            if (isLoading) {
-                Box(Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(0.1f)))
-            } else if (myTierData != null) {
-                MyTierProgressCard(myTierData)
-            }
-        }
-    }
-}
+            if (state.isLoadingMyTier) {
+                Box(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.08f)))
+            } else if (myTier != null) {
+                // ── My Tier Hero Card ─────────────────────────
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(20.dp),
+                    colors   = CardDefaults.cardColors(containerColor = Color.White.copy(0.12f)),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
-@Composable
-private fun MyTierProgressCard(data: MyTierResponseData) {
-    val tier     = data.currentTier
-    val next     = data.nextTier
-    val progress = data.nextTierProgress.toFloat()
-    val animProg by animateFloatAsState(progress, tween(800), label = "tier_prog")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                // Tier badge
+                                Box(
+                                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
+                                        .background(tierColor.copy(0.25f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp)
+                                }
+                                Column {
+                                    Text(myTier.name ?: "Silver Room",
+                                        style = MaterialTheme.typography.titleLarge, color = Color.White,
+                                        fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        "${myTier.displayMembers} members · ${myTier.displayActive} studying now",
+                                        style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f)
+                                    )
+                                }
+                            }
+                            // Coin multiplier badge
+                            Column(horizontalAlignment = Alignment.End) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                        .background(BpscColors.CoinGold.copy(0.2f))
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text("🪙 ${myTier.coinMultiplier}×/hr",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                                }
+                                val nextTier = state.myTierData?.nextTier
+                                if (nextTier != null) {
+                                    val pct = ((state.myTierData?.nextTierProgress ?: 0.0) * 100).toInt()
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("→ ${nextTier.iconEmoji ?: ""} $pct%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White.copy(0.6f), fontSize = 10.sp)
+                                }
+                            }
+                        }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f)),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(tier.iconEmoji ?: "🏆", fontSize = 22.sp)
-                    Column {
-                        Text(tier.name?: "Unknown Tier", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("${tier.totalMembers} members · ${tier.activeSessions} studying now",
-                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        // Progress bar to next tier
+                        state.myTierData?.nextTier?.let { next ->
+                            val progress = state.myTierData.nextTierProgress.toFloat()
+                            val animProg by animateFloatAsState(progress, tween(900), label = "prog")
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(7.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(0.15f))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(animProg.coerceIn(0f, 1f))
+                                            .fillMaxHeight()
+                                            .background(
+                                                Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)),
+                                                RoundedCornerShape(4.dp)
+                                            )
+                                    )
+                                }
+                                Text(
+                                    "Progress to ${next.iconEmoji ?: ""} ${next.name} — ${(progress * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(0.6f), fontSize = 10.sp
+                                )
+                            }
+                        } ?: run {
+                            Text("💎 Maximum tier — Diamond Elite",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
+                        }
+
+                        // User stats strip
+                        state.myTierData?.userStats?.let { stats ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(0.08f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", "Studied")
+                                StatPill("🔥", "${stats.streak}", "Streak")
+                                StatPill("📝", "${stats.quizzesAttempted}", "Quizzes")
+                                StatPill("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
+                            }
+                        }
                     }
                 }
-                if (next != null) {
-                    Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.15f)).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(next.iconEmoji ?: "🏆", fontSize = 12.sp)
-                        Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
             }
-            if (next != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(0.2f))) {
-                        Box(modifier = Modifier.fillMaxWidth(animProg).fillMaxHeight().background(Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)), RoundedCornerShape(3.dp)))
-                    }
-                    Text("Progress to ${next.name}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f), fontSize = 10.sp)
-                }
-            } else {
-                Text("🏆 Maximum tier reached — Diamond Elite", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFD700))
-            }
-        }
-    }
-}
 
-// ── Tier Map Row ───────────────────────────────────────────────
+            Spacer(Modifier.height(16.dp))
 
-@Composable
-private fun TierMapRow(
-    tiers: List<RoomTierDto>,
-    userTierKey: String?,
-    selectedTierKey: String?,
-    onSelectTier: (String) -> Unit
-) {
-    LazyRow(
-        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(tiers, key = { it.id }) { tier ->
-            val isUser     = tier.tierKey == userTierKey
-            val isSelected = tier.tierKey == selectedTierKey
-            val tierColor  = Color(android.graphics.Color.parseColor(tier.colorHex))
-
-            Card(
-                modifier = Modifier.width(130.dp).clickable { onSelectTier(tier.tierKey) }
-                    .then(if (isSelected) Modifier.border(2.dp, tierColor, RoundedCornerShape(16.dp)) else Modifier),
-                shape     = RoundedCornerShape(16.dp),
-                colors    = CardDefaults.cardColors(containerColor = if (isSelected) tierColor.copy(0.12f) else Color.White),
-                elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 1.dp)
+            // ── START STUDYING BUTTON ─────────────────────────
+            Button(
+                onClick  = onStart,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape    = RoundedCornerShape(16.dp),
+                enabled  = state.myTierData != null && sessionState.status == SessionStatus.IDLE,
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor   = Color(0xFF051D56),
+                    disabledContainerColor = Color.White.copy(0.3f),
+                    disabledContentColor   = Color.White.copy(0.5f)
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(tier.iconEmoji ?: "🏆", fontSize = 22.sp)
-                        if (isUser) {
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(BpscColors.Success))
-                        }
+                when (sessionState.status) {
+                    SessionStatus.STARTING -> {
+                        CircularProgressIndicator(
+                            color = Color(0xFF051D56),
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text("Starting session…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     }
-                    Text(tier.name?: "Unknown Tier", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${tier.totalMembers} members", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
-                    Text("${tier.coinMultiplier}x coins/hr", style = MaterialTheme.typography.labelSmall, color = tierColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    if (tier.activeSessions > 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(5.dp).clip(CircleShape).background(BpscColors.Success))
-                            Text("${tier.activeSessions} live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        }
+                    else -> {
+                        Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(10.dp))
+                        val tierName = state.myTierData?.currentTier?.name ?: "Silver"
+                        Text("Start Studying · $tierName", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -329,112 +395,354 @@ private fun TierMapRow(
     }
 }
 
-// ── Leaderboard Tab ────────────────────────────────────────────
-
 @Composable
-private fun LeaderboardTab(
-    entries: List<LeaderboardEntryDto>,
-    isLoading: Boolean,
-    myUserId: String,
-    period: String,
-    onChangePeriod: (String) -> Unit
-) {
-    val periods = listOf("weekly" to "This Week", "monthly" to "This Month", "alltime" to "All Time")
+private fun StatPill(icon: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(icon, fontSize = 12.sp)
+        Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f), fontSize = 9.sp)
+    }
+}
 
-    Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
-        // Period selector
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            periods.forEach { (key, label) ->
-                val sel = period == key
-                Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(if (sel) 0.dp else 1.dp, BpscColors.Divider, RoundedCornerShape(20.dp)).clickable { onChangePeriod(key) }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    Text(label, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
+// ════════════════════════════════════════════════════════════
+// PROGRESS BREAKDOWN CARD
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
+    val next = tierData.nextTier ?: return
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape    = RoundedCornerShape(18.dp),
+        colors   = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
+                    style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,
+                    fontWeight = FontWeight.ExtraBold)
+                val allDone = tierData.progressItems.all { it.done }
+                if (allDone) {
+                    Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                        .background(BpscColors.Success.copy(0.1f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)) {
+                        Text("✅ Ready to promote!", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
+            tierData.progressItems.forEach { item ->
+                ProgressConditionRow(item = item)
+            }
+            if (tierData.progressItems.isEmpty()) {
+                Text("Study, complete quizzes and set daily goals to unlock ${next.name}.",
+                    style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            }
         }
+    }
+}
+
+@Composable
+private fun ProgressConditionRow(item: TierProgressItemDto) {
+    val pct = (item.current / item.required.coerceAtLeast(0.001)).toFloat().coerceIn(0f, 1f)
+    val animPct by animateFloatAsState(pct, tween(700), label = "cond_${item.label}")
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
+                else Box(Modifier.size(14.dp).clip(CircleShape).border(1.5.dp, BpscColors.Divider, CircleShape))
+                Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+            }
+            Text("${item.current.toInt()} / ${item.required.toInt()} ${item.unit}",
+                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(BpscColors.Divider)) {
+            Box(modifier = Modifier
+                .fillMaxWidth(animPct)
+                .fillMaxHeight()
+                .background(if (item.done) BpscColors.Success else BpscColors.Primary, RoundedCornerShape(3.dp)))
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// TIER ROOMS GRID
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun TierRoomsGrid(
+    tiers:       List<RoomTierDto>,
+    userTierKey: String?,
+    selectedKey: String?,
+    isLoading:   Boolean,
+    onSelect:    (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text("All Rooms", style = MaterialTheme.typography.titleMedium,
+            color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(bottom = 10.dp))
 
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = BpscColors.Primary)
+            repeat(4) {
+                Box(Modifier.fillMaxWidth().height(68.dp).padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(14.dp)).background(BpscColors.Divider))
             }
-        } else if (entries.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🏆", fontSize = 40.sp)
-                    Text("No data yet for this period", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    Text("Start studying to appear on the leaderboard!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                }
-            }
-        } else {
-            LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(entries) { idx, entry ->
-                    LeaderboardEntryRow(entry = entry, isMe = entry.userId == myUserId)
-                }
-            }
+            return@Column
         }
-    }
-}
 
-@Composable
-private fun LeaderboardEntryRow(entry: LeaderboardEntryDto, isMe: Boolean) {
-    val bgColor = when (entry.rankPosition) {
-        1 -> Color(0xFFFFF8E1); 2 -> Color(0xFFF5F5F5); 3 -> Color(0xFFFFF3E0)
-        else -> if (isMe) BpscColors.PrimaryLight else Color.White
-    }
-    val rankEmoji = when (entry.rankPosition) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> "#${entry.rankPosition}" }
-
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = bgColor), elevation = CardDefaults.cardElevation(if (isMe) 3.dp else 1.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(rankEmoji, fontSize = if (entry.rankPosition <= 3) 20.sp else 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-            Column(modifier = Modifier.weight(1f)) {
-                Text("${entry.userName ?: "Unknown"}${if (isMe) " (You)" else ""}", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Lv.${entry.xpLevel}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    Text("🔥${entry.streakDays}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                }
+        tiers.forEach { tier ->
+            val isUser     = tier.tierKey == userTierKey
+            val isSelected = tier.tierKey == selectedKey
+            val tierColor  = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
+            val locked     = when (tier.tierKey) {
+                "gold"    -> userTierKey in listOf("silver")
+                "premium" -> userTierKey in listOf("silver", "gold")
+                "diamond" -> userTierKey in listOf("silver", "gold", "premium")
+                else      -> false
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${entry.studyMinutes}m", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                Text("🪙${entry.coinsEarned}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
-            }
-        }
-    }
-}
+            val isHigherTier = locked && !isUser
 
-// ── Members Tab ────────────────────────────────────────────────
-
-@Composable
-private fun MembersTab(members: List<TierMemberDto>, isLoading: Boolean) {
-    if (isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
-        return
-    }
-    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(members, key = { it.id }) { member ->
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(1.dp)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
-                        Text("Lv${member.xpLevel}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    .clickable { onSelect(tier.tierKey) }
+                    .then(if (isSelected) Modifier.border(2.dp, tierColor, RoundedCornerShape(14.dp)) else Modifier),
+                shape  = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) tierColor.copy(0.07f) else Color.White
+                ),
+                elevation = CardDefaults.cardElevation(if (isSelected) 3.dp else 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                            .background(if (isHigherTier) BpscColors.Divider else tierColor.copy(0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isHigherTier) {
+                            Icon(Icons.Rounded.Lock, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
+                        } else {
+                            Text(tier.iconEmoji ?: "🏆", fontSize = 20.sp)
+                        }
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(member.name, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                            if (member.isStudyingNow) {
-                                Row(modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(BpscColors.Success.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Box(Modifier.size(5.dp).clip(CircleShape).background(BpscColors.Success))
-                                    Text("live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(tier.name ?: tier.tierKey.replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (isHigherTier) BpscColors.TextHint else BpscColors.TextPrimary,
+                                fontWeight = FontWeight.Bold)
+                            if (isUser) {
+                                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                    .background(BpscColors.Success.copy(0.1f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                    Text("Your Room", style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                                 }
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("🔥${member.streak}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 11.sp)
-                            Text("🎯${member.accuracy.toInt()}%", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 11.sp)
-                            Text("${member.totalStudyMinutes/60}h", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 11.sp)
+                            Text("🪙 ${tier.coinMultiplier}×/hr",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isHigherTier) BpscColors.TextHint else tierColor,
+                                fontWeight = FontWeight.SemiBold)
+                            Text("👥 ${tier.displayMembers}",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            if (tier.displayActive > 0) {
+                                Text("🟢 ${tier.displayActive} live",
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
+                            }
                         }
                     }
-                    Text("🪙${member.coins}", style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                    if (isSelected) {
+                        Icon(Icons.Rounded.KeyboardArrowRight, null, tint = tierColor, modifier = Modifier.size(20.dp))
+                    }
                 }
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// QUICK ACTION ROW
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
+        QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
+    }
+}
+
+@Composable
+private fun QuickActionCard(icon: String, title: String, subtitle: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape    = RoundedCornerShape(14.dp),
+        colors   = CardDefaults.cardColors(containerColor = color.copy(0.06f)),
+        border   = BorderStroke(1.dp, color.copy(0.15f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 22.sp)
+            Column {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// LEADERBOARD SECTION
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun LeaderboardSection(
+    entries:        List<LeaderboardEntryDto>,
+    isLoading:      Boolean,
+    period:         String,
+    selectedTierKey: String?,
+    onChangePeriod: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text("Leaderboard", style = MaterialTheme.typography.titleMedium,
+            color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(bottom = 10.dp))
+
+        // Period tabs
+        val periods = listOf("weekly" to "This Week", "monthly" to "Month", "alltime" to "All Time")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 10.dp)) {
+            periods.forEach { (key, label) ->
+                val sel = period == key
+                Box(modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (sel) BpscColors.Primary else Color.White)
+                    .border(if (sel) 0.dp else 1.dp, BpscColors.Divider, RoundedCornerShape(20.dp))
+                    .clickable { onChangePeriod(key) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelSmall,
+                        color = if (sel) Color.White else BpscColors.TextSecondary,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
+
+        when {
+            isLoading -> Box(Modifier.fillMaxWidth().height(80.dp), Alignment.Center) {
+                CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(24.dp))
+            }
+            entries.isEmpty() -> Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("🏆", fontSize = 36.sp)
+                    Text("No rankings yet", style = MaterialTheme.typography.titleMedium,
+                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text("Start a study session to appear here.\nRankings update every Sunday night.",
+                        style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary,
+                        textAlign = TextAlign.Center)
+                }
+            }
+            else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                entries.take(10).forEachIndexed { _, entry ->
+                    LeaderboardRow(entry = entry)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardRow(entry: LeaderboardEntryDto) {
+    val bgColor = when (entry.rankPosition) {
+        1 -> Color(0xFFFFF8E1); 2 -> Color(0xFFF5F5F5); 3 -> Color(0xFFFFF3E0)
+        else -> Color.White
+    }
+    val medal = when (entry.rankPosition) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> "#${entry.rankPosition}" }
+
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor), elevation = CardDefaults.cardElevation(1.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(medal, fontSize = if (entry.rankPosition <= 3) 18.sp else 12.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(entry.userName ?: "Unknown", style = MaterialTheme.typography.titleSmall,
+                    color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Lv.${entry.xpLevel}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                    Text("🔥${entry.streakDays}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${entry.studyMinutes}m", style = MaterialTheme.typography.titleSmall,
+                    color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                Text("🪙${entry.coinsEarned}", style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.CoinGold, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// MEMBERS SECTION
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun MembersSection(members: List<TierMemberDto>, isLoading: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text("Members Online", style = MaterialTheme.typography.titleMedium,
+            color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(bottom = 10.dp))
+        if (isLoading) {
+            Box(Modifier.fillMaxWidth().height(60.dp), Alignment.Center) {
+                CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(24.dp))
+            }
+            return@Column
+        }
+        members.take(5).forEach { member ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                    contentAlignment = Alignment.Center) {
+                    Text("Lv${member.xpLevel}", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 9.sp)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(member.name, style = MaterialTheme.typography.bodyMedium,
+                            color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))
+                        if (member.isStudyingNow) {
+                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                .background(BpscColors.Success.copy(0.1f))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)) {
+                                Text("live", style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                            }
+                        }
+                    }
+                    Text("🔥${member.streak} streak · ${member.totalStudyMinutes/60}h total",
+                        style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                }
+                Text("🪙${member.coins}", style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
             }
         }
     }
