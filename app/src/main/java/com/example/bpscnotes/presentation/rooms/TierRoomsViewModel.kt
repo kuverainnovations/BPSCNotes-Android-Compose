@@ -75,6 +75,11 @@ class TierRoomsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TierRoomsUiState())
     val uiState: StateFlow<TierRoomsUiState> = _uiState.asStateFlow()
 
+    val currentUserId = tokenStore.getUserId() ?: ""
+
+    val myUserId = currentUserId
+
+
     companion object {
         private const val TAG = "TierRoomsVM"
     }

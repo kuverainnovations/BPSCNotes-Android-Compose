@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -61,7 +64,8 @@ fun StudyFocusScreen(
     val tiersState by tiersViewModel.uiState.collectAsState()
 
     var showEndConfirm by remember { mutableStateOf(false) }
-    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
+
+//    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
 
     androidx.activity.compose.BackHandler(
         enabled = state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK
@@ -90,14 +94,16 @@ fun StudyFocusScreen(
 
     // Chat sheet — fully dynamic, real-time via WebSocket
     val tierKey = tiersState.myTierData?.currentTier?.tierKey ?: "silver"
-    chatWithMember?.let { member ->
+
+
+    /*chatWithMember?.let { member ->
         ChatSheet(
             tierKey   = tierKey,
             member    = member,
             myName    = tiersState.myUserId,   // used internally by ChatSheet/ViewModel
             onDismiss = { chatWithMember = null }
         )
-    }
+    }*/
 
     when (state.status) {
         SessionStatus.STARTING -> StartingScreen()
@@ -111,7 +117,7 @@ fun StudyFocusScreen(
             tiersState   = tiersState,
             onBack       = { showEndConfirm = true },
             onEnd        = { showEndConfirm = true },
-            onMemberTap  = { chatWithMember = it },
+         //   onMemberTap  = { chatWithMember = it },
             tiersViewModel=tiersViewModel
         )
     }
@@ -146,7 +152,7 @@ private fun ActiveRoomScreen(
     tiersState:  TierRoomsUiState,
     onBack:      () -> Unit,
     onEnd:       () -> Unit,
-    onMemberTap: (TierMemberDto) -> Unit,
+    //onMemberTap: (TierMemberDto) -> Unit,
     tiersViewModel: TierRoomsViewModel
 ) {
     // Local timer — increments every second
@@ -157,18 +163,24 @@ private fun ActiveRoomScreen(
         }
     }
 
+    var showRoomChat by remember { mutableStateOf(false) }
+    val tierKey =
+        tiersState.myTierData?.currentTier?.tierKey ?: "silver"
+
+
+
+
     // Refresh members list every 30 seconds as a safety net.
     // Handles cases where the WebSocket presence event is missed (poor network).
     // This ensures Balu's "🟢 live" disappears within 30s of him leaving.
-    LaunchedEffect(state.status, "member_refresh") {
+   /* LaunchedEffect(state.status, "member_refresh") {
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
             delay(30_000L)
-            val tierKey = tiersState.selectedTierKey
             if (tierKey.isNotEmpty()) {
                 tiersViewModel.loadMembers(tierKey)
             }
         }
-    }
+    }*/
     val h = elapsedSeconds / 3600
     val m = (elapsedSeconds % 3600) / 60
     val s = elapsedSeconds % 60
@@ -185,15 +197,43 @@ private fun ActiveRoomScreen(
     }
 
     // Filter: live members only, exclude self (matched by userId)
-    val myUserId    = tiersState.myUserId
-    val liveMembers = tiersState.members.filter { member ->
+    //val myUserId    = tiersState.myUserId
+    val myUserId = remember(tiersState.myUserId) {
+        tiersState.myUserId.trim()
+    }
+   /* val liveMembers = tiersState.members.filter { member ->
         member.isStudyingNow && (myUserId.isEmpty() || member.id != myUserId)
+    }*/
+   /* val liveMembers = remember(
+        tiersState.members,
+        myUserId
+    ) {
+        tiersState.members.filter {
+            it.isStudyingNow &&
+                    it.id.trim() != myUserId
+        }
+    }*/
+
+    val liveMembers = tiersState.members.filter {
+        it.isStudyingNow &&
+                it.id != tiersState.myUserId
     }
 
     // Full dark background — unified, no mismatch
     val bgGradient = Brush.verticalGradient(
         listOf(Color(0xFF030D2E), Color(0xFF051D56), Color(0xFF071E3D))
     )
+
+
+    if (showRoomChat) {
+        ChatSheet(
+            tierKey = tierKey,
+            member = null,
+            myName = tiersState.myUserId,
+            onDismiss = { showRoomChat = false }
+        )
+    }
+
 
     Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
@@ -428,8 +468,8 @@ private fun ActiveRoomScreen(
                         }
                     }
                 }
-                Text("Tap to message", style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(0.4f))
+               /* Text("Tap to message", style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(0.4f))*/
             }
 
             // ── MEMBERS LIST — vertical, handles 1000+ ────────
@@ -445,14 +485,17 @@ private fun ActiveRoomScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier            = Modifier.weight(1f),
-                    contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ){
                     // Show max 50 live members. Backend should page large rooms.
                     items(liveMembers.take(50), key = { it.id }) { member ->
-                        LiveMemberRow(member = member, onClick = { onMemberTap(member) })
+                       // LiveMemberRow(member = member, onClick = { onMemberTap(member) })
+                        LiveMemberCard(member = member)
                     }
                     if (liveMembers.size > 50) {
                         item(key = "more") {
@@ -499,13 +542,30 @@ private fun ActiveRoomScreen(
                 }
             }
         }
+
+
+        FloatingActionButton(
+            onClick = { showRoomChat = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 22.dp, bottom = 110.dp),
+            containerColor = BpscColors.Primary
+        ) {
+            Icon(
+                Icons.Rounded.Chat,
+                contentDescription = null,
+                tint = Color.White
+            )
+        }
     }
 }
+
+
 
 // ════════════════════════════════════════════════════════════
 // LIVE MEMBER ROW — compact, vertical list, handles scale
 // ════════════════════════════════════════════════════════════
-@Composable
+/*@Composable
 private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -555,6 +615,76 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
             ) {
                 Icon(Icons.Rounded.Send, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(14.dp))
             }
+        }
+    }
+}*/
+
+@Composable
+private fun LiveMemberCard(member: TierMemberDto) {
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(0.06f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            Color.White.copy(0.08f)
+        )
+    ) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+
+            Box(
+                modifier = Modifier.size(54.dp),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(BpscColors.Primary.copy(0.22f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        member.name.first().uppercase(),
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .align(Alignment.BottomEnd)
+                        .clip(CircleShape)
+                        .background(BpscColors.Success)
+                )
+            }
+
+            Text(
+                text = member.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "Lv${member.xpLevel} • 🔥${member.streak}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(0.45f),
+                fontSize = 10.sp
+            )
         }
     }
 }

@@ -63,8 +63,17 @@ class RoomChatViewModel @Inject constructor(
 
     companion object { private const val TAG = "RoomChatVM" }
 
+    private var activeTierKey: String = ""
+    private var initialized = false
+
     // ── Initialise for a specific tier room ──────────────────
     fun init(tierKey: String) {
+
+        activeTierKey = tierKey
+
+        if (initialized) return
+        initialized = true
+
         loadHistory(tierKey)
         observeLiveMessages()
         observeConnectionState()
@@ -88,10 +97,14 @@ class RoomChatViewModel @Inject constructor(
         }
     }
 
+
     // ── 2. Observe live WebSocket messages ────────────────────
     private fun observeLiveMessages() {
         viewModelScope.launch {
             socket.roomMessages.collect { event ->
+                if (event.tierKey != activeTierKey) {
+                    return@collect
+                }
                 val isMe = event.senderId == myUserId && myUserId.isNotEmpty()
 
                 val currentMessages = _uiState.value.messages
@@ -159,18 +172,18 @@ class RoomChatViewModel @Inject constructor(
         socket.sendChatMessage(trimmed)
 
         // Timeout: if no echo in 5s → mark as failed (show grey text)
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(5000)
+        /*viewModelScope.launch {
+           // kotlinx.coroutines.delay(5000)
             val stillPending = _uiState.value.messages.any { it.id == tempId && it.isPending }
             if (stillPending) {
                 _uiState.update { state ->
                     state.copy(messages = state.messages.map { msg ->
-                        if (msg.id == tempId) msg.copy(timeLabel = "Failed to send", isPending = false)
+                        if (msg.id == tempId) msg.copy(timeLabel = "", isPending = false)
                         else msg
                     })
                 }
             }
-        }
+        }*/
     }
 
     // ── Helper ────────────────────────────────────────────────
