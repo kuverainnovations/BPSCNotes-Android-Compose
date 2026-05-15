@@ -1010,7 +1010,7 @@ fun DashboardScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmallQuickCard("Active\nRecall", Icons.Rounded.Psychology, BpscColors.PrimaryLight, BpscColors.Primary, Modifier.weight(1f)) { navController.navigate(Screen.ActiveRecall.route) }
                 SmallQuickCard("Mock\nTests",  Icons.Rounded.Assignment, Color(0xFFFFF4EC), BpscColors.Accent, Modifier.weight(1f)) { navController.navigate(Screen.MockTests.route) }
-                SmallQuickCard("Group\nStudy", Icons.Rounded.Groups, Color(0xFFE8FDF4), BpscColors.Success, Modifier.weight(1f)) { navController.navigate(Screen.RoomsHub.route) }
+                SmallQuickCard("Study\nMaterials", Icons.Rounded.Groups, Color(0xFFE8FDF4), BpscColors.Success, Modifier.weight(1f)) { navController.navigate(Screen.StudyMaterials.route) }
             }
             Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -27,6 +29,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
  * The ViewModel returns to [DashboardUiState.targetSuccess] which
  * the parent screen observes to show a toast and dismiss.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CreateTargetSheet(
     viewModel: DashboardViewModel,
@@ -37,6 +40,8 @@ fun CreateTargetSheet(
     var inputText   by remember { mutableStateOf("") }
     val addedTitles  = remember { mutableStateListOf<String>() }
     val currentCount = state.dailyTargets.size
+
+    val imeVisible = WindowInsets.isImeVisible
 
     // Dismiss automatically when ViewModel signals success
     LaunchedEffect(state.targetSuccess) {
@@ -60,8 +65,26 @@ fun CreateTargetSheet(
             shape    = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             colors   = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Column(modifier = Modifier.padding(24.dp).navigationBarsPadding()) {
 
+            val sheetHeight = when {
+                addedTitles.isEmpty() -> 0.55f
+                addedTitles.size <= 2 -> 0.65f
+                addedTitles.size <= 5 -> 0.75f
+                else -> 0.85f
+            }
+            Column(
+                modifier = Modifier
+                    .then(
+                        if (imeVisible) {
+                            Modifier.wrapContentHeight()
+                        } else {
+                            Modifier.fillMaxHeight(sheetHeight)
+                        }
+                    )
+                    .padding(24.dp)
+                    .navigationBarsPadding()
+                    .imePadding()
+            ) {
                 // Handle bar
                 Box(
                     modifier = Modifier
@@ -142,7 +165,7 @@ fun CreateTargetSheet(
                 }
 
                 // Added items list
-                if (addedTitles.isNotEmpty()) {
+                /*if (addedTitles.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     addedTitles.forEachIndexed { i, title ->
                         Row(
@@ -179,9 +202,69 @@ fun CreateTargetSheet(
                             }
                         }
                     }
-                }
+                }*/
 
-                Spacer(Modifier.height(20.dp))
+                // Scrollable targets area
+                Box(
+                    modifier = Modifier
+                        .weight(1f),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .imePadding()
+                            .align(Alignment.TopCenter),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                    itemsIndexed(addedTitles) { i, title ->
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(BpscColors.PrimaryLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "${i + 1}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            IconButton(
+                                onClick = { addedTitles.removeAt(i) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    null,
+                                    tint = BpscColors.TextSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                    }
+
+                Spacer(Modifier.height(16.dp))
+
+              //  Spacer(Modifier.height(20.dp))
 
                 // Submit button
                 Button(

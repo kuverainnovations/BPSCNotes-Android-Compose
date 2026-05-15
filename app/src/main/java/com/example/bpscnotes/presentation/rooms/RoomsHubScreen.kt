@@ -323,11 +323,11 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                     Offset(0f, 0f), Offset(500f, 500f)
                 )
             )
-            .statusBarsPadding()
+           // .statusBarsPadding()
     ) {
         Column(modifier = Modifier
             .padding(horizontal = 20.dp)
-            .padding(top = 16.dp, bottom = 28.dp)) {
+            .padding(top = 46.dp, bottom = 30.dp)) {
 
             // Top bar
             Row(
@@ -336,7 +336,7 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
+                   /* Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
@@ -345,10 +345,15 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
+                    }*/
                     Column {
-                        Text("Group Study", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Tap your room to start", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f))
+                        Text("Group Study",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold)
+                        Text("Tap your room to start",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(0.6f))
                     }
                 }
                 if (state.isSocketConnected) {

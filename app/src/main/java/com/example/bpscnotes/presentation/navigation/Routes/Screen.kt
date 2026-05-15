@@ -70,6 +70,8 @@ sealed class Screen(val route: String) {
         fun createRoute(id: String) = "reading_room/$id"
     }
 
+    object StudyMaterials : Screen("study_materials")
+
     // Wallet / payments
     object CoinWallet   : Screen("wallet")
     object Subscription : Screen("subscription")

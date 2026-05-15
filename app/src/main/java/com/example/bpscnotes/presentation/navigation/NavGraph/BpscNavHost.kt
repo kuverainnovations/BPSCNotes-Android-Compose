@@ -42,6 +42,7 @@ import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
 import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
+import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
 @Composable
@@ -158,6 +159,7 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
         // ── Tier Room System (Phase 1) ──────────────────────────
         composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
+        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
 
         composable(Screen.StudyFocus.route) { backStackEntry ->
 
