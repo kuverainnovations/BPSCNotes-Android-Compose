@@ -27,6 +27,7 @@ import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.EndSessionResponseData
 import com.example.bpscnotes.data.remote.api.MyTierResponseData
 import com.example.bpscnotes.data.remote.api.TierMemberDto
+import com.example.bpscnotes.presentation.readingrooms.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import javax.inject.Inject
@@ -87,9 +88,16 @@ fun StudyFocusScreen(
         )
     }
 
-    // Chat sheet
+    // Chat sheet — fully dynamic, real-time via WebSocket
+    val tierKey = tiersState.myTierData?.currentTier?.tierKey ?: "silver"
+    val myName  = tiersState.myTierData?.userStats?.let { "" } ?: ""
     chatWithMember?.let { member ->
-        ChatSheet(member = member, onDismiss = { chatWithMember = null })
+        ChatSheet(
+            tierKey   = tierKey,
+            member    = member,
+            myName    = myName,
+            onDismiss = { chatWithMember = null }
+        )
     }
 
     when (state.status) {
@@ -550,22 +558,21 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
     }
 }
 
-// ════════════════════════════════════════════════════════════
-// CHAT SHEET
-// ════════════════════════════════════════════════════════════
-data class ChatMessage(
-    val id: String, val text: String, val isMe: Boolean,
-    val senderName: String, val timeLabel: String
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
+// ChatSheet moved to ChatSheet.kt
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatSheet(member: TierMemberDto, onDismiss: () -> Unit) {
+private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var inputText  by remember { mutableStateOf("") }
     val messages   = remember {
         mutableStateListOf(
-            ChatMessage("1", "Hey! Are you studying the same topic? 📚", false, member.name.split(" ").first(), "Just now")
+            ChatMessage(
+                "1",
+                "Hey! Are you studying the same topic? 📚",
+                false,
+                member.name.split(" ").first(),
+                "Just now"
+            )
         )
     }
     val listState  = rememberLazyListState()
@@ -656,9 +663,9 @@ private fun ChatSheet(member: TierMemberDto, onDismiss: () -> Unit) {
             }
         }
     }
-}
+}*/
 
-@Composable
+/*@Composable
 private fun ChatBubble(message: ChatMessage) {
     Row(modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isMe) Arrangement.End else Arrangement.Start) {
@@ -686,7 +693,7 @@ private fun ChatBubble(message: ChatMessage) {
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
         }
     }
-}
+}*/
 
 // ════════════════════════════════════════════════════════════
 // SESSION SUMMARY SCREEN

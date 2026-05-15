@@ -15,17 +15,22 @@ import retrofit2.http.*
 
 data class RoomTierDto(
     val id: String,
-    @SerializedName("tier_key")       val tierKey: String,
-    @SerializedName("tierKey")       val tier_Key: String?="null",
+    @SerializedName(value = "tier_key", alternate = ["tierKey"])
+    val tierKey: String,
+   // @SerializedName("tierKey")       val tier_Key: String?="null",
 
     val name: String?,
     val description: String?,
-    @SerializedName("color_hex")      val colorHex: String,       // "#C0C0C0"
+    @SerializedName(value = "color_hex", alternate = ["colorHex"])
+    val colorHex: String = "#9E9E9E",
     @SerializedName("icon_emoji")     val iconEmoji: String,      // "🥈"
-    @SerializedName("sort_order")     val sortOrder: Int,
+    @SerializedName(value = "sort_order", alternate = ["sortOrder"])
+    val sortOrder: Int = 0,
     @SerializedName("max_members")    val maxMembers: Int,
-    @SerializedName("coin_multiplier") val coinMultiplier: Double, // 1.0 | 1.5 | 2.0 | 3.0
-    @SerializedName("xp_multiplier")  val xpMultiplier: Double,
+    @SerializedName(value = "coin_multiplier", alternate = ["coinMultiplier"])
+    val coinMultiplier: Double = 1.0,
+    @SerializedName(value = "xp_multiplier", alternate = ["xpMultiplier"])
+    val xpMultiplier: Double = 1.0,
     val perks: List<String> = emptyList(),
     @SerializedName("total_members")  val totalMembers: Int = 0,
     @SerializedName("active_sessions") val activeSessions: Int = 0,
@@ -53,7 +58,8 @@ data class NextTierDto(
     val id: String,
     @SerializedName("tier_key")   val tierKey: String,
     val name: String,
-    @SerializedName("icon_emoji") val iconEmoji: String
+    @SerializedName(value = "icon_emoji", alternate = ["iconEmoji"])
+    val iconEmoji: String = "🥈",
 )
 
 data class UserTierStatsDto(

@@ -12,6 +12,7 @@ import com.example.bpscnotes.data.remote.api.LiveClassesApiService
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 import com.example.bpscnotes.data.remote.api.StudyRoomsApiService
 import com.example.bpscnotes.data.remote.api.TierRoomsApiService
+import com.example.bpscnotes.data.remote.api.ChatApiService
 import com.example.bpscnotes.data.remote.api.AchievementsApiService
 import com.example.bpscnotes.data.remote.api.ChallengesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
@@ -107,5 +108,9 @@ object NetworkModule {
     @Provides @Singleton
     fun provideChallengesApi(r: Retrofit): ChallengesApiService =
         r.create(ChallengesApiService::class.java)
+
+    @Provides @Singleton
+    fun provideChatApi(r: Retrofit): ChatApiService =
+        r.create(ChatApiService::class.java)
 
 }

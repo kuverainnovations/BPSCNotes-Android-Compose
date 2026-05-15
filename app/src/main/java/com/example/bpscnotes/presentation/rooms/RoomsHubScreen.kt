@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -136,7 +137,9 @@ fun RoomsHubScreen(
     ) { padding ->
 
         LazyColumn(
-            modifier            = Modifier.fillMaxSize().padding(padding),
+            modifier            = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentPadding      = PaddingValues(bottom = 32.dp),
         ) {
 
@@ -163,7 +166,6 @@ fun RoomsHubScreen(
                         onDismiss  = { tiersViewModel.dismissDemotionBanner() },
                         onStudyNow = {
                             tiersViewModel.dismissDemotionBanner()
-                            val myTierKey = state.myTierData?.currentTier?.tier_Key ?: "silver"
                             sessionViewModel.startSession(mode = "study")
                         }
                     )
@@ -216,7 +218,9 @@ fun RoomsHubScreen(
                     if (state.isLoadingTiers) {
                         repeat(4) {
                             Box(
-                                Modifier.fillMaxWidth().height(80.dp)
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp)
                                     .padding(horizontal = 16.dp, vertical = 5.dp)
                                     .clip(RoundedCornerShape(18.dp))
                                     .background(BpscColors.Divider)
@@ -224,14 +228,28 @@ fun RoomsHubScreen(
                         }
                     } else {
                         state.allTiers.forEach { tier ->
-                            val myTierKey      = state.myTierData?.currentTier?.tier_Key
+                            val myTierKey      = state.myTierData?.currentTier?.tierKey
                             val myTierOrder    = state.myTierData?.currentTier?.sortOrder ?: 1
                             val isMyRoom       = tier.tierKey == myTierKey
                             val allDoneForNext = state.myTierData?.progressItems?.all { it.done } == true
                                 && state.myTierData?.nextTier != null
                             val isNextTier     = tier.sortOrder == myTierOrder + 1
                             val isClaimReady   = isNextTier && allDoneForNext
-                            val isLocked       = tier.sortOrder > myTierOrder && !isClaimReady
+                          //  val isLocked       = tier.sortOrder > myTierOrder && !isClaimReady
+
+                            Log.e("TAG", "RoomsHubScreen1212: $myTierKey", )
+
+                            val currentOrder =
+                                state.myTierData?.currentTier?.sortOrder ?: 0
+
+                            val isLocked =
+                                tier.sortOrder > currentOrder &&
+                                        !isClaimReady
+
+                            Log.e(
+                                "ROOM_DEBUG",
+                                "tier=${tier.tierKey} tierOrder=${tier.sortOrder} currentOrder=$currentOrder locked=$isLocked"
+                            )
                             val tierColor    = try {
                                 Color(android.graphics.Color.parseColor(tier.colorHex))
                             } catch (e: Exception) { BpscColors.Primary }
@@ -300,7 +318,9 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
             )
             .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 28.dp)) {
+        Column(modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(top = 16.dp, bottom = 28.dp)) {
 
             // Top bar
             Row(
@@ -310,8 +330,11 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(CircleShape)
-                            .background(Color.White.copy(0.12f)).clickable(onClick = onBack),
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .clickable(onClick = onBack),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -323,13 +346,17 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                 }
                 if (state.isSocketConnected) {
                     Row(
-                        modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
                             .background(BpscColors.Success.copy(0.2f))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
-                        Box(Modifier.size(6.dp).clip(CircleShape).background(BpscColors.Success))
+                        Box(Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(BpscColors.Success))
                         Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -338,7 +365,11 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
             Spacer(Modifier.height(18.dp))
 
             if (state.isLoadingMyTier) {
-                Box(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.08f)))
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(0.08f)))
                 return@Column
             }
 
@@ -357,7 +388,9 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(
-                                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
                                         .background(tierColor.copy(0.25f)),
                                     contentAlignment = Alignment.Center
                                 ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp) }
@@ -368,8 +401,10 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                                         style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
                                 }
                             }
-                            Box(modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.CoinGold.copy(0.2f)).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                            Box(modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(BpscColors.CoinGold.copy(0.2f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)) {
                                 Text("🪙 ${myTier.coinMultiplier}×/hr",
                                     style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                             }
@@ -380,9 +415,22 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                             val progress  = state.myTierData.nextTierProgress.toFloat()
                             val animProg  by animateFloatAsState(progress, tween(900), label = "prog")
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(0.15f))) {
-                                    Box(modifier = Modifier.fillMaxWidth(animProg.coerceIn(0f, 1f)).fillMaxHeight()
-                                        .background(Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)), RoundedCornerShape(3.dp)))
+                                Box(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.White.copy(0.15f))) {
+                                    Box(modifier = Modifier
+                                        .fillMaxWidth(animProg.coerceIn(0f, 1f))
+                                        .fillMaxHeight()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    Color(0xFF64B5F6),
+                                                    Color.White
+                                                )
+                                            ), RoundedCornerShape(3.dp)
+                                        ))
                                 }
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
@@ -396,8 +444,11 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                         // Stats strip
                         state.myTierData?.userStats?.let { stats ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(0.08f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(0.08f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", "Studied")
@@ -459,13 +510,17 @@ private fun RoomCard(
         elevation = CardDefaults.cardElevation(if (isMyRoom) 4.dp else 1.dp)
     ) {
         Row(
-            modifier              = Modifier.fillMaxWidth().padding(14.dp),
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Icon box
             Box(
-                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp))
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(if (isLocked) Color(0xFFE8E8E8) else tierColor.copy(0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -487,18 +542,24 @@ private fun RoomCard(
                         fontWeight = FontWeight.Bold
                     )
                     when {
-                        isClaimReady -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(BpscColors.Success.copy(0.15f)).padding(horizontal = 7.dp, vertical = 2.dp)) {
+                        isClaimReady -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.Success.copy(0.15f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("🎉 Claim Now!", style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                         }
-                        isMyRoom -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(BpscColors.Success.copy(0.12f)).padding(horizontal = 7.dp, vertical = 2.dp)) {
+                        isMyRoom -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.Success.copy(0.12f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("Your Room", style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                         }
-                        isLocked -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF0F0F0)).padding(horizontal = 7.dp, vertical = 2.dp)) {
+                        isLocked -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF0F0F0))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("Locked", style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFAAAAAA), fontSize = 9.sp)
                         }
@@ -529,11 +590,17 @@ private fun RoomCard(
             // Right arrow for own room; chevron-down for locked
             when {
                 isClaimReady -> Box(
-                    modifier = Modifier.size(34.dp).clip(CircleShape).background(BpscColors.Success.copy(0.15f)),
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(BpscColors.Success.copy(0.15f)),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Rounded.ArrowForward, null, tint = BpscColors.Success, modifier = Modifier.size(18.dp)) }
                 isMyRoom -> Box(
-                    modifier = Modifier.size(34.dp).clip(CircleShape).background(tierColor.copy(0.15f)),
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(tierColor.copy(0.15f)),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Rounded.PlayArrow, null, tint = tierColor, modifier = Modifier.size(18.dp)) }
                 isLocked -> Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
@@ -562,16 +629,25 @@ private fun LockedRoomSheet(
         shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
-            modifier              = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 40.dp),
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
             horizontalAlignment   = Alignment.CenterHorizontally,
             verticalArrangement   = Arrangement.spacedBy(16.dp)
         ) {
             // Handle
-            Box(Modifier.size(40.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Divider))
+            Box(Modifier
+                .size(40.dp, 4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(BpscColors.Divider))
 
             // Tier badge
             Box(
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)).background(tierColor.copy(0.12f)),
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(tierColor.copy(0.12f)),
                 contentAlignment = Alignment.Center
             ) { Text(tier.iconEmoji ?: "🔒", fontSize = 36.sp) }
 
@@ -623,7 +699,9 @@ private fun LockedRoomSheet(
 
             Button(
                 onClick  = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
             ) { Text("Got it, I'll keep studying!", fontWeight = FontWeight.Bold) }
@@ -641,7 +719,9 @@ private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
         infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape    = RoundedCornerShape(16.dp),
         colors   = CardDefaults.cardColors(containerColor = BpscColors.Success.copy(0.12f)),
         border   = BorderStroke(1.5.dp, BpscColors.Success.copy(glowAlpha))
@@ -665,7 +745,9 @@ private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
 private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
     val next = tierData.nextTier ?: return
     Card(
-        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier  = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -678,7 +760,10 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(13.dp))
-                            else Box(Modifier.size(13.dp).clip(CircleShape).border(1.5.dp, BpscColors.Divider, CircleShape))
+                            else Box(Modifier
+                                .size(13.dp)
+                                .clip(CircleShape)
+                                .border(1.5.dp, BpscColors.Divider, CircleShape))
                             Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary)
                         }
                         Text("${item.current.toInt()}/${item.required.toInt()} ${item.unit}",
@@ -687,9 +772,18 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
                     val pct by animateFloatAsState(
                         (item.current / item.required.coerceAtLeast(0.001)).toFloat().coerceIn(0f, 1f),
                         tween(700), label = "p_${item.label}")
-                    Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(BpscColors.Divider)) {
-                        Box(Modifier.fillMaxWidth(pct).fillMaxHeight()
-                            .background(if (item.done) BpscColors.Success else BpscColors.Primary, RoundedCornerShape(3.dp)))
+                    Box(Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(BpscColors.Divider)) {
+                        Box(Modifier
+                            .fillMaxWidth(pct)
+                            .fillMaxHeight()
+                            .background(
+                                if (item.done) BpscColors.Success else BpscColors.Primary,
+                                RoundedCornerShape(3.dp)
+                            ))
                     }
                 }
             }
@@ -702,7 +796,9 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
         QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
