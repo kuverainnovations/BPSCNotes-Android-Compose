@@ -47,7 +47,47 @@ fun RoomsHubScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Track which locked room sheet to show (null = none)
-    var showLockedSheetForTier by remember { mutableStateOf<RoomTierDto?>(null) }
+    var showLockedSheetForTier  by remember { mutableStateOf<RoomTierDto?>(null) }
+    var showClaimDialog         by remember { mutableStateOf(false) }
+    var claimResultMessage      by remember { mutableStateOf("") }
+
+    // Claim promotion dialog
+    if (showClaimDialog) {
+        AlertDialog(
+            onDismissRequest = { showClaimDialog = false },
+            icon   = { Text("🎉", fontSize = 36.sp) },
+            title  = { Text("Claim Promotion!", fontWeight = FontWeight.ExtraBold) },
+            text   = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("You've met all requirements!", color = BpscColors.TextSecondary)
+                    if (claimResultMessage.isNotEmpty()) {
+                        Text(claimResultMessage, fontWeight = FontWeight.SemiBold, color = BpscColors.Primary)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClaimDialog = false
+                        tiersViewModel.claimPromotion(
+                            onSuccess = { emoji, name ->
+                                claimResultMessage = ""
+                                // TierPromotionOverlay will show via pendingPromotion flow
+                            },
+                            onFail = { reason ->
+                                claimResultMessage = reason
+                                showClaimDialog = true
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)
+                ) { Text("Claim Now 🚀", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClaimDialog = false }) { Text("Later") }
+            }
+        )
+    }
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -123,7 +163,7 @@ fun RoomsHubScreen(
                         onDismiss  = { tiersViewModel.dismissDemotionBanner() },
                         onStudyNow = {
                             tiersViewModel.dismissDemotionBanner()
-                            val myTierKey = state.myTierData?.currentTier?.tierKey ?: "silver"
+                            val myTierKey = state.myTierData?.currentTier?.tier_Key ?: "silver"
                             sessionViewModel.startSession(mode = "study")
                         }
                     )
@@ -184,45 +224,31 @@ fun RoomsHubScreen(
                         }
                     } else {
                         state.allTiers.forEach { tier ->
-                            val myTierKey   = state.myTierData?.currentTier?.tierKey?.lowercase() ?: "silver"
-
-                            val currentLevel = when (myTierKey) {
-                                "silver" -> 1
-                                "gold" -> 2
-                                "premium" -> 3
-                                "diamond" -> 4
-                                else -> 1
-                            }
-
-                            val tierLevel = when (tier.tierKey.lowercase()) {
-                                "silver" -> 1
-                                "gold" -> 2
-                                "premium" -> 3
-                                "diamond" -> 4
-                                else -> 999
-                            }
-
-                            val isMyRoom = tier.tierKey.equals(myTierKey, ignoreCase = true)
-
-                            // Silver should always be unlocked
-                            val isLocked = tierLevel > currentLevel
+                            val myTierKey      = state.myTierData?.currentTier?.tier_Key
+                            val myTierOrder    = state.myTierData?.currentTier?.sortOrder ?: 1
+                            val isMyRoom       = tier.tierKey == myTierKey
+                            val allDoneForNext = state.myTierData?.progressItems?.all { it.done } == true
+                                && state.myTierData?.nextTier != null
+                            val isNextTier     = tier.sortOrder == myTierOrder + 1
+                            val isClaimReady   = isNextTier && allDoneForNext
+                            val isLocked       = tier.sortOrder > myTierOrder && !isClaimReady
                             val tierColor    = try {
                                 Color(android.graphics.Color.parseColor(tier.colorHex))
                             } catch (e: Exception) { BpscColors.Primary }
                             val isStarting   = sessionState.status == SessionStatus.STARTING && isMyRoom
 
                             RoomCard(
-                                tier        = tier,
-                                tierColor   = tierColor,
-                                isMyRoom    = isMyRoom,
-                                isLocked    = isLocked,
-                                isStarting  = isStarting,
-                                onClick     = {
-                                    if (isLocked) {
-                                        showLockedSheetForTier = tier
-                                    } else {
-                                        // Enter the room → start session
-                                        sessionViewModel.startSession(mode = "study")
+                                tier         = tier,
+                                tierColor    = tierColor,
+                                isMyRoom     = isMyRoom,
+                                isLocked     = isLocked,
+                                isClaimReady = isClaimReady,
+                                isStarting   = isStarting,
+                                onClick      = {
+                                    when {
+                                        isClaimReady -> showClaimDialog = true
+                                        isLocked     -> showLockedSheetForTier = tier
+                                        else         -> sessionViewModel.startSession(mode = "study")
                                     }
                                 }
                             )
@@ -401,22 +427,25 @@ private fun StatPill(icon: String, value: String, label: String) {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun RoomCard(
-    tier:       RoomTierDto,
-    tierColor:  Color,
-    isMyRoom:   Boolean,
-    isLocked:   Boolean,
-    isStarting: Boolean,
-    onClick:    () -> Unit
+    tier:         RoomTierDto,
+    tierColor:    Color,
+    isMyRoom:     Boolean,
+    isLocked:     Boolean,
+    isClaimReady: Boolean = false,
+    isStarting:   Boolean,
+    onClick:      () -> Unit
 ) {
     val bgColor = when {
-        isMyRoom -> tierColor.copy(0.08f)
-        isLocked -> Color(0xFFF0F0F0)
-        else     -> Color.White
+        isClaimReady -> BpscColors.Success.copy(0.07f)
+        isMyRoom     -> tierColor.copy(0.08f)
+        isLocked     -> Color(0xFFF0F0F0)
+        else         -> Color.White
     }
     val borderColor = when {
-        isMyRoom -> tierColor
-        isLocked -> Color(0xFFD0D0D0)
-        else     -> BpscColors.Divider
+        isClaimReady -> BpscColors.Success
+        isMyRoom     -> tierColor
+        isLocked     -> Color(0xFFD0D0D0)
+        else         -> BpscColors.Divider
     }
 
     Card(
@@ -440,12 +469,11 @@ private fun RoomCard(
                     .background(if (isLocked) Color(0xFFE8E8E8) else tierColor.copy(0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (isStarting) {
-                    CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else if (isLocked) {
-                    Icon(Icons.Rounded.Lock, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(22.dp))
-                } else {
-                    Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
+                when {
+                    isStarting   -> CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    isClaimReady -> Text("🎉", fontSize = 24.sp)
+                    isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(22.dp))
+                    else         -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
                 }
             }
 
@@ -458,15 +486,18 @@ private fun RoomCard(
                         color      = if (isLocked) Color(0xFFAAAAAA) else BpscColors.TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
-                    if (isMyRoom) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                    when {
+                        isClaimReady -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.Success.copy(0.15f)).padding(horizontal = 7.dp, vertical = 2.dp)) {
+                            Text("🎉 Claim Now!", style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        }
+                        isMyRoom -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
                             .background(BpscColors.Success.copy(0.12f)).padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("Your Room", style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                         }
-                    }
-                    if (isLocked) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                        isLocked -> Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFFF0F0F0)).padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("Locked", style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFAAAAAA), fontSize = 9.sp)
@@ -496,15 +527,16 @@ private fun RoomCard(
             }
 
             // Right arrow for own room; chevron-down for locked
-            if (isMyRoom) {
-                Box(
+            when {
+                isClaimReady -> Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape).background(BpscColors.Success.copy(0.15f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.ArrowForward, null, tint = BpscColors.Success, modifier = Modifier.size(18.dp)) }
+                isMyRoom -> Box(
                     modifier = Modifier.size(34.dp).clip(CircleShape).background(tierColor.copy(0.15f)),
                     contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, null, tint = tierColor, modifier = Modifier.size(18.dp))
-                }
-            } else if (isLocked) {
-                Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
+                ) { Icon(Icons.Rounded.PlayArrow, null, tint = tierColor, modifier = Modifier.size(18.dp)) }
+                isLocked -> Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
             }
         }
     }

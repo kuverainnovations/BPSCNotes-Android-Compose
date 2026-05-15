@@ -23,6 +23,10 @@ class TokenStore @Inject constructor(
     fun saveUserName(name: String) = prefs.edit().putString("user_name", name).apply()
     fun getUserName(): String? = prefs.getString("user_name", null)
 
+    // User ID — saved after login for chat identification
+    fun saveUserId(id: String) = prefs.edit().putString("user_id", id).apply()
+    fun getUserId(): String?   = prefs.getString("user_id", null)
+
     // ── Onboarding (intro slides) ──────────────────────────────
     fun isOnboarded(): Boolean = prefs.getBoolean("is_onboarded", false)
     fun setOnboarded() = prefs.edit().putBoolean("is_onboarded", true).apply()

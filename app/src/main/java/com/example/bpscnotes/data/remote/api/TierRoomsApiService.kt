@@ -20,14 +20,13 @@ data class RoomTierDto(
 
     val name: String?,
     val description: String?,
-    @SerializedName("color_hex")      val colorHex: String = "#9E9E9E",
-    @SerializedName("icon_emoji")     val iconEmoji: String?,
-    @SerializedName("sort_order")     val sortOrder: Int = 0,
-    @SerializedName("max_members")    val maxMembers: Int = 0,
-    @SerializedName("coin_multiplier") val coinMultiplier: Double = 1.0,
-    @SerializedName("xp_multiplier")  val xpMultiplier: Double = 1.0,
+    @SerializedName("color_hex")      val colorHex: String,       // "#C0C0C0"
+    @SerializedName("icon_emoji")     val iconEmoji: String,      // "🥈"
+    @SerializedName("sort_order")     val sortOrder: Int,
+    @SerializedName("max_members")    val maxMembers: Int,
+    @SerializedName("coin_multiplier") val coinMultiplier: Double, // 1.0 | 1.5 | 2.0 | 3.0
+    @SerializedName("xp_multiplier")  val xpMultiplier: Double,
     val perks: List<String> = emptyList(),
-    // getAllTiers uses snake_case from DB aggregate
     @SerializedName("total_members")  val totalMembers: Int = 0,
     @SerializedName("active_sessions") val activeSessions: Int = 0,
     // getMyTier currentTier uses camelCase — Gson picks first non-null
@@ -35,9 +34,11 @@ data class RoomTierDto(
     @SerializedName("activeNow")      val activeNow: Int = 0,
     @SerializedName("is_active")      val isActive: Boolean = true
 ) {
-    // Unified accessors — works for both getAllTiers and getMyTier responses
-    val displayMembers: Int get() = if (totalMembers > 0) totalMembers else memberCount
-    val displayActive: Int  get() = if (activeSessions > 0) activeSessions else activeNow
+    // Unified getters — getAllTiers returns snake_case from DB aggregate,
+    // getMyTier/currentTier returns camelCase from service code.
+    // These cover both so screens don't need to worry which endpoint populated the DTO.
+    val displayMembers: Int get() = if (memberCount > 0) memberCount else totalMembers
+    val displayActive:  Int get() = if (activeNow > 0) activeNow else activeSessions
 }
 
 data class TierProgressItemDto(
@@ -228,6 +229,15 @@ data class AtRiskData(
     @SerializedName("demotionGraceUntil") val demotionGraceUntil: String? = null
 )
 
+data class ClaimPromotionData(
+    val success: Boolean,
+    val message: String,
+    @SerializedName("newTierKey")   val newTierKey: String?   = null,
+    @SerializedName("newTierName")  val newTierName: String?  = null,
+    @SerializedName("newTierEmoji") val newTierEmoji: String? = null,
+    val missing: List<String>       = emptyList()
+)
+
 interface TierRoomsApiService {
 
     // ── Tier Rooms ───────────────────────────────────────────
@@ -325,4 +335,11 @@ interface TierRoomsApiService {
      */
     @GET("rooms/tiers/at-risk")
     suspend fun getAtRiskStatus(): ApiResponse<AtRiskData>
+
+    /**
+     * POST /rooms/tiers/claim-promotion
+     * User calls this when all requirements met — immediate promotion, no midnight wait.
+     */
+    @POST("rooms/tiers/claim-promotion")
+    suspend fun claimPromotion(): ApiResponse<ClaimPromotionData>
 }

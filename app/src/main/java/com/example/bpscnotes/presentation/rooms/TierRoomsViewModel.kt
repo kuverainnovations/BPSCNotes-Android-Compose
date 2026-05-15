@@ -283,6 +283,31 @@ class TierRoomsViewModel @Inject constructor(
         _uiState.update { it.copy(tiersError = null, myTierError = null, leaderboardError = null, membersError = null) }
     }
 
+    // ── User-initiated promotion (when requirements are met) ──
+    // Calls POST /rooms/tiers/claim-promotion.
+    // Backend re-verifies before promoting — safe to call from UI.
+    fun claimPromotion(
+        onSuccess: (emoji: String, name: String) -> Unit,
+        onFail:    (reason: String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val res  = api.claimPromotion()
+                val data = res.data ?: return@launch
+                if (data.success) {
+                    // Refresh tier data — user is now in Gold/Premium/Diamond
+                    loadAll()
+                    onSuccess(data.newTierEmoji ?: "🥇", data.newTierName ?: "Gold Room")
+                } else {
+                    onFail(data.missing.joinToString("\n") { "• $it" }.ifEmpty { data.message })
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "claimPromotion: ${e.message}", e)
+                onFail(e.message ?: "Promotion failed. Please try again.")
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         socket.leaveTierRoom()
