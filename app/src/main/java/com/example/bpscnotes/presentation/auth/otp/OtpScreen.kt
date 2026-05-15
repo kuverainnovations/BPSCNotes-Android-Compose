@@ -98,7 +98,14 @@ fun OtpScreen(
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
+            IconButton(
+                onClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Otp.createRoute(mobile)) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            ) {
                 Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = BpscColors.TextPrimary)
             }
         }
@@ -209,7 +216,14 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(onClick = { navController.popBackStack() }) {
+        TextButton(
+            onClick = {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Otp.createRoute(mobile)) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        ) {
             Text("Change Mobile Number",
                 color = BpscColors.TextSecondary,
                 style = MaterialTheme.typography.bodyMedium)

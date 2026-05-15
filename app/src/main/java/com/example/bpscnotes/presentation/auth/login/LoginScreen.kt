@@ -74,6 +74,8 @@ fun LoginScreen(navController: NavHostController) {
     // Navigate on success
     LaunchedEffect(sendOtpSuccess) {
         sendOtpSuccess?.let { mob ->
+            viewModel.onOtpNavigationConsumed()
+
             navController.navigate(Screen.Otp.createRoute(mob))
         }
     }
@@ -153,7 +155,16 @@ fun LoginScreen(navController: NavHostController) {
             // Mobile input
             OutlinedTextField(
                 value = mobile,
-                onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) mobile = it },
+                onValueChange = {
+                    if (it.length <= 10 && it.all(Char::isDigit)) {
+                        mobile = it
+
+                        if (it.length == 10) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 placeholder = { Text("Mobile number", color = BpscColors.TextHint) },

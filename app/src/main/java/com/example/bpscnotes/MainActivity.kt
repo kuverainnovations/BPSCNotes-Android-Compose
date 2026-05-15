@@ -18,11 +18,13 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        // Status bar icons: white (light) because our header is always dark blue.
-        // This ensures icons are visible on the blue gradient background.
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
         WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false   // false = white/light icons
+            isAppearanceLightStatusBars = false
         }
 
         setContent {

@@ -133,7 +133,8 @@ fun RoomsHubScreen(
 
     Scaffold(
         snackbarHost    = { SnackbarHost(snackbarHost) },
-        containerColor  = Color(0xFF051D56)
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+       // containerColor  = Color(0xFF051D56)
     ) { padding ->
 
         LazyColumn(
@@ -177,7 +178,7 @@ fun RoomsHubScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                      //  .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                         .background(BpscColors.Surface)
                         .padding(top = 8.dp)
                 ) {
@@ -494,15 +495,16 @@ private fun RoomCard(
     onClick:      () -> Unit
 ) {
     val bgColor = when {
-        isClaimReady -> BpscColors.Success.copy(0.07f)
-        isMyRoom     -> tierColor.copy(0.08f)
-        isLocked     -> Color(0xFFF0F0F0)
+        isClaimReady -> BpscColors.Success.copy(0.05f)
+        isMyRoom     -> Color.White
+        isLocked     -> Color(0xFFF7F7F7)
         else         -> Color.White
     }
+
     val borderColor = when {
         isClaimReady -> BpscColors.Success
-        isMyRoom     -> tierColor
-        isLocked     -> Color(0xFFD0D0D0)
+        isMyRoom     -> tierColor.copy(alpha = 0.45f)
+        isLocked     -> Color(0xFFE2E2E2)
         else         -> BpscColors.Divider
     }
 
@@ -513,8 +515,11 @@ private fun RoomCard(
             .clickable(onClick = onClick),
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = bgColor),
-        border    = BorderStroke(if (isMyRoom) 2.dp else 1.dp, borderColor),
-        elevation = CardDefaults.cardElevation(if (isMyRoom) 4.dp else 1.dp)
+        border = BorderStroke(
+            width = if (isMyRoom) 1.5.dp else 1.dp,
+            color = borderColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier              = Modifier

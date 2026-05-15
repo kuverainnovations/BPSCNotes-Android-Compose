@@ -28,5 +28,9 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun onOtpNavigationConsumed() {
+        _sendOtpSuccess.value = null
+    }
+
     private fun isValidMobile(mobile: String) = mobile.length == 10 && mobile.all { it.isDigit() }
 }
