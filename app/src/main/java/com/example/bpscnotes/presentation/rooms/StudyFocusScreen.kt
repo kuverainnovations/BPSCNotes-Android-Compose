@@ -90,12 +90,11 @@ fun StudyFocusScreen(
 
     // Chat sheet — fully dynamic, real-time via WebSocket
     val tierKey = tiersState.myTierData?.currentTier?.tierKey ?: "silver"
-    val myName  = tiersState.myTierData?.userStats?.let { "" } ?: ""
     chatWithMember?.let { member ->
         ChatSheet(
             tierKey   = tierKey,
             member    = member,
-            myName    = myName,
+            myName    = tiersState.myUserId,   // used internally by ChatSheet/ViewModel
             onDismiss = { chatWithMember = null }
         )
     }
@@ -185,9 +184,11 @@ private fun ActiveRoomScreen(
         catch (e: Exception) { Color(0xFF1565C0) }
     }
 
-    // Filter members: live only + exclude current user (matched by name from tiersState)
-    val myName    = tiersState.myTierData?.userStats?.let { "" } ?: ""
-    val liveMembers = tiersState.members.filter { it.isStudyingNow }
+    // Filter: live members only, exclude self (matched by userId)
+    val myUserId    = tiersState.myUserId
+    val liveMembers = tiersState.members.filter { member ->
+        member.isStudyingNow && (myUserId.isEmpty() || member.id != myUserId)
+    }
 
     // Full dark background — unified, no mismatch
     val bgGradient = Brush.verticalGradient(

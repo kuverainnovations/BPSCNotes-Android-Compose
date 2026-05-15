@@ -55,7 +55,11 @@ class RoomChatViewModel @Inject constructor(
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     // My userId from the JWT (stored in TokenStore after login)
-    private val myUserId: String get() = tokenStore.getUserId() ?: ""
+    private val myUserId: String get() {
+        val id = tokenStore.getUserId()
+        if (id.isNullOrEmpty()) Log.w("RoomChatVM", "getUserId() is null — chat isMe detection disabled")
+        return id ?: ""
+    }
 
     companion object { private const val TAG = "RoomChatVM" }
 
@@ -88,21 +92,31 @@ class RoomChatViewModel @Inject constructor(
     private fun observeLiveMessages() {
         viewModelScope.launch {
             socket.roomMessages.collect { event ->
-                val isMe = event.senderId == myUserId
+                val isMe = event.senderId == myUserId && myUserId.isNotEmpty()
 
-                // If this is my own message echoed back → replace the pending stub
-                val existing = _uiState.value.messages.any { it.id == event.id }
-                if (existing) return@collect  // already in list (e.g. duplicate delivery)
+                val currentMessages = _uiState.value.messages
 
-                // Remove my pending stub for this message (matched by text + isMe + pending)
-                val withoutPending = _uiState.value.messages.filterNot { msg ->
-                    msg.isPending && msg.isMe && msg.text == event.message
-                }
+                // Dedup: if server ID already in list, skip entirely (duplicate delivery)
+                if (currentMessages.any { it.id == event.id }) return@collect
+
+                // For my own echoed messages: find pending stub by tempId pattern + text.
+                // We can't match by real id (stub has tempId). Match by: isMe + isPending + text.
+                // Remove only the OLDEST pending stub with matching text (handles duplicates safely).
+                var removedPending = false
+                val withoutPending = if (isMe) {
+                    val pendingIdx = currentMessages.indexOfFirst { msg ->
+                        msg.isPending && msg.isMe && msg.text == event.message
+                    }
+                    if (pendingIdx >= 0) {
+                        removedPending = true
+                        currentMessages.toMutableList().also { it.removeAt(pendingIdx) }
+                    } else currentMessages
+                } else currentMessages
 
                 val newMsg = ChatUiMessage(
                     id         = event.id,
                     senderId   = event.senderId,
-                    senderName = event.senderName,
+                    senderName = if (isMe) "You" else event.senderName,
                     text       = event.message,
                     timeLabel  = formatTime(event.createdAt),
                     isMe       = isMe,

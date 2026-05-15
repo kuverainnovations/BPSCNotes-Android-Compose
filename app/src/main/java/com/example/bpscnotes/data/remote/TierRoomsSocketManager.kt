@@ -101,7 +101,12 @@ class TierRoomsSocketManager @Inject constructor(
     private fun registerListeners() {
         val s = socket ?: return
 
-        s.on(Socket.EVENT_CONNECT)       { _isConnected.value = true;  Log.d(TAG, "Connected ✅") }
+        s.on(Socket.EVENT_CONNECT) {
+            _isConnected.value = true
+            Log.d(TAG, "Connected ✅")
+            // Re-join tier room on reconnect (handles network drops)
+            currentTierKey?.let { key -> s.emit("tier:join_room", org.json.JSONObject().put("tierKey", key)) }
+        }
         s.on(Socket.EVENT_DISCONNECT)    { _isConnected.value = false; Log.d(TAG, "Disconnected") }
         s.on(Socket.EVENT_CONNECT_ERROR) { args -> Log.e(TAG, "WS error: ${args.firstOrNull()}") }
 
@@ -182,9 +187,13 @@ class TierRoomsSocketManager @Inject constructor(
         }
     }
 
+    // Track current tier room for reconnect
+    private var currentTierKey: String? = null
+
     // ── Emit helpers ──────────────────────────────────────────
 
     fun joinTierRoom(tierKey: String) {
+        currentTierKey = tierKey  // remember for reconnect
         if (socket?.connected() != true) { connect(); return }
         socket?.emit("tier:join_room", JSONObject().put("tierKey", tierKey))
     }
@@ -210,6 +219,7 @@ class TierRoomsSocketManager @Inject constructor(
     fun disconnect() {
         socket?.disconnect()
         socket = null
+        currentTierKey = null
         _isConnected.value = false
     }
 

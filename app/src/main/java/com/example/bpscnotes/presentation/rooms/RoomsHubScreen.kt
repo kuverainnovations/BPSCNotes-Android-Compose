@@ -235,6 +235,7 @@ fun RoomsHubScreen(
                                 && state.myTierData?.nextTier != null
                             val isNextTier     = tier.sortOrder == myTierOrder + 1
                             val isClaimReady   = isNextTier && allDoneForNext
+                            val isLowerTier    = tier.sortOrder < myTierOrder  // e.g. Silver when user is Gold
                           //  val isLocked       = tier.sortOrder > myTierOrder && !isClaimReady
 
                             Log.e("TAG", "RoomsHubScreen1212: $myTierKey", )
@@ -261,11 +262,16 @@ fun RoomsHubScreen(
                                 isMyRoom     = isMyRoom,
                                 isLocked     = isLocked,
                                 isClaimReady = isClaimReady,
+                                isLowerTier  = isLowerTier,
                                 isStarting   = isStarting,
                                 onClick      = {
                                     when {
                                         isClaimReady -> showClaimDialog = true
                                         isLocked     -> showLockedSheetForTier = tier
+                                        // Lower tier OR own tier: always start session
+                                        // Session backend uses user's DB tier for coins/XP.
+                                        // Tapping Silver as a Gold user is fine — rewards
+                                        // are determined server-side by current_tier_id.
                                         else         -> sessionViewModel.startSession(mode = "study")
                                     }
                                 }
@@ -483,6 +489,7 @@ private fun RoomCard(
     isMyRoom:     Boolean,
     isLocked:     Boolean,
     isClaimReady: Boolean = false,
+    isLowerTier:  Boolean = false,
     isStarting:   Boolean,
     onClick:      () -> Unit
 ) {

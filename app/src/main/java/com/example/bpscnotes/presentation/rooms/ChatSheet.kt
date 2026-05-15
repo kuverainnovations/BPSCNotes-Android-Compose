@@ -55,9 +55,15 @@ fun ChatSheet(
         viewModel.init(tierKey)
     }
 
-    // Auto-scroll when new message arrives
+    // Smart auto-scroll: only scroll to bottom if user is already near the bottom.
+    // If user scrolled up to read history, don't interrupt them.
     LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) {
+        if (state.messages.isEmpty()) return@LaunchedEffect
+        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        val total       = listState.layoutInfo.totalItemsCount
+        // "Near bottom" = within 3 items of the end
+        val isNearBottom = total == 0 || lastVisible >= total - 3
+        if (isNearBottom) {
             listState.animateScrollToItem(state.messages.size - 1)
         }
     }

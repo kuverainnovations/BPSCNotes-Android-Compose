@@ -61,12 +61,15 @@ data class TierRoomsUiState(
     val isSocketConnected: Boolean                  = false,
     val pendingPromotion: PromotionEvent?            = null,
     val pendingDemotion: DemotionEvent?              = null,
+    // Current user's ID — used to filter self from members list
+    val myUserId: String                            = "",
 )
 
 @HiltViewModel
 class TierRoomsViewModel @Inject constructor(
-    private val api:    TierRoomsApiService,
-    private val socket: TierRoomsSocketManager
+    private val api:        TierRoomsApiService,
+    private val socket:     TierRoomsSocketManager,
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TierRoomsUiState())
@@ -77,6 +80,9 @@ class TierRoomsViewModel @Inject constructor(
     }
 
     init {
+        // Load user ID from TokenStore so screens can filter self from member lists
+        val userId = tokenStore.getUserId() ?: ""
+        _uiState.update { it.copy(myUserId = userId) }
         loadAll()
         connectSocket()
     }
@@ -88,33 +94,41 @@ class TierRoomsViewModel @Inject constructor(
             socket.isConnected.collect { connected ->
                 _uiState.update { it.copy(isSocketConnected = connected) }
                 if (connected) {
-                    // Join the user's own tier room on connect
+                    // Join user's tier room. myTierData may not be loaded yet on first connect,
+                    // so fall back to selectedTierKey (default "silver").
+                    // loadMyTier() calls joinTierRoom again once real tier is known.
                     val tierKey = _uiState.value.myTierData?.currentTier?.tierKey
-                    if (tierKey != null) socket.joinTierRoom(tierKey)
+                        ?: _uiState.value.selectedTierKey
+                    socket.joinTierRoom(tierKey)
                 }
             }
         }
-        // Observe live presence updates
+        // Observe individual presence update events — fires IMMEDIATELY on each join/leave.
+        // This is faster than presenceSnapshot (which is the full map, batched).
         viewModelScope.launch {
-            // Track previous counts so we know when someone joined/left
-            var prevCounts = emptyMap<String, Int>()
+            socket.presenceUpdates.collect { event ->
+                // Update the active count for this tier in the list
+                _uiState.update { state ->
+                    state.copy(allTiers = state.allTiers.map { tier ->
+                        if (tier.tierKey == event.tierKey) tier.copy(activeSessions = event.activeNow)
+                        else tier
+                    })
+                }
+                // If it's the currently viewed tier, refresh members immediately
+                if (event.tierKey == _uiState.value.selectedTierKey) {
+                    loadMembers(event.tierKey)
+                }
+            }
+        }
+        // Also collect the full snapshot for initial state on connect
+        viewModelScope.launch {
             socket.presenceSnapshot.collect { snapshot ->
-                // Update tier active counts in UI
                 _uiState.update { state ->
                     state.copy(allTiers = state.allTiers.map { tier ->
                         val liveCount = snapshot[tier.tierKey]
                         if (liveCount != null) tier.copy(activeSessions = liveCount) else tier
                     })
                 }
-                // If count changed for the currently viewed tier → re-fetch members list
-                // so isStudyingNow flags are accurate (e.g. Balu left → remove from list)
-                val currentTierKey = _uiState.value.selectedTierKey
-                val prevCount = prevCounts[currentTierKey] ?: -1
-                val newCount  = snapshot[currentTierKey] ?: -1
-                if (newCount != prevCount && newCount >= 0) {
-                    loadMembers(currentTierKey)
-                }
-                prevCounts = snapshot
             }
         }
         // Observe promotion events
@@ -213,8 +227,10 @@ class TierRoomsViewModel @Inject constructor(
                 }
                 // Load leaderboard for user's actual tier
                 loadLeaderboard(tierKey)
-                // Also load members for the tab
+                // Load members for the tab
                 loadMembers(tierKey)
+                // Join the correct socket room now that we know the user's actual tier
+                socket.joinTierRoom(tierKey)
             } catch (e: Exception) {
                 Log.e(TAG, "loadMyTier: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMyTier = false, myTierError = e.message ?: "Failed to load your tier") }
