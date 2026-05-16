@@ -5,8 +5,6 @@ import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
@@ -42,7 +40,6 @@ import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
-import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
@@ -149,11 +146,7 @@ fun BpscNavHost(navController: NavHostController) {
             arguments = listOf(navArgument("quizId") { type = NavType.StringType })
         ) { backStackEntry ->
             val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
-
-            QuizPlayScreen(
-                quizId = quizId,
-                navController = navController
-            )
+            QuizPlayScreen(quizId = quizId, navController = navController)
         }
 
         composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController) }
@@ -163,18 +156,11 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
         composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
 
-        composable(Screen.StudyFocus.route) { backStackEntry ->
-
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(Screen.RoomsHub.route)
-            }
-
-            val sharedViewModel: StudySessionViewModel = hiltViewModel(parentEntry)
-
-            StudyFocusScreen(
-                navController = navController,
-                viewModel = sharedViewModel
-            )
+        composable(Screen.StudyFocus.route) {
+            // StudySessionViewModel scoped to this composable.
+            // Session state survives rotation. RoomsHub uses checkForExistingSession()
+            // on Resume to detect an active session and navigate here.
+            StudyFocusScreen(navController = navController)
         }
 
         composable(Screen.Achievements.route)     { AchievementsScreen(navController) }

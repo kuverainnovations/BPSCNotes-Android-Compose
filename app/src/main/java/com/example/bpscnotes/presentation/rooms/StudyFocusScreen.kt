@@ -30,6 +30,7 @@ import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.EndSessionResponseData
 import com.example.bpscnotes.data.remote.api.MyTierResponseData
 import com.example.bpscnotes.data.remote.api.TierMemberDto
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.readingrooms.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -110,15 +111,24 @@ fun StudyFocusScreen(
         SessionStatus.ENDED    -> SessionSummaryScreen(
             summary   = state.summary,
             tierData  = tiersState.myTierData,
-            onDismiss = { viewModel.clearSession(); navController.popBackStack() }
+            onDismiss = {
+            viewModel.clearSession()
+            // FIX 3: pop ALL the way back to RoomsHub (not just one step).
+            // popBackStack() alone lands on StudyFocusScreen which still has
+            // ENDED status → re-shows summary → infinite loop.
+            navController.navigate(Screen.RoomsHub.route) {
+                popUpTo(Screen.StudyFocus.route) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
         )
         else -> ActiveRoomScreen(
-            state        = state,
-            tiersState   = tiersState,
-            onBack       = { showEndConfirm = true },
-            onEnd        = { showEndConfirm = true },
-         //   onMemberTap  = { chatWithMember = it },
-            tiersViewModel=tiersViewModel
+            state          = state,
+            tiersState     = tiersState,
+            onBack         = { showEndConfirm = true },
+            onEnd          = { showEndConfirm = true },
+            onDismissAfk   = { viewModel.dismissAfkWarning() },  // FIX 4: wire AFK dismiss
+            tiersViewModel = tiersViewModel
         )
     }
 }
@@ -148,16 +158,20 @@ private fun StartingScreen() {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun ActiveRoomScreen(
-    state:       StudySessionUiState,
-    tiersState:  TierRoomsUiState,
-    onBack:      () -> Unit,
-    onEnd:       () -> Unit,
-    //onMemberTap: (TierMemberDto) -> Unit,
+    state:          StudySessionUiState,
+    tiersState:     TierRoomsUiState,
+    onBack:         () -> Unit,
+    onEnd:          () -> Unit,
+    onDismissAfk:   () -> Unit = {},     // FIX 4
     tiersViewModel: TierRoomsViewModel
 ) {
     // Local timer — increments every second
-    var elapsedSeconds by remember { mutableIntStateOf(state.activeMinutes * 60) }
-    LaunchedEffect(state.status, "timer") {
+    var elapsedSeconds by remember { mutableIntStateOf(0) }  // reset by LaunchedEffect below
+    // FIX 1: Key on (status, sessionId) so the timer re-fires when session starts.
+    // Previously keyed only on status → when STARTING→ACTIVE transition happened,
+    // the effect had already exited because the while() failed on STARTING.
+    LaunchedEffect(state.status, state.sessionId) {
+        elapsedSeconds = state.activeMinutes * 60   // re-sync from backend on resume
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
             delay(1000L); elapsedSeconds++
         }
@@ -286,7 +300,7 @@ private fun ActiveRoomScreen(
                             Text("Idle time not counted toward coins",
                                 style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
                         }
-                        TextButton(onClick = {}) {
+                        TextButton(onClick = onDismissAfk) {   // FIX 4: was onClick = {}
                             Text("I'm Back", color = Color.White, fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelSmall)
                         }

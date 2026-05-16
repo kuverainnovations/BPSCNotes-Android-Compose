@@ -40,7 +40,6 @@ class MyLearningViewModel @Inject constructor(
             try {
                 // Parallel: all courses + enrolled courses + user profile for coins
                 val allCoursesJob     = async { coursesApi.getCourses(limit = 20).data?.courses ?: emptyList() }
-                Log.e("TAG", "load: ${ coursesApi.getCourses(limit = 20).data?.courses/*?.filter { it.enrollment?.status=="active" }*/}", )
                 val enrolledJob       = async {
                     try { coursesApi.getCourses(limit = 20).data?.courses?.filter { it.enrollment?.status=="active" } ?: emptyList() }
                     catch (e: Exception) { emptyList() }
