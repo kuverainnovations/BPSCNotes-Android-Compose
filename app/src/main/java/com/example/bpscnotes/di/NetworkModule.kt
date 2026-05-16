@@ -16,6 +16,7 @@ import com.example.bpscnotes.data.remote.api.ChatApiService
 import com.example.bpscnotes.data.remote.api.AchievementsApiService
 import com.example.bpscnotes.data.remote.api.ChallengesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
+import com.example.bpscnotes.data.remote.api.StudyMaterialsApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -112,5 +113,9 @@ object NetworkModule {
     @Provides @Singleton
     fun provideChatApi(r: Retrofit): ChatApiService =
         r.create(ChatApiService::class.java)
+
+    @Provides @Singleton
+    fun provideStudyMaterialsApi(r: Retrofit): StudyMaterialsApiService =
+        r.create(StudyMaterialsApiService::class.java)
 
 }

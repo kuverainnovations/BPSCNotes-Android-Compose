@@ -507,10 +507,10 @@ data class CreateRoomRequest(
 
 data class CoinBalanceDto(
     val balance: Int,
-    @SerializedName("totalEarned") val totalEarned: Int = 0,
-    @SerializedName("totalSpent") val totalSpent: Int = 0,
-//    @SerializedName("check_in_streak") val checkInStreak: Int = 0,
-//    @SerializedName("checked_in_today") val checkedInToday: Boolean = false
+    @SerializedName("totalEarned")       val totalEarned: Int = 0,
+    @SerializedName("totalSpent")        val totalSpent: Int = 0,
+    @SerializedName("check_in_streak")   val checkInStreak: Int = 0,
+    @SerializedName("checked_in_today")  val checkedInToday: Boolean = false
 )
 
 data class CheckInDayDto(
@@ -526,16 +526,31 @@ data class EarnTaskDto(
     val id: String,
     val title: String,
     val subtitle: String,
-    @SerializedName("coins_reward") val coinsReward: Int,
-    val icon: String,                               // "quiz" | "study" | "referral" | "ad"
-    @SerializedName("action_label") val actionLabel: String,
-    @SerializedName("is_completed") val isCompleted: Boolean = false,
-    @SerializedName("is_ad") val isAd: Boolean = false,
-    @SerializedName("action_bg") val actionBg: Color,
-    @SerializedName("icon_bg") val iconBg: Color,
-    @SerializedName("icon_tint") val iconTint: Color,
-    @SerializedName("action_text_color") val actionTextColor: Color,
-)
+    @SerializedName("coins_reward")       val coinsReward: Int,
+    val icon: String,                      // "quiz" | "study" | "referral" | "ad"
+    @SerializedName("action_label")       val actionLabel: String,
+    @SerializedName("is_completed")       val isCompleted: Boolean = false,
+    @SerializedName("is_ad")              val isAd: Boolean = false,
+    // Colors sent as hex strings from backend — parsed to Compose Color in UI
+    @SerializedName("action_bg")          val actionBgHex: String = "#1565C0",
+    @SerializedName("icon_bg")            val iconBgHex: String = "#E8F0FD",
+    @SerializedName("icon_tint")          val iconTintHex: String = "#1565C0",
+    @SerializedName("action_text_color")  val actionTextColorHex: String = "#FFFFFF",
+) {
+    // Computed Compose Colors — safe hex parsing with fallbacks
+    val actionBg: Color         get() = parseColor(actionBgHex, Color(0xFF1565C0))
+    val iconBg: Color           get() = parseColor(iconBgHex,   Color(0xFFE8F0FD))
+    val iconTint: Color         get() = parseColor(iconTintHex, Color(0xFF1565C0))
+    val actionTextColor: Color  get() = parseColor(actionTextColorHex, Color.White)
+
+    companion object {
+        fun parseColor(hex: String, fallback: Color): Color = try {
+            Color(android.graphics.Color.parseColor(
+                if (hex.startsWith("#")) hex else "#$hex"
+            ))
+        } catch (e: Exception) { fallback }
+    }
+}
 
 fun mapIcon(icon: String): ImageVector {
     return when (icon) {
@@ -561,8 +576,9 @@ data class CoinsBalanceResponseData(
     val balance: Int,
     val totalEarned: Int,
     val totalSpent: Int,
-    @SerializedName("check_in_days")
-    val checkInDays: List<CheckInDayDto> = emptyList()
+    @SerializedName("check_in_streak")  val checkInStreak: Int = 0,
+    @SerializedName("checked_in_today") val checkedInToday: Boolean = false,
+    @SerializedName("check_in_days")    val checkInDays: List<CheckInDayDto> = emptyList()
 )
 
 data class EarnTasksResponseData(
@@ -582,14 +598,15 @@ interface CoinsApiService {
 
     @GET("coins/transactions")
     suspend fun getTransactions(
-        @Query("limit") limit: Int = 50
+        @Query("limit") limit: Int = 20,
+        @Query("page")  page:  Int = 1
     ): ApiResponse<CoinTransactionsResponseData>
 
     @POST("coins/check-in")
     suspend fun checkIn(): ApiResponse<CoinBalanceDto>
 
     @POST("coins/tasks/{id}/claim")
-    suspend fun claimTask(@Path("id") id: String): ApiResponse<Any>
+    suspend fun claimTask(@Path("id") id: String): ApiResponse<CoinBalanceDto>
 
     // ══════════════════════════════════════════════════════════════
 // FLASHCARD DTOs — GET /flashcards

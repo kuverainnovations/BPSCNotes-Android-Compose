@@ -24,6 +24,7 @@ import com.example.bpscnotes.data.mock.MockData
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import com.example.bpscnotes.data.remote.api.CheckInDayDto
+import com.example.bpscnotes.data.remote.api.CoinTransactionDto
 import com.example.bpscnotes.data.remote.api.EarnTaskDto
 import com.example.bpscnotes.data.remote.api.mapIcon
 import com.example.bpscnotes.presentation.wallet.CoinWalletViewModel
@@ -78,12 +79,27 @@ fun CoinWalletScreen(
     navController: NavHostController,
     viewModel: CoinWalletViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state       by viewModel.uiState.collectAsState()
+    val snackbarHost = remember { SnackbarHostState() }
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Earn Coins", "History")
 
-    // ✅ Loading
+    // Show success / error toasts
+    LaunchedEffect(state.successMessage) {
+        state.successMessage?.let {
+            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.clearMessage()
+        }
+    }
+    LaunchedEffect(state.error) {
+        state.error?.let {
+            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.clearMessage()
+        }
+    }
+
+    // Full-screen loading only on first load with no data
     if (state.isLoading && state.balance == 0) {
         Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.CoinGold)
@@ -91,8 +107,12 @@ fun CoinWalletScreen(
         return
     }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
+        containerColor = BpscColors.Surface
+    ) { scaffoldPadding ->
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(BpscColors.Surface),
+        modifier = Modifier.fillMaxSize().background(BpscColors.Surface).padding(scaffoldPadding),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
 
@@ -137,12 +157,19 @@ fun CoinWalletScreen(
                     SectionHeader("Earn Coins", null)
                 }
 
-                items(state.earnTasks, key = { it.id }) { task ->
-                    EarnTaskRow(
-                        index = 0,
-                        task = task,
-                        onClick = { viewModel.claimTask(task.id) }
-                    )
+                state.earnTasks.forEachIndexed { idx, task ->
+                    item(key = task.id) {
+                        EarnTaskRow(
+                            index      = idx + 1,
+                            task       = task,
+                            isClaiming = state.claimingTaskId == task.id,
+                            onClick    = {
+                                if (!task.isCompleted && state.claimingTaskId == null) {
+                                    viewModel.claimTask(task.id)
+                                }
+                            }
+                        )
+                    }
                 }
 
                 if (state.earnTasks.isEmpty() && !state.isLoading) {
@@ -156,24 +183,48 @@ fun CoinWalletScreen(
 
             // ───── HISTORY TAB ─────
             1 -> {
+                item { HistorySummaryRow(
+                    totalEarned = state.totalEarned,
+                    totalSpent  = state.totalSpent
+                )}
 
+                item { SectionHeader("Transaction History", "${state.transactions.size} transactions") }
 
-                item {
-                    SectionHeader("Transaction History", null)
+                items(state.transactions, key = { it.id }) { txn ->
+                    TransactionRow(transaction = txn)
                 }
-
-
 
                 if (state.transactions.isEmpty() && !state.isLoading) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("No transactions yet")
+                            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("🪙", fontSize = 40.sp)
+                                Text("No transactions yet", style = MaterialTheme.typography.titleMedium,
+                                    color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
+                                Text("Complete tasks or study to earn coins",
+                                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint,
+                                    textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+
+                // Load more trigger
+                if (state.hasMoreTransactions && state.transactions.isNotEmpty()) {
+                    item(key = "load_more_txn") {
+                        LaunchedEffect(Unit) { viewModel.loadMoreTransactions() }
+                        Box(Modifier.fillMaxWidth().padding(16.dp), Alignment.Center) {
+                            if (state.isLoadingTransactions) {
+                                CircularProgressIndicator(color = BpscColors.CoinGold, modifier = Modifier.size(24.dp))
+                            }
                         }
                     }
                 }
             }
         }
-    }
+    }  // end LazyColumn
+    }  // end Scaffold
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -428,8 +479,27 @@ private fun DailyCheckInCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Streak header
+            if (days.any { it.isDone }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Daily Streak", style = MaterialTheme.typography.titleSmall,
+                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("🔥", fontSize = 14.sp)
+                        Text("${days.count { it.isDone }} days",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
             // Day circles row
             Row(
                 modifier              = Modifier.fillMaxWidth(),
@@ -522,6 +592,35 @@ private fun DailyCheckInCard(
                     }
                 }
             }
+
+            // Check-In button
+            Spacer(Modifier.height(4.dp))
+            Button(
+                onClick  = onCheckIn,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape    = RoundedCornerShape(14.dp),
+                enabled  = !doneToday && !isLoading,
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor         = BpscColors.CoinGold,
+                    contentColor           = Color.White,
+                    disabledContainerColor = BpscColors.Divider,
+                    disabledContentColor   = BpscColors.TextHint
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Checking in…", style = MaterialTheme.typography.titleMedium)
+                } else if (doneToday) {
+                    Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Checked in today ✓", style = MaterialTheme.typography.titleMedium)
+                } else {
+                    Icon(Icons.Rounded.CalendarToday, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Check In Now", style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
     }
 }
@@ -531,11 +630,11 @@ private fun DailyCheckInCard(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun EarnTaskRow(index: Int, task: EarnTaskDto, onClick: () -> Unit){
+private fun EarnTaskRow(index: Int, task: EarnTaskDto, isClaiming: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -552,77 +651,66 @@ private fun EarnTaskRow(index: Int, task: EarnTaskDto, onClick: () -> Unit){
         // Icon circle
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(task.iconBg),
+                .background(if (task.isCompleted) BpscColors.Success.copy(0.12f) else task.iconBg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                mapIcon(task.icon),
-                 null,
-                tint     = task.iconTint,
-                modifier = Modifier.size(22.dp)
-            )
-
-            Icon(Icons.Rounded.ArrowUpward,
-                null,
-                tint = BpscColors.Success,
-                modifier = Modifier.size(14.dp))
-
+            if (task.isCompleted) {
+                Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(22.dp))
+            } else {
+                Icon(mapIcon(task.icon), null, tint = task.iconTint, modifier = Modifier.size(22.dp))
+            }
         }
 
-        // Title + subtitle
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    task.title,
-                    style      = MaterialTheme.typography.bodyLarge,
-                    color      = BpscColors.TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines   = 1,
-                    overflow   = TextOverflow.Ellipsis
-                )
-                // Ad badge
+        // Title + subtitle + coins reward
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(task.title, style = MaterialTheme.typography.bodyLarge,
+                    color = if (task.isCompleted) BpscColors.TextHint else BpscColors.TextPrimary,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (task.isAd) {
-                    Text(
-                        "AD",
-                        style    = MaterialTheme.typography.labelSmall,
-                        color    = Color(0xFF1565C0),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFE3F2FD))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+                    Text("AD", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1565C0),
+                        fontSize = 8.sp, fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFE3F2FD)).padding(horizontal = 4.dp, vertical = 1.dp))
                 }
             }
-            Text(
-                task.subtitle,
-                style  = MaterialTheme.typography.bodyMedium,
-                color  = BpscColors.TextSecondary
-            )
+            Text(task.subtitle, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            // Coins reward label
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("🪙", fontSize = 11.sp)
+                Text("+${task.coinsReward} coins", style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+            }
         }
 
-        // Action button — exactly like screenshot
+        // Action button
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(task.actionBg)
-                .clickable(enabled = !task.isCompleted) { /* handle action */ }
-                .padding(horizontal = 18.dp, vertical = 8.dp),
+                .background(
+                    when {
+                        task.isCompleted -> BpscColors.Success.copy(0.1f)
+                        isClaiming       -> task.actionBg.copy(0.5f)
+                        else             -> task.actionBg
+                    }
+                )
+                .clickable(enabled = !task.isCompleted && !isClaiming, onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                task.actionLabel,
-                style      = MaterialTheme.typography.labelSmall,
-                color      = task.actionTextColor,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize   = 12.sp
-            )
+            if (isClaiming) {
+                CircularProgressIndicator(color = task.actionTextColor, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+            } else {
+                Text(
+                    if (task.isCompleted) "Done ✓" else task.actionLabel,
+                    style      = MaterialTheme.typography.labelSmall,
+                    color      = if (task.isCompleted) BpscColors.Success else task.actionTextColor,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize   = 12.sp
+                )
+            }
         }
     }
 
@@ -638,9 +726,7 @@ private fun EarnTaskRow(index: Int, task: EarnTaskDto, onClick: () -> Unit){
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun HistorySummaryRow(transactions: List<CoinTransaction>) {
-    val totalEarned = transactions.filter { it.type == TransactionType.EARNED }.sumOf { it.coins }
-    val totalSpent  = transactions.filter { it.type == TransactionType.SPENT  }.sumOf { kotlin.math.abs(it.coins) }
+private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
 
     Row(
         modifier = Modifier
@@ -711,83 +797,57 @@ private fun HistorySummaryRow(transactions: List<CoinTransaction>) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun TransactionRow(transaction: CoinTransaction) {
+private fun TransactionRow(transaction: CoinTransactionDto) {
+    val isEarned = transaction.type == "earned"
+    val iconVector = mapIcon(transaction.icon)
+    val iconBg = if (isEarned) Color(0xFFE8FDF4) else Color(0xFFFCE4EC)
+    val iconTint = if (isEarned) BpscColors.Success else Color(0xFFC62828)
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment     = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(transaction.iconBg),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                transaction.icon,
-                contentDescription = null,
-                tint     = transaction.iconTint,
-                modifier = Modifier.size(22.dp)
-            )
+        Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
+            contentAlignment = Alignment.Center) {
+            Icon(iconVector, null, tint = iconTint, modifier = Modifier.size(22.dp))
         }
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                transaction.title,
-                style      = MaterialTheme.typography.bodyMedium,
-                color      = BpscColors.TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis
-            )
-            Text(
-                transaction.subtitle,
-                style    = MaterialTheme.typography.labelSmall,
-                color    = BpscColors.TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                transaction.timeLabel,
-                style    = MaterialTheme.typography.labelSmall,
-                color    = BpscColors.TextHint,
-                fontSize = 10.sp
-            )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(transaction.title, style = MaterialTheme.typography.bodyMedium,
+                color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(transaction.subtitle, style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(formatDate(transaction.date), style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextHint, fontSize = 10.sp)
         }
 
-        // Coin amount
         Column(horizontalAlignment = Alignment.End) {
-            Row(
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("🪙", fontSize = 11.sp)
                 Text(
-                    if (transaction.type == TransactionType.EARNED) "+${transaction.coins}"
-                    else "${transaction.coins}",
-                    style      = MaterialTheme.typography.titleMedium,
-                    color      = if (transaction.type == TransactionType.EARNED) BpscColors.Success else Color(0xFFE53935),
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize   = 14.sp
+                    if (isEarned) "+${transaction.coins}" else "-${kotlin.math.abs(transaction.coins)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isEarned) BpscColors.Success else Color(0xFFE53935),
+                    fontWeight = FontWeight.ExtraBold, fontSize = 14.sp
                 )
             }
-            Text(
-                "coins",
-                style    = MaterialTheme.typography.labelSmall,
-                color    = BpscColors.TextHint,
-                fontSize = 9.sp
-            )
+            Text("coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
         }
     }
 
-    HorizontalDivider(
-        modifier  = Modifier.padding(horizontal = 16.dp),
-        color     = BpscColors.Divider,
-        thickness = 0.5.dp
-    )
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+        color = BpscColors.Divider, thickness = 0.5.dp)
+}
+
+private fun formatDate(iso: String): String {
+    return try {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        val date = sdf.parse(iso) ?: return iso
+        java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.getDefault()).format(date)
+    } catch (e: Exception) { iso.take(10) }
 }
 
 // ─────────────────────────────────────────────────────────────

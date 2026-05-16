@@ -24,6 +24,10 @@ data class CoinWalletUiState(
     val transactions: List<CoinTransactionDto>  = emptyList(),
     val isLoading: Boolean                      = true,
     val isCheckingIn: Boolean                   = false,
+    val claimingTaskId: String?                 = null,  // which task is being claimed
+    val isLoadingTransactions: Boolean          = false,
+    val transactionPage: Int                    = 1,
+    val hasMoreTransactions: Boolean            = true,
     val error: String?                          = null,
     val successMessage: String?                 = null
 )
@@ -55,8 +59,8 @@ class CoinWalletViewModel @Inject constructor(
                         balance        = balanceData?.balance ?: 0,
                         totalEarned    = balanceData?.totalEarned ?: 0,
                         totalSpent     = balanceData?.totalSpent ?: 0,
-                       // checkInStreak  = balanceData?.balance?.checkInStreak ?: 0,
-                      //  checkedInToday = balanceData?.balance?.checkedInToday ?: false,
+                        checkInStreak  = balanceData?.checkInStreak ?: 0,
+                        checkedInToday = balanceData?.checkedInToday ?: false,
                         checkInDays    = balanceData?.checkInDays ?: emptyList(),
                         earnTasks      = tasks,
                         transactions   = transactions,
@@ -79,12 +83,15 @@ class CoinWalletViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         balance        = result?.balance ?: it.balance,
-                      //  checkInStreak  = result?.checkInStreak ?: it.checkInStreak,
+                        totalEarned    = (it.totalEarned) + (result?.balance?.minus(it.balance)?.coerceAtLeast(0) ?: 0),
+                        checkInStreak  = result?.checkInStreak ?: it.checkInStreak,
                         checkedInToday = true,
                         isCheckingIn   = false,
-                        successMessage = "✅ Daily check-in done! 🪙"
+                        successMessage = "✅ +${(result?.balance ?: it.balance) - it.balance} coins! Streak: ${result?.checkInStreak ?: it.checkInStreak} days 🔥"
                     )
                 }
+                // Refresh check-in days state after successful check-in
+                load()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isCheckingIn = false, error = "Check-in failed. Try again.") }
             }
@@ -92,13 +99,45 @@ class CoinWalletViewModel @Inject constructor(
     }
 
     fun claimTask(taskId: String) {
+        if (_uiState.value.claimingTaskId != null) return  // prevent double-tap
         viewModelScope.launch {
+            _uiState.update { it.copy(claimingTaskId = taskId) }
             try {
-                coinsApi.claimTask(taskId)
-                // Refresh wallet to get updated balance + mark task complete
-                load()
+                val result = coinsApi.claimTask(taskId).data
+                _uiState.update { state ->
+                    state.copy(
+                        claimingTaskId = null,
+                        balance        = result?.balance ?: state.balance,
+                        // Optimistically mark this task as completed in the list
+                        earnTasks      = state.earnTasks.map { task ->
+                            if (task.id == taskId) task.copy(isCompleted = true) else task
+                        },
+                        successMessage = "🎉 +${(result?.balance ?: state.balance) - state.balance} coins earned!"
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Could not claim reward.") }
+                _uiState.update { it.copy(claimingTaskId = null, error = "Could not claim reward: ${e.message}") }
+            }
+        }
+    }
+
+    fun loadMoreTransactions() {
+        val s = _uiState.value
+        if (!s.hasMoreTransactions || s.isLoadingTransactions) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingTransactions = true) }
+            try {
+                val nextPage  = s.transactionPage + 1
+                val res       = coinsApi.getTransactions(limit = 20, page = nextPage).data
+                val newTxns   = res?.transactions ?: emptyList()
+                _uiState.update { it.copy(
+                    transactions        = it.transactions + newTxns,
+                    transactionPage     = nextPage,
+                    hasMoreTransactions = newTxns.size >= 20,
+                    isLoadingTransactions = false
+                )}
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingTransactions = false) }
             }
         }
     }
