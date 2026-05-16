@@ -37,7 +37,7 @@ interface AuthApiService {
     suspend fun saveExamTarget(@Body body: ExamTargetRequest): ApiResponse<Any>
 
     /** PATCH /users/profile — update name, email, bio, district, etc. */
-    @PATCH("users/profile")
+    @PATCH("auth/users/profile")
     suspend fun updateProfile(@Body body: UpdateProfileRequest): ApiResponse<GetMeData>
 
     /** POST /auth/logout — invalidate server-side token */

@@ -134,7 +134,7 @@ fun EditProfileScreen(
                 SectionHeader("Exam Settings")
 
                 // Prep level picker
-                Text("Preparation Level", style = MaterialTheme.typography.labelMedium,
+              /*  Text("Preparation Level", style = MaterialTheme.typography.labelMedium,
                     color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     prepLevels.forEach { level ->
@@ -149,7 +149,7 @@ fun EditProfileScreen(
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
-                }
+                }*/
 
                 // Target year picker
                 Text("Target Year", style = MaterialTheme.typography.labelMedium,

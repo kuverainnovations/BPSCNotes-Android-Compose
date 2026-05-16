@@ -512,9 +512,9 @@ private fun DailyCheckInCard(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // Bonus label above circle
-                        if (day.bonusLabel.isNotEmpty()) {
+                        if (!day.bonusLabel.isNullOrEmpty()) {
                             Text(
-                                day.bonusLabel,
+                                day.bonusLabel?:"",
                                 style      = MaterialTheme.typography.labelSmall,
                                 color      = BpscColors.CoinGold,
                                 fontWeight = FontWeight.ExtraBold,
@@ -579,7 +579,7 @@ private fun DailyCheckInCard(
 
                         // Day label below
                         Text(
-                            day.label,
+                            day.label.orEmpty(),
                             style  = MaterialTheme.typography.labelSmall,
                             color  = when (status) {
                                 CheckInStatus.DONE, CheckInStatus.BONUS -> BpscColors.TextPrimary
@@ -666,7 +666,7 @@ private fun EarnTaskRow(index: Int, task: EarnTaskDto, isClaiming: Boolean, onCl
         // Title + subtitle + coins reward
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(task.title, style = MaterialTheme.typography.bodyLarge,
+                Text(task.title?:"", style = MaterialTheme.typography.bodyLarge,
                     color = if (task.isCompleted) BpscColors.TextHint else BpscColors.TextPrimary,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (task.isAd) {
@@ -676,7 +676,11 @@ private fun EarnTaskRow(index: Int, task: EarnTaskDto, isClaiming: Boolean, onCl
                             .background(Color(0xFFE3F2FD)).padding(horizontal = 4.dp, vertical = 1.dp))
                 }
             }
-            Text(task.subtitle, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            Text(
+                task.subtitle.orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = BpscColors.TextSecondary
+            )
             // Coins reward label
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text("🪙", fontSize = 11.sp)
@@ -704,7 +708,7 @@ private fun EarnTaskRow(index: Int, task: EarnTaskDto, isClaiming: Boolean, onCl
                 CircularProgressIndicator(color = task.actionTextColor, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
             } else {
                 Text(
-                    if (task.isCompleted) "Done ✓" else task.actionLabel,
+                        text = if (task.isCompleted) "Done ✓" else task.actionLabel.orEmpty(),
                     style      = MaterialTheme.typography.labelSmall,
                     color      = if (task.isCompleted) BpscColors.Success else task.actionTextColor,
                     fontWeight = FontWeight.ExtraBold,
@@ -814,12 +818,12 @@ private fun TransactionRow(transaction: CoinTransactionDto) {
         }
 
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(transaction.title, style = MaterialTheme.typography.bodyMedium,
+            Text(transaction.title.orEmpty(), style = MaterialTheme.typography.bodyMedium,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(transaction.subtitle, style = MaterialTheme.typography.labelSmall,
+            Text(transaction.subtitle.orEmpty(), style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(formatDate(transaction.date), style = MaterialTheme.typography.labelSmall,
+            Text(formatDate(transaction.date.orEmpty()), style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextHint, fontSize = 10.sp)
         }
 
