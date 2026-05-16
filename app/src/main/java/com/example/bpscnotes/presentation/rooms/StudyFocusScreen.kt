@@ -58,8 +58,8 @@ import javax.inject.Inject
 @Composable
 fun StudyFocusScreen(
     navController:  NavHostController,
-    viewModel:      StudySessionViewModel = hiltViewModel(),
-    tiersViewModel: TierRoomsViewModel    = hiltViewModel()
+    viewModel:      StudySessionViewModel,
+    tiersViewModel: TierRoomsViewModel
 ) {
     val state      by viewModel.uiState.collectAsState()
     val tiersState by tiersViewModel.uiState.collectAsState()
@@ -113,9 +113,10 @@ fun StudyFocusScreen(
             tierData  = tiersState.myTierData,
             onDismiss = {
             viewModel.clearSession()
-            // FIX 3: pop ALL the way back to RoomsHub (not just one step).
-            // popBackStack() alone lands on StudyFocusScreen which still has
-            // ENDED status → re-shows summary → infinite loop.
+            // FIX 3: Must remove StudyFocus from back-stack entirely.
+            // plain popBackStack() leaves StudyFocusScreen in the stack → when
+            // clearSession() resets status to IDLE the screen re-renders in the
+            // else→ActiveRoomScreen branch while navigation is still pending.
             navController.navigate(Screen.RoomsHub.route) {
                 popUpTo(Screen.StudyFocus.route) { inclusive = true }
                 launchSingleTop = true
@@ -127,7 +128,7 @@ fun StudyFocusScreen(
             tiersState     = tiersState,
             onBack         = { showEndConfirm = true },
             onEnd          = { showEndConfirm = true },
-            onDismissAfk   = { viewModel.dismissAfkWarning() },  // FIX 4: wire AFK dismiss
+            onDismissAfk   = { viewModel.dismissAfkWarning() },
             tiersViewModel = tiersViewModel
         )
     }
@@ -162,18 +163,19 @@ private fun ActiveRoomScreen(
     tiersState:     TierRoomsUiState,
     onBack:         () -> Unit,
     onEnd:          () -> Unit,
-    onDismissAfk:   () -> Unit = {},     // FIX 4
+    onDismissAfk:   () -> Unit = {},
     tiersViewModel: TierRoomsViewModel
 ) {
     // Local timer — increments every second
-    var elapsedSeconds by remember { mutableIntStateOf(0) }  // reset by LaunchedEffect below
-    // FIX 1: Key on (status, sessionId) so the timer re-fires when session starts.
-    // Previously keyed only on status → when STARTING→ACTIVE transition happened,
-    // the effect had already exited because the while() failed on STARTING.
+    // FIX 2: elapsedSeconds synced from backend on every session-state change.
+    // Key includes sessionId so the effect re-fires when STARTING→ACTIVE happens.
+    // Without sessionId in the key the timer block exited before the session was ACTIVE.
+    var elapsedSeconds by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.status, state.sessionId) {
-        elapsedSeconds = state.activeMinutes * 60   // re-sync from backend on resume
+        elapsedSeconds = state.activeMinutes * 60   // sync from backend value
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
-            delay(1000L); elapsedSeconds++
+            delay(1000L)
+            elapsedSeconds++
         }
     }
 
@@ -300,7 +302,7 @@ private fun ActiveRoomScreen(
                             Text("Idle time not counted toward coins",
                                 style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
                         }
-                        TextButton(onClick = onDismissAfk) {   // FIX 4: was onClick = {}
+                        TextButton(onClick = onDismissAfk) {
                             Text("I'm Back", color = Color.White, fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelSmall)
                         }

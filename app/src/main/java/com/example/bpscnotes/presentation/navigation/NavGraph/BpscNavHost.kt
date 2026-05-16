@@ -37,9 +37,11 @@ import com.example.bpscnotes.presentation.quiz.QuizViewModel
 import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
+import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
+import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
@@ -153,15 +155,40 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.MockTests.route)     { MockTestsScreen(navController) }
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
         // ── Tier Room System (Phase 1) ──────────────────────────
-        composable(Screen.RoomsHub.route)   { RoomsHubScreen(navController) }
-        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
+        composable(Screen.RoomsHub.route) { backStackEntry ->
 
-        composable(Screen.StudyFocus.route) {
-            // StudySessionViewModel scoped to this composable.
-            // Session state survives rotation. RoomsHub uses checkForExistingSession()
-            // on Resume to detect an active session and navigate here.
-            StudyFocusScreen(navController = navController)
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Main.route)
+            }
+
+            val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+            val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+
+            RoomsHubScreen(
+                navController = navController,
+                sessionViewModel = sessionVM,
+                tiersViewModel = tiersVM
+            )
         }
+
+        composable(Screen.StudyFocus.route) { backStackEntry ->
+
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Main.route)
+            }
+
+            val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+            val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+
+            StudyFocusScreen(
+                navController = navController,
+                viewModel = sessionVM,
+                tiersViewModel = tiersVM
+            )
+        }
+
+
+        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
 
         composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
         composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }

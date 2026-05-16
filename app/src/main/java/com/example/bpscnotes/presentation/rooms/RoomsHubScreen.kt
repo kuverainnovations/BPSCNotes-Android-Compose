@@ -40,8 +40,8 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 @Composable
 fun RoomsHubScreen(
     navController: NavHostController,
-    tiersViewModel:   TierRoomsViewModel    = hiltViewModel(),
-    sessionViewModel: StudySessionViewModel = hiltViewModel()
+    tiersViewModel:   TierRoomsViewModel,
+    sessionViewModel: StudySessionViewModel
 ) {
     val state        by tiersViewModel.uiState.collectAsState()
     val sessionState by sessionViewModel.uiState.collectAsState()
