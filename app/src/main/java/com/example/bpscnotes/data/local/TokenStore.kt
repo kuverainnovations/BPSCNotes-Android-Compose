@@ -22,26 +22,27 @@ class TokenStore @Inject constructor(
     fun getUserMobile(): String? = prefs.getString("user_mobile", null)
     fun saveUserName(name: String) = prefs.edit().putString("user_name", name).apply()
     fun getUserName(): String? = prefs.getString("user_name", null)
-
-    // User ID — saved after login for chat identification
     fun saveUserId(id: String) = prefs.edit().putString("user_id", id).apply()
-    fun getUserId(): String?   = prefs.getString("user_id", null)
+    fun getUserId(): String? = prefs.getString("user_id", null)
 
-    // ── Onboarding (intro slides) ──────────────────────────────
+    // ── Onboarding ─────────────────────────────────────────────
     fun isOnboarded(): Boolean = prefs.getBoolean("is_onboarded", false)
     fun setOnboarded() = prefs.edit().putBoolean("is_onboarded", true).apply()
 
-    // ── Exam Setup (NEW) ──────────────────────────────────────
-    // Tracks whether the user has completed the post-register exam selection flow.
-    // Checked in SplashScreen to decide: Main vs ExamSetup
+    // ── Exam Setup ────────────────────────────────────────────
     fun isExamSetupDone(): Boolean = prefs.getBoolean("exam_setup_done", false)
     fun setExamSetupDone() = prefs.edit().putBoolean("exam_setup_done", true).apply()
-
     fun saveUserPrimaryExam(exam: String) = prefs.edit().putString("primary_exam", exam).apply()
     fun getUserPrimaryExam(): String? = prefs.getString("primary_exam", null)
-
     fun saveUserPrepLevel(level: String) = prefs.edit().putString("prep_level", level).apply()
     fun getUserPrepLevel(): String? = prefs.getString("prep_level", null)
+
+    // ── Generic boolean prefs — settings toggles ───────────────
+    // Persists user preferences across app restarts
+    fun getBoolPref(key: String, default: Boolean = false): Boolean =
+        prefs.getBoolean("pref_$key", default)
+    fun setBoolPref(key: String, value: Boolean) =
+        prefs.edit().putBoolean("pref_$key", value).apply()
 
     // ── Clear all (logout) ─────────────────────────────────────
     fun clearAll() = prefs.edit().clear().apply()

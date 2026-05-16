@@ -79,6 +79,7 @@ sealed class Screen(val route: String) {
     // Settings
     object NotificationSettings : Screen("notification_settings")
     object Settings             : Screen("settings")
+    object EditProfile          : Screen("edit_profile")
 }
 
 fun String.encodeUrl(): String = java.net.URLEncoder.encode(this, "UTF-8")

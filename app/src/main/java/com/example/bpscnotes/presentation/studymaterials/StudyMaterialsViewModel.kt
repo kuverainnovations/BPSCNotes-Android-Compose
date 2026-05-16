@@ -307,75 +307,68 @@ class StudyMaterialsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isUploading = true, uploadProgress = 0f, uploadError = null) }
             try {
-                // Run all I/O and network operations on Dispatchers.IO to avoid NetworkOnMainThreadException
-                withContext(Dispatchers.IO) {
-                    // 1. Get file metadata
-                    val contentResolver = context.contentResolver
-                    val mimeType = contentResolver.getType(localUri) ?: "application/pdf"
-                    val fileName = getFileName(localUri) ?: "upload.pdf"
-                    val fileSizeBytes = getFileSize(localUri)
+                // 1. Get file metadata
+                val contentResolver = context.contentResolver
+                val mimeType = contentResolver.getType(localUri) ?: "application/pdf"
+                val fileName = getFileName(localUri) ?: "upload.pdf"
+                val fileSizeBytes = getFileSize(localUri)
 
-                    // 2. Get pre-signed upload URL from backend
-                    _state.update { it.copy(uploadProgress = 0.1f) }
-                    val urlRes = api.getUploadUrl(fileName, mimeType)
-                    val uploadUrl = urlRes.data?.uploadUrl ?: throw Exception("Failed to get upload URL")
-                    val fileKey   = urlRes.data.fileKey
+                // 2. Get pre-signed upload URL from backend
+                _state.update { it.copy(uploadProgress = 0.1f) }
+                val urlRes = api.getUploadUrl(fileName, mimeType)
+                val uploadUrl = urlRes.data?.uploadUrl ?: throw Exception("Failed to get upload URL")
+                val fileKey   = urlRes.data.fileKey
 
-                    // 3. Upload directly to S3 via OkHttp
-                    _state.update { it.copy(uploadProgress = 0.2f) }
-                    val inputStream = contentResolver.openInputStream(localUri)
-                        ?: throw Exception("Cannot read file")
+                // 3. Upload directly to S3 via OkHttp with progress tracking
+                _state.update { it.copy(uploadProgress = 0.2f) }
+                val inputStream = contentResolver.openInputStream(localUri)
+                    ?: throw Exception("Cannot read file")
 
-                    val fileBytes = inputStream.readBytes()
-                    inputStream.close()
+                val fileBytes = inputStream.readBytes()
+                inputStream.close()
 
-                    // Upload to S3
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                        .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
-                        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                        .build()
+                // Upload to S3
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
 
-                    val requestBody = okhttp3.RequestBody.create(
-                        mimeType.toMediaTypeOrNull(), fileBytes
-                    )
+                val requestBody = okhttp3.RequestBody.create(
+                    mimeType.toMediaTypeOrNull(), fileBytes
+                )
+                // AWS SDK v3 requires CRC32 checksum header in the PUT request
+                val crc32Header = computeCrc32Header(fileBytes)
+                val request = okhttp3.Request.Builder()
+                    .url(uploadUrl)
+                    .put(requestBody)
+                    .addHeader("Content-Type", mimeType)
+                    .addHeader("x-amz-checksum-crc32", crc32Header)
+                    .build()
 
-                    // AWS SDK v3 presigned URLs include x-amz-checksum-crc32 requirement.
-                    val crc32Header = computeCrc32Header(fileBytes)
-
-                    val request = okhttp3.Request.Builder()
-                        .url(uploadUrl)
-                        .put(requestBody)
-                        .addHeader("Content-Type", mimeType)
-                        .addHeader("x-amz-checksum-crc32", crc32Header)
-                        .build()
-
-                    _state.update { it.copy(uploadProgress = 0.5f) }
-                    val response = client.newCall(request).execute()
-                    if (!response.isSuccessful) {
-                        val errorBody = response.body?.string() ?: ""
-                        Log.e(TAG, "S3 upload failed: HTTP \${response.code} — $errorBody")
-                        throw Exception("S3 upload failed: \${response.code}. $errorBody")
-                    }
-                    response.close()
-                    _state.update { it.copy(uploadProgress = 0.8f) }
-
-                    // 4. Create material record in backend
-                    api.createMaterial(
-                        CreateMaterialRequest(
-                            title        = title.trim(),
-                            description  = description.trim().ifEmpty { null },
-                            subject      = subject.trim(),
-                            materialType = type.apiKey,
-                            author       = author.trim().ifEmpty { null },
-                            tags         = tags.filter { it.isNotBlank() },
-                            fileKey      = fileKey,
-                            fileSizeMb   = fileSizeBytes / (1024f * 1024f),
-                            pageCount    = pageCount
-                        )
-                    )
+                _state.update { it.copy(uploadProgress = 0.5f) }
+                val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: "no body"
+                    Log.e(TAG, "S3 upload failed HTTP " + response.code.toString() + ": " + errorBody)
+                    throw Exception("S3 upload failed: HTTP " + response.code.toString())
                 }
+                _state.update { it.copy(uploadProgress = 0.8f) }
 
+                // 4. Create material record in backend
+                val createRes = api.createMaterial(
+                    CreateMaterialRequest(
+                        title        = title.trim(),
+                        description  = description.trim().ifEmpty { null },
+                        subject      = subject.trim(),
+                        materialType = type.apiKey,
+                        author       = author.trim().ifEmpty { null },
+                        tags         = tags.filter { it.isNotBlank() },
+                        fileKey      = fileKey,
+                        fileSizeMb   = fileSizeBytes / (1024f * 1024f),
+                        pageCount    = pageCount
+                    )
+                )
                 _state.update {
                     it.copy(
                         isUploading   = false,
@@ -387,7 +380,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 loadStats()  // refresh stats header
 
             } catch (e: Exception) {
-                Log.e(TAG, "uploadMaterial: \${e.message}", e)
+                Log.e(TAG, "uploadMaterial: ${e.message}", e)
                 _state.update { it.copy(isUploading = false, uploadError = e.message ?: "Upload failed") }
             }
         }
@@ -428,23 +421,17 @@ class StudyMaterialsViewModel @Inject constructor(
             } ?: 0L
         } catch (e: Exception) { 0L }
     }
-
-    /**
-     * Compute CRC32 checksum of [bytes] and return it Base64-encoded.
-     * Required by AWS S3 presigned URLs generated with AWS SDK v3 (checksum enabled).
-     * The presigned URL includes x-amz-checksum-crc32 in the signed headers,
-     * so the PUT request MUST include this header with the matching value.
-     */
+    // Compute CRC32 checksum required by AWS SDK v3 presigned URLs
     private fun computeCrc32Header(bytes: ByteArray): String {
         val crc = java.util.zip.CRC32()
         crc.update(bytes)
-        val valueBytes = ByteArray(4).also { buf ->
-            val v = crc.value
-            buf[0] = ((v shr 24) and 0xFF).toByte()
-            buf[1] = ((v shr 16) and 0xFF).toByte()
-            buf[2] = ((v shr  8) and 0xFF).toByte()
-            buf[3] = ((v       ) and 0xFF).toByte()
-        }
-        return android.util.Base64.encodeToString(valueBytes, android.util.Base64.NO_WRAP)
+        val v = crc.value
+        val buf = ByteArray(4)
+        buf[0] = ((v shr 24) and 0xFF).toByte()
+        buf[1] = ((v shr 16) and 0xFF).toByte()
+        buf[2] = ((v shr  8) and 0xFF).toByte()
+        buf[3] = ((v       ) and 0xFF).toByte()
+        return android.util.Base64.encodeToString(buf, android.util.Base64.NO_WRAP)
     }
+
 }

@@ -26,6 +26,8 @@ import com.example.bpscnotes.presentation.navigation.MainShell.MainShell
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.nofification.NotificationSettingsScreen
 import com.example.bpscnotes.presentation.placeholders.DownloadsScreen
+import com.example.bpscnotes.presentation.profile.EditProfileScreen
+import com.example.bpscnotes.presentation.settings.SettingsViewModel
 import com.example.bpscnotes.presentation.placeholders.NotesReaderScreen
 import com.example.bpscnotes.presentation.placeholders.SubscriptionScreen
 import com.example.bpscnotes.presentation.profile.ProfileScreen
@@ -186,6 +188,7 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.Profile.route)       { ProfileScreen(navController) }
         composable(Screen.CoinWallet.route)    { CoinWalletScreen(navController) }
         composable(Screen.Subscription.route)  { SubscriptionScreen(navController) }
+        composable(Screen.EditProfile.route)    { EditProfileScreen(navController) }
         composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
         composable(Screen.Settings.route)      { SettingsScreen(navController) }
         composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }

@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
-import com.example.bpscnotes.data.mock.MockData
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -172,7 +171,7 @@ fun ProfileScreen(
                 coins = user?.coins ?: 0,
                 rank = user?.rank ?: 0,
                 rankTitle = "Gold Achiever",
-                onEditClick = { navController.navigate("settings") },
+                onEditClick = { navController.navigate(Screen.EditProfile.route) },
                 onShareClick = {}
             )
 
