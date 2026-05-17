@@ -10,7 +10,7 @@ import androidx.compose.material.icons.rounded.Quiz
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.bpscnotes.data.remote.dto.ApiResponse
-import com.example.bpscnotes.presentation.course.CourseDetailResponse
+import com.example.bpscnotes.presentation.course.ChapterDto
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.*
@@ -18,111 +18,78 @@ import retrofit2.http.*
 // ══════════════════════════════════════════════════════════════
 // COURSE DTOs  (unchanged)
 // ══════════════════════════════════════════════════════════════
-
-/*data class CourseDto(
-
-    val id: String,
-    val title: String,
-    val slug: String,
-    val description: String?,
-    val instructor: String?,
-    val instructor_bio: String?,
-    val subject: String,
-    val price: Int,
-    @SerializedName("original_price")
-    val originalPrice: Int,
-    @SerializedName("is_paid")
-    val isPaid: Boolean,
-    val is_featured: Boolean,
-    val is_limited_offer: Boolean,
-    val offer_ends_at: String?,
-    val thumbnail_url: String?,
-    @SerializedName("total_lessons")
-    val totalLessons: Int,
-    @SerializedName("total_hours")
-    val totalHours: String,
-    val rating: String,
-    val review_count: Int,
-    @SerializedName("enrollment_count")
-    val enrollmentCount: Int,
-    val bpsc_relevance: Int,
-    val syllabus_coverage: Int,
-    val language: String,
-    val trial_lesson_title: String?,
-    val exam_tags: List<String>,
-    val status: String,
-    val meta_keywords: String?,
-    val created_by: String,
-    val created_at: String,
-    val updated_at: String,
-    val enrollment: Enrollment?,
-    val chapters: List<Chapter>,
-    val reviews: List<Review>? // currently null
-
-)*/
-data class Review(
-    val id: String? = null
-    // Add fields later when API provides
-)
-
-
-data class CoursesResponse(
-    val success: Boolean,
-    val message: String,
-    val data: CoursesData,
-    val meta: Meta,
-    val timestamp: String
-)
-
 data class CoursesData(
     val courses: List<CourseDto>
+)
+
+data class CourseDetailResponse(
+    @SerializedName("course")
+    val course: CourseDto,
+
+    @SerializedName("chapters")
+    val chapters: List<ChapterDto>? = null
 )
 
 data class CourseDto(
     val id: String,
     val title: String,
-    val instructor: String,
+    val slug: String? = null,
+    val description: String? = null,
+    val instructor: String? = null,
+    @SerializedName("instructor_bio")      val instructorBio: String? = null,
+    @SerializedName("instructor_students") val instructorStudents: String? = null,
+    @SerializedName("instructor_courses")  val instructorCourses: Int = 1,
     val subject: String,
-    val price: Int,
-    val original_price: Int,
-    val is_paid: Boolean,
-    val is_featured: Boolean,
-    val is_limited_offer: Boolean,
-    val offer_ends_at: String?,
-    val thumbnail_url: String?,
-    val total_lessons: Int,
-    val total_hours: String,
-    val rating: String,
-    val review_count: Int,
-    val enrollment_count: Int,
-    val bpsc_relevance: Int,
-    val exam_tags: List<String>,
-    val language: String,
-    val status: String,
-    val created_at: String,
-    val trial_lesson_title: String?,
-    val enrollment: EnrollmentData?
+    val price: Int = 0,
+    @SerializedName("original_price")      val originalPrice: Int = 0,
+    @SerializedName("is_paid")             val isPaid: Boolean = false,
+    val is_featured: Boolean = false,
+    val is_limited_offer: Boolean = false,
+    val offer_ends_at: String? = null,
+    val thumbnail_url: String? = null,
+    @SerializedName("total_lessons")       val totalLessons: Int = 0,
+    @SerializedName("total_hours")         val totalHours: String = "0",
+    val rating: String = "0",
+    val review_count: Int = 0,
+    @SerializedName("enrollment_count")    val enrollmentCount: Int = 0,
+    val bpsc_relevance: Int = 0,
+    val syllabus_coverage: Int = 0,
+    val language: String = "Hindi + English",
+    val trial_lesson_title: String? = null,
+    val exam_tags: List<String> = emptyList(),
+    val status: String = "published",
+    val meta_keywords: String? = null,
+    val created_at: String? = null,
+    val updated_at: String? = null,
+    @SerializedName("what_you_learn")      val whatYouLearn: List<String> = emptyList(),
+    @SerializedName("has_certificate")     val hasCertificate: Boolean = true,
+    @SerializedName("rating_distribution") val ratingDistribution: RatingDistribution? = null,
+    val enrollment: Enrollment? = null,
+    val chapters: List<Chapter> = emptyList(),
+    val reviews: List<CourseReview>? = null
 )
 
-data class EnrollmentData(
-    val id: String,
-    val status: String,
-    val completed_lessons: Int,
-    val total_minutes: Int,
-    val studied_minutes: Int,
-    val last_studied_at: String?,
-    val enrolled_at: String,
-    val completed_at: String?,
-    val last_lesson_id: String?
-)
+data class RatingDistribution(
+    @SerializedName("5") val five:  Int = 0,
+    @SerializedName("4") val four:  Int = 0,
+    @SerializedName("3") val three: Int = 0,
+    @SerializedName("2") val two:   Int = 0,
+    @SerializedName("1") val one:   Int = 0
+) {
+    val total get() = (five + four + three + two + one).coerceAtLeast(1)
+    fun pct(star: Int) = when(star) {
+        5 -> five; 4 -> four; 3 -> three; 2 -> two; else -> one
+    }.toFloat() / total
+}
 
-data class Meta(
-    val total: Int,
-    val page: Int,
-    val limit: Int,
-    val totalPages: Int,
-    val hasNext: Boolean,
-    val hasPrev: Boolean
+data class CourseReview(
+    val id: String? = null,
+    val rating: Float = 0f,
+    val comment: String? = null,
+    @SerializedName("is_verified")    val isVerified: Boolean = false,
+    @SerializedName("reviewer_name") val reviewerName: String = "Student",
+    @SerializedName("avatar_url")    val avatarUrl: String? = null,
+    @SerializedName("created_at")    val createdAt: String? = null
 )
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
@@ -260,19 +227,6 @@ data class Lesson(
     val is_locked: Boolean,
     val sort_order: Int
 )
-// Dynamic subjects from API
-data class SubjectDto(
-    val id: String,
-    val name: String,
-    val emoji: String = "📚",
-    @SerializedName("color_hex") val colorHex: String = "#1565C0",
-    @SerializedName("sort_order") val sortOrder: Int = 0
-)
-
-data class SubjectsResponseData(val subjects: List<SubjectDto> = emptyList())
-data class AffairCategoriesResponseData(val categories: List<AffairCategoryDto> = emptyList())
-data class AffairCategoryDto(val id: String, val name: String, val emoji: String = "📰")
-
 data class Enrollment(
     val id: String,
     val user_id: String,
@@ -390,12 +344,6 @@ interface CoursesApiService {
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
-
-    @GET("app-config/subjects")
-    suspend fun getSubjects(): ApiResponse<SubjectsResponseData>
-
-    @GET("app-config/affair-categories")
-    suspend fun getAffairCategories(): ApiResponse<AffairCategoriesResponseData>
 }
 
 
@@ -601,29 +549,70 @@ data class CheckInDayDto(
 )
 
 data class EarnTaskDto(
+
     val id: String,
-    val title: String?="",
-    val subtitle: String,
-    @SerializedName("coins_reward")          val coinsReward: Int = 0,
+
+    val title: String = "",
+
+    val subtitle: String = "",
+
     val icon: String = "quiz",
-    @SerializedName("action_label")          val actionLabel: String = "Claim",
-    @SerializedName("is_completed")          val isCompleted: Boolean = false,
-    @SerializedName("is_ad")                 val isAd: Boolean = false,
-    @SerializedName("action_bg")             val actionBgHex: String? = "#1565C0",
-    @SerializedName("icon_bg")               val iconBgHex: String? = "#E3F2FD",
-    @SerializedName("icon_tint")             val iconTintHex: String? = "#1565C0",
-    @SerializedName("action_text_color")     val actionTextColorHex: String? = "#FFFFFF",
+
+    val action: String = "",
+
+    @SerializedName("coinsReward")
+    val coinsReward: Int = 0,
+
+    @SerializedName("actionLabel")
+    val actionLabel: String = "Claim",
+
+    @SerializedName("actionBgHex")
+    val actionBgHex: String? = "#1565C0",
+
+    @SerializedName("iconBgHex")
+    val iconBgHex: String? = "#E3F2FD",
+
+    @SerializedName("iconTintHex")
+    val iconTintHex: String? = "#1565C0",
+
+    @SerializedName("actionTextColorHex")
+    val actionTextColorHex: String? = "#FFFFFF",
+
+    @SerializedName("isAd")
+    val isAd: Boolean = false,
+
+    @SerializedName("isCompleted")
+    val isCompleted: Boolean = false
+
 ) {
-    val actionBg: Color         get() = parseColor(actionBgHex, Color(0xFF1565C0))
-    val iconBg: Color           get() = parseColor(iconBgHex,   Color(0xFFE3F2FD))
-    val iconTint: Color         get() = parseColor(iconTintHex, Color(0xFF1565C0))
-    val actionTextColor: Color  get() = parseColor(actionTextColorHex, Color.White)
+
+    val actionBg: Color
+        get() = parseColor(actionBgHex, Color(0xFF1565C0))
+
+    val iconBg: Color
+        get() = parseColor(iconBgHex, Color(0xFFE3F2FD))
+
+    val iconTint: Color
+        get() = parseColor(iconTintHex, Color(0xFF1565C0))
+
+    val actionTextColor: Color
+        get() = parseColor(actionTextColorHex, Color.White)
 
     companion object {
+
         fun parseColor(hex: String?, fallback: Color): Color = try {
-            if (hex.isNullOrBlank()) fallback
-            else Color(android.graphics.Color.parseColor(if (hex.startsWith("#")) hex else "#$hex"))
-        } catch (e: Exception) { fallback }
+            if (hex.isNullOrBlank()) {
+                fallback
+            } else {
+                Color(
+                    android.graphics.Color.parseColor(
+                        if (hex.startsWith("#")) hex else "#$hex"
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            fallback
+        }
     }
 }
 

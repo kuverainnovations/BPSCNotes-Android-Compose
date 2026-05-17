@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.course
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.data.remote.api.CourseDetailResponse
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel

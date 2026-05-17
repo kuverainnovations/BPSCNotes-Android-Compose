@@ -152,15 +152,15 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     instructor = instructor ?: "BPSCNotes",
     subject = subject,
     price = price,
-    originalPrice = original_price,
-    totalLessons = total_lessons,
-    totalHours = total_hours.toFloatOrNull() ?: 0f,
+    originalPrice = originalPrice,
+    totalLessons = totalLessons,
+    totalHours = totalHours.toFloatOrNull() ?: 0f,
     rating = rating.toFloatOrNull() ?: 0f,
     reviewCount = review_count,
-    studentsEnrolled = enrollment_count,
+    studentsEnrolled = enrollmentCount,
     bpscRelevance = 0,
     syllabusCoverage = 0,
-    isPaid = is_paid,
+    isPaid = isPaid,
     isFeatured = is_featured,
     tags = exam_tags,
     trialLessonTitle = trial_lesson_title ?: "",
@@ -172,13 +172,13 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
     title = title,
     instructor = instructor ?: "BPSCNotes",
     subject = subject,
-    totalLessons = total_lessons,
+    totalLessons = totalLessons,
     completedLessons = enrollment?.completed_lessons?:0,
-    totalMinutes = ((total_hours.toFloatOrNull() ?: (0f * 60))).toInt(),
+    totalMinutes = ((totalHours.toFloatOrNull() ?: (0f * 60))).toInt(),
     studiedMinutes = enrollment?.completed_lessons ?: (0 * 10), // approx or backend later
     lastStudied = "Recently",
-    status = if ((enrollment?.completed_lessons ?: 0) == total_lessons) CourseStatus.Completed else CourseStatus.InProgress,
-    isPaid = is_paid
+    status = if ((enrollment?.completed_lessons ?: 0) == totalLessons) CourseStatus.Completed else CourseStatus.InProgress,
+    isPaid = isPaid
 )
 
 val storeSubjects = listOf(

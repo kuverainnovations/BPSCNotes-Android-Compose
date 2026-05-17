@@ -410,7 +410,7 @@ class SubscriptionViewModel @Inject constructor(
 
                 // Load paid courses
                 val coursesRes = try { coursesApi.getCourses().data?.courses ?: emptyList() } catch (e: Exception) { emptyList() }
-                val paidCourses = coursesRes.filter { it.is_paid }
+                val paidCourses = coursesRes.filter { it.isPaid }
 
                 _state.update { it.copy(
                     premiumMaterials = premiumMats,
