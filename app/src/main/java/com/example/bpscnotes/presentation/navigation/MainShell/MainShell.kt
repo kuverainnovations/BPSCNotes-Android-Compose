@@ -9,7 +9,9 @@ import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,6 +23,9 @@ import com.example.bpscnotes.presentation.navigation.BpscBottomNav
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
 import com.example.bpscnotes.presentation.profile.ProfileScreen
+import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
+import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
+import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 
 @Composable
 fun MainShell(rootNavController: NavHostController) {
@@ -40,7 +45,7 @@ fun MainShell(rootNavController: NavHostController) {
             badgeCount = 0
         ),
         BottomNavItem(
-            route      = Screen.ELibrary.route,
+            route      = Screen.RoomsHub.route,
             label      = "E-Library",
             icon       = Icons.Rounded.LocalLibrary,
             badgeCount = 0
@@ -69,8 +74,23 @@ fun MainShell(rootNavController: NavHostController) {
                 .consumeWindowInsets(innerPadding)
         ) {
             composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController) }
-            composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController) }
-            composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
+            composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
+            //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
+            composable(Screen.RoomsHub.route) { backStackEntry ->
+
+                val parentEntry = remember(backStackEntry) {
+                    rootNavController.getBackStackEntry(Screen.Main.route)
+                }
+
+                val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+
+                RoomsHubScreen(
+                    navController = rootNavController,
+                    sessionViewModel = sessionVM,
+                    tiersViewModel = tiersVM
+                )
+            }
             composable(Screen.Profile.route)    { ProfileScreen(rootNavController) }
         }
     }

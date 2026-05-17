@@ -141,14 +141,15 @@ fun NotificationSettingsScreen(
         }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
             // Header
             Box(modifier = Modifier.fillMaxWidth().background(
                 Brush.linearGradient(listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                    Offset(0f, 0f), Offset(600f, 300f))).statusBarsPadding()) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 14.dp, bottom = 18.dp),
+                    Offset(0f, 0f), Offset(600f, 300f)))/*.statusBarsPadding()*/) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 30.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))

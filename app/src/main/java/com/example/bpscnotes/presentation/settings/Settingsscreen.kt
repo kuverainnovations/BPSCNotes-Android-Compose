@@ -92,7 +92,8 @@ fun SettingsScreen(
         )
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -356,8 +357,8 @@ private fun SettingsHeader(onBack: () -> Unit) {
         .background(Brush.linearGradient(
             colors = listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
             start = Offset(0f, 0f), end = Offset(600f, 400f)
-        )).statusBarsPadding()) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 14.dp, bottom = 18.dp),
+        ))/*.statusBarsPadding()*/) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.12f))
                 .clickable(onClick = onBack), contentAlignment = Alignment.Center) {

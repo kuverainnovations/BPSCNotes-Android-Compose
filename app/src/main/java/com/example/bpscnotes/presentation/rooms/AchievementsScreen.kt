@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -52,8 +53,8 @@ fun AchievementsScreen(
                         listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
                         Offset(0f, 0f), Offset(400f, 300f)
                     ))
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                  //  .statusBarsPadding()
+                    .padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

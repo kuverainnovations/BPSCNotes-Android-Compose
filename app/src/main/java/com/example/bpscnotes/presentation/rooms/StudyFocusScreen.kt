@@ -117,10 +117,17 @@ fun StudyFocusScreen(
             // plain popBackStack() leaves StudyFocusScreen in the stack → when
             // clearSession() resets status to IDLE the screen re-renders in the
             // else→ActiveRoomScreen branch while navigation is still pending.
-            navController.navigate(Screen.RoomsHub.route) {
-                popUpTo(Screen.StudyFocus.route) { inclusive = true }
-                launchSingleTop = true
-            }
+//            navController.navigate(Screen.RoomsHub.route) {
+//                popUpTo(Screen.StudyFocus.route) { inclusive = true }
+//                launchSingleTop = true
+//            }
+                viewModel.clearSession()
+
+                navController.popBackStack(
+                    route = Screen.StudyFocus.route,
+                    inclusive = true
+                )
+
         }
         )
         else -> ActiveRoomScreen(

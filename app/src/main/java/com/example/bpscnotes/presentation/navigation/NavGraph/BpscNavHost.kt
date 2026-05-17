@@ -194,7 +194,7 @@ fun BpscNavHost(navController: NavHostController) {
         composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
 
         composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
-        composable(Screen.MyLearning.route)    { MyLearningScreen(navController) }
+        composable(Screen.MyLearning.route)    { MyLearningScreen(navController, fromScreen = "nav-host") }
 
         // ── Placeholders ─────────────────────────────────────────
         composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }

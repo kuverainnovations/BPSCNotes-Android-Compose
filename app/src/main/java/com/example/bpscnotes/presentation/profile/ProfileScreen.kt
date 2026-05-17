@@ -1010,7 +1010,7 @@ private fun BadgesCard(badges: List<BadgeItem>) {
 private fun ProfileSettingsRow(navController: NavHostController) {
     val items = listOf(
         Triple(Icons.Rounded.MenuBook, "My Courses", Screen.MyLearning.route),
-        Triple(Icons.Rounded.EmojiEvents, "Achievements", Screen.Dashboard.route),
+        Triple(Icons.Rounded.EmojiEvents, "Achievements", Screen.Achievements.route),
         Triple(Icons.Rounded.Settings, "Settings", Screen.Settings.route),
     )
 

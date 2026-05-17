@@ -186,258 +186,6 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
     isPaid = isPaid
 )
 
-// ── Mock data ─────────────────────────────────────────────────
-val mockStoreItems = listOf(
-    StoreItem(
-        "s1", "BPSC 70th Complete Preparation Course", "BPSCNotes Team",
-        "All Subjects", 1999, 3999, 180, 45f, 4.9f, 2840, 18500, 98, 95, true,
-        isFeatured = true, isLimitedOffer = true, offerEndsHours = 48,
-        tags = listOf("Bestseller", "2026 Updated"),
-        trialLessonTitle = "Introduction to BPSC Exam Pattern",
-        description = "The most comprehensive BPSC preparation course covering all subjects — Polity, History, Geography, Economy, Bihar GK, Science and Current Affairs.",
-        reviews = listOf(
-            CourseReview(
-                "Priya Singh",
-                5f,
-                "Best course for BPSC prep! Cleared prelims in first attempt.",
-                "10 Mar 2026"
-            ),
-            CourseReview("Amit Kumar", 4.5f, "Very detailed. Notes are excellent.", "08 Mar 2026"),
-        ),
-        syllabus = listOf(
-            "Polity & Constitution (35 lessons)",
-            "Modern History (28 lessons)",
-            "Geography of India & Bihar (25 lessons)",
-            "Indian Economy (22 lessons)",
-            "Bihar GK (40 lessons)",
-            "Science & Tech (18 lessons)",
-            "Current Affairs 2025-26 (12 lessons)"
-        )
-    ),
-    StoreItem(
-        "s2", "Polity Master Class — BPSC Special", "Dr. R.K. Sharma",
-        "Polity", 799, 1499, 45, 12f, 4.8f, 1240, 9800, 95, 100, true,
-        isFeatured = true, isLimitedOffer = true, offerEndsHours = 24,
-        tags = listOf("Polity Expert", "Complete"),
-        trialLessonTitle = "Preamble of Indian Constitution",
-        description = "Complete Polity course covering Constitution, Fundamental Rights, DPSP, Parliament and Judiciary.",
-        reviews = listOf(
-            CourseReview(
-                "Rahul Kumar",
-                5f,
-                "Dr. Sharma explains so clearly. Worth every rupee!",
-                "12 Mar 2026"
-            )
-        ),
-        syllabus = listOf(
-            "Constitutional History (5)",
-            "Fundamental Rights (8)",
-            "DPSP (4)",
-            "Parliament (7)",
-            "Judiciary (6)",
-            "Elections (10)"
-        )
-    ),
-    StoreItem(
-        "s3", "Bihar GK Intensive Course", "Rahul Sir",
-        "Bihar GK", 599, 999, 60, 15f, 4.9f, 1890, 12400, 100, 98, true,
-        isFeatured = true, tags = listOf("Bihar Special", "Most Popular"),
-        trialLessonTitle = "History of Bihar — Ancient Period",
-        description = "The only Bihar GK course you need. Covers geography, history, economy, polity and culture.",
-        reviews = listOf(
-            CourseReview(
-                "Manoj Yadav",
-                5f,
-                "Got 28/30 in Bihar section!",
-                "11 Mar 2026"
-            )
-        ),
-        syllabus = listOf(
-            "Bihar Geography (15)",
-            "Bihar History (18)",
-            "Bihar Economy (10)",
-            "Bihar Polity (8)",
-            "Bihar Culture (5)"
-        )
-    ),
-    StoreItem(
-        "s4", "Economy for BPSC — Zero to Advanced", "CA Vikram Joshi",
-        "Economy", 899, 1599, 40, 10f, 4.7f, 980, 7200, 90, 92, true,
-        tags = listOf("Economy Expert", "Budget 2026"),
-        trialLessonTitle = "Understanding Indian Economy Basics",
-        description = "Complete Indian Economy course. Covers RBI, banking, budget and economic survey.",
-        reviews = listOf(
-            CourseReview(
-                "Pooja Kumari",
-                4.5f,
-                "Finally understood monetary policy!",
-                "07 Mar 2026"
-            )
-        ),
-        syllabus = listOf(
-            "Indian Economy Basics (8)",
-            "Agriculture (6)",
-            "RBI & Banking (8)",
-            "Budget 2026 (5)",
-            "Economic Survey (7)"
-        )
-    ),
-    StoreItem(
-        "s5", "Modern History — BPSC Focus", "Prof. Anita Singh",
-        "History", 0, 0, 35, 9f, 4.6f, 2100, 15600, 88, 90, false,
-        tags = listOf("Free", "History"),
-        trialLessonTitle = "1857 Revolt",
-        description = "Free Modern History course covering 1757 to Independence.",
-        reviews = listOf(CourseReview("Ravi Shankar", 4.5f, "Great free resource!", "06 Mar 2026")),
-        syllabus = listOf(
-            "British Rule (5)",
-            "1857 Revolt (4)",
-            "Nationalist Movement (8)",
-            "Gandhi Era (7)",
-            "Independence (5)"
-        )
-    ),
-    StoreItem(
-        "s6", "Geography of India & Bihar", "Dr. S. Mishra",
-        "Geography", 0, 0, 50, 12f, 4.5f, 1850, 11200, 85, 88, false,
-        tags = listOf("Free", "Geography"),
-        trialLessonTitle = "Physical Geography of India",
-        description = "Comprehensive Geography course covering physical, human and economic geography.",
-        reviews = listOf(),
-        syllabus = listOf(
-            "Physical Geography (12)",
-            "Rivers & Mountains (8)",
-            "Climate (6)",
-            "Bihar Geography (14)",
-            "Economic Geography (10)"
-        )
-    ),
-)
-
-/*val mockLearningCourses = listOf(
-    LearningCourse(
-        "lc1",
-        "BPSC 70th Complete Preparation Course",
-        "BPSCNotes Team",
-        "All Subjects",
-        180,
-        72,
-        2700,
-        1080,
-        "Today",
-        CourseStatus.InProgress,
-        true
-    ),
-    LearningCourse(
-        "lc2",
-        "Polity Master Class",
-        "Dr. R.K. Sharma",
-        "Polity",
-        45,
-        38,
-        720,
-        608,
-        "Yesterday",
-        CourseStatus.InProgress,
-        true
-    ),
-    LearningCourse(
-        "lc3",
-        "Bihar GK Intensive",
-        "Rahul Sir",
-        "Bihar GK",
-        60,
-        60,
-        900,
-        900,
-        "3 days ago",
-        CourseStatus.Completed,
-        true,
-        true,
-        "15 Feb 2026",
-        4.8f
-    ),
-    LearningCourse(
-        "lc4",
-        "Modern History — BPSC Focus",
-        "Prof. Anita Singh",
-        "History",
-        35,
-        20,
-        540,
-        308,
-        "5 days ago",
-        CourseStatus.InProgress,
-        false
-    ),
-)*/
-
-val mockLibraryItems = listOf(
-    LibraryItem(
-        "li1", "BPSC Polity Complete Notes", "Polity", LibraryContentType.PDF,
-        "BPSCNotes Team", 185, 12.4f, 45200, 4.8f, false, isTrending = true, isPinned = true,
-        uploadedDate = "10 Mar 2026",
-        description = "Complete Polity notes covering Constitution, Fundamental Rights, DPSP, Parliament and Judiciary.",
-        tags = listOf("Constitution", "Fundamental Rights", "Parliament")
-    ),
-    LibraryItem(
-        "li2", "BPSC 69th Previous Year Paper", "All Subjects", LibraryContentType.PYQ,
-        "BPSCNotes Team", 24, 2.1f, 38900, 4.9f, false, isTrending = true, isPinned = true,
-        uploadedDate = "05 Mar 2026",
-        description = "Complete BPSC 69th CCE Prelims paper with answer key.",
-        tags = listOf("Prelims", "2024", "Answer Key")
-    ),
-    LibraryItem(
-        "li3", "Modern India — Complete Notes", "History", LibraryContentType.PDF,
-        "Prof. Anita Singh", 142, 9.8f, 28400, 4.7f, false, isNew = true,
-        uploadedDate = "12 Mar 2026",
-        description = "Comprehensive notes on Modern Indian History from 1757 to Independence.",
-        tags = listOf("British Rule", "Freedom Movement")
-    ),
-    LibraryItem(
-        "li4", "Bihar GK Handbook 2026", "Bihar GK", LibraryContentType.Book,
-        "Rahul Kumar", 320, 22.5f, 51200, 4.9f, true, isTrending = true,
-        uploadedDate = "01 Mar 2026",
-        description = "Complete Bihar GK reference book covering geography, history, economy and culture.",
-        tags = listOf("Bihar", "Comprehensive", "2026 Updated")
-    ),
-    LibraryItem(
-        "li5", "Economy for BPSC — Video Notes", "Economy", LibraryContentType.Video,
-        "CA Vikram Joshi", 68, 5.2f, 19800, 4.6f, true, isNew = true,
-        uploadedDate = "13 Mar 2026",
-        description = "Structured notes from Economy video lectures covering RBI, Banking and Budget.",
-        tags = listOf("RBI", "Budget 2026", "GDP")
-    ),
-    LibraryItem(
-        "li6", "BPSC 68th Previous Year Paper", "All Subjects", LibraryContentType.PYQ,
-        "BPSCNotes Team", 24, 2.0f, 34100, 4.7f, false,
-        uploadedDate = "20 Feb 2026",
-        description = "BPSC 68th CCE Prelims paper with answer key.",
-        tags = listOf("Prelims", "2022")
-    ),
-    LibraryItem(
-        "li7", "Geography of India — Master Notes", "Geography", LibraryContentType.PDF,
-        "Dr. S. Mishra", 156, 11.2f, 22300, 4.5f, false,
-        uploadedDate = "25 Feb 2026",
-        description = "Complete Indian Geography notes including physical, economic and human geography.",
-        tags = listOf("Rivers", "Mountains", "Climate")
-    ),
-    LibraryItem(
-        "li8", "Indian Economy — Ramesh Singh", "Economy", LibraryContentType.Book,
-        "Ramesh Singh", 580, 48.0f, 67800, 4.8f, true, isTrending = true,
-        uploadedDate = "15 Jan 2026",
-        description = "Most trusted book for Indian Economy preparation.",
-        tags = listOf("Standard Book", "Comprehensive")
-    ),
-    LibraryItem(
-        "li9", "Current Affairs January 2026", "Current Affairs", LibraryContentType.PDF,
-        "BPSCNotes Team", 45, 3.8f, 18200, 4.5f, false, isNew = true,
-        uploadedDate = "01 Feb 2026",
-        description = "Monthly current affairs for January 2026 curated for BPSC.",
-        tags = listOf("Monthly", "January 2026")
-    ),
-)
-
 val storeSubjects = listOf(
     "All",
     "All Subjects",
@@ -448,26 +196,12 @@ val storeSubjects = listOf(
     "Bihar GK",
     "Science"
 )
-val librarySubjects = listOf(
-    "All",
-    "Polity",
-    "History",
-    "Geography",
-    "Economy",
-    "Bihar GK",
-    "Science",
-    "Current Affairs",
-    "All Subjects"
-)
-
-// ─────────────────────────────────────────────────────────────
-// MAIN SCREEN
-// ─────────────────────────────────────────────────────────────
 @Composable
 fun MyLearningScreen(
     navController: NavHostController,
     startTab: Int = 0,
-    viewModel: MyLearningViewModel = hiltViewModel()
+    viewModel: MyLearningViewModel = hiltViewModel(),
+    fromScreen: String=""
 ) {
     val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(startTab) }
@@ -529,6 +263,10 @@ fun MyLearningScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                   if (fromScreen=="nav-host") Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                        .clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
                     Column {
                         Text(
                             "My Learning",

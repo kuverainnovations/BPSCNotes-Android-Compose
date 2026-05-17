@@ -20,7 +20,7 @@ sealed class Screen(val route: String) {
     // Bottom nav tabs
     object Dashboard    : Screen("dashboard")
     object MyLearning   : Screen("my_learning")
-    object ELibrary     : Screen("e_library")
+    object ELibrary     : Screen("rooms_hub")
     object Profile      : Screen("profile")
 
     // Dashboard children

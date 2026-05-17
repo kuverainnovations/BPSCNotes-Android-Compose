@@ -1383,8 +1383,8 @@ fun DashboardScreen(
             Triple(Icons.Rounded.Download,      "Downloads",             Screen.Downloads.route),
             Triple(Icons.Rounded.Work,          "Latest Govt Vacancies", Screen.JobVacancies.route),
             Triple(Icons.Rounded.Psychology,    "Active Recall",         Screen.ActiveRecall.route),
-            Triple(Icons.Rounded.Groups,        "E-Library",             Screen.ReadingRooms.route),
-            Triple(Icons.Rounded.Notifications, "Notification Settings", Screen.NotificationSettings.route),
+           // Triple(Icons.Rounded.Groups,        "E-Library",             Screen.ReadingRooms.route),
+            Triple(Icons.Rounded.Notifications, "Notifications", Screen.NotificationSettings.route),
             Triple(Icons.Rounded.Settings,      "Settings",              Screen.Settings.route),
         )
         val scrollState = rememberScrollState()

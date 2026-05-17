@@ -71,7 +71,8 @@ fun CoinWalletScreen(
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHost) },
-        containerColor = BpscColors.Surface
+        containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { scaffoldPadding ->
         LazyColumn(
             modifier = Modifier
@@ -160,7 +161,7 @@ private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
             .fillMaxWidth()
             .height(240.dp)
             .background(Brush.verticalGradient(listOf(Color(0xFFFAC84A), Color(0xFFF0A500), Color(0xFFE59400))))
-            .statusBarsPadding()
+          //  .statusBarsPadding()
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(Color.White.copy(0.12f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
@@ -175,7 +176,7 @@ private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
         // Back button
         Box(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(horizontal = 16.dp).padding(top = 46.dp, bottom = 16.dp)
                 .size(36.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(0.2f))

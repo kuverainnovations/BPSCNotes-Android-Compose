@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -183,16 +184,16 @@ fun DownloadsScreen(
     }
 
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(BpscColors.Surface)) {
 
             // ── Header ─────────────────────────────────────────
             Box(modifier = Modifier.fillMaxWidth()
                 .background(Brush.linearGradient(
                     listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                    Offset(0f, 0f), Offset(500f, 300f)))
-                .statusBarsPadding()) {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    Offset(0f, 0f), Offset(500f, 300f)))) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -434,7 +435,8 @@ fun SubscriptionScreen(
 ) {
     val state     by viewModel.state.collectAsState()
 
-    Scaffold(containerColor = BpscColors.Surface) { padding ->
+    Scaffold(containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).background(BpscColors.Surface)) {
 
             // ── Header ─────────────────────────────────────────
@@ -442,8 +444,8 @@ fun SubscriptionScreen(
                 .background(Brush.linearGradient(
                     listOf(Color(0xFF6A0DAD), Color(0xFF9B59B6), Color(0xFFBA68C8)),
                     Offset(0f, 0f), Offset(500f, 300f)))
-                .statusBarsPadding()) {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+             ) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

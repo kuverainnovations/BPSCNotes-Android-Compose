@@ -56,7 +56,8 @@ fun StudyMaterialsScreen(
         }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface) { scaffoldPadding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)) { scaffoldPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding).background(BpscColors.Surface)) {
 
             // ── HEADER ──────────────────────────────────────────
@@ -189,9 +190,9 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
                 listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
                 Offset(0f, 0f), Offset(500f, 500f)
             ))
-            .statusBarsPadding()
+           // .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
