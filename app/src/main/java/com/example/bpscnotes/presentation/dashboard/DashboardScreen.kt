@@ -1064,7 +1064,7 @@ fun DashboardScreen(
     private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
         val subjectColors = mapOf("Bihar GK" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)))
         val (accent, bg) = subjectColors[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-        val progress = if (course.totalLessons > 0) course.enrollment?.completed_lessons?.toFloat() ?: 0f else 0f
+        val progress = if (course.total_lessons > 0) course.enrollment?.completed_lessons?.toFloat() ?: 0f else 0f
         Card(modifier = Modifier
             .width(168.dp)
             .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
@@ -1074,7 +1074,7 @@ fun DashboardScreen(
                     .height(96.dp)
                     .background(bg), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.MenuBook, null, tint = accent, modifier = Modifier.size(38.dp))
-                    if (course.isPaid) Box(modifier = Modifier
+                    if (course.is_paid) Box(modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -1094,7 +1094,7 @@ fun DashboardScreen(
                         Spacer(Modifier.height(4.dp))
                         Text("${(progress * 100).toInt()}% complete", style = MaterialTheme.typography.labelSmall, color = accent)
                     } else {
-                        Text(if (course.isPaid) "₹${course.price}" else "Free", style = MaterialTheme.typography.titleMedium, color = if (course.isPaid) BpscColors.Accent else BpscColors.Success, fontWeight = FontWeight.Bold)
+                        Text(if (course.is_paid) "₹${course.price}" else "Free", style = MaterialTheme.typography.titleMedium, color = if (course.is_paid) BpscColors.Accent else BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
             }

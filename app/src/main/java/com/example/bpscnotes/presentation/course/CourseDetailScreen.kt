@@ -158,9 +158,9 @@ fun CourseDetailScreen(
                             // Stats strip
                             Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                                 CourseStatChip("📚", "${totalLessons}", "Lessons")
-                                CourseStatChip("⏱️", "${course.totalHours}h", "Total")
+                                CourseStatChip("⏱️", "${course.total_hours}h", "Total")
                                 CourseStatChip("⭐", "${course.rating}", "Rating")
-                                CourseStatChip("👥", "${course.enrollmentCount}", "Enrolled")
+                                CourseStatChip("👥", "${course.enrollment_count}", "Enrolled")
                             }
 
                             // Progress bar (if enrolled)
@@ -196,16 +196,16 @@ fun CourseDetailScreen(
                     Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(Modifier.weight(1f)) {
-                                if (course.isPaid) {
+                                if (course.is_paid) {
                                     Text("₹${course.price}", style = MaterialTheme.typography.headlineMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                                    if (course.originalPrice > course.price) {
-                                        Text("₹${course.originalPrice}", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextHint)
+                                    if (course.original_price > course.price) {
+                                        Text("₹${course.original_price}", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextHint)
                                     }
                                 } else {
                                     Text("FREE", style = MaterialTheme.typography.headlineMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
                                 }
                                 Text(
-                                    if (course.enrollment?.status=="active") "You're enrolled ✓" else if (course.isPaid) "One-time purchase" else "Enroll for free",
+                                    if (course.enrollment?.status=="active") "You're enrolled ✓" else if (course.is_paid) "One-time purchase" else "Enroll for free",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = BpscColors.TextSecondary
                                 )

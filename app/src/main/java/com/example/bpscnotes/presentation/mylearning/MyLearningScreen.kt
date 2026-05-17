@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CurrencyRupee
-import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -53,9 +51,7 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Upload
-import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -99,7 +95,6 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
-import com.example.bpscnotes.presentation.mylearning.MyLearningViewModel
 import com.example.bpscnotes.data.remote.api.CourseDto
 
 // ─────────────────────────────────────────────────────────────
@@ -157,19 +152,19 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     instructor = instructor ?: "BPSCNotes",
     subject = subject,
     price = price,
-    originalPrice = originalPrice,
-    totalLessons = totalLessons,
-    totalHours = totalHours.toFloatOrNull() ?: 0f,
+    originalPrice = original_price,
+    totalLessons = total_lessons,
+    totalHours = total_hours.toFloatOrNull() ?: 0f,
     rating = rating.toFloatOrNull() ?: 0f,
     reviewCount = review_count,
-    studentsEnrolled = enrollmentCount,
+    studentsEnrolled = enrollment_count,
     bpscRelevance = 0,
     syllabusCoverage = 0,
-    isPaid = isPaid,
+    isPaid = is_paid,
     isFeatured = is_featured,
     tags = exam_tags,
     trialLessonTitle = trial_lesson_title ?: "",
-    description = description ?: ""
+    description =  title?: ""
 )
 
 private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
@@ -177,13 +172,13 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
     title = title,
     instructor = instructor ?: "BPSCNotes",
     subject = subject,
-    totalLessons = totalLessons,
+    totalLessons = total_lessons,
     completedLessons = enrollment?.completed_lessons?:0,
-    totalMinutes = ((totalHours.toFloatOrNull() ?: (0f * 60))).toInt(),
+    totalMinutes = ((total_hours.toFloatOrNull() ?: (0f * 60))).toInt(),
     studiedMinutes = enrollment?.completed_lessons ?: (0 * 10), // approx or backend later
     lastStudied = "Recently",
-    status = if ((enrollment?.completed_lessons ?: 0) == totalLessons) CourseStatus.Completed else CourseStatus.InProgress,
-    isPaid = isPaid
+    status = if ((enrollment?.completed_lessons ?: 0) == total_lessons) CourseStatus.Completed else CourseStatus.InProgress,
+    isPaid = is_paid
 )
 
 val storeSubjects = listOf(
@@ -333,7 +328,7 @@ fun MyLearningScreen(
         }
 
         when (selectedTab) {
-            0 -> StoreTab(navController = navController, userCoins = userCoins,courses=storeItems)
+            0 -> StoreTab(navController = navController, userCoins = userCoins,courses=storeItems,viewModel)
             1 -> MyCoursesTab(navController = navController,courses=learningCourses)
         }
     }
@@ -343,7 +338,11 @@ fun MyLearningScreen(
 // STORE TAB  (same as before — no change needed)
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun StoreTab(navController: NavHostController, userCoins: Int, courses: List<StoreItem>
+private fun StoreTab(
+    navController: NavHostController,
+    userCoins: Int,
+    courses: List<StoreItem>,
+    viewModel: MyLearningViewModel
 ) {
     var selectedSubject by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
@@ -489,14 +488,20 @@ private fun StoreTab(navController: NavHostController, userCoins: Int, courses: 
 
     selectedCourse?.let { course ->
         CourseDetailSheet(
-            course = course, userCoins = userCoins,
+            course       = course,
+            userCoins    = userCoins,
             isWishlisted = wishlist.contains(course.id),
-            onWishlist = {
-                if (wishlist.contains(course.id)) wishlist.remove(course.id) else wishlist.add(
-                    course.id
-                )
+            onWishlist   = {
+                if (wishlist.contains(course.id)) wishlist.remove(course.id)
+                else wishlist.add(course.id)
             },
-            onDismiss = { selectedCourse = null })
+            // FIX 2: actually call enroll API for free courses
+            onEnroll     = { courseId ->
+                viewModel.enroll(courseId)
+                selectedCourse = null
+            },
+            onDismiss    = { selectedCourse = null }
+        )
     }
 }
 
@@ -1374,6 +1379,7 @@ private fun CourseDetailSheet(
     userCoins: Int,
     isWishlisted: Boolean,
     onWishlist: () -> Unit,
+    onEnroll: (courseId: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1668,7 +1674,7 @@ private fun CourseDetailSheet(
                         )
                     }
                     Button(
-                        onClick = { if (course.isPaid) showPayment = true else onDismiss() },
+                        onClick = { if (course.isPaid) showPayment = true else onEnroll(course.id) },
                         modifier = Modifier
                             .weight(3f)
                             .height(50.dp),

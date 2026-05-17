@@ -19,7 +19,7 @@ import retrofit2.http.*
 // COURSE DTOs  (unchanged)
 // ══════════════════════════════════════════════════════════════
 
-data class CourseDto(
+/*data class CourseDto(
 
     val id: String,
     val title: String,
@@ -59,10 +59,70 @@ data class CourseDto(
     val chapters: List<Chapter>,
     val reviews: List<Review>? // currently null
 
-)
+)*/
 data class Review(
     val id: String? = null
     // Add fields later when API provides
+)
+
+
+data class CoursesResponse(
+    val success: Boolean,
+    val message: String,
+    val data: CoursesData,
+    val meta: Meta,
+    val timestamp: String
+)
+
+data class CoursesData(
+    val courses: List<CourseDto>
+)
+
+data class CourseDto(
+    val id: String,
+    val title: String,
+    val instructor: String,
+    val subject: String,
+    val price: Int,
+    val original_price: Int,
+    val is_paid: Boolean,
+    val is_featured: Boolean,
+    val is_limited_offer: Boolean,
+    val offer_ends_at: String?,
+    val thumbnail_url: String?,
+    val total_lessons: Int,
+    val total_hours: String,
+    val rating: String,
+    val review_count: Int,
+    val enrollment_count: Int,
+    val bpsc_relevance: Int,
+    val exam_tags: List<String>,
+    val language: String,
+    val status: String,
+    val created_at: String,
+    val trial_lesson_title: String?,
+    val enrollment: EnrollmentData?
+)
+
+data class EnrollmentData(
+    val id: String,
+    val status: String,
+    val completed_lessons: Int,
+    val total_minutes: Int,
+    val studied_minutes: Int,
+    val last_studied_at: String?,
+    val enrolled_at: String,
+    val completed_at: String?,
+    val last_lesson_id: String?
+)
+
+data class Meta(
+    val total: Int,
+    val page: Int,
+    val limit: Int,
+    val totalPages: Int,
+    val hasNext: Boolean,
+    val hasPrev: Boolean
 )
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
@@ -200,6 +260,19 @@ data class Lesson(
     val is_locked: Boolean,
     val sort_order: Int
 )
+// Dynamic subjects from API
+data class SubjectDto(
+    val id: String,
+    val name: String,
+    val emoji: String = "📚",
+    @SerializedName("color_hex") val colorHex: String = "#1565C0",
+    @SerializedName("sort_order") val sortOrder: Int = 0
+)
+
+data class SubjectsResponseData(val subjects: List<SubjectDto> = emptyList())
+data class AffairCategoriesResponseData(val categories: List<AffairCategoryDto> = emptyList())
+data class AffairCategoryDto(val id: String, val name: String, val emoji: String = "📰")
+
 data class Enrollment(
     val id: String,
     val user_id: String,
@@ -317,6 +390,12 @@ interface CoursesApiService {
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
+
+    @GET("app-config/subjects")
+    suspend fun getSubjects(): ApiResponse<SubjectsResponseData>
+
+    @GET("app-config/affair-categories")
+    suspend fun getAffairCategories(): ApiResponse<AffairCategoriesResponseData>
 }
 
 

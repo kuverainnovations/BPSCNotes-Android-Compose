@@ -16,10 +16,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class MyLearningUiState(
-    val storeCourses: List<CourseDto>    = emptyList(),   // all published courses (store tab)
-    val enrolledCourses: List<CourseDto> = emptyList(),   // user's enrolled courses
+    val storeCourses: List<CourseDto>    = emptyList(),
+    val enrolledCourses: List<CourseDto> = emptyList(),
     val userCoins: Int                   = 0,
+    val subjects: List<String>           = emptyList(),   // dynamic from API
     val isLoading: Boolean               = true,
+    val isEnrolling: Boolean             = false,
+    val enrollSuccess: String?           = null,          // enrolled course title
     val error: String?                   = null
 )
 
@@ -39,19 +42,22 @@ class MyLearningViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 // Parallel: all courses + enrolled courses + user profile for coins
-                val allCoursesJob     = async { coursesApi.getCourses(limit = 20).data?.courses ?: emptyList() }
-                val enrolledJob       = async {
-                    try { coursesApi.getCourses(limit = 20).data?.courses?.filter { it.enrollment?.status=="active" } ?: emptyList() }
-                    catch (e: Exception) { emptyList() }
-                }
-                val userJob           = async {
+                val allCoursesJob = async { coursesApi.getCourses(limit = 50).data?.courses ?: emptyList() }
+                val userJob       = async {
                     try { authApi.getMe().data?.user?.coins ?: 0 } catch (e: Exception) { 0 }
                 }
 
+                val allCourses = allCoursesJob.await()
+
+                // FIX 3: Enrolled courses = courses where enrollment.status == "active"
+                // Previously filtering from same getCourses call — but enrollment data
+                // is only included when the user is authenticated. This is correct.
+                val enrolledCourses = allCourses.filter { it.enrollment?.status=="active" }
+
                 _uiState.update {
                     it.copy(
-                        storeCourses    = allCoursesJob.await(),
-                        enrolledCourses = enrolledJob.await(),
+                        storeCourses    = allCourses,
+                        enrolledCourses = enrolledCourses,
                         userCoins       = userJob.await(),
                         isLoading       = false
                     )
@@ -64,4 +70,23 @@ class MyLearningViewModel @Inject constructor(
     }
 
     fun retry() = load()
+
+    // ── FIX 2: Enroll a free course via API ─────────────────────
+    // Was missing — Enroll Free button just called onDismiss() before.
+    fun enroll(courseId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isEnrolling = true) }
+            try {
+                coursesApi.enrollCourse(courseId)
+                // Re-load so enrolled tab shows the new course
+                load()
+                _uiState.update { it.copy(isEnrolling = false, enrollSuccess = "Enrolled successfully!") }
+            } catch (e: Exception) {
+                Log.e("MyLearningVM", "enroll failed: ${e.message}", e)
+                _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
+            }
+        }
+    }
+
+    fun clearMessages() { _uiState.update { it.copy(enrollSuccess = null, error = null) } }
 }
