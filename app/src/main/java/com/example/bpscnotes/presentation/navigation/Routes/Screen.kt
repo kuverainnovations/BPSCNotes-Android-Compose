@@ -57,6 +57,11 @@ sealed class Screen(val route: String) {
     object NotesReader   : Screen("notes/{noteId}") {
         fun createRoute(id: String) = "notes/$id"
     }
+
+    // Full lesson viewer — handles PDF, video, quiz, live
+    object LessonViewer  : Screen("lesson/{courseId}/{lessonId}") {
+        fun createRoute(courseId: String, lessonId: String) = "lesson/$courseId/$lessonId"
+    }
     object Downloads     : Screen("downloads")
 
     // Group study

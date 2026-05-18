@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.data.remote.api.CourseReview
 import com.example.bpscnotes.data.remote.api.RatingDistribution
@@ -42,12 +43,15 @@ data class ChapterDto(
 data class LessonDto(
     val id: String,
     val title: String,
-    @SerializedName("duration_mins")  val durationMins: Int = 0,
-    val type: String = "video",
+    @SerializedName("duration_mins")   val durationMins: Int = 0,
+    val type: String = "pdf",
+    @SerializedName("notes_url")       val notesUrl: String? = null,
+    @SerializedName("video_url")       val videoUrl: String? = null,
     @SerializedName("is_free_preview") val isFreePreview: Boolean = false,
     @SerializedName("is_locked")       val isLocked: Boolean = true,
     @SerializedName("is_completed")    val isCompleted: Boolean? = null,
-    @SerializedName("sort_order")      val sortOrder: Int = 0
+    @SerializedName("sort_order")      val sortOrder: Int = 0,
+    @SerializedName("watch_time_secs") val watchTimeSecs: Int = 0
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -173,7 +177,9 @@ fun CourseDetailScreen(
                             accent     = accent,
                             expanded   = expandedChapter == chapter.id,
                             onToggle   = { expandedChapter = if (expandedChapter == chapter.id) null else chapter.id },
-                            onLessonTap = { lessonId -> nav.navigate(Screen.NotesReader.createRoute(lessonId)) }
+                            onLessonTap = { lesson ->
+                                nav.navigate(Screen.LessonViewer.createRoute(courseId, lesson.id))
+                            }
                         )
                     }
                 }
@@ -408,7 +414,7 @@ private fun CertificateBanner() {
 @Composable
 private fun ChapterCard(
     chapter: ChapterDto, accent: Color, expanded: Boolean,
-    onToggle: () -> Unit, onLessonTap: (String) -> Unit
+    onToggle: () -> Unit, onLessonTap: (LessonDto) -> Unit
 ) {
     val lessons      = chapter.lessons ?: emptyList()
     val doneLessons  = lessons.count { it.isCompleted == true }
@@ -450,7 +456,7 @@ private fun ChapterCard(
             if (expanded) {
                 HorizontalDivider(color = BpscColors.Divider)
                 lessons.forEachIndexed { index, lesson ->
-                    LessonRow(lesson = lesson, accent = accent, onTap = { if (!lesson.isLocked) onLessonTap(lesson.id) })
+                    LessonRow(lesson = lesson, accent = accent, onTap = { if (!lesson.isLocked) onLessonTap(lesson) })
                     if (index < lessons.size - 1) HorizontalDivider(Modifier.padding(horizontal = 14.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                 }
                 Spacer(Modifier.height(4.dp))

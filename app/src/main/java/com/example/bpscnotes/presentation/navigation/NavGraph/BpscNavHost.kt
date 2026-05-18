@@ -37,10 +37,11 @@ import com.example.bpscnotes.presentation.quiz.QuizViewModel
 import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
-import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
+import com.example.bpscnotes.presentation.course.LessonViewerScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
+import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
@@ -215,5 +216,20 @@ fun BpscNavHost(navController: NavHostController) {
             Screen.NotesReader.route,
             arguments = listOf(navArgument("noteId") { type = NavType.StringType })
         ) { NotesReaderScreen(navController, it.arguments?.getString("noteId") ?: "") }
+
+        // ── Lesson Viewer (PDF / Video / Quiz / Live) ─────────
+        composable(
+            Screen.LessonViewer.route,
+            arguments = listOf(
+                navArgument("courseId")  { type = NavType.StringType },
+                navArgument("lessonId")  { type = NavType.StringType }
+            )
+        ) { backStack ->
+            LessonViewerScreen(
+                nav      = navController,
+                courseId = backStack.arguments?.getString("courseId") ?: "",
+                lessonId = backStack.arguments?.getString("lessonId") ?: ""
+            )
+        }
     }
 }

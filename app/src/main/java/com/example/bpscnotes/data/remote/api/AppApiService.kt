@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.example.bpscnotes.presentation.course.ChapterDto
+import com.example.bpscnotes.presentation.course.LessonDto
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.*
@@ -65,7 +66,7 @@ data class CourseDto(
     @SerializedName("has_certificate")     val hasCertificate: Boolean = true,
     @SerializedName("rating_distribution") val ratingDistribution: RatingDistribution? = null,
     val enrollment: Enrollment? = null,
-    val chapters: List<Chapter> = emptyList(),
+    val chapters: List<ChapterDto> = emptyList(),
     val reviews: List<CourseReview>? = null
 )
 
@@ -216,7 +217,7 @@ data class Chapter(
     val id: String,
     val title: String,
     val sort_order: Int,
-    val lessons: List<Lesson>
+    val lessons: List<LessonDto>
 )
 data class Lesson(
     val id: String,
@@ -229,13 +230,17 @@ data class Lesson(
 )
 data class Enrollment(
     val id: String,
-    val user_id: String,
-    val course_id: String,
-    val completed_lessons: Int,
-    val last_lesson_id: String?,
-    val status: String,
-    val enrolled_at: String,
-    val completed_at: String?
+    val user_id: String? = null,
+    val course_id: String? = null,
+    val status: String = "active",
+    val completed_lessons: Int = 0,
+    val last_lesson_id: String? = null,
+    // Fields added in migration 1747300000000-EnrollmentMissingFields
+    @SerializedName("total_minutes")   val totalMinutes: Int = 0,
+    @SerializedName("studied_minutes") val studiedMinutes: Int = 0,
+    @SerializedName("last_studied_at") val lastStudiedAt: String? = null,
+    val enrolled_at: String? = null,
+    val completed_at: String? = null
 )
 
 data class AffairsResponseData(val affairs: List<CurrentAffairDto> = emptyList())
@@ -344,6 +349,21 @@ interface CoursesApiService {
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
+
+    // Get lesson detail with notes_url / video_url and is_completed for the user
+    /*@GET("courses/{courseId}/lessons/{lessonId}")
+    suspend fun getLessonDetail(
+        @Path("courseId") courseId: String,
+        @Path("lessonId") lessonId: String
+    ): ApiResponse<LessonDetailResponseData>
+
+    // Mark lesson as complete + update enrollment progress
+    @POST("courses/{courseId}/lessons/{lessonId}/complete")
+    suspend fun completeCourseLesson(
+        @Path("courseId") courseId: String,
+        @Path("lessonId") lessonId: String,
+        @Body request: CompleteLessonRequest = CompleteLessonRequest()
+    ): ApiResponse<CompleteLessonResponse>*/
 }
 
 
@@ -549,70 +569,29 @@ data class CheckInDayDto(
 )
 
 data class EarnTaskDto(
-
     val id: String,
-
-    val title: String = "",
-
-    val subtitle: String = "",
-
+    val title: String?="",
+    val subtitle: String,
+    @SerializedName("coins_reward")          val coinsReward: Int = 0,
     val icon: String = "quiz",
-
-    val action: String = "",
-
-    @SerializedName("coinsReward")
-    val coinsReward: Int = 0,
-
-    @SerializedName("actionLabel")
-    val actionLabel: String = "Claim",
-
-    @SerializedName("actionBgHex")
-    val actionBgHex: String? = "#1565C0",
-
-    @SerializedName("iconBgHex")
-    val iconBgHex: String? = "#E3F2FD",
-
-    @SerializedName("iconTintHex")
-    val iconTintHex: String? = "#1565C0",
-
-    @SerializedName("actionTextColorHex")
-    val actionTextColorHex: String? = "#FFFFFF",
-
-    @SerializedName("isAd")
-    val isAd: Boolean = false,
-
-    @SerializedName("isCompleted")
-    val isCompleted: Boolean = false
-
+    @SerializedName("action_label")          val actionLabel: String = "Claim",
+    @SerializedName("is_completed")          val isCompleted: Boolean = false,
+    @SerializedName("is_ad")                 val isAd: Boolean = false,
+    @SerializedName("action_bg")             val actionBgHex: String? = "#1565C0",
+    @SerializedName("icon_bg")               val iconBgHex: String? = "#E3F2FD",
+    @SerializedName("icon_tint")             val iconTintHex: String? = "#1565C0",
+    @SerializedName("action_text_color")     val actionTextColorHex: String? = "#FFFFFF",
 ) {
-
-    val actionBg: Color
-        get() = parseColor(actionBgHex, Color(0xFF1565C0))
-
-    val iconBg: Color
-        get() = parseColor(iconBgHex, Color(0xFFE3F2FD))
-
-    val iconTint: Color
-        get() = parseColor(iconTintHex, Color(0xFF1565C0))
-
-    val actionTextColor: Color
-        get() = parseColor(actionTextColorHex, Color.White)
+    val actionBg: Color         get() = parseColor(actionBgHex, Color(0xFF1565C0))
+    val iconBg: Color           get() = parseColor(iconBgHex,   Color(0xFFE3F2FD))
+    val iconTint: Color         get() = parseColor(iconTintHex, Color(0xFF1565C0))
+    val actionTextColor: Color  get() = parseColor(actionTextColorHex, Color.White)
 
     companion object {
-
         fun parseColor(hex: String?, fallback: Color): Color = try {
-            if (hex.isNullOrBlank()) {
-                fallback
-            } else {
-                Color(
-                    android.graphics.Color.parseColor(
-                        if (hex.startsWith("#")) hex else "#$hex"
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            fallback
-        }
+            if (hex.isNullOrBlank()) fallback
+            else Color(android.graphics.Color.parseColor(if (hex.startsWith("#")) hex else "#$hex"))
+        } catch (e: Exception) { fallback }
     }
 }
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.collections.sortedBy
 
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
@@ -48,11 +49,11 @@ class CourseDetailViewModel @Inject constructor(
                     it.copy(
                         course = detail.course,
                         chapters = detail.course.chapters
-                            ?.sortedBy { it.sort_order }
+                            ?.sortedBy { it.sortOrder }
                             ?.map { chapter ->
                                 chapter.copy(
                                     lessons = chapter.lessons
-                                        ?.sortedBy { it.sort_order }
+                                        ?.sortedBy { it.sortOrder }
                                         ?: emptyList()
                                 )
                             } ?: emptyList(),
@@ -79,4 +80,32 @@ class CourseDetailViewModel @Inject constructor(
     }
 
     fun clearMessages() { _uiState.update { it.copy(enrollSuccess = false, error = null) } }
+
+   /* fun completeLesson(courseId: String, lessonId: String, watchSecs: Int = 0) {
+        viewModelScope.launch {
+            try {
+                api.completeCourseLesson(courseId, lessonId, CompleteLessonRequest(watchTimeSecs = watchSecs))
+                // Reload course so is_completed reflects on chapter list
+                load(courseId)
+            } catch (e: Exception) {
+                android.util.Log.w("CourseDetailVM", "completeLesson: ${e.message}")
+            }
+        }
+    }
+
+    fun showRatingSheet()    { _uiState.update { it.copy(showRatingSheet = true) } }
+    fun dismissRatingSheet() { _uiState.update { it.copy(showRatingSheet = false) } }
+
+    fun submitRating(courseId: String, rating: Int, comment: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingRating = true) }
+            try {
+                api.submitCourseReview(courseId, mapOf("rating" to rating, "comment" to comment))
+                _uiState.update { it.copy(isSubmittingRating = false, showRatingSheet = false, isRatingSubmitted = true) }
+                load(courseId) // refresh to show new review
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSubmittingRating = false, error = "Failed to submit rating: ${e.message}") }
+            }
+        }
+    }*/
 }
