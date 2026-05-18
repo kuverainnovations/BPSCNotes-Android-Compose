@@ -10,8 +10,6 @@ import androidx.compose.material.icons.rounded.Quiz
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.bpscnotes.data.remote.dto.ApiResponse
-import com.example.bpscnotes.presentation.course.ChapterDto
-import com.example.bpscnotes.presentation.course.LessonDto
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.*
@@ -28,69 +26,53 @@ data class CourseDetailResponse(
     val course: CourseDto,
 
     @SerializedName("chapters")
-    val chapters: List<ChapterDto>? = null
+    val chapters: List<Chapter>? = null
 )
 
 data class CourseDto(
+
     val id: String,
     val title: String,
-    val slug: String? = null,
-    val description: String? = null,
-    val instructor: String? = null,
+    val slug: String,
+    val description: String?,
+    val instructor: String?,
     @SerializedName("instructor_bio")      val instructorBio: String? = null,
     @SerializedName("instructor_students") val instructorStudents: String? = null,
     @SerializedName("instructor_courses")  val instructorCourses: Int = 1,
     val subject: String,
-    val price: Int = 0,
-    @SerializedName("original_price")      val originalPrice: Int = 0,
-    @SerializedName("is_paid")             val isPaid: Boolean = false,
-    val is_featured: Boolean = false,
-    val is_limited_offer: Boolean = false,
-    val offer_ends_at: String? = null,
-    val thumbnail_url: String? = null,
-    @SerializedName("total_lessons")       val totalLessons: Int = 0,
-    @SerializedName("total_hours")         val totalHours: String = "0",
-    val rating: String = "0",
-    val review_count: Int = 0,
-    @SerializedName("enrollment_count")    val enrollmentCount: Int = 0,
-    val bpsc_relevance: Int = 0,
-    val syllabus_coverage: Int = 0,
-    val language: String = "Hindi + English",
-    val trial_lesson_title: String? = null,
-    val exam_tags: List<String> = emptyList(),
-    val status: String = "published",
-    val meta_keywords: String? = null,
-    val created_at: String? = null,
-    val updated_at: String? = null,
+    val price: Int,
+    @SerializedName("original_price")
+    val originalPrice: Int,
+    @SerializedName("is_paid")
+    val isPaid: Boolean,
+    val is_featured: Boolean,
+    val is_limited_offer: Boolean,
+    val offer_ends_at: String?,
+    val thumbnail_url: String?,
+    @SerializedName("total_lessons")
+    val totalLessons: Int,
+    @SerializedName("total_hours")
+    val totalHours: String,
+    val rating: String,
+    val review_count: Int,
+    @SerializedName("enrollment_count")
+    val enrollmentCount: Int,
+    val bpsc_relevance: Int,
+    val syllabus_coverage: Int,
+    val language: String,
+    val trial_lesson_title: String?,
+    val exam_tags: List<String>,
+    val status: String,
+    val meta_keywords: String?,
+    val created_by: String,
+    val created_at: String,
+    val updated_at: String,
+    val enrollment: Enrollment? = null,
+    val chapters: List<Chapter> = emptyList(),
     @SerializedName("what_you_learn")      val whatYouLearn: List<String> = emptyList(),
     @SerializedName("has_certificate")     val hasCertificate: Boolean = true,
     @SerializedName("rating_distribution") val ratingDistribution: RatingDistribution? = null,
-    val enrollment: Enrollment? = null,
-    val chapters: List<ChapterDto> = emptyList(),
     val reviews: List<CourseReview>? = null
-)
-
-data class RatingDistribution(
-    @SerializedName("5") val five:  Int = 0,
-    @SerializedName("4") val four:  Int = 0,
-    @SerializedName("3") val three: Int = 0,
-    @SerializedName("2") val two:   Int = 0,
-    @SerializedName("1") val one:   Int = 0
-) {
-    val total get() = (five + four + three + two + one).coerceAtLeast(1)
-    fun pct(star: Int) = when(star) {
-        5 -> five; 4 -> four; 3 -> three; 2 -> two; else -> one
-    }.toFloat() / total
-}
-
-data class CourseReview(
-    val id: String? = null,
-    val rating: Float = 0f,
-    val comment: String? = null,
-    @SerializedName("is_verified")    val isVerified: Boolean = false,
-    @SerializedName("reviewer_name") val reviewerName: String = "Student",
-    @SerializedName("avatar_url")    val avatarUrl: String? = null,
-    @SerializedName("created_at")    val createdAt: String? = null
 )
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
@@ -216,17 +198,34 @@ data class CurrentAffairDto(
 data class Chapter(
     val id: String,
     val title: String,
-    val sort_order: Int,
-    val lessons: List<LessonDto>
+    @SerializedName("sort_order") val sortOrder: Int = 0,
+    val lessons: List<Lesson>
 )
 data class Lesson(
     val id: String,
     val title: String,
-    val duration_mins: Int,
-    val type: String,
-    val is_free_preview: Boolean,
-    val is_locked: Boolean,
-    val sort_order: Int
+    @SerializedName("duration_mins")   val duration_mins: Int = 0,
+    val type: String = "pdf",
+    @SerializedName("notes_url")       val notes_url: String? = null,
+    @SerializedName("video_url")       val video_url: String? = null,
+    @SerializedName("is_free_preview") val is_free_preview: Boolean = false,
+    @SerializedName("is_locked")       val is_locked: Boolean = true,
+    @SerializedName("is_completed")    val is_completed: Boolean? = null,
+    @SerializedName("sort_order")      val sort_order: Int = 0,
+    @SerializedName("watch_time_secs") val watch_time_secs: Int = 0
+)
+
+// ── Lesson detail response ────────────────────────────────────
+data class LessonDetailResponseData(val lesson: Lesson)
+
+// ── Complete lesson request / response ───────────────────────
+data class CompleteLessonRequest(
+    @SerializedName("watchTimeSecs") val watchTimeSecs: Int = 0
+)
+data class CompleteLessonResponse(
+    val completedLessons: Int = 0,
+    val totalLessons: Int = 0,
+    val isCompleted: Boolean = false
 )
 data class Enrollment(
     val id: String,
@@ -235,12 +234,42 @@ data class Enrollment(
     val status: String = "active",
     val completed_lessons: Int = 0,
     val last_lesson_id: String? = null,
-    // Fields added in migration 1747300000000-EnrollmentMissingFields
     @SerializedName("total_minutes")   val totalMinutes: Int = 0,
     @SerializedName("studied_minutes") val studiedMinutes: Int = 0,
     @SerializedName("last_studied_at") val lastStudiedAt: String? = null,
     val enrolled_at: String? = null,
     val completed_at: String? = null
+)
+
+// ── Course review ────────────────────────────────────────────
+data class CourseReview(
+    val id: String? = null,
+    val rating: Float = 0f,
+    val comment: String? = null,
+    @SerializedName("is_verified")    val isVerified: Boolean = false,
+    @SerializedName("reviewer_name") val reviewerName: String = "Student",
+    @SerializedName("avatar_url")    val avatarUrl: String? = null,
+    @SerializedName("created_at")    val createdAt: String? = null
+)
+
+// ── Rating distribution ──────────────────────────────────────
+data class RatingDistribution(
+    @SerializedName("5") val five:  Int = 0,
+    @SerializedName("4") val four:  Int = 0,
+    @SerializedName("3") val three: Int = 0,
+    @SerializedName("2") val two:   Int = 0,
+    @SerializedName("1") val one:   Int = 0
+) {
+    val total get() = (five + four + three + two + one).coerceAtLeast(1)
+    fun pct(star: Int) = when(star) {
+        5 -> five; 4 -> four; 3 -> three; 2 -> two; else -> one
+    }.toFloat() / total
+}
+
+// ── Submit review request ────────────────────────────────────
+data class SubmitReviewRequest(
+    val rating: Int,
+    val comment: String = ""
 )
 
 data class AffairsResponseData(val affairs: List<CurrentAffairDto> = emptyList())
@@ -342,28 +371,33 @@ interface CoursesApiService {
         @Query("exam")    exam: String? = null
     ): ApiResponse<CoursesResponseData>
 
-    /* @GET("courses/{id}")
-     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<CourseDetailResponse>
- */
     @GET("courses/{id}")
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
+
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
 
-    // Get lesson detail with notes_url / video_url and is_completed for the user
-    /*@GET("courses/{courseId}/lessons/{lessonId}")
+    // Get full lesson detail including notes_url / video_url / is_completed
+    @GET("courses/{courseId}/lessons/{lessonId}")
     suspend fun getLessonDetail(
         @Path("courseId") courseId: String,
         @Path("lessonId") lessonId: String
     ): ApiResponse<LessonDetailResponseData>
 
-    // Mark lesson as complete + update enrollment progress
+    // Mark a lesson complete — updates lesson_progress + enrollment progress
     @POST("courses/{courseId}/lessons/{lessonId}/complete")
     suspend fun completeCourseLesson(
         @Path("courseId") courseId: String,
         @Path("lessonId") lessonId: String,
-        @Body request: CompleteLessonRequest = CompleteLessonRequest()
-    ): ApiResponse<CompleteLessonResponse>*/
+        @Body request: CompleteLessonRequest
+    ): ApiResponse<CompleteLessonResponse>
+
+    // Submit a star rating + comment for a course
+    @POST("courses/{id}/review")
+    suspend fun submitCourseReview(
+        @Path("id") courseId: String,
+        @Body request: SubmitReviewRequest
+    ): ApiResponse<Any>
 }
 
 

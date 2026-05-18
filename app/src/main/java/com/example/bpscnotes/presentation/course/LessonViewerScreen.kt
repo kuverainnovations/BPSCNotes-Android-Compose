@@ -65,7 +65,7 @@ fun LessonViewerScreen(
         bottomBar    = {
             if (state.lesson != null) {
                 LessonBottomBar(
-                    isCompleted   = state.lesson?.isCompleted == true,
+                    isCompleted   = state.lesson?.is_completed == true,
                     isMarking     = state.isMarking,
                     onMarkComplete = { viewModel.markComplete() }
                 )
@@ -80,15 +80,15 @@ fun LessonViewerScreen(
                 state.lesson != null -> {
                     val lesson = state.lesson!!
                     when (lesson.type) {
-                        "video"       -> VideoPlayer(lesson.videoUrl ?: lesson.notesUrl)
-                        "pdf", "notes" -> PdfViewer(lesson.notesUrl)
+                        "video"       -> VideoPlayer(lesson.video_url ?: lesson.notes_url)
+                        "pdf", "notes" -> PdfViewer(lesson.notes_url)
                         "live"        -> LiveClassView(lesson)
                         "quiz"        -> QuizRedirectView(lesson, onQuizTap = { nav.popBackStack() })
-                        else          -> PdfViewer(lesson.notesUrl ?: lesson.videoUrl)
+                        else          -> PdfViewer(lesson.notes_url ?: lesson.video_url)
                     }
 
                     // Completed banner overlay
-                    if (state.lesson?.isCompleted == true) {
+                    if (state.lesson?.is_completed == true) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -97,7 +97,7 @@ fun LessonViewerScreen(
                                 .background(Color(0xFF2E7D32).copy(0.9f))
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment =  Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Text("Completed", style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
                             }
@@ -328,7 +328,7 @@ private fun VideoPlayer(videoUrl: String?) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun LiveClassView(lesson: LessonDto) {
+private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) {
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(32.dp)) {
             Box(
@@ -340,7 +340,7 @@ private fun LiveClassView(lesson: LessonDto) {
             }
             Text("Live Class", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
-            if (!lesson.videoUrl.isNullOrBlank()) {
+            if (!lesson.video_url.isNullOrBlank()) {
                 Button(
                     onClick = { /* open join URL */ },
                     shape   = RoundedCornerShape(14.dp),
@@ -363,7 +363,7 @@ private fun LiveClassView(lesson: LessonDto) {
 
 @Composable
 private fun QuizRedirectView(
-    lesson: LessonDto,
+    lesson: com.example.bpscnotes.data.remote.api.Lesson,
     onQuizTap: () -> Unit
 ) {
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
@@ -373,7 +373,7 @@ private fun QuizRedirectView(
             }
             Text("Chapter Quiz", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
-            Text("${lesson.durationMins} min · Test your knowledge", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
+            Text("${lesson.duration_mins} min · Test your knowledge", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
             Button(
                 onClick = onQuizTap,
                 shape   = RoundedCornerShape(14.dp),

@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.data.remote.api.Lesson
 import com.example.bpscnotes.data.remote.api.CourseReview
 import com.example.bpscnotes.data.remote.api.RatingDistribution
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -33,26 +34,9 @@ import java.util.*
 // DATA CLASSES (chapter / lesson already defined elsewhere)
 // ─────────────────────────────────────────────────────────────
 
-data class ChapterDto(
-    val id: String,
-    val title: String,
-    @SerializedName("sort_order") val sortOrder: Int = 0,
-    val lessons: List<LessonDto>? = null
-)
-
-data class LessonDto(
-    val id: String,
-    val title: String,
-    @SerializedName("duration_mins")   val durationMins: Int = 0,
-    val type: String = "pdf",
-    @SerializedName("notes_url")       val notesUrl: String? = null,
-    @SerializedName("video_url")       val videoUrl: String? = null,
-    @SerializedName("is_free_preview") val isFreePreview: Boolean = false,
-    @SerializedName("is_locked")       val isLocked: Boolean = true,
-    @SerializedName("is_completed")    val isCompleted: Boolean? = null,
-    @SerializedName("sort_order")      val sortOrder: Int = 0,
-    @SerializedName("watch_time_secs") val watchTimeSecs: Int = 0
-)
+// Chapter = Chapter (from AppApiService — use project class directly)
+// Lesson  = Lesson  (from AppApiService — use project class directly)
+// Defined in AppApiService.kt as data class Chapter / data class Lesson
 
 // ─────────────────────────────────────────────────────────────
 // UI STATE + VIEW MODEL
@@ -60,7 +44,7 @@ data class LessonDto(
 
 data class CourseDetailUiState(
     val course: CourseDto? = null,
-    val chapters: List<ChapterDto> = emptyList(),
+    val chapters: List<Chapter> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
     val enrollSuccess: Boolean = false,
@@ -106,7 +90,7 @@ fun CourseDetailScreen(
             }
 
             val totalLessons     = chapters.sumOf { it.lessons?.size ?: 0 }
-            val completedLessons = chapters.sumOf { ch -> ch.lessons?.count { it.isCompleted == true } ?: 0 }
+            val completedLessons = chapters.sumOf { ch -> ch.lessons?.count { it.is_completed == true } ?: 0 }
             val progress         = if (totalLessons > 0) completedLessons.toFloat() / totalLessons else 0f
             val animProg         by animateFloatAsState(progress, tween(1000), label = "prog")
 
@@ -143,7 +127,7 @@ fun CourseDetailScreen(
                 }
 
                 // ── CTA CARD ──────────────────────────────────
-                item { CtaCard(course = course, state = state, isEnrolled = isEnrolled, courseId = courseId, viewModel = viewModel) }
+                //item { CtaCard(course = course, state = state, isEnrolled = isEnrolled, courseId = courseId, viewModel = viewModel) }
 
                 // ── WHAT YOU'LL LEARN ─────────────────────────
                 if (course.whatYouLearn.isNotEmpty()) {
@@ -216,7 +200,7 @@ fun CourseDetailScreen(
                     onContinue    = {
                         val firstUnfinished = chapters
                             .flatMap { it.lessons ?: emptyList() }
-                            .firstOrNull { it.isCompleted != true && !it.isLocked }
+                            .firstOrNull { it.is_completed != true && !it.is_locked }
                         firstUnfinished?.let { nav.navigate(Screen.NotesReader.createRoute(it.id)) }
                     }
                 )
@@ -413,11 +397,11 @@ private fun CertificateBanner() {
 
 @Composable
 private fun ChapterCard(
-    chapter: ChapterDto, accent: Color, expanded: Boolean,
-    onToggle: () -> Unit, onLessonTap: (LessonDto) -> Unit
+    chapter: Chapter, accent: Color, expanded: Boolean,
+    onToggle: () -> Unit, onLessonTap: (Lesson) -> Unit
 ) {
     val lessons      = chapter.lessons ?: emptyList()
-    val doneLessons  = lessons.count { it.isCompleted == true }
+    val doneLessons  = lessons.count { it.is_completed == true }
     val totalLessons = lessons.size
 
     Card(
@@ -456,7 +440,7 @@ private fun ChapterCard(
             if (expanded) {
                 HorizontalDivider(color = BpscColors.Divider)
                 lessons.forEachIndexed { index, lesson ->
-                    LessonRow(lesson = lesson, accent = accent, onTap = { if (!lesson.isLocked) onLessonTap(lesson) })
+                    LessonRow(lesson = lesson, accent = accent, onTap = { if (!lesson.is_locked) onLessonTap(lesson) })
                     if (index < lessons.size - 1) HorizontalDivider(Modifier.padding(horizontal = 14.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                 }
                 Spacer(Modifier.height(4.dp))
@@ -466,40 +450,40 @@ private fun ChapterCard(
 }
 
 @Composable
-private fun LessonRow(lesson: LessonDto, accent: Color, onTap: () -> Unit) {
+private fun LessonRow(lesson: Lesson, accent: Color, onTap: () -> Unit) {
     val typeEmoji = when (lesson.type) { "quiz" -> "❓"; "notes" -> "📄"; "live" -> "🔴"; else -> "🎬" }
     Row(
         modifier              = Modifier.fillMaxWidth()
-            .alpha(if (lesson.isLocked) 0.5f else 1f)
-            .clickable(enabled = !lesson.isLocked, onClick = onTap)
+            .alpha(if (lesson.is_locked) 0.5f else 1f)
+            .clickable(enabled = !lesson.is_locked, onClick = onTap)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier         = Modifier.size(30.dp).clip(CircleShape).background(
-                when { lesson.isCompleted == true -> BpscColors.Success.copy(0.15f); lesson.isLocked -> BpscColors.Surface; else -> accent.copy(0.1f) }
+                when { lesson.is_completed == true -> BpscColors.Success.copy(0.15f); lesson.is_locked -> BpscColors.Surface; else -> accent.copy(0.1f) }
             ),
             contentAlignment = Alignment.Center
         ) {
             when {
-                lesson.isCompleted == true -> Icon(Icons.Rounded.Check, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
-                lesson.isLocked            -> Icon(Icons.Rounded.Lock, null, tint = BpscColors.TextHint, modifier = Modifier.size(12.dp))
+                lesson.is_completed == true -> Icon(Icons.Rounded.Check, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
+                lesson.is_locked            -> Icon(Icons.Rounded.Lock, null, tint = BpscColors.TextHint, modifier = Modifier.size(12.dp))
                 else                       -> Text(typeEmoji, fontSize = 12.sp)
             }
         }
         Column(Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = if (lesson.isLocked) BpscColors.TextHint else BpscColors.TextPrimary,
-                    fontWeight = if (lesson.isCompleted == true) FontWeight.Normal else FontWeight.SemiBold,
+                Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = if (lesson.is_locked) BpscColors.TextHint else BpscColors.TextPrimary,
+                    fontWeight = if (lesson.is_completed == true) FontWeight.Normal else FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (lesson.isFreePreview) Text("Free", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                if (lesson.is_free_preview) Text("Free", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 5.dp, vertical = 2.dp))
             }
-            if (lesson.durationMins > 0)
-                Text("${lesson.durationMins}min", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
+            if (lesson.duration_mins > 0)
+                Text("${lesson.duration_mins}min", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
         }
-        if (lesson.isCompleted == true) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
+        if (lesson.is_completed == true) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
     }
 }
 

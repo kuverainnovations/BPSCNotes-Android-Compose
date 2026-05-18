@@ -3,31 +3,21 @@ package com.example.bpscnotes.presentation.course
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
 import com.example.bpscnotes.data.remote.api.CoursesApiService
+import com.example.bpscnotes.data.remote.api.Lesson
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
-// ─────────────────────────────────────────────────────────────
-// LESSON VIEWER VIEW MODEL
-//
-// State machine:
-//   IDLE → load() → LOADING → lesson fetched → READY
-//   READY → markComplete() → MARKING → backend called → COMPLETED
-//
-// Watch time:
-//   A coroutine ticks every second while the screen is active.
-//   On markComplete(), the accumulated watch_time_secs is sent
-//   to the backend so the studied_minutes field updates correctly.
-// ─────────────────────────────────────────────────────────────
-
 data class LessonViewerUiState(
-    val lesson:     LessonDto? = null,
-    val isLoading:  Boolean    = true,
-    val isMarking:  Boolean    = false,
-    val error:      String?    = null,
-    val watchSecs:  Int        = 0,
+    val lesson:    Lesson? = null,
+    val isLoading: Boolean = true,
+    val isMarking: Boolean = false,
+    val error:     String? = null,
+    val watchSecs: Int     = 0,
 )
 
 @HiltViewModel
@@ -44,29 +34,26 @@ class LessonViewerViewModel @Inject constructor(
 
     companion object { private const val TAG = "LessonViewerVM" }
 
-    // ── 1. Load lesson detail ──────────────────────────────────
+    // ── Load lesson detail ────────────────────────────────────
     fun load(courseId: String, lessonId: String) {
         this.courseId = courseId
         this.lessonId = lessonId
-        /*viewModelScope.launch {
+        viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val res    = api.getLessonDetail(courseId, lessonId)
-                val lesson = res.data ?: throw Exception("Lesson not found")
+                val lesson = res.data?.lesson
+                    ?: throw Exception("Lesson not found")
                 _uiState.update { it.copy(lesson = lesson, isLoading = false) }
-
-                // Start watch timer (paused if lesson is locked)
-                if (!lesson) startTimer()
-
+                if (!lesson.is_locked) startTimer()
             } catch (e: Exception) {
                 Log.e(TAG, "load: ${e.message}", e)
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load lesson") }
             }
-        }*/
+        }
     }
 
-    // ── 2. Watch time timer ────────────────────────────────────
-    // Ticks every second while the user is on the screen.
+    // ── Watch time timer ──────────────────────────────────────
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
@@ -77,38 +64,33 @@ class LessonViewerViewModel @Inject constructor(
         }
     }
 
-    // ── 3. Mark lesson complete ────────────────────────────────
-    // Called when user taps "Mark as Complete" button.
-    // Sends accumulated watch time to backend.
+    // ── Mark complete ─────────────────────────────────────────
     fun markComplete() {
         if (_uiState.value.isMarking) return
-        val currentLesson = _uiState.value.lesson ?: return
+        val lesson = _uiState.value.lesson ?: return
 
-        timerJob?.cancel() // stop timer — freeze watch time
-
-       /* viewModelScope.launch {
+        timerJob?.cancel()
+        viewModelScope.launch {
             _uiState.update { it.copy(isMarking = true) }
             try {
-                val watchSecs = _uiState.value.watchSecs
+                val watched = _uiState.value.watchSecs
                 api.completeCourseLesson(
-                    courseId,
-                    lessonId,
-                    CompleteLessonRequest(watchTimeSecs = watchSecs)
+                    courseId, lessonId,
+                    CompleteLessonRequest(watchTimeSecs = watched)
                 )
-                // Update local lesson state to show completed
-                _uiState.update { state ->
-                    state.copy(
+                _uiState.update {
+                    it.copy(
                         isMarking = false,
-                        lesson    = currentLesson.copy(isCompleted = true)
+                        lesson    = lesson.copy(is_completed = true)
                     )
                 }
-                Log.d(TAG, "Lesson $lessonId marked complete (${watchSecs}s watched)")
+                Log.d(TAG, "Lesson $lessonId marked complete (${watched}s watched)")
             } catch (e: Exception) {
                 Log.e(TAG, "markComplete: ${e.message}", e)
-                _uiState.update { it.copy(isMarking = false, error = "Failed to mark complete: ${e.message}") }
+                _uiState.update { it.copy(isMarking = false, error = "Failed to mark complete") }
                 startTimer() // resume timer so user can retry
             }
-        }*/
+        }
     }
 
     override fun onCleared() {
