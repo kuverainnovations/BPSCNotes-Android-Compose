@@ -47,12 +47,12 @@ class CourseDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         course = detail.course,
-                        chapters = detail.chapters
-                            ?.sortedBy { it.sortOrder }
+                        chapters = detail.course.chapters
+                            ?.sortedBy { it.sort_order }
                             ?.map { chapter ->
                                 chapter.copy(
                                     lessons = chapter.lessons
-                                        ?.sortedBy { it.sortOrder }
+                                        ?.sortedBy { it.sort_order }
                                         ?: emptyList()
                                 )
                             } ?: emptyList(),
