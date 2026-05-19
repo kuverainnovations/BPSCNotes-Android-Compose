@@ -15,7 +15,24 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // ════════════════════════════════════════════════════════════
-// TierRoomsSocketManager — WebSocket for rooms + real-time chat
+// TierRoomsSocketManager — Singleton WebSocket manager
+//
+// BUGS FIXED IN THIS VERSION:
+//
+// 1. "Failed to send" when socket is still connecting.
+//    Root cause: sendChatMessage() returned immediately if socket.connected() != true.
+//    When the user opens the chat sheet, the socket may still be in "connecting" state.
+//    Fix: Messages are now queued in pendingMessages and flushed on EVENT_CONNECT.
+//
+// 2. "Reconnecting..." banner showing on initial open (before first connect).
+//    Root cause: isConnected starts as false. Any collector sees false immediately.
+//    The banner showed "Reconnecting" even on first connection.
+//    Fix: Added hasConnectedBefore flag. UI should only show "Reconnecting" if this is true.
+//
+// 3. Server-side WsException errors were silently swallowed.
+//    Root cause: Android socket.io ignores the 'exception' event from NestJS.
+//    Fix: Added listener for 'exception' event → emits to socketErrors flow so
+//    UI can show the actual error (e.g. "Too fast", "Not in a room").
 // ════════════════════════════════════════════════════════════
 
 data class PresenceUpdateEvent(val tierKey: String, val activeNow: Int)
@@ -23,9 +40,15 @@ data class PromotionEvent(val tierKey: String, val tierName: String, val tierEmo
 data class DemotionEvent(val tierKey: String, val tierName: String, val tierEmoji: String, val message: String)
 data class LeaderboardTickEntry(val userId: String, val userName: String, val rankPosition: Int, val studyMinutes: Int, val coinsEarned: Int)
 data class LeaderboardTickEvent(val tierKey: String, val top3: List<LeaderboardTickEntry>, val updatedAt: String)
-data class HeartbeatAckEvent(val isAfk: Boolean, val activeMinsThisBeat: Int, val coinsEarnedThisBeat: Int, val xpEarnedThisBeat: Int, val totalCoinsThisSession: Int, val totalXpThisSession: Int, val totalActiveMinutes: Int)
-
-// BUG FIX: member join/leave events for real-time member list updates
+data class HeartbeatAckEvent(
+    val isAfk: Boolean,
+    val activeMinsThisBeat: Int,
+    val coinsEarnedThisBeat: Int,
+    val xpEarnedThisBeat: Int,
+    val totalCoinsThisSession: Int,
+    val totalXpThisSession: Int,
+    val totalActiveMinutes: Int
+)
 data class MemberJoinEvent(val tierKey: String, val userId: String, val userName: String)
 data class MemberLeaveEvent(val tierKey: String, val userId: String)
 
@@ -50,7 +73,7 @@ class TierRoomsSocketManager @Inject constructor(
 
     private var socket: Socket? = null
 
-    // ── Flows ──────────────────────────────────────────────────
+    // ── Public flows ───────────────────────────────────────────
     private val _presenceUpdates = MutableSharedFlow<PresenceUpdateEvent>(extraBufferCapacity = 64)
     val presenceUpdates: SharedFlow<PresenceUpdateEvent> = _presenceUpdates.asSharedFlow()
 
@@ -69,44 +92,58 @@ class TierRoomsSocketManager @Inject constructor(
     private val _afkWarnings = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val afkWarnings: SharedFlow<String> = _afkWarnings.asSharedFlow()
 
-    private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
-
-    private val _presenceSnapshot = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val presenceSnapshot: StateFlow<Map<String, Int>> = _presenceSnapshot.asStateFlow()
-
-    // Chat messages
     private val _roomMessages = MutableSharedFlow<RoomMessageEvent>(extraBufferCapacity = 200)
     val roomMessages: SharedFlow<RoomMessageEvent> = _roomMessages.asSharedFlow()
 
-    // BUG FIX: Real-time member join/leave flows
-    // Without these, new members only appear after manual refresh.
-    private val _memberJoins  = MutableSharedFlow<MemberJoinEvent>(extraBufferCapacity = 64)
-    val memberJoins:  SharedFlow<MemberJoinEvent>  = _memberJoins.asSharedFlow()
+    private val _memberJoins = MutableSharedFlow<MemberJoinEvent>(extraBufferCapacity = 64)
+    val memberJoins: SharedFlow<MemberJoinEvent> = _memberJoins.asSharedFlow()
 
     private val _memberLeaves = MutableSharedFlow<MemberLeaveEvent>(extraBufferCapacity = 64)
     val memberLeaves: SharedFlow<MemberLeaveEvent> = _memberLeaves.asSharedFlow()
 
+    // FIX 2: Socket errors from server (WsException) forwarded to UI
+    private val _socketErrors = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val socketErrors: SharedFlow<String> = _socketErrors.asSharedFlow()
+
+    // isConnected: true = socket is connected and authenticated on server
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
+    // FIX 2: Track whether we have EVER connected successfully.
+    // UI uses this to distinguish "initial connecting" from "reconnecting after drop".
+    private val _hasConnectedBefore = MutableStateFlow(false)
+    val hasConnectedBefore: StateFlow<Boolean> = _hasConnectedBefore.asStateFlow()
+
+    private val _presenceSnapshot = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val presenceSnapshot: StateFlow<Map<String, Int>> = _presenceSnapshot.asStateFlow()
+
     // Track current tier room so we can re-join after reconnect
     private var currentTierKey: String? = null
 
-    // ── Connect ───────────────────────────────────────────────
+    // FIX 1: Message queue — messages sent while socket is connecting
+    // are queued here and flushed on EVENT_CONNECT
+    private val pendingMessages = mutableListOf<String>()
+
+    // ── Connect ────────────────────────────────────────────────
     fun connect() {
         if (socket?.connected() == true) return
-        val token = tokenStore.getToken() ?: return
+        val token = tokenStore.getToken() ?: run {
+            Log.w(TAG, "connect() skipped — no auth token")
+            return
+        }
         try {
             val opts = IO.Options.builder()
                 .setAuth(mapOf("token" to token))
                 .setTransports(arrayOf("websocket"))
                 .setReconnection(true)
-                .setReconnectionAttempts(Int.MAX_VALUE)   // BUG FIX: was 5 → keep trying forever
+                .setReconnectionAttempts(Int.MAX_VALUE)
                 .setReconnectionDelay(2000)
-                .setReconnectionDelayMax(10_000)          // cap at 10s backoff
+                .setReconnectionDelayMax(10_000)
                 .build()
             socket = IO.socket("$BASE_URL$NAMESPACE", opts)
             registerListeners()
             socket!!.connect()
-            Log.d(TAG, "Connecting to $BASE_URL$NAMESPACE…")
+            Log.d(TAG, "Connecting to $BASE_URL$NAMESPACE …")
         } catch (e: Exception) {
             Log.e(TAG, "Socket create failed: ${e.message}", e)
         }
@@ -117,11 +154,27 @@ class TierRoomsSocketManager @Inject constructor(
 
         s.on(Socket.EVENT_CONNECT) {
             _isConnected.value = true
-            Log.d(TAG, "Connected ✅")
+            _hasConnectedBefore.value = true
+            Log.d(TAG, "✅ Connected")
+
             // Re-join tier room on every connect/reconnect
             currentTierKey?.let { key ->
                 s.emit("tier:join_room", JSONObject().put("tierKey", key))
                 Log.d(TAG, "Rejoined tier room: $key")
+            }
+
+            // FIX 1: Flush queued messages that were sent while connecting
+            synchronized(pendingMessages) {
+                if (pendingMessages.isNotEmpty()) {
+                    Log.d(TAG, "Flushing ${pendingMessages.size} queued message(s)")
+                    pendingMessages.forEach { msg ->
+                        val payload = JSONObject()
+                            .put("message", msg)
+                            .put("tierKey", currentTierKey ?: "")
+                        s.emit("room:send_message", payload)
+                    }
+                    pendingMessages.clear()
+                }
             }
         }
 
@@ -134,9 +187,18 @@ class TierRoomsSocketManager @Inject constructor(
             Log.e(TAG, "WS connect error: ${args.firstOrNull()}")
         }
 
-        // ── Presence ──────────────────────────────────────────
+        // FIX 3: Listen for server-side WsException errors
+        // NestJS @WebSocketGateway emits 'exception' when a @SubscribeMessage handler throws
+        s.on("exception") { args ->
+            val json    = args.firstOrNull() as? JSONObject
+            val message = json?.optString("message") ?: args.firstOrNull()?.toString() ?: "Unknown error"
+            Log.e(TAG, "Server exception: $message")
+            _socketErrors.tryEmit(message)
+        }
+
+        // ── Presence ───────────────────────────────────────────
         s.on("tier:presence_update") { args ->
-            val json = args.firstOrNull() as? JSONObject ?: return@on
+            val json  = args.firstOrNull() as? JSONObject ?: return@on
             val event = PresenceUpdateEvent(json.optString("tierKey"), json.optInt("activeNow"))
             _presenceUpdates.tryEmit(event)
             _presenceSnapshot.value = _presenceSnapshot.value.toMutableMap().also {
@@ -154,10 +216,7 @@ class TierRoomsSocketManager @Inject constructor(
             _presenceSnapshot.value = snapshot
         }
 
-        // BUG FIX: Listen for individual member join/leave events.
-        // Backend emits "room:member_joined" when a user's session starts,
-        // and "room:member_left" when it ends.
-        // Without these, the members list only updates when you go back and return.
+        // ── Member join/leave ──────────────────────────────────
         s.on("room:member_joined") { args ->
             val json = args.firstOrNull() as? JSONObject ?: return@on
             _memberJoins.tryEmit(
@@ -167,7 +226,6 @@ class TierRoomsSocketManager @Inject constructor(
                     userName = json.optString("userName")
                 )
             )
-            Log.d(TAG, "Member joined: ${json.optString("userName")}")
         }
 
         s.on("room:member_left") { args ->
@@ -178,10 +236,9 @@ class TierRoomsSocketManager @Inject constructor(
                     userId  = json.optString("userId")
                 )
             )
-            Log.d(TAG, "Member left: ${json.optString("userId")}")
         }
 
-        // ── Tier events ───────────────────────────────────────
+        // ── Tier events ────────────────────────────────────────
         s.on("tier:promotion") { args ->
             val json = args.firstOrNull() as? JSONObject ?: return@on
             _promotionEvents.tryEmit(
@@ -202,7 +259,7 @@ class TierRoomsSocketManager @Inject constructor(
             )
         }
 
-        // ── Leaderboard ───────────────────────────────────────
+        // ── Leaderboard ────────────────────────────────────────
         s.on("room:leaderboard_tick") { args ->
             val json    = args.firstOrNull() as? JSONObject ?: return@on
             val top3Arr = json.optJSONArray("top3") ?: return@on
@@ -216,7 +273,7 @@ class TierRoomsSocketManager @Inject constructor(
             _leaderboardTicks.tryEmit(LeaderboardTickEvent(json.optString("tierKey"), top3, json.optString("updatedAt")))
         }
 
-        // ── Heartbeat ─────────────────────────────────────────
+        // ── Heartbeat ──────────────────────────────────────────
         s.on("session:heartbeat_ack") { args ->
             val json = args.firstOrNull() as? JSONObject ?: return@on
             _heartbeatAcks.tryEmit(
@@ -237,7 +294,7 @@ class TierRoomsSocketManager @Inject constructor(
             _afkWarnings.tryEmit(json.optString("sessionId"))
         }
 
-        // ── Chat ──────────────────────────────────────────────
+        // ── Chat messages ──────────────────────────────────────
         s.on("room:new_message") { args ->
             val json = args.firstOrNull() as? JSONObject ?: return@on
             _roomMessages.tryEmit(
@@ -250,16 +307,17 @@ class TierRoomsSocketManager @Inject constructor(
                     createdAt  = json.optString("createdAt")
                 )
             )
-            Log.d(TAG, "Chat [${json.optString("tierKey")}] ${json.optString("senderName")}: ${json.optString("message").take(30)}")
+            Log.d(TAG, "📨 [${json.optString("tierKey")}] ${json.optString("senderName")}: ${json.optString("message").take(40)}")
         }
     }
 
-    // ── Emit helpers ──────────────────────────────────────────
+    // ── Public emitters ────────────────────────────────────────
 
     fun joinTierRoom(tierKey: String) {
         currentTierKey = tierKey
         if (socket?.connected() != true) {
             connect()
+            // connect() will emit tier:join_room in EVENT_CONNECT handler
             return
         }
         socket?.emit("tier:join_room", JSONObject().put("tierKey", tierKey))
@@ -268,7 +326,7 @@ class TierRoomsSocketManager @Inject constructor(
 
     fun leaveTierRoom() {
         socket?.emit("tier:leave_room")
-        // Keep currentTierKey so reconnect can rejoin
+        // Keep currentTierKey — reconnect will rejoin
     }
 
     fun sendHeartbeat(sessionId: String) {
@@ -280,27 +338,46 @@ class TierRoomsSocketManager @Inject constructor(
     }
 
     /**
-     * Send a chat message.
-     * BUG FIX: include tierKey so the server knows which room to broadcast to.
-     * Without tierKey the server was broadcasting to all rooms or dropping the message.
+     * FIX 1: Send a chat message.
+     *
+     * OLD behaviour: returned immediately if socket.connected() != true → "Failed to send"
+     *
+     * NEW behaviour:
+     * - If connected → emit immediately (fast path, same as before)
+     * - If connecting → add to pendingMessages queue, which is flushed in EVENT_CONNECT
+     * - If socket is null → call connect() first, then queue
+     *
+     * Result: messages sent while the socket is still handshaking are no longer lost.
      */
     fun sendChatMessage(message: String) {
-        if (socket?.connected() != true) {
-            Log.w(TAG, "sendChatMessage skipped — not connected")
-            return
-        }
         val payload = JSONObject()
             .put("message", message)
-            .put("tierKey", currentTierKey ?: "")   // BUG FIX: was missing tierKey
-        socket?.emit("room:send_message", payload)
-        Log.d(TAG, "Sent chat message to room: $currentTierKey")
+            .put("tierKey", currentTierKey ?: "")
+
+        if (socket?.connected() == true) {
+            socket?.emit("room:send_message", payload)
+            Log.d(TAG, "📤 Sent immediately to room: $currentTierKey")
+        } else {
+            // Queue the message — it will be sent once EVENT_CONNECT fires
+            synchronized(pendingMessages) {
+                pendingMessages.add(message)
+            }
+            Log.d(TAG, "📥 Queued message (socket connecting) for room: $currentTierKey")
+
+            // Make sure the socket is actually trying to connect
+            if (socket == null || socket?.connected() == false) {
+                connect()
+            }
+        }
     }
 
     fun disconnect() {
+        synchronized(pendingMessages) { pendingMessages.clear() }
         socket?.disconnect()
         socket = null
         currentTierKey = null
         _isConnected.value = false
+        // NOTE: do NOT reset _hasConnectedBefore — it's lifetime state
     }
 
     fun reconnect() {

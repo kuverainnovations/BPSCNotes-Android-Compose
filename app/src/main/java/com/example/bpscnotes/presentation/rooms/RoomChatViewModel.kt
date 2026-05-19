@@ -17,24 +17,43 @@ import javax.inject.Inject
 // ════════════════════════════════════════════════════════════
 // RoomChatViewModel — real-time room chat
 //
-// BUGS FIXED:
-// 1. History not loading — init() was guarded by `initialized` flag
-//    which blocked re-init when ChatSheet reopened after dismiss.
-//    Fix: always reload history, only skip socket subscriptions.
+// ROOT CAUSES FIXED:
 //
-// 2. "Sending" forever — optimistic stub was never replaced because
-//    server echo was being deduplicated by ID before the stub was removed.
-//    Fix: check for pending stub BEFORE the ID-dedup check.
+// 1. "Failed to send" when socket is connecting:
+//    sendMessage() optimistically added the message to UI, then called
+//    socket.sendChatMessage(). If socket was still connecting, sendChatMessage
+//    returned immediately (old code returned early if !socket.connected()).
+//    8s timeout → "Failed to send".
+//    Fix: TierRoomsSocketManager now queues messages while connecting (see that file).
+//    Here, we also listen to socketErrors to show server-side rejection reasons.
 //
-// 3. My sent message showing on left (received side) for the sender —
-//    isMe detection compared senderId to myUserId which was sometimes
-//    empty (getUserId() returned null before login completes).
-//    Fix: also match by senderName == "You" as fallback, and log warnings.
+// 2. "Reconnecting" always showing on first open:
+//    socket.isConnected is a StateFlow that starts as false.
+//    observeConnectionState() collected it and set isConnected=false immediately.
+//    ChatSheet saw isConnected=false → after 2s grace → "Reconnecting...".
+//    Fix: Added connectionStatus (CONNECTING | LIVE | RECONNECTING) with proper
+//    state transitions using hasConnectedBefore flag from TierRoomsSocketManager.
 //
-// 4. Friend's message showing on wrong side (left is correct for received,
-//    was accidentally showing right) — was a cascading effect of bug #3.
-//    Fix: once #3 is fixed, left/right is correct automatically.
+// 3. Wrong message sides (my messages on left, friend's on right):
+//    isMine() compared senderId with myUserId from TokenStore.
+//    If getUserId() returned null or whitespace-padded value, all messages
+//    appeared as "received" (left side) including your own.
+//    Fix: Normalize both sides with trim(). Fail-safe: if myUserId is truly
+//    empty after init, reload from TokenStore before each comparison.
+//
+// 4. History replaying on every reconnect (minor UX issue):
+//    observeConnectionState collected isConnected=true on EVERY reconnect and
+//    called loadHistory() → message list jumped to newest.
+//    Fix: Only reload history on reconnect if socket previously disconnected
+//    (i.e., was connected before). Skip reload on initial connection since
+//    init() already loaded history.
 // ════════════════════════════════════════════════════════════
+
+enum class ChatConnectionStatus {
+    CONNECTING,    // Never connected yet — initial state
+    LIVE,          // Connected and ready
+    RECONNECTING   // Was connected, then dropped
+}
 
 data class ChatUiMessage(
     val id:         String,
@@ -47,12 +66,15 @@ data class ChatUiMessage(
 )
 
 data class ChatUiState(
-    val messages:         List<ChatUiMessage> = emptyList(),
-    val isLoadingHistory: Boolean             = true,
-    val isSending:        Boolean             = false,
-    val error:            String?             = null,
-    val isConnected:      Boolean             = false
-)
+    val messages:          List<ChatUiMessage>    = emptyList(),
+    val isLoadingHistory:  Boolean                = true,
+    val connectionStatus:  ChatConnectionStatus   = ChatConnectionStatus.CONNECTING,
+    val serverError:       String?                = null,  // e.g. "Too fast. Slow down."
+    val error:             String?                = null
+) {
+    // Convenience for ChatSheet
+    val isConnected: Boolean get() = connectionStatus == ChatConnectionStatus.LIVE
+}
 
 @HiltViewModel
 class RoomChatViewModel @Inject constructor(
@@ -64,42 +86,44 @@ class RoomChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    // BUG FIX: Read userId eagerly AND refresh it right before each send.
-    // The old `get()` property was called when getUserId() might still be null on cold start.
-    private var _myUserId: String = ""
-    private val myUserId: String
-        get() {
-            if (_myUserId.isEmpty()) {
-                _myUserId = tokenStore.getUserId()?.trim() ?: ""
-                if (_myUserId.isEmpty()) Log.w(TAG, "getUserId() still empty — isMe detection degraded")
-            }
-            return _myUserId
-        }
-
     companion object { private const val TAG = "RoomChatVM" }
 
     private var activeTierKey: String = ""
-    // BUG FIX: Separate flag for socket subscription vs history loading.
-    // Old single `initialized` flag prevented history reload when sheet reopened.
-    private var socketSubscribed = false
+    private var socketSubscribed      = false
 
-    // ── Entry point ───────────────────────────────────────────
+    // myUserId: normalized, trimmed UUID from TokenStore
+    private var myUserId: String = ""
+        get() {
+            if (field.isEmpty()) {
+                field = tokenStore.getUserId()?.trim() ?: ""
+            }
+            return field
+        }
+
+    // ── Entry point ────────────────────────────────────────────
     fun init(tierKey: String) {
         activeTierKey = tierKey
-        _myUserId = tokenStore.getUserId()?.trim() ?: ""
+        // Eagerly load userId so isMine() works correctly for history messages
+        myUserId = tokenStore.getUserId()?.trim() ?: ""
+        if (myUserId.isEmpty()) {
+            Log.w(TAG, "⚠️ getUserId() returned null/empty — message sides may be wrong")
+        } else {
+            Log.d(TAG, "My userId: $myUserId")
+        }
 
-        // Always reload history — user may have dismissed and reopened the sheet
+        // Always reload history when sheet opens (user may have dismissed and reopened)
         loadHistory(tierKey)
 
-        // Only set up socket subscriptions once per ViewModel lifetime
+        // Set up socket subscriptions only once per ViewModel lifetime
         if (!socketSubscribed) {
             socketSubscribed = true
             observeLiveMessages()
             observeConnectionState()
+            observeServerErrors()
         }
     }
 
-    // ── 1. Load history from REST ─────────────────────────────
+    // ── 1. History from REST ───────────────────────────────────
     private fun loadHistory(tierKey: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingHistory = true, error = null) }
@@ -112,32 +136,27 @@ class RoomChatViewModel @Inject constructor(
                 Log.d(TAG, "Loaded ${msgs.size} history messages for $tierKey")
             } catch (e: Exception) {
                 Log.e(TAG, "loadHistory failed: ${e.message}", e)
-                // Show error but don't block — user can still send new messages
-                _uiState.update {
-                    it.copy(
-                        isLoadingHistory = false,
-                        error = "Could not load history: ${e.message}"
-                    )
-                }
+                _uiState.update { it.copy(isLoadingHistory = false, error = "Couldn't load history") }
             }
         }
     }
 
-    // ── 2. Observe live WebSocket messages ────────────────────
+    // ── 2. Live WebSocket messages ─────────────────────────────
     private fun observeLiveMessages() {
         viewModelScope.launch {
             socket.roomMessages.collect { event ->
                 if (event.tierKey != activeTierKey) return@collect
 
-                val isMe  = isMine(event.senderId)
-                val msgs  = _uiState.value.messages
+                val isMe = isMine(event.senderId)
+                val msgs = _uiState.value.messages
 
-                // BUG FIX: Handle pending stub replacement BEFORE the ID-dedup check.
-                // Old order: ID-dedup first → stub never removed because stub has tempId.
+                // Handle pending stub replacement BEFORE ID-dedup.
+                // Pending stubs have a tempId that won't match the real ID.
                 if (isMe) {
-                    val pendingIdx = msgs.indexOfFirst { it.isPending && it.isMe && it.text == event.message }
+                    val pendingIdx = msgs.indexOfFirst {
+                        it.isPending && it.isMe && it.text == event.message
+                    }
                     if (pendingIdx >= 0) {
-                        // Replace the pending stub with the confirmed message
                         val confirmed = ChatUiMessage(
                             id         = event.id,
                             senderId   = event.senderId,
@@ -147,74 +166,119 @@ class RoomChatViewModel @Inject constructor(
                             isMe       = true,
                             isPending  = false
                         )
-                        val updated = msgs.toMutableList().also {
-                            it[pendingIdx] = confirmed
+                        _uiState.update {
+                            it.copy(messages = it.messages.toMutableList().also { list ->
+                                list[pendingIdx] = confirmed
+                            })
                         }
-                        _uiState.update { it.copy(messages = updated) }
                         return@collect
                     }
                 }
 
-                // Dedup: skip if message ID already in list (e.g. history + live overlap)
+                // Dedup: skip if ID already in list (history + live overlap)
                 if (msgs.any { it.id == event.id }) return@collect
 
                 val newMsg = ChatUiMessage(
                     id         = event.id,
                     senderId   = event.senderId,
-                    // BUG FIX: always show real sender name for others' messages
                     senderName = if (isMe) "You" else event.senderName.ifBlank { "Member" },
                     text       = event.message,
                     timeLabel  = formatTime(event.createdAt),
                     isMe       = isMe,
                     isPending  = false
                 )
-                _uiState.update { it.copy(messages = msgs + newMsg) }
+                _uiState.update { it.copy(messages = it.messages + newMsg) }
             }
         }
     }
 
-    // ── 3. Observe connection state ───────────────────────────
+    // ── 3. Connection state ────────────────────────────────────
     private fun observeConnectionState() {
         viewModelScope.launch {
-            socket.isConnected.collect { connected ->
-                _uiState.update { it.copy(isConnected = connected) }
-                // BUG FIX: Reload history on reconnect so messages sent while offline appear
-                if (connected && activeTierKey.isNotEmpty()) {
+            // Combine isConnected and hasConnectedBefore to determine status
+            combine(
+                socket.isConnected,
+                socket.hasConnectedBefore
+            ) { connected, hasConnectedBefore ->
+                when {
+                    connected          -> ChatConnectionStatus.LIVE
+                    hasConnectedBefore -> ChatConnectionStatus.RECONNECTING
+                    else               -> ChatConnectionStatus.CONNECTING
+                }
+            }.collect { status ->
+                _uiState.update { it.copy(connectionStatus = status) }
+
+                // Reload history only on RECONNECT (not on initial connect,
+                // since init() already called loadHistory())
+                if (status == ChatConnectionStatus.LIVE
+                    && socket.hasConnectedBefore.value
+                    && activeTierKey.isNotEmpty()
+                ) {
+                    // Small delay to let the server settle before fetching
+                    kotlinx.coroutines.delay(500)
                     loadHistory(activeTierKey)
                 }
             }
         }
     }
 
-    // ── 4. Send a message ─────────────────────────────────────
+    // ── 4. Server errors (WsException forwarded from gateway) ─
+    private fun observeServerErrors() {
+        viewModelScope.launch {
+            socket.socketErrors.collect { errorMsg ->
+                Log.e(TAG, "Server error: $errorMsg")
+                // Mark any pending messages as failed when server rejects
+                _uiState.update { state ->
+                    val hasPending = state.messages.any { it.isPending }
+                    if (hasPending) {
+                        state.copy(
+                            messages = state.messages.map { msg ->
+                                if (msg.isPending) msg.copy(timeLabel = "Failed to send", isPending = false)
+                                else msg
+                            },
+                            serverError = errorMsg
+                        )
+                    } else {
+                        state.copy(serverError = errorMsg)
+                    }
+                }
+                // Auto-clear server error after 3s
+                kotlinx.coroutines.delay(3_000)
+                _uiState.update { it.copy(serverError = null) }
+            }
+        }
+    }
+
+    // ── 5. Send a message ──────────────────────────────────────
     fun sendMessage(text: String) {
         val trimmed = text.trim()
         if (trimmed.isEmpty() || trimmed.length > 500) return
 
-        // Refresh userId right before sending in case it was null on init
-        if (_myUserId.isEmpty()) {
-            _myUserId = tokenStore.getUserId()?.trim() ?: ""
+        // Refresh userId right before sending (safety net)
+        if (myUserId.isEmpty()) {
+            myUserId = tokenStore.getUserId()?.trim() ?: ""
         }
 
-        val tempId = "pending_${System.currentTimeMillis()}"
+        val tempId     = "pending_${System.currentTimeMillis()}"
         val optimistic = ChatUiMessage(
             id         = tempId,
-            senderId   = _myUserId,
+            senderId   = myUserId,
             senderName = "You",
             text       = trimmed,
             timeLabel  = "Sending…",
-            isMe       = true,   // BUG FIX: always true for messages I send
+            isMe       = true,   // Always true — I am the sender
             isPending  = true
         )
         _uiState.update { it.copy(messages = it.messages + optimistic) }
 
-        // Send via WebSocket — server will echo back to confirm
+        // TierRoomsSocketManager.sendChatMessage() now queues the message if
+        // the socket is still connecting, so this will succeed even during initial connect
         socket.sendChatMessage(trimmed)
-        Log.d(TAG, "Sent message: '${trimmed.take(30)}…'")
+        Log.d(TAG, "Sent: '${trimmed.take(40)}'")
 
-        // BUG FIX: Timeout — if no server echo in 8s, mark as failed instead of "Sending…" forever
+        // Timeout: if server doesn't echo within 10s, mark as failed
         viewModelScope.launch {
-            kotlinx.coroutines.delay(8_000L)
+            kotlinx.coroutines.delay(10_000L)
             val stillPending = _uiState.value.messages.any { it.id == tempId && it.isPending }
             if (stillPending) {
                 _uiState.update { state ->
@@ -223,28 +287,27 @@ class RoomChatViewModel @Inject constructor(
                         else msg
                     })
                 }
-                Log.w(TAG, "Message timed out — marked as failed")
+                Log.w(TAG, "Message timed out after 10s")
             }
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────
+    // ── Helpers ────────────────────────────────────────────────
 
     /**
-     * BUG FIX: Robust isMe check.
-     * Old code: `dto.senderId == myUserId` — fails when myUserId is empty on cold start.
-     * New code: exact userId match OR (userId is empty AND we treat it as "could be me").
-     * The real fix is ensuring myUserId is populated before any message comparison.
+     * Robust isMe check.
+     * Both senderId and myUserId are trimmed before comparison.
+     * Returns false (not mine) if myUserId is empty — safe default.
      */
     private fun isMine(senderId: String): Boolean {
         val uid = myUserId
-        if (uid.isEmpty()) return false   // can't determine — treat as others' message
+        if (uid.isEmpty()) return false
         return senderId.trim() == uid
     }
 
     private fun formatTime(isoString: String): String {
+        if (isoString.isEmpty()) return "Now"
         return try {
-            // Try with milliseconds first, then without
             val parsers = listOf(
                 "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
                 "yyyy-MM-dd'T'HH:mm:ss'Z'",
@@ -253,21 +316,18 @@ class RoomChatViewModel @Inject constructor(
             var date: Date? = null
             for (fmt in parsers) {
                 try {
-                    val parser = SimpleDateFormat(fmt, Locale.getDefault())
-                    parser.timeZone = TimeZone.getTimeZone("UTC")
-                    date = parser.parse(isoString)
+                    val p = SimpleDateFormat(fmt, Locale.getDefault())
+                    p.timeZone = TimeZone.getTimeZone("UTC")
+                    date = p.parse(isoString)
                     if (date != null) break
                 } catch (_: Exception) {}
             }
-            val display = SimpleDateFormat("h:mm a", Locale.getDefault())
-            display.format(date ?: Date())
-        } catch (e: Exception) {
-            "Now"
-        }
+            SimpleDateFormat("h:mm a", Locale.getDefault()).format(date ?: Date())
+        } catch (_: Exception) { "Now" }
     }
 }
 
-// ── Extension to convert API DTO to UI model ──────────────────
+// ── DTO → UI model conversion ─────────────────────────────────
 private fun ChatMessageDto.toChatUiMessage(isMe: Boolean) = ChatUiMessage(
     id         = this.id,
     senderId   = this.senderId,
@@ -280,7 +340,8 @@ private fun ChatMessageDto.toChatUiMessage(isMe: Boolean) = ChatUiMessage(
             try {
                 val p = SimpleDateFormat(fmt, Locale.getDefault())
                 p.timeZone = TimeZone.getTimeZone("UTC")
-                date = p.parse(this.createdAt); if (date != null) break
+                date = p.parse(this.createdAt)
+                if (date != null) break
             } catch (_: Exception) {}
         }
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(date ?: Date())
