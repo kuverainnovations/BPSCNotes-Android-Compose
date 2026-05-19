@@ -65,6 +65,14 @@ data class MaterialListData(
     val meta: PaginationMeta
 )
 
+
+data class UploadResultData(
+    val id: String,
+    val title: String,
+    val status: String,
+    val fileUrl: String?,
+    val fileKey: String?
+)
 data class MaterialDetailData(
     val id: String, val title: String, val description: String?,
     val subject: String,
@@ -173,4 +181,24 @@ interface StudyMaterialsApiService {
     /** POST /study-materials/:id/bookmark — toggle bookmark */
     @POST("study-materials/{id}/bookmark")
     suspend fun toggleBookmark(@Path("id") id: String): ApiResponse<BookmarkData>
+
+    /**
+     * POST /study-materials/upload  (multipart/form-data)
+     *
+     * Single-step upload directly to our server — no AWS needed.
+     * Replaces the two-step presigned URL + OkHttp PUT flow.
+     * All fields except file are plain text parts.
+     */
+    @Multipart
+    @POST("study-materials/upload")
+    suspend fun uploadMaterial(
+        @Part                               file:         MultipartBody.Part,
+        @Part("title")                      title:        RequestBody,
+        @Part("description")               description:  RequestBody,
+        @Part("subject")                   subject:      RequestBody,
+        @Part("materialType")              materialType: RequestBody,
+        @Part("author")                    author:       RequestBody,
+        @Part("tags")                      tags:         RequestBody,
+        @Part("pageCount")                 pageCount:    RequestBody,
+    ): ApiResponse<UploadResultData>
 }

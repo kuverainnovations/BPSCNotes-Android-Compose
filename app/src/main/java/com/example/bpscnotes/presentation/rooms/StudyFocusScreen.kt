@@ -193,17 +193,17 @@ private fun ActiveRoomScreen(
 
 
 
-    // Refresh members list every 30 seconds as a safety net.
-    // Handles cases where the WebSocket presence event is missed (poor network).
-    // This ensures Balu's "🟢 live" disappears within 30s of him leaving.
-   /* LaunchedEffect(state.status, "member_refresh") {
+     // BUG FIX: Re-enabled 30s member refresh as safety net for missed WS events.
+    // Primary updates come from socket memberJoins/memberLeaves flows.
+    // This catches any that were missed (network jitter, server-side missed events).
+    LaunchedEffect(state.status, tierKey) {
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
             delay(30_000L)
             if (tierKey.isNotEmpty()) {
                 tiersViewModel.loadMembers(tierKey)
             }
         }
-    }*/
+    }
     val h = elapsedSeconds / 3600
     val m = (elapsedSeconds % 3600) / 60
     val s = elapsedSeconds % 60

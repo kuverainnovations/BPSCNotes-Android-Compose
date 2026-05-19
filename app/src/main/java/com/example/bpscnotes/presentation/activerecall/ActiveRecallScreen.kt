@@ -514,6 +514,7 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
 private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating) -> Unit) {
     var mcqSelected by remember { mutableIntStateOf(-1) }
     var mcqAnswered by remember { mutableStateOf(false) }
+    val hasBackImage = !card.backImageUrl.isNullOrBlank()
 
     Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -525,10 +526,38 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
                         Text("✅", fontSize = 10.sp); Text("Answer", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
+
+                // ── ANSWER SECTION — image OR text ─────────────────────
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Answer", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
-                    Text(card.answer, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 24.sp)
+
+                    if (hasBackImage) {
+                        // Back image answer (e.g. diagram, chart, map with answer highlighted)
+                        AsyncImage(
+                            model              = card.backImageUrl,
+                            contentDescription = "Answer image",
+                            contentScale       = ContentScale.Fit,
+                            modifier           = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 160.dp, max = 280.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFFF5F5F5))
+                        )
+                        // Text answer shown below image if also present
+                        if (card.answer.isNotBlank()) {
+                            Text(
+                                card.answer,
+                                style      = MaterialTheme.typography.bodyMedium,
+                                color      = BpscColors.TextSecondary,
+                                lineHeight = 22.sp
+                            )
+                        }
+                    } else {
+                        // Pure text answer
+                        Text(card.answer, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 24.sp)
+                    }
                 }
+
                 if (card.example.isNotBlank()) {
                     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📌", fontSize = 14.sp)

@@ -596,23 +596,25 @@ private fun ReviewCard(review: CourseReview) {
         Color(0xFFE67E22), Color(0xFFE74C3C), Color(0xFF16A085), Color(0xFF2C3E50)
     )
     val color    = avatarColors[(review.reviewerName.hashCode() and 0x7FFFFFFF) % avatarColors.size]
-    val initials = review.reviewerName.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
+    val initials = review.reviewerName?.split(" ")?.mapNotNull { it.firstOrNull()?.toString() }?.take(2)?.joinToString("")
 
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(14.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(1.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
                 Row(Modifier.weight(1f), Arrangement.spacedBy(10.dp), Alignment.CenterVertically) {
                     Box(Modifier.size(38.dp).clip(CircleShape).background(color), Alignment.Center) {
-                        Text(initials, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                        initials?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold) }
                     }
                     Column(Modifier.weight(1f)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                review.reviewerName,
-                                style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary,
-                                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
+                            review.reviewerName?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
                             if (review.isVerified) {
                                 Row(
                                     Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE3F2FD)).padding(horizontal = 5.dp, vertical = 2.dp),

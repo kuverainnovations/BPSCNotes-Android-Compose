@@ -42,5 +42,29 @@ class JobVacanciesViewModel @Inject constructor(
         }
     }
 
+    fun toggleSave(jobId: String) {
+        viewModelScope.launch {
+            try {
+
+                api.toggleSaveJob(jobId)
+
+                _uiState.update { state ->
+                    state.copy(
+                        jobs = state.jobs.map { job ->
+                            if (job.id == jobId) {
+                                job.copy(
+                                    isSaved = !(job.isSaved ?: false)
+                                )
+                            } else job
+                        }
+                    )
+                }
+
+            } catch (e: Exception) {
+                Log.e("JobsVM", "Save job failed", e)
+            }
+        }
+    }
+
     fun retry() = load()
 }

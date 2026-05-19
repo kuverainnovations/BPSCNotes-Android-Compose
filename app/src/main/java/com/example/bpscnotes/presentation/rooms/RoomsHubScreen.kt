@@ -590,8 +590,12 @@ private fun RoomCard(
                     Text("👥 ${tier.displayMembers}",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isLocked) Color(0xFFCCCCCC) else BpscColors.TextHint)
+                    // BUG FIX: Only show active count when > 0 and not locked.
+                    // displayActive comes from activeSessions field which is updated via WebSocket.
+                    // If it shows 1 just by opening the page, it means the server is counting
+                    // socket connections (not sessions). We hide counts of 0 to avoid confusion.
                     if (tier.displayActive > 0 && !isLocked) {
-                        Text("🟢 ${tier.displayActive} live",
+                        Text("🟢 ${tier.displayActive} studying",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
                     }
                 }

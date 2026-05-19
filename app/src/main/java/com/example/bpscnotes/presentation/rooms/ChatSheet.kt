@@ -117,10 +117,27 @@ fun ChatSheet(
                             Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(6.dp).clip(CircleShape)
                                     .background(if (state.isConnected) BpscColors.Success else Color.Gray))
+                                // BUG FIX: 2s grace period before showing "Reconnecting"
+                                // so it doesn't flash on every sheet open
+                                var showReconnecting by remember { mutableStateOf(false) }
+                                LaunchedEffect(state.isConnected) {
+                                    if (!state.isConnected) {
+                                        kotlinx.coroutines.delay(2000L)
+                                        showReconnecting = !state.isConnected
+                                    } else { showReconnecting = false }
+                                }
                                 Text(
-                                    if (state.isConnected) "Live" else "Reconnecting…",
+                                    when {
+                                        state.isConnected -> "Live"
+                                        showReconnecting  -> "Reconnecting…"
+                                        else              -> "Connecting…"
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (state.isConnected) BpscColors.Success else Color.Gray
+                                    color = when {
+                                        state.isConnected -> BpscColors.Success
+                                        showReconnecting  -> Color(0xFFFFA726)
+                                        else              -> Color.Gray
+                                    }
                                 )
                             }
                         }

@@ -33,14 +33,14 @@ data class CourseDto(
 
     val id: String,
     val title: String,
-    val slug: String,
+    val slug: String = "",
     val description: String?,
     val instructor: String?,
     @SerializedName("instructor_bio")      val instructorBio: String? = null,
     @SerializedName("instructor_students") val instructorStudents: String? = null,
     @SerializedName("instructor_courses")  val instructorCourses: Int = 1,
-    val subject: String,
-    val price: Int,
+    val subject: String = "",
+    val price: Int = 0,
     @SerializedName("original_price")
     val originalPrice: Int,
     @SerializedName("is_paid")
@@ -52,21 +52,21 @@ data class CourseDto(
     @SerializedName("total_lessons")
     val totalLessons: Int,
     @SerializedName("total_hours")
-    val totalHours: String,
-    val rating: String,
+    val totalHours: String = "0",
+    val rating: String = "0",
     val review_count: Int,
     @SerializedName("enrollment_count")
     val enrollmentCount: Int,
     val bpsc_relevance: Int,
     val syllabus_coverage: Int,
-    val language: String,
+    val language: String = "",
     val trial_lesson_title: String?,
-    val exam_tags: List<String>,
-    val status: String,
+    val exam_tags: List<String> = emptyList(),
+    val status: String = "published",
     val meta_keywords: String?,
-    val created_by: String,
-    val created_at: String,
-    val updated_at: String,
+    val created_by: String = "",
+    val created_at: String = "",
+    val updated_at: String = "",
     val enrollment: Enrollment? = null,
     val chapters: List<Chapter> = emptyList(),
     @SerializedName("what_you_learn")      val whatYouLearn: List<String> = emptyList(),
@@ -86,10 +86,10 @@ data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
  * is_attempted is now returned by the fixed backend SQL.
  */
 data class QuizPreviewDto(
-    val id: String,
-    val title: String,
-    val subject: String,
-    val type: String,
+    val id: String = "",
+    val title: String = "",
+    val subject: String = "",
+    val type: String = "mock",
     val difficulty: String = "medium",
     @SerializedName("total_questions") val totalQuestions: Int = 0,
     @SerializedName("duration_mins")   val durationMins: Int = 15,
@@ -114,12 +114,12 @@ data class QuizzesResponseData(val quizzes: List<QuizPreviewDto> = emptyList())
  * They are returned in the submit result instead.
  */
 data class QuizQuestionDto(
-    val id: String,
-    @SerializedName("question_text") val questionText: String,
-    @SerializedName("option_a")      val optionA: String,
-    @SerializedName("option_b")      val optionB: String,
-    @SerializedName("option_c")      val optionC: String,
-    @SerializedName("option_d")      val optionD: String,
+    val id: String = "",
+    @SerializedName("question_text") val questionText: String = "",
+    @SerializedName("option_a")      val optionA: String = "",
+    @SerializedName("option_b")      val optionB: String = "",
+    @SerializedName("option_c")      val optionC: String = "",
+    @SerializedName("option_d")      val optionD: String = "",
     val subject: String? = null,
     val difficulty: String = "medium",
     @SerializedName("sort_order")    val sortOrder: Int = 0
@@ -181,11 +181,11 @@ data class QuizResultData(
 data class CurrentAffairDto(
     val id: String,
     val title: String,
-    val summary: String,
+    val summary: String = "",
     @SerializedName("full_content") val fullContent: String? = null,
-    val category: String,
+    val category: String = "",
     val source: String? = null,
-    val date: String,
+    val date: String = "",
     @SerializedName("is_important")    val isImportant: Boolean = false,
     @SerializedName("exam_tags")       val examTags: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
@@ -247,7 +247,7 @@ data class CourseReview(
     val rating: Float = 0f,
     val comment: String? = null,
     @SerializedName("is_verified")    val isVerified: Boolean = false,
-    @SerializedName("reviewer_name") val reviewerName: String = "Student",
+    @SerializedName("reviewer_name") val reviewerName: String? = null,
     @SerializedName("avatar_url")    val avatarUrl: String? = null,
     @SerializedName("created_at")    val createdAt: String? = null
 )
@@ -279,8 +279,8 @@ data class AffairsResponseData(val affairs: List<CurrentAffairDto> = emptyList()
 // ══════════════════════════════════════════════════════════════
 
 data class BannerDto(
-    val id: String,
-    val title: String,
+    val id: String = "",
+    val title: String = "",
     val subtitle: String? = null,
     @SerializedName("image_url")   val imageUrl: String? = null,
     @SerializedName("action_link") val actionLink: String? = null,
@@ -296,7 +296,7 @@ data class BannersResponseData(val banners: List<BannerDto> = emptyList())
 // USER STATS DTOs  (unchanged)
 // ══════════════════════════════════════════════════════════════
 
-data class WeeklyActivityDto(val date: String, val activity: Int)
+data class WeeklyActivityDto(val date: String = "", val activity: Int = 0)
 
 data class UserStatsData(
     @SerializedName("weekly_activity")     val weeklyActivity: List<WeeklyActivityDto> = emptyList(),
@@ -313,9 +313,9 @@ data class UserStatsData(
 // ══════════════════════════════════════════════════════════════
 
 data class DailyTargetDto(
-    val id: String,
-    val title: String,
-    val subject: String,
+    val id: String = "",
+    val title: String = "",
+    val subject: String = "",
     @SerializedName("is_completed")        val isCompleted: Boolean = false,
     @SerializedName("total_questions")     val totalQuestions: Int = 10,
     @SerializedName("attempted_questions") val attemptedQuestions: Int = 0,
@@ -454,7 +454,7 @@ data class LiveClassDto(
     val title: String,
     val instructor: String,
     val subject: String,
-    @SerializedName("scheduled_at") val scheduledAt: String,
+    @SerializedName("scheduled_at") val scheduledAt: String = "",
     @SerializedName("duration_mins") val durationMins: Int = 60,
     @SerializedName("meeting_link") val meetingLink: String? = null,
     @SerializedName("is_live") val isLive: Boolean = false,
@@ -484,24 +484,27 @@ interface LiveClassesApiService {
 // ══════════════════════════════════════════════════════════════
 
 data class JobVacancyDto(
-    val id: String,
-    val title: String,
-    val department: String,
-    val category: String,                            // "BPSC" | "Bihar Govt" | "Central Govt" | "Private" | "Part-time"
-    @SerializedName("total_posts") val totalPosts: Int,
-    val location: String,
-    @SerializedName("salary_range") val salaryRange: String,
-    val qualification: String,
-    @SerializedName("age_limit") val ageLimit: String,
-    @SerializedName("apply_end_date") val applyEndDate: String,    // ISO date
-    @SerializedName("notification_date") val notificationDate: String,
-    @SerializedName("apply_start_date") val applyStartDate: String,
-    @SerializedName("exam_date") val examDate: String?,
-    @SerializedName("official_link") val officialLink: String,
+    val id: String = "",
+    val title: String = "",
+    @SerializedName("department", alternate = ["organization"]) val department: String? = null,
+    val category: String? = null,
+    @SerializedName("total_posts") val totalPosts: Int? = null,
+    val location: String? = null,
+    @SerializedName("salary_range") val salaryRange: String? = null,
+    val qualification: String? = null,
+    @SerializedName("age_limit") val ageLimit: String? = null,
+    @SerializedName("apply_end_date", alternate = ["last_date"]) val applyEndDate: String? = null,
+    @SerializedName("notification_date") val notificationDate: String? = null,
+    @SerializedName("apply_start_date") val applyStartDate: String? = null,
+    @SerializedName("exam_date") val examDate: String? = null,
+    @SerializedName("official_link", alternate = ["application_link"]) val officialLink: String? = null,
+    val description: String? = null,
     @SerializedName("is_new") val isNew: Boolean = false,
     @SerializedName("is_featured") val isFeatured: Boolean = false,
-    @SerializedName("nearby_districts") val nearbyDistricts: List<String> = emptyList(),
-    val status: String = "active"
+    @SerializedName("is_urgent") val isUrgent: Boolean = false,
+    @SerializedName("nearby_districts") val nearbyDistricts: List<String>? = null,
+    @SerializedName("is_saved") val isSaved: Boolean = false,
+    val status: String? = null
 )
 
 data class JobsResponseData(
@@ -518,6 +521,11 @@ interface JobsApiService {
         @Query("search")   search: String? = null,
         @Query("status")   status: String = "active"
     ): ApiResponse<JobsResponseData>
+
+    @POST("jobs/{id}/save")
+    suspend fun toggleSaveJob(
+        @Path("id") jobId: String
+    ): ApiResponse<Any>
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -529,10 +537,10 @@ data class StudyRoomDto(
     val id: String,
     val name: String,
     val subject: String,                            // "Polity" | "History" | etc.
-    @SerializedName("today_focus") val todayFocus: String,
-    @SerializedName("host_name") val hostName: String,
-    @SerializedName("current_members") val currentMembers: Int,
-    @SerializedName("max_members") val maxMembers: Int,
+    @SerializedName("today_focus") val todayFocus: String = "",
+    @SerializedName("host_name") val hostName: String = "",
+    @SerializedName("current_members") val currentMembers: Int = 0,
+    @SerializedName("max_members") val maxMembers: Int = 0,
     @SerializedName("is_private") val isPrivate: Boolean = false,
     @SerializedName("is_featured") val isFeatured: Boolean = false,
     @SerializedName("is_member") val isMember: Boolean = false,
@@ -574,7 +582,7 @@ data class JoinRoomRequest(
 data class CreateRoomRequest(
     val name: String,
     val subject: String,
-    @SerializedName("today_focus") val todayFocus: String,
+    @SerializedName("today_focus") val todayFocus: String = "",
     @SerializedName("max_members") val maxMembers: Int = 20,
     @SerializedName("is_private") val isPrivate: Boolean = false,
     @SerializedName("duration_mins") val durationMins: Int = 120
@@ -594,10 +602,10 @@ data class CoinBalanceDto(
 )
 
 data class CheckInDayDto(
-    val day: Int,                                   // 1–7
-    val label: String,                              // "Mon", "Tue" etc.
-    @SerializedName("is_done") val isDone: Boolean,
-    @SerializedName("is_today") val isToday: Boolean,
+    val day: Int = 0,
+    val label: String = "",
+    @SerializedName("is_done") val isDone: Boolean = false,
+    @SerializedName("is_today") val isToday: Boolean = false,
     @SerializedName("bonus_label") val bonusLabel: String = "",  // "+5 Gold" for day 7
     @SerializedName("is_bonus") val isBonus: Boolean = false
 )
@@ -642,17 +650,17 @@ fun mapIcon(icon: String): ImageVector {
 data class CoinTransactionDto(
     val id: String,
     val title: String,
-    val subtitle: String,
-    val coins: Int,
-    val type: String,                               // "earned" | "spent"
-    val date: String,
-    val icon: String                                // "quiz" | "daily" | "store" | "referral"
+    val subtitle: String = "",
+    val coins: Int = 0,
+    val type: String = "",
+    val date: String = "",
+    val icon: String = ""
 )
 
 data class CoinsBalanceResponseData(
-    val balance: Int,
-    val totalEarned: Int,
-    val totalSpent: Int,
+    val balance: Int = 0,
+    val totalEarned: Int = 0,
+    val totalSpent: Int = 0,
     @SerializedName("check_in_streak")   val checkInStreak: Int = 0,
     @SerializedName("checked_in_today")  val checkedInToday: Boolean = false,
     @SerializedName("check_in_days")     val checkInDays: List<CheckInDayDto> = emptyList()
@@ -719,11 +727,11 @@ interface CoinsApiService {
     )
 
     data class FlashcardDto(
-        val id: String,
-        val subject: String,
-        val topic: String,
-        val question: String,
-        val answer: String,
+        val id: String = "",
+        val subject: String = "",
+        val topic: String = "",
+        val question: String = "",
+        val answer: String = "",
         val hint: String = "",
         val example: String = "",
         val difficulty: String = "medium",
@@ -731,6 +739,7 @@ interface CoinsApiService {
         @SerializedName("card_type")  val cardType: String = "text",
         /** Cloudinary URL — non-null only when cardType == 'image' */
         @SerializedName("image_url")  val imageUrl: String? = null,
+        @SerializedName("backImageUrl")  val backImageUrl: String? = null,
         @SerializedName("related_mcq") val relatedMcq: FlashMcqDto? = null
     )
 
@@ -759,9 +768,9 @@ interface CoinsApiService {
 // ── Exam DTOs ──────────────────────────────────────────────────
 
 data class ExamDto(
-    val name: String,
-    @SerializedName("full_name") val fullName: String,
-    val category: String,
+    val name: String = "",
+    @SerializedName("full_name") val fullName: String = "",
+    val category: String = "",
     val emoji: String = "🎯",
     @SerializedName("sort_order") val sortOrder: Int = 0
 )

@@ -155,6 +155,68 @@ class TierRoomsViewModel @Inject constructor(
                 if (tick.tierKey == selected) loadLeaderboard(selected)
             }
         }
+
+        // BUG FIX: Real-time member join — add member to list immediately without API call.
+        // Previously members only appeared after going back + returning (no auto-refresh).
+        viewModelScope.launch {
+            socket.memberJoins.collect { event ->
+                val myTierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: return@collect
+                if (event.tierKey != myTierKey) return@collect
+                val myUserId = _uiState.value.myUserId
+                // Don't add self to the member list — user sees themselves in "You" card
+                if (event.userId == myUserId) return@collect
+                val existing = _uiState.value.members.any { it.id == event.userId }
+                if (!existing) {
+                    // Optimistic add: create a minimal TierMemberDto so the card appears instantly.
+                    // Full details (XP, streak) will load on next loadMembers() call.
+                    val newMember = TierMemberDto(
+                        id                = event.userId,
+                        name              = event.userName,
+                        isStudyingNow     = true,
+                        xpLevel           = 1,
+                        streak            = 0,
+                        totalStudyMinutes = 0
+                    )
+                    _uiState.update { it.copy(members = it.members + newMember) }
+                }
+                // Also increment active count in tier cards
+                _uiState.update { state ->
+                    state.copy(allTiers = state.allTiers.map { tier ->
+                        if (tier.tierKey == event.tierKey)
+                            tier.copy(activeSessions = (tier.activeSessions + 1).coerceAtLeast(0))
+                        else tier
+                    })
+                }
+            }
+        }
+
+        // BUG FIX: Real-time member leave — remove immediately
+        viewModelScope.launch {
+            socket.memberLeaves.collect { event ->
+                val myTierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: return@collect
+                if (event.tierKey != myTierKey) return@collect
+                _uiState.update { state ->
+                    state.copy(
+                        members = state.members.filter { it.id != event.userId },
+                        allTiers = state.allTiers.map { tier ->
+                            if (tier.tierKey == event.tierKey)
+                                tier.copy(activeSessions = (tier.activeSessions - 1).coerceAtLeast(0))
+                            else tier
+                        }
+                    )
+                }
+            }
+        }
+
+        // BUG FIX: Periodic member refresh every 30s as a safety net.
+        // Catches any missed join/leave events due to network issues.
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30_000L)
+                val tierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: continue
+                loadMembers(tierKey)
+            }
+        }
     }
 
     // ── Load everything in parallel ───────────────────────────

@@ -116,14 +116,14 @@ data class TierMemberDto(
     val id: String,
     val name: String,
     val streak: Int,
-    @SerializedName("quizzes_attempted") val quizzesAttempted: Int,
-    val accuracy: Double,
-    val coins: Int,
-    val xp: Int,
+//    @SerializedName("quizzes_attempted") val quizzesAttempted: Int,
+//    val accuracy: Double,
+//    val coins: Int,
+//    val xp: Int,
     @SerializedName("xp_level")          val xpLevel: Int,
     @SerializedName("total_study_minutes") val totalStudyMinutes: Int,
-    @SerializedName("promoted_at")        val promotedAt: String?,
-    @SerializedName("next_tier_progress") val nextTierProgress: Double,
+//    @SerializedName("promoted_at")        val promotedAt: String?,
+//    @SerializedName("next_tier_progress") val nextTierProgress: Double,
     @SerializedName("is_studying_now")    val isStudyingNow: Boolean = false
 )
 
