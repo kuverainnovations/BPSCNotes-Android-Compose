@@ -196,9 +196,11 @@ private fun ActiveRoomScreen(
     // BUG FIX: Re-enabled 30s member refresh as safety net for missed WS events.
     // Primary updates come from socket memberJoins/memberLeaves flows.
     // This catches any that were missed (network jitter, server-side missed events).
+    // Refresh members every 5s so new joiners appear within 5s
+    // (backed by server's room:member_joined event for instant updates)
     LaunchedEffect(state.status, tierKey) {
         while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
-            delay(30_000L)
+            delay(5_000L)
             if (tierKey.isNotEmpty()) {
                 tiersViewModel.loadMembers(tierKey)
             }

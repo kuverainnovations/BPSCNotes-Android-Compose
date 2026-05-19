@@ -208,13 +208,17 @@ class TierRoomsViewModel @Inject constructor(
             }
         }
 
-        // BUG FIX: Periodic member refresh every 30s as a safety net.
-        // Catches any missed join/leave events due to network issues.
+        // Safety-net refresh every 5s during active session for real-time member list.
+        // Primary updates come from room:member_joined/left socket events (immediate).
+        // This catches any missed events (network jitter, race conditions).
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(30_000L)
+                kotlinx.coroutines.delay(5_000L)
                 val tierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: continue
-                loadMembers(tierKey)
+                // Only refresh if user is actually in session (saves API calls on lobby)
+                if (_uiState.value.isSocketConnected) {
+                    loadMembers(tierKey)
+                }
             }
         }
     }
@@ -280,10 +284,10 @@ class TierRoomsViewModel @Inject constructor(
             try {
                 val response = api.getMyTier()
                 val data     = response.data ?: throw Exception("Empty tier response")
-                
+
                 // Safety: fallback if tierKey is null from API
                 val tierKey = data.currentTier.tierKey ?: "silver"
-                
+
                 _uiState.update { s ->
                     s.copy(
                         myTierData      = data,
