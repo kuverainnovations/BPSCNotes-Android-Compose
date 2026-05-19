@@ -7,6 +7,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
@@ -78,19 +82,16 @@ fun StudyMaterialsScreen(
                 onUpload = viewModel::showUpload
             )
 
-            TypeFilterRow(
-                selected = state.selectedType,
-                onSelect = viewModel::selectType
+            // Unified filter bar — type + sort in ONE row (subjects on demand)
+            CompactFilterBar(
+                selectedType    = state.selectedType,
+                selectedSubject = state.selectedSubject,
+                subjects        = state.subjects,
+                sortBy          = state.sortBy,
+                onTypeSelect    = viewModel::selectType,
+                onSubjectSelect = viewModel::selectSubject,
+                onSortSelect    = viewModel::setSortBy
             )
-
-            SubjectFilterRow(
-                subjects = state.subjects,
-                selected = state.selectedSubject,
-                onSelect = viewModel::selectSubject
-            )
-
-            // Sort row
-            SortRow(current = state.sortBy, onSelect = viewModel::setSortBy)
 
             // ── PULL-TO-REFRESH CONTENT ─────────────────────────
             val pullRefreshState = rememberPullToRefreshState()
@@ -104,32 +105,32 @@ fun StudyMaterialsScreen(
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                when {
-                    state.isLoadingList && state.materials.isEmpty() -> {
-                        LoadingGrid()
+                    when {
+                        state.isLoadingList && state.materials.isEmpty() -> {
+                            LoadingGrid()
+                        }
+
+                        state.listError != null && state.materials.isEmpty() -> {
+                            ErrorState(message = state.listError!!, onRetry = viewModel::refresh)
+                        }
+
+                        state.materials.isEmpty() -> {
+                            EmptyState(showBookmarksOnly = state.showBookmarksOnly)
+                        }
+
+                        else -> {
+                            MaterialsList(
+                                state = state,
+                                onView = viewModel::openDetail,
+                                onBookmark = viewModel::toggleBookmark,
+                                onDownload = viewModel::downloadMaterial,
+                                onLoadMore = viewModel::loadMore
+                            )
+                        }
                     }
 
-                    state.listError != null && state.materials.isEmpty() -> {
-                        ErrorState(message = state.listError!!, onRetry = viewModel::refresh)
-                    }
-
-                    state.materials.isEmpty() -> {
-                        EmptyState(showBookmarksOnly = state.showBookmarksOnly)
-                    }
-
-                    else -> {
-                        MaterialsList(
-                            state = state,
-                            onView = viewModel::openDetail,
-                            onBookmark = viewModel::toggleBookmark,
-                            onDownload = viewModel::downloadMaterial,
-                            onLoadMore = viewModel::loadMore
-                        )
-                    }
                 }
-
             }
-        }
         }
     }
 
@@ -190,7 +191,7 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
                 listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
                 Offset(0f, 0f), Offset(500f, 500f)
             ))
-           // .statusBarsPadding()
+        // .statusBarsPadding()
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -288,23 +289,191 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
 // TYPE FILTER ROW
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun TypeFilterRow(selected: MaterialType?, onSelect: (MaterialType?) -> Unit) {
-    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            FilterChip(label = "All", emoji = null, selected = selected == null,
-                color = BpscColors.Primary, bg = BpscColors.PrimaryLight,
-                onClick = { onSelect(null) })
+// ════════════════════════════════════════════════════════════
+// COMPACT FILTER BAR — replaces 3 separate filter rows
+// Row 1: Type chips (All · PDF · PYQ · Books) — horizontally scrollable
+// Row 2: Sort pills (Popular · Newest) + Subject dropdown on same line
+// ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+private fun CompactFilterBar(
+    selectedType:    MaterialType?,
+    selectedSubject: String,
+    subjects:        List<String>,
+    sortBy:          String,
+    onTypeSelect:    (MaterialType?) -> Unit,
+    onSubjectSelect: (String) -> Unit,
+    onSortSelect:    (String) -> Unit,
+) {
+    var showSubjectSheet by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(bottom = 6.dp)
+    ) {
+        // Row 1: Type filter chips
+        LazyRow(
+            contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            item {
+                TypeChip(label = "All", emoji = "📋", selected = selectedType == null) {
+                    onTypeSelect(null)
+                }
+            }
+            items(MaterialType.values()) { type ->
+                TypeChip(
+                    label    = type.label,
+                    emoji    = type.emoji,
+                    selected = selectedType == type
+                ) { onTypeSelect(if (selectedType == type) null else type) }
+            }
         }
-        items(MaterialType.values()) { type ->
-            val typeColor = typeColor(type)
-            val typeBg    = typeBg(type)
-            FilterChip(label = type.label, emoji = type.emoji, selected = selected == type,
-                color = typeColor, bg = typeBg,
-                onClick = { onSelect(if (selected == type) null else type) })
+
+        HorizontalDivider(color = BpscColors.Divider, thickness = 0.5.dp)
+
+        // Row 2: Sort tabs + Subject picker — all in one line
+        Row(
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Sort pills
+            listOf("downloads" to "🔥 Popular", "newest" to "🆕 Newest").forEach { (key, label) ->
+                val sel = sortBy == key
+                Text(
+                    label,
+                    style     = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (sel) FontWeight.ExtraBold else FontWeight.Normal,
+                    color     = if (sel) Color.White else BpscColors.TextSecondary,
+                    modifier  = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (sel) BpscColors.Primary else BpscColors.Surface)
+                        .clickable { onSortSelect(key) }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Subject picker — shows selected subject, opens bottom sheet on tap
+            Row(
+                modifier          = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.dp, BpscColors.Divider, RoundedCornerShape(20.dp))
+                    .clickable { showSubjectSheet = true }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    selectedSubject.ifEmpty { "Subject" },
+                    style  = MaterialTheme.typography.labelSmall,
+                    color  = if (selectedSubject.isEmpty() || selectedSubject == "All") BpscColors.TextHint else BpscColors.Primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+                Icon(Icons.Rounded.KeyboardArrowDown, null,
+                    tint = BpscColors.TextHint, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+
+    // Subject bottom sheet
+    if (showSubjectSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showSubjectSheet = false },
+            sheetState       = sheetState,
+            containerColor   = Color.White
+        ) {
+            Column(
+                modifier            = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    "Filter by Subject",
+                    style      = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color      = BpscColors.TextPrimary,
+                    modifier   = Modifier.padding(bottom = 8.dp)
+                )
+                subjects.forEach { subj ->
+                    val sel = selectedSubject == subj
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (sel) BpscColors.PrimaryLight else Color.Transparent)
+                            .clickable { onSubjectSelect(subj); showSubjectSheet = false }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            subj,
+                            style      = MaterialTheme.typography.bodyLarge,
+                            color      = if (sel) BpscColors.Primary else BpscColors.TextPrimary,
+                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                        if (sel) Icon(Icons.Rounded.Check, null,
+                            tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun TypeChip(label: String, emoji: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier              = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) BpscColors.Primary else BpscColors.Surface)
+            .border(1.dp, if (selected) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(emoji, fontSize = 12.sp)
+        Text(
+            label,
+            style      = MaterialTheme.typography.labelSmall,
+            color      = if (selected) Color.White else BpscColors.TextSecondary,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// ORIGINAL TYPE FILTER (kept for reference, no longer used)
+// ════════════════════════════════════════════════════════════
+//private fun TypeFilterRow(selected: MaterialType?, onSelect: (MaterialType?) -> Unit) {
+//    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+//        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+//        item {
+//            FilterChip(label = "All", emoji = null, selected = selected == null,
+//                color = BpscColors.Primary, bg = BpscColors.PrimaryLight,
+//                onClick = { onSelect(null) })
+//        }
+//        items(MaterialType.values()) { type ->
+//            val typeColor = typeColor(type)
+//            val typeBg    = typeBg(type)
+//            FilterChip(label = type.label, emoji = type.emoji, selected = selected == type,
+//                color = typeColor, bg = typeBg,
+//                onClick = { onSelect(if (selected == type) null else type) })
+//        }
+//    }
+//}
 
 @Composable
 private fun SubjectFilterRow(subjects: List<String>, selected: String, onSelect: (String) -> Unit) {
@@ -341,7 +510,7 @@ private fun SortRow(current: String, onSelect: (String) -> Unit) {
 
 @Composable
 private fun FilterChip(label: String, emoji: String?, selected: Boolean,
-    color: Color, bg: Color, onClick: () -> Unit) {
+                       color: Color, bg: Color, onClick: () -> Unit) {
     Row(modifier = Modifier.clip(RoundedCornerShape(20.dp))
         .background(if (selected) color else Color.White)
         .border(1.dp, if (selected) color else BpscColors.Divider, RoundedCornerShape(20.dp))

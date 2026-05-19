@@ -90,11 +90,22 @@ fun RoomsHubScreen(
         )
     }
 
+    // FIX: Only check session on resume, not full reload every tab switch.
+    // Full reload (loadMyTier + loadAtRiskStatus) only when data isn't loaded yet.
+    // This eliminates the flicker caused by repeated reloads on tab switches.
+    LaunchedEffect(Unit) {
+        sessionViewModel.checkForExistingSession()
+        // Only load if not already loaded (ViewModel handles caching)
+        if (state.myTierData == null) {
+            tiersViewModel.loadMyTier()
+            tiersViewModel.loadAtRiskStatus()
+        }
+    }
+
+    // Re-check session on lifecycle resume (but NOT full data reload)
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             sessionViewModel.checkForExistingSession()
-            tiersViewModel.loadMyTier()
-            tiersViewModel.loadAtRiskStatus()
         }
     }
 

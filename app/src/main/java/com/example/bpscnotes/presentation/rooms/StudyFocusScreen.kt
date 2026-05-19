@@ -112,11 +112,11 @@ fun StudyFocusScreen(
             summary   = state.summary,
             tierData  = tiersState.myTierData,
             onDismiss = {
-            viewModel.clearSession()
-            // FIX 3: Must remove StudyFocus from back-stack entirely.
-            // plain popBackStack() leaves StudyFocusScreen in the stack → when
-            // clearSession() resets status to IDLE the screen re-renders in the
-            // else→ActiveRoomScreen branch while navigation is still pending.
+                viewModel.clearSession()
+                // FIX 3: Must remove StudyFocus from back-stack entirely.
+                // plain popBackStack() leaves StudyFocusScreen in the stack → when
+                // clearSession() resets status to IDLE the screen re-renders in the
+                // else→ActiveRoomScreen branch while navigation is still pending.
 //            navController.navigate(Screen.RoomsHub.route) {
 //                popUpTo(Screen.StudyFocus.route) { inclusive = true }
 //                launchSingleTop = true
@@ -128,7 +128,7 @@ fun StudyFocusScreen(
                     inclusive = true
                 )
 
-        }
+            }
         )
         else -> ActiveRoomScreen(
             state          = state,
@@ -193,7 +193,7 @@ private fun ActiveRoomScreen(
 
 
 
-     // BUG FIX: Re-enabled 30s member refresh as safety net for missed WS events.
+    // BUG FIX: Re-enabled 30s member refresh as safety net for missed WS events.
     // Primary updates come from socket memberJoins/memberLeaves flows.
     // This catches any that were missed (network jitter, server-side missed events).
     LaunchedEffect(state.status, tierKey) {
@@ -224,22 +224,24 @@ private fun ActiveRoomScreen(
     val myUserId = remember(tiersState.myUserId) {
         tiersState.myUserId.trim()
     }
-   /* val liveMembers = tiersState.members.filter { member ->
-        member.isStudyingNow && (myUserId.isEmpty() || member.id != myUserId)
-    }*/
-   /* val liveMembers = remember(
-        tiersState.members,
-        myUserId
-    ) {
-        tiersState.members.filter {
-            it.isStudyingNow &&
-                    it.id.trim() != myUserId
-        }
-    }*/
+    /* val liveMembers = tiersState.members.filter { member ->
+         member.isStudyingNow && (myUserId.isEmpty() || member.id != myUserId)
+     }*/
+    /* val liveMembers = remember(
+         tiersState.members,
+         myUserId
+     ) {
+         tiersState.members.filter {
+             it.isStudyingNow &&
+                     it.id.trim() != myUserId
+         }
+     }*/
 
-    val liveMembers = tiersState.members.filter {
-        it.isStudyingNow &&
-                it.id != tiersState.myUserId
+    // FIX: myUserId may be empty string on first load — handle safely
+    // Also trim both sides to avoid whitespace-caused comparison failures
+    val liveMembers = tiersState.members.filter { member ->
+        member.isStudyingNow &&
+                (myUserId.isBlank() || member.id.trim() != myUserId)
     }
 
     // Full dark background — unified, no mismatch
@@ -491,8 +493,8 @@ private fun ActiveRoomScreen(
                         }
                     }
                 }
-               /* Text("Tap to message", style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(0.4f))*/
+                /* Text("Tap to message", style = MaterialTheme.typography.labelSmall,
+                     color = Color.White.copy(0.4f))*/
             }
 
             // ── MEMBERS LIST — vertical, handles 1000+ ────────
@@ -517,7 +519,7 @@ private fun ActiveRoomScreen(
                 ){
                     // Show max 50 live members. Backend should page large rooms.
                     items(liveMembers.take(50), key = { it.id }) { member ->
-                       // LiveMemberRow(member = member, onClick = { onMemberTap(member) })
+                        // LiveMemberRow(member = member, onClick = { onMemberTap(member) })
                         LiveMemberCard(member = member)
                     }
                     if (liveMembers.size > 50) {
