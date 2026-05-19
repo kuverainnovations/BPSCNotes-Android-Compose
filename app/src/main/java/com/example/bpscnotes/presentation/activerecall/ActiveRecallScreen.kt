@@ -26,6 +26,8 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import kotlinx.coroutines.*
 import kotlin.math.abs
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 // ─────────────────────────────────────────────────────────────
 // UI-ONLY MODELS  (mapped from FlashcardDto — no file-scope mock data)
@@ -432,22 +434,71 @@ private fun FlashcardSessionScreen(
 
 @Composable
 private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
-    val difficulty = card.difficulty.toFlashDifficulty()
+    val difficulty  = card.difficulty.toFlashDifficulty()
+    val isImageCard = card.cardType == "image" && !card.imageUrl.isNullOrBlank()
+
     Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(Brush.horizontalGradient(listOf(Color(0xFF0A2472), Color(0xFF1E88E5)))))
-            Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FlashSubjectChip(card.subject); FlashDifficultyChip(difficulty); Spacer(Modifier.weight(1f))
-                    Text(card.topic, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+            if (isImageCard) {
+                // ── IMAGE-TYPE CARD FRONT ──────────────────────────────
+                Column(modifier = Modifier.fillMaxSize().padding(top = 6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FlashSubjectChip(card.subject)
+                        Spacer(Modifier.weight(1f))
+                        Text(card.topic, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    // Full-width image
+                    AsyncImage(
+                        model        = card.imageUrl,
+                        contentDescription = "Question image",
+                        contentScale = ContentScale.Fit,
+                        modifier     = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 12.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                    // Question text below image (may be the actual question or description)
+                    if (card.question.isNotBlank()) {
+                        Text(
+                            card.question,
+                            style     = MaterialTheme.typography.titleMedium,
+                            color     = BpscColors.TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+                    }
+                    if (card.hint.isNotBlank()) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E1)).padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("💡", fontSize = 14.sp)
+                            Text(card.hint, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404), lineHeight = 18.sp)
+                        }
+                    }
                 }
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("❓", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
-                    Text(card.question, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, lineHeight = 28.sp)
-                }
-                if (card.hint.isNotBlank()) {
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E1)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("💡", fontSize = 14.sp); Text(card.hint, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404), lineHeight = 18.sp)
+            } else {
+                // ── TEXT-TYPE CARD FRONT (original) ───────────────────
+                Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        FlashSubjectChip(card.subject); FlashDifficultyChip(difficulty); Spacer(Modifier.weight(1f))
+                        Text(card.topic, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("❓", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
+                        Text(card.question, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, lineHeight = 28.sp)
+                    }
+                    if (card.hint.isNotBlank()) {
+                        Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E1)).padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("💡", fontSize = 14.sp); Text(card.hint, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404), lineHeight = 18.sp)
+                        }
                     }
                 }
             }

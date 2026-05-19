@@ -177,7 +177,16 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
     totalMinutes = ((totalHours.toFloatOrNull() ?: (0f * 60))).toInt(),
     studiedMinutes = enrollment?.completed_lessons ?: (0 * 10), // approx or backend later
     lastStudied = "Recently",
-    status = if ((enrollment?.completed_lessons ?: 0) == totalLessons) CourseStatus.Completed else CourseStatus.InProgress,
+    status =
+        when {
+            totalLessons <= 0 -> CourseStatus.NotStarted
+            (enrollment?.completed_lessons ?: 0) >= totalLessons ->
+                CourseStatus.Completed
+            (enrollment?.completed_lessons ?: 0) > 0 ->
+                CourseStatus.InProgress
+            else ->
+                CourseStatus.NotStarted
+        },
     isPaid = isPaid
 )
 
@@ -208,7 +217,9 @@ fun MyLearningScreen(
     }
 
     val learningCourses = remember(state.enrolledCourses) {
-        state.enrolledCourses.map { it.toLearningCourse() }
+        state.enrolledCourses
+            .filter { it.enrollment != null }
+            .map { it.toLearningCourse() }
     }
 
     // ✅ Loading

@@ -726,7 +726,11 @@ interface CoinsApiService {
         val answer: String,
         val hint: String = "",
         val example: String = "",
-        val difficulty: String = "medium",                     // "easy" | "medium" | "hard"
+        val difficulty: String = "medium",
+        /** 'text' (default) or 'image' — drives rendering in ActiveRecallScreen */
+        @SerializedName("card_type")  val cardType: String = "text",
+        /** Cloudinary URL — non-null only when cardType == 'image' */
+        @SerializedName("image_url")  val imageUrl: String? = null,
         @SerializedName("related_mcq") val relatedMcq: FlashMcqDto? = null
     )
 

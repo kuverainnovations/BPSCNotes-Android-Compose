@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
 import com.example.bpscnotes.data.remote.api.CourseDetailResponse
-import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,15 +15,19 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ────────────────────────────────────────────────────────────
-// UI STATE
-// ────────────────────────────────────────────────────────────
-
-
-
-// ────────────────────────────────────────────────────────────
-// VIEW MODEL
-// ────────────────────────────────────────────────────────────
+data class CourseDetailUiState(
+    val course: CourseDto? = null,
+    val chapters: List<Chapter> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val enrollSuccess: Boolean = false,
+    val isEnrolling: Boolean = false,
+    // Rating
+    val showRatingSheet: Boolean = false,
+    val isSubmittingRating: Boolean = false,
+    val isRatingSubmitted: Boolean = false,
+    val ratingError: String? = null
+)
 
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
@@ -33,10 +37,19 @@ class CourseDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CourseDetailUiState())
     val uiState: StateFlow<CourseDetailUiState> = _uiState.asStateFlow()
 
-    // Cached courseId so we can reload after lesson completion
     private var activeCourseId: String = ""
 
-    // ── Load course detail ────────────────────────────────────
+    companion object {
+        /**
+         * Survives ViewModel recreation (back-stack) within the same process.
+         * Prevents the "Rate this Course" banner from reappearing after
+         * the user navigates away and returns.
+         */
+        private val reviewedCourseIds = mutableSetOf<String>()
+    }
+
+    // ── Load ──────────────────────────────────────────────────
+
     fun load(courseId: String) {
         activeCourseId = courseId
         viewModelScope.launch {
@@ -58,9 +71,11 @@ class CourseDetailViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        course   = detail.course,
-                        chapters = sortedChapters,
-                        isLoading = false
+                        course            = detail.course,
+                        chapters          = sortedChapters,
+                        isLoading         = false,
+                        // Restore submitted state if user already reviewed this course
+                        isRatingSubmitted = reviewedCourseIds.contains(courseId)
                     )
                 }
             } catch (e: Exception) {
@@ -71,13 +86,13 @@ class CourseDetailViewModel @Inject constructor(
     }
 
     // ── Enroll ────────────────────────────────────────────────
+
     fun enroll(courseId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isEnrolling = true) }
             try {
                 api.enrollCourse(courseId)
                 _uiState.update { it.copy(isEnrolling = false, enrollSuccess = true) }
-                // Reload so enrollment object appears in course data
                 load(courseId)
             } catch (e: Exception) {
                 Log.e("CourseDetailVM", "enroll: ${e.message}", e)
@@ -86,14 +101,12 @@ class CourseDetailViewModel @Inject constructor(
         }
     }
 
-    // ── Mark lesson complete ──────────────────────────────────
-    // Called by LessonViewerViewModel after user taps "Mark as Complete".
-    // Reloads the course so is_completed checkmarks update on chapter list.
+    // ── Complete lesson ───────────────────────────────────────
+
     fun completeLesson(courseId: String, lessonId: String, watchSecs: Int = 0) {
         viewModelScope.launch {
             try {
                 api.completeCourseLesson(courseId, lessonId, CompleteLessonRequest(watchSecs))
-                // Reload course so chapter list reflects new is_completed
                 load(courseId)
             } catch (e: Exception) {
                 Log.w("CourseDetailVM", "completeLesson failed: ${e.message}")
@@ -102,15 +115,25 @@ class CourseDetailViewModel @Inject constructor(
     }
 
     // ── Rating sheet ──────────────────────────────────────────
-    /*fun showRatingSheet()    { _uiState.update { it.copy(showRatingSheet = true) } }
-    fun dismissRatingSheet() { _uiState.update { it.copy(showRatingSheet = false) } }
+
+    fun showRatingSheet() {
+        _uiState.update { it.copy(showRatingSheet = true, ratingError = null) }
+    }
+
+    fun dismissRatingSheet() {
+        _uiState.update { it.copy(showRatingSheet = false, ratingError = null) }
+    }
 
     fun submitRating(courseId: String, rating: Int, comment: String) {
         if (rating < 1 || rating > 5) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmittingRating = true) }
+            _uiState.update { it.copy(isSubmittingRating = true, ratingError = null) }
             try {
-                api.submitCourseReview(courseId, SubmitReviewRequest(rating, comment))
+                api.submitCourseReview(courseId, SubmitReviewRequest(rating, comment.trim()))
+
+                // Mark as reviewed in the companion set so it persists on back-navigation
+                reviewedCourseIds.add(courseId)
+
                 _uiState.update {
                     it.copy(
                         isSubmittingRating = false,
@@ -118,18 +141,22 @@ class CourseDetailViewModel @Inject constructor(
                         isRatingSubmitted  = true
                     )
                 }
-                // Reload to show new review in the list
+                // Reload so the new review appears in the list
                 load(courseId)
             } catch (e: Exception) {
                 Log.e("CourseDetailVM", "submitRating: ${e.message}", e)
                 _uiState.update {
-                    it.copy(isSubmittingRating = false, error = "Rating failed: ${e.message}")
+                    it.copy(
+                        isSubmittingRating = false,
+                        ratingError        = "Could not submit review. Please try again."
+                    )
                 }
             }
         }
-    }*/
+    }
 
     // ── Clear messages ─────────────────────────────────────────
+
     fun clearMessages() {
         _uiState.update { it.copy(enrollSuccess = false, error = null) }
     }

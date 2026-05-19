@@ -17,6 +17,7 @@ import com.example.bpscnotes.data.remote.api.AchievementsApiService
 import com.example.bpscnotes.data.remote.api.ChallengesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
 import com.example.bpscnotes.data.remote.api.StudyMaterialsApiService
+import com.example.bpscnotes.data.remote.api.MarketplaceApiService
 import com.example.bpscnotes.presentation.nofification.NotificationsApiService
 import dagger.Module
 import dagger.Provides
@@ -118,6 +119,10 @@ object NetworkModule {
     @Provides @Singleton
     fun provideStudyMaterialsApi(r: Retrofit): StudyMaterialsApiService =
         r.create(StudyMaterialsApiService::class.java)
+
+    @Provides @Singleton
+    fun provideMarketplaceApi(r: Retrofit): MarketplaceApiService =
+        r.create(MarketplaceApiService::class.java)
 
     @Provides @Singleton
     fun provideNotificationsApi(r: Retrofit): NotificationsApiService =

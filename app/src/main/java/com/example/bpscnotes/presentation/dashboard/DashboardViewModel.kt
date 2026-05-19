@@ -92,10 +92,19 @@ class DashboardViewModel @Inject constructor(
                     tokenStore.saveUserName(u.name)
                 }
 
-                val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                val weekly = stats?.weeklyActivity?.mapIndexed { i, w ->
-                    DayProgress(dayLabels.getOrElse(i) { "D${i+1}" }, w.activity)
-                } ?: emptyList()
+                // Build last-7-days array — always 7 items so the chart always renders.
+                // Backend now returns 7 rows (with zeros) via generate_series.
+                // As a safety net, we also generate client-side if the API returns fewer.
+                val cal       = java.util.Calendar.getInstance()
+                val dfmt      = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                val dayAbbr   = listOf("Sun","Mon","Tue","Wed","Thu","Fri","Sat")
+                val apiMap    = stats?.weeklyActivity?.associate { it.date.take(10) to it.activity } ?: emptyMap()
+                val weekly    = (6 downTo 0).map { daysAgo ->
+                    cal.timeInMillis = System.currentTimeMillis() - daysAgo * 86_400_000L
+                    val dateStr  = dfmt.format(cal.time)
+                    val dayLabel = dayAbbr[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1]
+                    DayProgress(dayLabel, apiMap[dateStr] ?: 0)
+                }
 
 
 // Derive achievements from user profile — no extra API call needed

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
@@ -21,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
+import com.example.bpscnotes.data.remote.api.QuizQuestionDto
 import kotlinx.coroutines.*
 
 enum class MockTestType { Full, SubjectWise, PreviousYear, Custom }
@@ -33,13 +35,15 @@ data class MockTest(
     val type: MockTestType,
     val totalQuestions: Int,
     val durationMinutes: Int,
-    val subject: String?,          // null = all subjects
-    val year: Int? = null,          // for previous year papers
+    val subject: String?,
+    val year: Int? = null,
     val isPaid: Boolean = false,
     val negativeMarking: Float = 0.33f,
     val totalAttempts: Int = 0,
     val averageScore: Float = 0f,
     val isFeatured: Boolean = false,
+    /** True when scheduledFor is in the future — test cannot be started yet */
+    val isScheduledFuture: Boolean = false,
 )
 
 data class MockQuestion(
@@ -126,24 +130,52 @@ val mockLeaderboard = listOf(
 
 enum class MockTestState { Lobby, Instructions, Active, Analysis, Leaderboard }
 
-private fun QuizPreviewDto.toMockTest(): MockTest = MockTest(
-    id = id,
-    title = title,
-    subtitle = "${totalQuestions} Questions · ${durationMins} min · ${difficulty}",
-    type = when (type) {
-        "mock" -> MockTestType.Full
-        "topic" -> MockTestType.SubjectWise
-        "previous_year" -> MockTestType.PreviousYear
-        else -> MockTestType.Full
-    },
-    totalQuestions = totalQuestions,
-    durationMinutes = durationMins,
-    subject = subject.takeIf { it.isNotBlank() },
-    isPaid = false,
-    totalAttempts = attemptCount,
-    averageScore = avgScore.toFloat() ?: 0f,
-    isFeatured = false
+private fun QuizPreviewDto.toMockTest(): MockTest {
+    // Detect if test is scheduled for a future date (not yet started)
+    val isScheduledFuture = scheduledFor?.let { scheduled ->
+        try {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val d = sdf.parse(scheduled)
+            d != null && d.after(java.util.Date())
+        } catch (e: Exception) { false }
+    } ?: false
+
+    return MockTest(
+        id             = id,
+        title          = title,
+        subtitle       = buildString {
+            append("$totalQuestions Qs · ${durationMins}m · $difficulty")
+            if (isScheduledFuture) append(" · Upcoming")
+        },
+        type           = when (type) {
+            "mock"          -> MockTestType.Full
+            "topic"         -> MockTestType.SubjectWise
+            "previous_year" -> MockTestType.PreviousYear
+            else            -> MockTestType.Full
+        },
+        totalQuestions  = totalQuestions,
+        durationMinutes = durationMins,
+        subject         = subject.takeIf { it.isNotBlank() },
+        isPaid          = false,
+        totalAttempts   = attemptCount,
+        averageScore    = avgScore.toFloat(),
+        isFeatured      = false,
+        isScheduledFuture = isScheduledFuture
+    )
+}
+
+/** Maps API QuizQuestionDto → UI MockQuestion. */
+private fun QuizQuestionDto.toMockQuestion(): MockQuestion = MockQuestion(
+    id           = id,
+    question     = questionText,
+    options      = listOf(optionA, optionB, optionC, optionD),
+    correctIndex = 0,    // not revealed during play; backend returns it on submit
+    explanation  = "",
+    subject      = subject ?: "General",
+    difficulty   = difficulty,
 )
+
 
 @Composable
 fun MockTestsScreen(navController: NavHostController,
@@ -185,6 +217,33 @@ fun MockTestsScreen(navController: NavHostController,
 
 
 
+    // ── Questions loading overlay ─────────────────────────────
+    if (state.isLoadingQuestions) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(0.5f)), Alignment.Center) {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(Color.White)) {
+                Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = BpscColors.Primary)
+                    Text("Loading questions…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Setting up your test", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                }
+            }
+        }
+    }
+
+    // ── Questions error dialog ────────────────────────────────
+    if (state.questionsError != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearQuestions(); screenState = MockTestState.Lobby },
+            title = { Text("Cannot Start Test") },
+            text  = { Text(state.questionsError!!) },
+            confirmButton = {
+                Button(onClick = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     when (screenState) {
         MockTestState.Lobby -> MockTestLobbyScreen(
             navController   = navController,
@@ -194,45 +253,72 @@ fun MockTestsScreen(navController: NavHostController,
                 screenState  = MockTestState.Instructions
             },
             onCustomTest    = { showCustomSheet = true },
-            viewModel=viewModel
+            viewModel       = viewModel
         )
         MockTestState.Instructions -> selectedTest?.let { test ->
             TestInstructionsScreen(
                 test    = test,
-                onStart = { screenState = MockTestState.Active },
+                onStart = {
+                    // Load real questions from API before going to Active
+                    viewModel.loadQuestionsForTest(test.id)
+                    screenState = MockTestState.Active
+                },
                 onBack  = { screenState = MockTestState.Lobby }
             )
         }
         MockTestState.Active -> selectedTest?.let { test ->
-            ActiveTestScreen(
-                test          = test,
-                questions     = sampleQuestions.take(test.totalQuestions.coerceAtMost(sampleQuestions.size)),
-                userAnswers   = userAnswers,
-                bookmarked    = bookmarked,
-                reviewMarked  = reviewMarked,
-                onSubmit      = { score ->
-                    finalScore  = score
-                    screenState = MockTestState.Analysis
-                },
-                onExit        = { screenState = MockTestState.Lobby }
-            )
+            val questions = state.activeQuestions.map { it.toMockQuestion() }
+            when {
+                state.questionsError != null -> {
+                    /* handled by AlertDialog above */
+                }
+                questions.isEmpty() && !state.isLoadingQuestions -> {
+                    // Questions not yet loaded — show waiting state
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            CircularProgressIndicator(color = BpscColors.Primary)
+                            Text("Preparing questions…", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+                questions.isNotEmpty() -> {
+                    val testStartTime = remember { System.currentTimeMillis() }
+                    ActiveTestScreen(
+                        test          = test,
+                        questions     = questions,
+                        userAnswers   = userAnswers,
+                        bookmarked    = bookmarked,
+                        reviewMarked  = reviewMarked,
+                        onSubmit      = { score ->
+                            finalScore = score
+                            val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
+                            // Submit to API asynchronously
+                            viewModel.submitTest(test.id, userAnswers, elapsed)
+                            screenState = MockTestState.Analysis
+                        },
+                        onExit = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
+                    )
+                }
+            }
         }
         MockTestState.Analysis -> selectedTest?.let { test ->
+            val questions = state.activeQuestions.map { it.toMockQuestion() }
             TestAnalysisScreen(
-                test            = test,
-                questions       = sampleQuestions.take(test.totalQuestions.coerceAtMost(sampleQuestions.size)),
-                userAnswers     = userAnswers,
-                score           = finalScore,
+                test              = test,
+                questions         = questions,
+                userAnswers       = userAnswers,
+                score             = finalScore,
+                submitResult      = state.submitResult,
                 onViewLeaderboard = { screenState = MockTestState.Leaderboard },
-                onRetry         = {
+                onRetry           = {
                     userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
                     screenState = MockTestState.Active
                 },
-                onExit          = { screenState = MockTestState.Lobby }
+                onExit            = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
             )
         }
         MockTestState.Leaderboard -> TestLeaderboardScreen(
-            entries = mockLeaderboard,
+            entries = emptyList(), // Real leaderboard coming in next release
             onBack  = { screenState = MockTestState.Analysis }
         )
     }
@@ -372,6 +458,34 @@ private fun MockTestLobbyScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Empty state — no tests available
+                if (filtered.isEmpty()) {
+                    item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 48.dp),
+                            Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("📝", fontSize = 48.sp)
+                                Text(
+                                    if (selectedType != null) "No tests in this category"
+                                    else "No mock tests available yet",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = BpscColors.TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "New tests are added regularly. Check back soon!",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = BpscColors.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
                 // Featured tests
                 val featured = filtered.filter { it.isFeatured }
                 if (featured.isNotEmpty() && selectedType == null) {
@@ -499,15 +613,27 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", "Duration")
                 }
                 Button(
-                    onClick  = onStart,
+                    onClick  = { if (!test.isScheduledFuture) onStart() },
+                    enabled  = !test.isScheduledFuture,
                     shape    = RoundedCornerShape(10.dp),
                     colors   = ButtonDefaults.buttonColors(
-                        containerColor = if (test.isPaid) BpscColors.CoinGold else BpscColors.Primary
+                        containerColor = when {
+                            test.isScheduledFuture -> BpscColors.TextHint
+                            test.isPaid            -> BpscColors.CoinGold
+                            else                   -> BpscColors.Primary
+                        }
                     ),
                     modifier = Modifier.height(38.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    Text(if (test.isPaid) "Unlock" else "Start", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(
+                        when {
+                            test.isScheduledFuture -> "🕐 Soon"
+                            test.isPaid -> "Unlock"
+                            else -> "Start"
+                        },
+                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -989,6 +1115,7 @@ private fun TestAnalysisScreen(
     questions: List<MockQuestion>,
     userAnswers: Map<String, Int>,
     score: Float,
+    submitResult: com.example.bpscnotes.data.remote.api.QuizResultData? = null,
     onViewLeaderboard: () -> Unit,
     onRetry: () -> Unit,
     onExit: () -> Unit,

@@ -102,7 +102,7 @@ fun CreateTargetSheet(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Add up to 10 study tasks for today.",
+                    "Add up to 5 study tasks for today (${5 - currentCount} remaining).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.TextSecondary
                 )
@@ -136,7 +136,7 @@ fun CreateTargetSheet(
                     IconButton(
                         onClick  = {
                             val trimmed = inputText.trim()
-                            if (trimmed.isNotEmpty() && addedTitles.size < 10) {
+                            if (trimmed.isNotEmpty() && addedTitles.size + currentCount < 5) {
                                 addedTitles.add(trimmed)
                                 inputText = ""
                             }
@@ -149,9 +149,9 @@ fun CreateTargetSheet(
 
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "${currentCount} / 10 targets",
+                    "${currentCount + addedTitles.size} / 5 targets · ${addedTitles.size} to add",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = if (currentCount + addedTitles.size >= 5) MaterialTheme.colorScheme.error else BpscColors.TextSecondary
                 )
 
                 // Error display
