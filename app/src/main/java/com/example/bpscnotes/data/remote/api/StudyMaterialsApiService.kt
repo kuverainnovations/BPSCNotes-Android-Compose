@@ -43,7 +43,7 @@ data class StudyMaterialDto(
     val rating: Float = 0f,
     @SerializedName("uploadedDate")  val uploadedDate: String?,
     @SerializedName("uploaderName")  val uploaderName: String?,
-    @SerializedName("isBookmarked")  val isBookmarked: Boolean = false,
+    @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
     val downloadUrl: String? = null,     // only present in detail call
     val status: String? = null,          // only in my-uploads
     @SerializedName("rejectionReason") val rejectionReason: String? = null
@@ -89,7 +89,7 @@ data class MaterialDetailData(
     val rating: Float = 0f,
     @SerializedName("uploadedDate")  val uploadedDate: String?,
     @SerializedName("uploaderName")  val uploaderName: String?,
-    @SerializedName("isBookmarked")  val isBookmarked: Boolean = false,
+    @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
     val downloadUrl: String?
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)

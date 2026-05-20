@@ -633,12 +633,22 @@ private fun LibraryItemCard(
                     Text(item.author ?: item.uploaderName ?: "BPSCNotes Team",
                         style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
-                Box(modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp))
-                    .background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface)
-                    .clickable(onClick = onBookmark), contentAlignment = Alignment.Center) {
-                    Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null,
-                        tint = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextHint,
-                        modifier = Modifier.size(15.dp))
+                // FIX: Increased touch target from 28dp → 44dp (min recommended: 48dp)
+                // Small touch targets inside a Card.clickable() cause the outer click to fire instead.
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)          // bigger touch target — was 28dp, too small
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface)
+                        .clickable(onClick = onBookmark),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                        contentDescription = if (isBookmarked) "Remove from saved" else "Save material",
+                        tint     = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextHint,
+                        modifier = Modifier.size(20.dp)  // icon also slightly bigger
+                    )
                 }
             }
 

@@ -113,17 +113,42 @@ data class QuizzesResponseData(val quizzes: List<QuizPreviewDto> = emptyList())
  * (backend deliberately excludes them to prevent cheating).
  * They are returned in the submit result instead.
  */
+// ── Question type ──────────────────────────────────────────────
+// text  = classic text question (no image)
+// image = question has a main image shown above the text
+enum class QuestionType { text, image }
+
+// ── Option type ────────────────────────────────────────────────
+// text  = all 4 options are text strings (classic MCQ)
+// image = all 4 options are images (shown as 2×2 grid — Testbook style)
+// mixed = options have text + optional image below
+enum class OptionType { text, image, mixed }
+
 data class QuizQuestionDto(
     val id: String = "",
-    @SerializedName("question_text") val questionText: String = "",
-    @SerializedName("option_a")      val optionA: String = "",
-    @SerializedName("option_b")      val optionB: String = "",
-    @SerializedName("option_c")      val optionC: String = "",
-    @SerializedName("option_d")      val optionD: String = "",
+    @SerializedName("question_text")      val questionText: String = "",
+    @SerializedName("option_a")           val optionA: String = "",
+    @SerializedName("option_b")           val optionB: String = "",
+    @SerializedName("option_c")           val optionC: String = "",
+    @SerializedName("option_d")           val optionD: String = "",
     val subject: String? = null,
     val difficulty: String = "medium",
-    @SerializedName("sort_order")    val sortOrder: Int = 0
-)
+    val explanation: String = "Nothing",
+    @SerializedName("sort_order")         val sortOrder: Int = 0,
+    // Image support (added for image-based MCQs)
+    @SerializedName("question_type")      val questionType: String = "text",  // "text" | "image"
+    @SerializedName("question_image_url") val questionImageUrl: String? = null,
+    @SerializedName("option_type")        val optionType: String = "text",   // "text" | "image" | "mixed"
+    @SerializedName("option_a_image")     val optionAImage: String? = null,
+    @SerializedName("option_b_image")     val optionBImage: String? = null,
+    @SerializedName("option_c_image")     val optionCImage: String? = null,
+    @SerializedName("option_d_image")     val optionDImage: String? = null,
+) {
+    val isImageQuestion: Boolean get() = questionType == "image" && !questionImageUrl.isNullOrBlank()
+    val isImageOptions:  Boolean get() = optionType == "image"
+    val optionImages:    List<String?> get() = listOf(optionAImage, optionBImage, optionCImage, optionDImage)
+    val optionTexts:     List<String>  get() = listOf(optionA, optionB, optionC, optionD)
+}
 
 data class QuizDetailData(
     val quiz: QuizPreviewDto,
@@ -748,7 +773,7 @@ interface CoinsApiService {
         @SerializedName("card_type")  val cardType: String = "text",
         /** Cloudinary URL — non-null only when cardType == 'image' */
         @SerializedName("image_url")  val imageUrl: String? = null,
-        @SerializedName("backImageUrl")  val backImageUrl: String? = null,
+        @SerializedName("back_image_url")  val backImageUrl: String? = null,
         @SerializedName("related_mcq") val relatedMcq: FlashMcqDto? = null
     )
 

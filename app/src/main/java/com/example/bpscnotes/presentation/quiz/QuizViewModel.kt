@@ -21,15 +21,22 @@ import javax.inject.Inject
 data class QuizSessionQuestion(
     val id: String,
     val question: String,
-    val options: List<String>,
+    val options: List<String>,              // text options (may be empty for image-type)
     val subject: String,
     val difficulty: String,
-    val correctOptionLetter: String? = null,   // null during play, set after submit
-    val explanation: String? = null
+    val correctOptionLetter: String? = null,
+    val explanation: String? = null,
+    // Image support
+    val questionType: String = "text",      // "text" | "image"
+    val questionImageUrl: String? = null,   // shown above question text
+    val optionType: String = "text",        // "text" | "image" | "mixed"
+    val optionImages: List<String?> = emptyList(), // [a,b,c,d] image URLs (null = no image)
 ) {
     val correctIndex: Int get() = when (correctOptionLetter?.lowercase()) {
         "a" -> 0; "b" -> 1; "c" -> 2; "d" -> 3; else -> -1
     }
+    val isImageQuestion: Boolean get() = questionType == "image" && !questionImageUrl.isNullOrBlank()
+    val isImageOptions:  Boolean get() = optionType == "image"
 }
 
 data class QuizSession(
@@ -197,11 +204,16 @@ class QuizViewModel @Inject constructor(
                 val quiz      = data.quiz
                 val questions = data.questions.map { q ->
                     QuizSessionQuestion(
-                        id         = q.id,
-                        question   = q.questionText,
-                        options    = listOf(q.optionA, q.optionB, q.optionC, q.optionD),
-                        subject    = q.subject ?: quiz.subject,
-                        difficulty = q.difficulty
+                        id               = q.id,
+                        question         = q.questionText,
+                        options          = listOf(q.optionA, q.optionB, q.optionC, q.optionD),
+                        subject          = q.subject ?: quiz.subject,
+                        difficulty       = q.difficulty,
+                        explanation      = q.explanation,
+                        questionType     = q.questionType,
+                        questionImageUrl = q.questionImageUrl,
+                        optionType       = q.optionType,
+                        optionImages     = q.optionImages
                     )
                 }
                 if (questions.isEmpty()) throw Exception("This quiz has no questions yet. Ask admin to add questions.")
