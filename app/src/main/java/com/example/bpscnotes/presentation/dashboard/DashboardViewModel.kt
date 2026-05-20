@@ -25,8 +25,11 @@ data class DashboardUiState(
     val stats: UserStatsData?                 = null,
     val dailyTargets: List<DailyTargetDto>    = emptyList(),
     val targetSummary: DailyTargetsSummary    = DailyTargetsSummary(),
-    val liveClasses: List<LiveClassDto>       = emptyList(),       // ← NEW: real schedule
-    val achievements: List<AchievementItem>   = emptyList(),       // ← NEW: derived from user
+    val liveClasses: List<LiveClassDto>       = emptyList(),
+    val achievements: List<AchievementItem>   = emptyList(),
+    // Schedule interaction state
+    val registeredClassIds: Set<String>       = emptySet(),        // classes user has registered for
+    val scheduleToast:      String?           = null,
     val isLoading: Boolean                    = true,
     val isCreatingTarget: Boolean             = false,    // separate flag for create action
     val error: String?                        = null,
@@ -356,6 +359,45 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+    // ── Register for a live class ────────────────────────────
+    /**
+     * Three behaviours depending on class status:
+     *  - "live"      → no registration needed; caller opens meetingLink directly
+     *  - "scheduled" → call POST /users/live-classes/:id/register
+     *  - "ended"     → show toast; no action
+     */
+    fun registerLiveClass(classId: String) {
+        viewModelScope.launch {
+            // Optimistic: add to registered set immediately
+            _uiState.update { it.copy(registeredClassIds = it.registeredClassIds + classId) }
+            try {
+                liveClassesApi.register(classId)
+                _uiState.update {
+                    it.copy(scheduleToast = "✅ Registered! You'll get a notification when it starts.")
+                }
+            } catch (e: Exception) {
+                // Revert if it was already registered (409 Conflict) → still mark as registered
+                val msg = e.message ?: ""
+                if (msg.contains("409") || msg.contains("already", ignoreCase = true)) {
+                    _uiState.update { it.copy(scheduleToast = "Already registered for this class") }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            registeredClassIds = it.registeredClassIds - classId,
+                            scheduleToast = "Registration failed: $msg"
+                        )
+                    }
+                }
+                Log.e("DASHBOARD", "registerLiveClass: $msg", e)
+            }
+        }
+    }
+
+    fun clearScheduleToast() { _uiState.update { it.copy(scheduleToast = null) } }
+
+    /** Called directly from composable for instant toast without an API call */
+    fun setScheduleToast(msg: String) { _uiState.update { it.copy(scheduleToast = msg) } }
 
     fun refresh() = loadDashboard()
 

@@ -74,6 +74,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -208,7 +209,7 @@ fun MyLearningScreen(
     fromScreen: String=""
 ) {
     val state by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(startTab) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
 
     val userCoins = state.userCoins
 
@@ -249,7 +250,7 @@ fun MyLearningScreen(
                         Offset(0f, 0f), Offset(500f, 500f)
                     )
                 )
-                //.statusBarsPadding()
+            //.statusBarsPadding()
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
                 drawCircle(
@@ -269,7 +270,7 @@ fun MyLearningScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                   if (fromScreen=="nav-host") Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                    if (fromScreen=="nav-host") Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
                         .clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
@@ -339,8 +340,20 @@ fun MyLearningScreen(
         }
 
         when (selectedTab) {
-            0 -> StoreTab(navController = navController, userCoins = userCoins,courses=storeItems,viewModel)
-            1 -> MyCoursesTab(navController = navController,courses=learningCourses)
+            0 -> StoreTab(
+                navController  = navController,
+                userCoins      = userCoins,
+                courses        = storeItems,
+                savedCourseIds = state.savedCourseIds,
+                viewModel      = viewModel
+            )
+            1 -> MyCoursesTab(
+                navController  = navController,
+                courses        = learningCourses,
+                savedCourses   = remember(state.savedCourses) { state.savedCourses.map { it.toLearningCourse() } },
+                savedCourseIds = state.savedCourseIds,
+                onToggleSave   = viewModel::toggleSave
+            )
         }
     }
 }
@@ -350,15 +363,16 @@ fun MyLearningScreen(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun StoreTab(
-    navController: NavHostController,
-    userCoins: Int,
-    courses: List<StoreItem>,
-    viewModel: MyLearningViewModel
+    navController:  NavHostController,
+    userCoins:      Int,
+    courses:        List<StoreItem>,
+    savedCourseIds: Set<String>,
+    viewModel:      MyLearningViewModel
 ) {
     var selectedSubject by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf<StoreItem?>(null) }
-    val wishlist = remember { mutableStateListOf<String>() }
+    // FIX 6: Use savedCourseIds from ViewModel (API-backed) instead of in-memory wishlist
     val focusManager = LocalFocusManager.current
 
     val filtered = courses.filter { course ->
@@ -458,11 +472,8 @@ private fun StoreTab(
                 items(featured) { course ->
                     StoreCourseCard(
                         course,
-                        wishlist.contains(course.id),
-                        {
-                            if (wishlist.contains(course.id)) wishlist.remove(course.id) else wishlist.add(
-                                course.id
-                            )
+                        savedCourseIds.contains(course.id),
+                        { viewModel.toggleSave(course.id)
                         }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
                 }
                 item { Spacer(Modifier.height(4.dp)) }
@@ -472,11 +483,8 @@ private fun StoreTab(
                 items(free) { course ->
                     StoreCourseCard(
                         course,
-                        wishlist.contains(course.id),
-                        {
-                            if (wishlist.contains(course.id)) wishlist.remove(course.id) else wishlist.add(
-                                course.id
-                            )
+                        savedCourseIds.contains(course.id),
+                        { viewModel.toggleSave(course.id)
                         }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
                 }
                 item { Spacer(Modifier.height(4.dp)) }
@@ -486,11 +494,8 @@ private fun StoreTab(
                 items(paid) { course ->
                     StoreCourseCard(
                         course,
-                        wishlist.contains(course.id),
-                        {
-                            if (wishlist.contains(course.id)) wishlist.remove(course.id) else wishlist.add(
-                                course.id
-                            )
+                        savedCourseIds.contains(course.id),
+                        { viewModel.toggleSave(course.id)
                         }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
                 }
             }
@@ -501,11 +506,8 @@ private fun StoreTab(
         CourseDetailSheet(
             course       = course,
             userCoins    = userCoins,
-            isWishlisted = wishlist.contains(course.id),
-            onWishlist   = {
-                if (wishlist.contains(course.id)) wishlist.remove(course.id)
-                else wishlist.add(course.id)
-            },
+            isWishlisted = savedCourseIds.contains(course.id),
+            onWishlist   = { viewModel.toggleSave(course.id) },
             // FIX 2: actually call enroll API for free courses
             onEnroll     = { courseId ->
                 viewModel.enroll(courseId)
@@ -570,8 +572,11 @@ private fun MyCoursesTab(navController: NavHostController, courses: List<Learnin
 
 @Composable
 private fun MyCoursesTab(
-    navController: NavHostController,
-    courses: List<LearningCourse>
+    navController:  NavHostController,
+    courses:        List<LearningCourse>,
+    savedCourses:   List<LearningCourse> = emptyList(),
+    savedCourseIds: Set<String>          = emptySet(),
+    onToggleSave:   (String) -> Unit     = {}
 ) {
     Column(
         modifier = Modifier
@@ -583,8 +588,11 @@ private fun MyCoursesTab(
         // (StudyMaterialsContent kept for future Dashboard use)
 
         EnrolledCoursesContent(
-            navController = navController,
-            courses = courses
+            navController  = navController,
+            courses        = courses,
+            savedCourses   = savedCourses,
+            savedCourseIds = savedCourseIds,
+            onToggleSave   = onToggleSave
         )
     }
 }
@@ -593,16 +601,22 @@ private fun MyCoursesTab(
 // SUB-TAB 1 — ENROLLED COURSES
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun EnrolledCoursesContent(navController: NavHostController, courses: List<LearningCourse>) {
+private fun EnrolledCoursesContent(
+    navController:  NavHostController,
+    courses:        List<LearningCourse>,
+    savedCourses:   List<LearningCourse> = emptyList(),
+    savedCourseIds: Set<String>          = emptySet(),
+    onToggleSave:   (String) -> Unit     = {}
+) {
     var selectedFilter by remember { mutableIntStateOf(0) }
     val wishlist = remember { mutableStateListOf<String>() }
-    val filters = listOf("All", "In Progress", "Completed", "Wishlist")
+    val filters = listOf("All", "In Progress", "Completed", "Saved")
 
     val filtered = courses.filter { course ->
         when (selectedFilter) {
             1 -> course.status == CourseStatus.InProgress
             2 -> course.status == CourseStatus.Completed
-            3 -> wishlist.contains(course.id)
+            3 -> savedCourseIds.contains(course.id)
             else -> true
         }
     }
@@ -648,7 +662,7 @@ private fun EnrolledCoursesContent(navController: NavHostController, courses: Li
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(BpscColors.Surface)
-                       // .statusBarsPadding()
+                    // .statusBarsPadding()
 
                 ) {
                     Box(
@@ -713,8 +727,10 @@ private fun EnrolledCoursesContent(navController: NavHostController, courses: Li
                 onContinue = { navController.navigate(Screen.CourseDetail.createRoute(continueWith.id)) })
             Spacer(Modifier.height(8.dp))
         }
-        Log.e("TAG", "EnrolledCoursesContent: $courses", )
-        if (filtered.isEmpty()) {
+        // When "Saved" filter is active, show savedCourses (not enrolled) too
+        val displayList = if (selectedFilter == 3) savedCourses else filtered
+
+        if (displayList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -751,7 +767,7 @@ private fun EnrolledCoursesContent(navController: NavHostController, courses: Li
                     }
                     item { Spacer(Modifier.height(6.dp)) }
                 }
-                items(filtered) { course ->
+                items(displayList) { course ->
                     CourseProgressCard(
                         course = course,
                         isWishlisted = wishlist.contains(course.id),

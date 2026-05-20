@@ -377,6 +377,15 @@ interface CoursesApiService {
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
 
+    @POST("courses/{id}/save")
+    suspend fun saveCourse(@Path("id") id: String): ApiResponse<Any>
+
+    @DELETE("courses/{id}/save")
+    suspend fun unsaveCourse(@Path("id") id: String): ApiResponse<Any>
+
+    @GET("courses/saved")
+    suspend fun getSavedCourses(): ApiResponse<CoursesResponseData>
+
     // Get full lesson detail including notes_url / video_url / is_completed
     @GET("courses/{courseId}/lessons/{lessonId}")
     suspend fun getLessonDetail(

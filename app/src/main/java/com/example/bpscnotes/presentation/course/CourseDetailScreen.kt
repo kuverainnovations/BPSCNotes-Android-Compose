@@ -98,9 +98,12 @@ fun CourseDetailScreen(
             // FIX 2: isRatingSubmitted is now persistent via companion set in ViewModel
             val canReview = allDone && !state.isRatingSubmitted
 
+            // FIX 4: Preserve scroll position when returning from LessonViewer
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             LazyColumn(
                 modifier       = Modifier.fillMaxSize().background(BpscColors.Surface),
-                contentPadding = PaddingValues(bottom = 110.dp)
+                contentPadding = PaddingValues(bottom = 110.dp),
+                state          = listState
             ) {
 
                 item {
@@ -198,7 +201,8 @@ fun CourseDetailScreen(
                         if (next != null) {
                             nav.navigate(Screen.LessonViewer.createRoute(courseId, next.id))
                         }
-                    }
+                    },
+                    completedLessons=completedLessons
                 )
             }
         }
@@ -674,7 +678,29 @@ private fun HeroHeader(
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f)).clickable(onClick = onBack), Alignment.Center) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-                Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f)), Alignment.Center) {
+                // FIX 5: Share now actually works
+                val shareContext = androidx.compose.ui.platform.LocalContext.current
+                val courseTitle  = course.title
+                Box(
+                    Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f))
+                        .clickable {
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+
+                                putExtra(
+                                    android.content.Intent.EXTRA_SUBJECT,
+                                    "Check this BPSC course: $courseTitle"
+                                )
+
+                                putExtra(
+                                    android.content.Intent.EXTRA_TEXT,
+                                    "I'm studying \"$courseTitle\" on BPSCNotes app! Join me → https://bpscnotes.in/courses/${course.id}"
+                                )
+                            }
+                            shareContext.startActivity(android.content.Intent.createChooser(shareIntent, "Share Course"))
+                        },
+                    Alignment.Center
+                ) {
                     Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             }
@@ -894,7 +920,8 @@ private fun BottomCta(
     allDone:     Boolean,            // NEW param
     isEnrolling: Boolean,
     onEnroll:    () -> Unit,
-    onContinue:  () -> Unit
+    onContinue:  () -> Unit,
+    completedLessons: Int
 ) {
     Surface(Modifier.fillMaxWidth(), shadowElevation = 16.dp, color = Color.White) {
         Box(
@@ -940,7 +967,11 @@ private fun BottomCta(
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Continue Learning", style = MaterialTheme.typography.titleMedium)
+                        // FIX 3: Show "Start Learning" if 0 lessons done, "Continue Learning" if started
+                        Text(
+                            if (completedLessons > 0) "Continue Learning" else "Start Learning",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 }
 
