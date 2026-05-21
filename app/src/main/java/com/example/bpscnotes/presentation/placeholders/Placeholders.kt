@@ -99,7 +99,7 @@ class DownloadsViewModel @Inject constructor(
                 serverHistory.forEach { dto ->
                     val safeName = dto.title.replace("[^a-zA-Z0-9]".toRegex(), "_") + ".pdf"
                     val localFile = localFiles.firstOrNull { it.name.contains(dto.id.take(8)) || it.name == safeName }
-                    if (localFile != null || dto.downloadUrl != null) {
+                    if (localFile != null || dto.fileUrl != null) {
                         items.add(DownloadedFileItem(
                             id           = dto.id,
                             title        = dto.title,

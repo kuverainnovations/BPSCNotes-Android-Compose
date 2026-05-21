@@ -58,7 +58,9 @@ class MyLearningViewModel @Inject constructor(
                 val savedIds       = savedCourses.map { it.id }.toSet()
 
                 // Enrolled = active enrollment
-                val enrolledCourses = allCourses.filter { it.enrollment?.status == "active" }
+                val enrolledCourses = allCourses.filter {
+                    it.enrollment?.status in listOf("active", "completed")
+                }
                 val enrolledIds     = enrolledCourses.map { it.id }.toSet()
 
                 // FIX 1: Store tab = courses NOT enrolled yet (no Enroll button on already-enrolled courses)

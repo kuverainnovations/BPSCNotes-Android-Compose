@@ -45,6 +45,7 @@ import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
+import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
 @Composable
@@ -190,6 +191,30 @@ fun BpscNavHost(navController: NavHostController) {
 
 
         composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
+
+        // PDF Viewer — custom in-app renderer with page locking
+        composable(
+            route     = Screen.PdfViewer.route,
+            arguments = listOf(
+                navArgument("fileUrl")     { type = NavType.StringType },
+                navArgument("title")       { type = NavType.StringType },
+                navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
+                navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
+            )
+        ) { back ->
+            val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+            val title       = back.arguments?.getString("title")?.let  { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Document"
+            val freePages   = back.arguments?.getInt("freePages")  ?: 3
+            val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
+            PdfViewerScreen(
+                fileUrl       = fileUrl,
+                title         = title,
+                freePages     = freePages,
+                isPurchased   = isPurchased,
+                navController = navController,
+                authToken     = ""//tokenStore.getToken() ?: ""
+            )
+        }
 
         composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
         composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }

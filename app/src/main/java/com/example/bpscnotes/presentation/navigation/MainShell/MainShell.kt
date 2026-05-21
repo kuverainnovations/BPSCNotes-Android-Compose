@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import dagger.hilt.android.EntryPointAccessors
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen

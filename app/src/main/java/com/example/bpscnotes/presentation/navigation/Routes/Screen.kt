@@ -77,6 +77,12 @@ sealed class Screen(val route: String) {
 
     object StudyMaterials : Screen("study_materials")
 
+    // PDF Viewer with page locking
+    object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}") {
+        fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean) =
+            "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased"
+    }
+
     // Wallet / payments
     object CoinWallet   : Screen("wallet")
     object Subscription : Screen("subscription")

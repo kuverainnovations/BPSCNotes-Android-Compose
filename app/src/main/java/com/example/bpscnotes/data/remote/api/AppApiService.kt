@@ -72,6 +72,9 @@ data class CourseDto(
     @SerializedName("what_you_learn")      val whatYouLearn: List<String> = emptyList(),
     @SerializedName("has_certificate")     val hasCertificate: Boolean = true,
     @SerializedName("rating_distribution") val ratingDistribution: RatingDistribution? = null,
+
+    @SerializedName("has_reviewed")
+    val hasReviewed: Boolean = false,
     val reviews: List<CourseReview>? = null
 )
 

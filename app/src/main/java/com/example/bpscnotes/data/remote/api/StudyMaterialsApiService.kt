@@ -23,33 +23,91 @@ enum class MaterialType(val apiKey: String, val label: String, val emoji: String
     }
 }
 
-// ── DTOs ──────────────────────────────────────────────────────
 data class StudyMaterialDto(
+
+    @SerializedName("id")
     val id: String,
+
+    @SerializedName("title")
     val title: String,
+
+    @SerializedName("description")
     val description: String?,
+
+    @SerializedName("subject")
     val subject: String,
-    @SerializedName("materialType")  val materialType: String,   // "pdf"|"pyq"|"book"|"video"
+
+    @SerializedName("material_type")
+    val materialType: String,
+
+    @SerializedName("author")
     val author: String?,
+
+    @SerializedName("tags")
     val tags: List<String> = emptyList(),
-    @SerializedName("fileSizeBytes") val fileSizeBytes: Long = 0,
-    @SerializedName("pageCount")     val pageCount: Int = 0,
-    @SerializedName("isPremium")     val isPremium: Boolean = false,
-    @SerializedName("isFeatured")    val isFeatured: Boolean = false,
-    @SerializedName("isTrending")    val isTrending: Boolean = false,
-    @SerializedName("isNew")         val isNew: Boolean = false,
-    @SerializedName("downloadCount") val downloadCount: Int = 0,
-    @SerializedName("viewCount")     val viewCount: Int = 0,
+
+    @SerializedName("file_size_bytes")
+    val fileSizeBytes: Long = 0,
+
+    @SerializedName("page_count")
+    val pageCount: Int = 0,
+
+    @SerializedName("is_premium")
+    val isPremium: Boolean = false,
+
+    @SerializedName("is_featured")
+    val isFeatured: Boolean = false,
+
+    @SerializedName("is_trending")
+    val isTrending: Boolean = false,
+
+    @SerializedName("is_new")
+    val isNew: Boolean = false,
+
+    @SerializedName("download_count")
+    val downloadCount: Int = 0,
+
+    @SerializedName("view_count")
+    val viewCount: Int = 0,
+
+    @SerializedName("rating")
     val rating: Float = 0f,
-    @SerializedName("uploadedDate")  val uploadedDate: String?,
-    @SerializedName("uploaderName")  val uploaderName: String?,
-    @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
-    val downloadUrl: String? = null,     // only present in detail call
-    val status: String? = null,          // only in my-uploads
-    @SerializedName("rejectionReason") val rejectionReason: String? = null
+
+    @SerializedName("created_at")
+    val uploadedDate: String?,
+
+    @SerializedName("uploader_name")
+    val uploaderName: String?,
+
+    @SerializedName("is_bookmarked")
+    val isBookmarked: Boolean = false,
+
+    @SerializedName("fileUrl")
+    val fileUrl: String? = null,
+
+    @SerializedName("status")
+    val status: String? = null,
+
+    @SerializedName("rejection_reason")
+    val rejectionReason: String? = null,
+
+    @SerializedName("price")
+    val price: Int = 0,
+
+    @SerializedName("free_pages")
+    val freePages: Int = 3,
+
+    @SerializedName("is_marketplace")
+    val isMarketplace: Boolean = false
 ) {
-    val type: MaterialType get() = MaterialType.fromKey(materialType)
-    val fileSizeMb: Float  get() = fileSizeBytes / (1024f * 1024f)
+    val type: MaterialType
+        get() = MaterialType.fromKey(materialType)
+
+    val fileSizeMb: Float
+        get() = fileSizeBytes / (1024f * 1024f)
+
+    val isFree: Boolean
+        get() = price == 0
 }
 
 data class PaginationMeta(
@@ -128,6 +186,41 @@ data class CreateMaterialRequest(
     val pageCount: Int? = null
 )
 
+// ── Marketplace / Downloads DTOs ────────────────────────────
+data class DownloadHistoryItem(
+    val id:            String  = "",
+    val title:         String  = "",
+    val subject:       String  = "",
+    @SerializedName("materialType")  val materialType:  String  = "pdf",
+    @SerializedName("fileSizeBytes") val fileSizeBytes: Long    = 0L,
+    @SerializedName("pageCount")     val pageCount:     Int     = 0,
+    @SerializedName("isPremium")     val isPremium:     Boolean = false,
+    val price:         Int     = 0,
+    @SerializedName("freePages")     val freePages:     Int     = 3,
+    val rating:        Float   = 0f,
+    @SerializedName("uploaderName")  val uploaderName:  String? = null,
+    @SerializedName("downloadedAt")  val downloadedAt:  String  = "",
+    val fileUrl:       String? = null,
+    @SerializedName("isPurchased")   val isPurchased:   Boolean = false
+)
+
+data class MyDownloadsData(val downloads: List<DownloadHistoryItem> = emptyList())
+
+data class PurchaseResultData(
+    val purchased:        Boolean = false,
+    val alreadyPurchased: Boolean = false,
+    val coinsSpent:       Int     = 0,
+    val coinsBalance:     Int     = 0,
+    val fileUrl:          String? = null
+)
+
+data class PreviewData(
+    val previewUrl:  String?  = null,
+    val totalPages:  Int      = 0,
+    val freePages:   Int      = 3,
+    val isPurchased: Boolean  = false
+)
+
 // ════════════════════════════════════════════════════════════
 // RETROFIT INTERFACE
 // ════════════════════════════════════════════════════════════
@@ -186,6 +279,21 @@ interface StudyMaterialsApiService {
     /** POST /study-materials/:id/bookmark — toggle bookmark */
     @POST("study-materials/{id}/bookmark")
     suspend fun toggleBookmark(@Path("id") id: String): ApiResponse<BookmarkData>
+
+    /** GET /study-materials/my-downloads — user's download history (paginated) */
+    @GET("study-materials/my-downloads")
+    suspend fun getMyDownloads(
+        @Query("page")  page: Int  = 1,
+        @Query("limit") limit: Int = 50
+    ): ApiResponse<MyDownloadsData>
+
+    /** POST /study-materials/:id/purchase — buy a paid material with coins */
+    @POST("study-materials/{id}/purchase")
+    suspend fun purchaseMaterial(@Path("id") id: String): ApiResponse<PurchaseResultData>
+
+    /** GET /study-materials/:id/preview — get signed preview (free pages only) */
+    @GET("study-materials/{id}/preview")
+    suspend fun getPreview(@Path("id") id: String): ApiResponse<PreviewData>
 
     /**
      * POST /study-materials/upload  (multipart/form-data)

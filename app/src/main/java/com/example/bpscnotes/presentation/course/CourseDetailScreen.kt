@@ -91,12 +91,14 @@ fun CourseDetailScreen(
             val progress   = if (totalLessons > 0) completedLessons.toFloat() / totalLessons else 0f
             val animProg   by animateFloatAsState(progress, tween(1000), label = "prog")
             val accent     = subjectAccent(course.subject)
-            val isEnrolled = course.enrollment?.status == "active"
+            //val isEnrolled = course.enrollment?.status == "active" || course.enrollment?.status == "completed"
 
+            val isEnrolled =
+                course.enrollment?.status in listOf("active", "completed")
             // FIX 1: allDone drives both the bottom bar state AND review banner gate
             val allDone   = isEnrolled && totalLessons > 0 && completedLessons >= totalLessons
             // FIX 2: isRatingSubmitted is now persistent via companion set in ViewModel
-            val canReview = allDone && !state.isRatingSubmitted
+            val canReview = allDone && !course.hasReviewed
 
             // FIX 4: Preserve scroll position when returning from LessonViewer
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -168,7 +170,7 @@ fun CourseDetailScreen(
                 }
 
                 // Success strip: shown after submission
-                if (state.isRatingSubmitted) {
+                if (course.hasReviewed || state.isRatingSubmitted) {
                     item { ReviewSubmittedBanner() }
                 }
 

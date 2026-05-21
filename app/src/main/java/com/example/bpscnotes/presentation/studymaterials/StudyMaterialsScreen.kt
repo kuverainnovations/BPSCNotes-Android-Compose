@@ -55,8 +55,8 @@ fun StudyMaterialsScreen(
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-//        if (granted) viewModel.retryPendingDownload()
-//        else         viewModel.onStoragePermissionDenied()
+        if (granted) viewModel.retryPendingDownload()
+        else         viewModel.onStoragePermissionDenied()
     }
     LaunchedEffect(state.needsStoragePermission) {
         if (state.needsStoragePermission && Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
@@ -73,6 +73,29 @@ fun StudyMaterialsScreen(
             viewModel.clearToast()
         }
     }
+
+    // Purchase dialog
+    var showPurchaseDialog by remember { mutableStateOf<StudyMaterialDto?>(null) }
+    LaunchedEffect(state.purchaseSuccess) {
+        state.purchaseSuccess?.let {
+            snackbarHost.showSnackbar(it)
+            viewModel.clearPurchaseMessages()
+            showPurchaseDialog = null
+        }
+    }
+    LaunchedEffect(state.purchaseError) {
+        state.purchaseError?.let { snackbarHost.showSnackbar(it) }
+    }
+
+    showPurchaseDialog?.let { item ->
+        PurchaseConfirmDialog(
+            item      = item,
+            isPurchasing = state.purchasingId == item.id,
+            onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title) },
+            onDismiss = { showPurchaseDialog = null; viewModel.clearPurchaseMessages() }
+        )
+    }
+
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { scaffoldPadding ->
@@ -689,6 +712,21 @@ private fun LibraryItemCard(
                 if (item.pageCount > 0) LibInfoChip(Icons.Rounded.Description, "${item.pageCount} pages")
                 LibInfoChip(Icons.Rounded.Storage, "${"%.1f".format(item.fileSizeMb)} MB")
                 LibInfoChip(Icons.Rounded.Download, formatCount(item.downloadCount))
+                // Show price/lock badge for paid materials
+                if ((item.price ?: 0) > 0) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFFFF8E1))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text("🪙", fontSize = 10.sp)
+                        Text("${item.price}", style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF856404), fontWeight = FontWeight.Bold)
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold, modifier = Modifier.size(12.dp))
@@ -1105,6 +1143,214 @@ private fun formatCount(count: Int): String {
 }
 
 // needed for text field in search
+
+// ════════════════════════════════════════════════════════════
+// DOWNLOADS TAB — shows user's download history with PDF access
+// ════════════════════════════════════════════════════════════
+@Composable
+fun DownloadsTab(
+    downloads:    List<com.example.bpscnotes.data.remote.api.DownloadHistoryItem>,
+    isLoading:    Boolean,
+    purchasedIds: Set<String>,
+    onOpenPdf:    (String) -> Unit,
+    onRefresh:    () -> Unit
+) {
+    when {
+        isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            CircularProgressIndicator(color = BpscColors.Primary)
+        }
+        downloads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("📂", fontSize = 56.sp)
+                Text("No downloads yet", style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                Text("Download study materials to access them here",
+                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+                OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) {
+                    Text("Refresh")
+                }
+            }
+        }
+        else -> LazyColumn(
+            contentPadding      = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text("${downloads.size} downloaded file${if (downloads.size != 1) "s" else ""}",
+                    style = MaterialTheme.typography.labelLarge, color = BpscColors.TextSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            items(downloads, key = { it.id }) { item ->
+                val isPurchased = purchasedIds.contains(item.id) || item.isPurchased
+                val hasFullAccess = !item.isPremium || isPurchased || item.price == 0
+
+                Card(
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(16.dp),
+                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(52.dp).clip(RoundedCornerShape(12.dp))
+                                .background(BpscColors.PrimaryLight),
+                            Alignment.Center
+                        ) {
+                            Text(
+                                when (item.materialType.lowercase()) {
+                                    "pdf"   -> "📄"; "pyq" -> "📝"; "book" -> "📚"
+                                    "video" -> "🎬"; else  -> "📋"
+                                }, fontSize = 24.sp
+                            )
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.title, style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(item.subject, style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary)
+                                if (item.pageCount > 0) {
+                                    Text("• ${item.pageCount} pages", style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.TextHint)
+                                }
+                            }
+                            // Lock indicator
+                            if (item.isPremium && !hasFullAccess) {
+                                Row(
+                                    Modifier.clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFFFF8E1))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment     = Alignment.CenterVertically
+                                ) {
+                                    Text("🔒", fontSize = 10.sp)
+                                    Text("${item.freePages} of ${item.pageCount} pages free",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF856404))
+                                }
+                            }
+                        }
+                        // Action button
+                        if (!item.fileUrl.isNullOrBlank()) {
+                            Button(
+                                onClick  = { onOpenPdf(item.fileUrl) },
+                                shape    = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(36.dp),
+                                colors   = ButtonDefaults.buttonColors(
+                                    containerColor = if (hasFullAccess) BpscColors.Primary else Color(0xFFF59E0B))
+                            ) {
+                                Text(if (hasFullAccess) "Open" else "Preview",
+                                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// PURCHASE CONFIRM DIALOG — shown when user taps Buy
+// Shows price, preview page count, and commission notice
+// ════════════════════════════════════════════════════════════
+@Composable
+fun PurchaseConfirmDialog(
+    item:         StudyMaterialDto,
+    isPurchasing: Boolean,
+    onConfirm:    () -> Unit,
+    onDismiss:    () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape            = RoundedCornerShape(20.dp),
+        containerColor   = Color.White,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("🔓 Unlock Full Access", fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge)
+                Text(item.title, style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextSecondary, maxLines = 2)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // What they get
+                Card(shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FBF5))) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("✅"); Text("Full PDF — all ${item.pageCount ?: 0} pages",
+                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("✅"); Text("Download to device",
+                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("✅"); Text("Lifetime access, no expiry",
+                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                        }
+                    }
+                }
+                // Price
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
+                    Text("Price", style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("🪙", fontSize = 20.sp)
+                        Text("${item.price ?: 0} coins",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+                Text("Creator earns 70% • BPSCNotes keeps 30%",
+                    style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick  = onConfirm,
+                enabled  = !isPurchasing,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape    = RoundedCornerShape(12.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+            ) {
+                if (isPurchasing) {
+                    CircularProgressIndicator(color = Color.White,
+                        modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Processing…")
+                } else {
+                    Text("🪙 Buy for ${item.price ?: 0} Coins",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = BpscColors.TextSecondary)
+            }
+        }
+    )
+}
+
+
+
 @Composable
 private fun BasicTextField(
     value: String, onValueChange: (String) -> Unit, modifier: Modifier,

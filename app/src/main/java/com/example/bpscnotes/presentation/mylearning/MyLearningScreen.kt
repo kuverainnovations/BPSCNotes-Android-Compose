@@ -177,7 +177,7 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
     completedLessons = enrollment?.completed_lessons?:0,
     totalMinutes = ((totalHours.toFloatOrNull() ?: (0f * 60))).toInt(),
     studiedMinutes = enrollment?.completed_lessons ?: (0 * 10), // approx or backend later
-    lastStudied = "Recently",
+    lastStudied = enrollment?.lastStudiedAt ?: "",
     status =
         when {
             totalLessons <= 0 -> CourseStatus.NotStarted
@@ -720,7 +720,8 @@ private fun EnrolledCoursesContent(
             }
         }
 
-        val continueWith = inProgress.maxByOrNull { it.studiedMinutes }
+        val continueWith =
+            inProgress.maxByOrNull { it.lastStudied }
         if (selectedFilter == 0 && continueWith != null) {
             ContinueCard(
                 course = continueWith,

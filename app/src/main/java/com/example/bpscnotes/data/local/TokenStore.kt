@@ -44,6 +44,32 @@ class TokenStore @Inject constructor(
     fun setBoolPref(key: String, value: Boolean) =
         prefs.edit().putBoolean("pref_$key", value).apply()
 
+    // ── Downloaded material IDs (persisted so "Saved" button survives restart) ──
+    fun getDownloadedIds(): Set<String> =
+        prefs.getStringSet("downloaded_material_ids", emptySet()) ?: emptySet()
+
+    fun addDownloadedId(id: String) {
+        val current = getDownloadedIds().toMutableSet()
+        current.add(id)
+        prefs.edit().putStringSet("downloaded_material_ids", current).apply()
+    }
+
+    fun removeDownloadedId(id: String) {
+        val current = getDownloadedIds().toMutableSet()
+        current.remove(id)
+        prefs.edit().putStringSet("downloaded_material_ids", current).apply()
+    }
+
+    // ── Purchased material IDs (locked PDF access) ──────────────
+    fun getPurchasedIds(): Set<String> =
+        prefs.getStringSet("purchased_material_ids", emptySet()) ?: emptySet()
+
+    fun addPurchasedId(id: String) {
+        val current = getPurchasedIds().toMutableSet()
+        current.add(id)
+        prefs.edit().putStringSet("purchased_material_ids", current).apply()
+    }
+
     // ── Clear all (logout) ─────────────────────────────────────
     fun clearAll() = prefs.edit().clear().apply()
 }

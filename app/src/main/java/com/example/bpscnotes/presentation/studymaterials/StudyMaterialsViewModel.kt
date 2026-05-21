@@ -41,8 +41,17 @@ import javax.inject.Inject
 
 // Permission state for download on Android 9 and below
 data class StudyMaterialsUiState(
-    val needsStoragePermission: Boolean  = false,   // triggers permission request in UI
-    val pendingDownloadMaterial: com.example.bpscnotes.data.remote.api.StudyMaterialDto? = null, // retried after grant
+    val needsStoragePermission: Boolean  = false,
+    val pendingDownloadMaterial: com.example.bpscnotes.data.remote.api.StudyMaterialDto? = null,
+    // Downloads history tab
+    val downloadHistory:   List<com.example.bpscnotes.data.remote.api.DownloadHistoryItem> = emptyList(),
+    val isLoadingHistory:  Boolean = false,
+    // Purchased IDs — for PDF unlocking
+    val purchasedIds:      Set<String> = emptySet(),
+    // Purchase flow
+    val purchasingId:      String? = null,
+    val purchaseSuccess:   String? = null,
+    val purchaseError:     String? = null,
     // List
     val materials:          List<StudyMaterialDto> = emptyList(),
     val isLoadingList:      Boolean                = true,
@@ -91,7 +100,8 @@ data class StudyMaterialsUiState(
 
 @HiltViewModel
 class StudyMaterialsViewModel @Inject constructor(
-    private val api: StudyMaterialsApiService,
+    private val api:        StudyMaterialsApiService,
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -103,9 +113,15 @@ class StudyMaterialsViewModel @Inject constructor(
     private var searchJob: Job? = null
 
     init {
+        // FIX: Load persisted downloaded IDs so "Saved" button survives app restart
+        _state.update { it.copy(
+            downloadedIds = tokenStore.getDownloadedIds(),
+            purchasedIds  = tokenStore.getPurchasedIds()
+        )}
         loadSubjects()
         loadStats()
         loadMaterials(reset = true)
+        loadDownloadHistory()
     }
 
     // ── Subjects ──────────────────────────────────────────────
@@ -289,6 +305,8 @@ class StudyMaterialsViewModel @Inject constructor(
                 }
                 dm.enqueue(request)
 
+                // FIX: Persist to SharedPreferences so button stays "Saved" after restart
+                tokenStore.addDownloadedId(material.id)
                 _state.update {
                     it.copy(
                         downloadingId = null,
@@ -296,6 +314,8 @@ class StudyMaterialsViewModel @Inject constructor(
                         toastMessage  = "⬇️ Download started — check Downloads app"
                     )
                 }
+                // Refresh download history so Downloads tab updates
+                loadDownloadHistory()
             } catch (e: Exception) {
                 Log.e(TAG, "download: ${e.message}", e)
                 _state.update { it.copy(downloadingId = null, toastMessage = "Download failed: ${e.message}") }
@@ -419,4 +439,77 @@ class StudyMaterialsViewModel @Inject constructor(
             }
         } catch (e: Exception) { null }
     }
+    // ── Downloads history ─────────────────────────────────────
+    fun loadDownloadHistory() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingHistory = true) }
+            try {
+                val res = api.getMyDownloads()
+                _state.update { it.copy(
+                    downloadHistory  = res.data?.downloads ?: emptyList(),
+                    isLoadingHistory = false
+                )}
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoadingHistory = false) }
+                Log.e(TAG, "loadDownloadHistory: \${e.message}")
+            }
+        }
+    }
+
+    // ── Purchase locked material ───────────────────────────────
+    fun purchaseMaterial(materialId: String, price: Int, title: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
+            try {
+                val res = api.purchaseMaterial(materialId)
+                val data = res.data
+                if (data?.alreadyPurchased == true) {
+                    _state.update { it.copy(
+                        purchasingId    = null,
+                        purchaseSuccess = "You already own \"$title\"",
+                        purchasedIds    = it.purchasedIds + materialId
+                    )}
+                } else {
+                    tokenStore.addPurchasedId(materialId)
+                    _state.update { it.copy(
+                        purchasingId    = null,
+                        purchaseSuccess = "🎉 Unlocked! \"$title\" — full PDF now available",
+                        purchasedIds    = it.purchasedIds + materialId
+                    )}
+                    loadStats()
+                }
+            } catch (e: Exception) {
+                val msg = e.message ?: "Purchase failed"
+                _state.update { it.copy(
+                    purchasingId  = null,
+                    purchaseError = when {
+                        msg.contains("insufficient", true) || msg.contains("coins", true) ->
+                            "Not enough coins. Watch an ad or complete daily tasks to earn more."
+                        else -> msg
+                    }
+                )}
+            }
+        }
+    }
+
+    fun clearPurchaseMessages() {
+        _state.update { it.copy(purchaseSuccess = null, purchaseError = null) }
+    }
+
+    /** Called by UI after user grants WRITE_EXTERNAL_STORAGE permission */
+    fun retryPendingDownload() {
+        val material = _state.value.pendingDownloadMaterial ?: return
+        _state.update { it.copy(needsStoragePermission = false, pendingDownloadMaterial = null) }
+        downloadMaterial(material)
+    }
+
+    /** Called when user denies the permission */
+    fun onStoragePermissionDenied() {
+        _state.update { it.copy(
+            needsStoragePermission  = false,
+            pendingDownloadMaterial = null,
+            toastMessage = "Storage permission denied. Grant it in Settings to download files."
+        )}
+    }
+
 }
