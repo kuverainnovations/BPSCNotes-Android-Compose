@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.studymaterials
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -49,6 +50,19 @@ fun StudyMaterialsScreen(
     viewModel:     StudyMaterialsViewModel = hiltViewModel()
 ) {
     val state       by viewModel.state.collectAsState()
+
+    // ── Storage permission (Android 9 and below only) ──────────
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+//        if (granted) viewModel.retryPendingDownload()
+//        else         viewModel.onStoragePermissionDenied()
+    }
+    LaunchedEffect(state.needsStoragePermission) {
+        if (state.needsStoragePermission && Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            storagePermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
     val snackbarHost = remember { SnackbarHostState() }
     val context      = LocalContext.current
 
@@ -161,8 +175,25 @@ fun StudyMaterialsScreen(
                 viewModel.downloadMaterial(dto)
             },
             onOpenPdf      = { url ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
+                // Try PDF app first, fall back to browser, then Google Docs viewer
+                val uri = Uri.parse(url)
+                // 1. Try native PDF viewer (Adobe, Drive, etc.)
+                val pdfIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/pdf")
+                    flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                if (pdfIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(pdfIntent)
+                } else {
+                    // 2. Fall back to browser with Google Docs viewer (works for any https URL)
+                    val viewerUrl = "https://docs.google.com/viewer?url=${Uri.encode(url)}"
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(viewerUrl))
+                    try { context.startActivity(browserIntent) }
+                    catch (e: Exception) {
+                        // 3. Last resort — plain browser
+                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    }
+                }
             },
             onDismiss      = viewModel::closeDetail
         )
@@ -765,14 +796,14 @@ private fun MaterialDetailSheet(
                 }
 
                 // Preview area / open PDF button
-                val downloadUrl = material.downloadUrl
+                val downloadUrl = material.resolvedUrl
                 Box(modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
                     .background(BpscColors.Surface).border(1.dp, BpscColors.Divider, RoundedCornerShape(16.dp))
-                    .then(if (downloadUrl != null) Modifier.clickable { onOpenPdf(downloadUrl) } else Modifier),
+                    .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable { onOpenPdf(downloadUrl) } else Modifier),
                     contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(material.type.emoji, fontSize = 44.sp)
-                        Text(if (downloadUrl != null) "Tap to open" else "Preview",
+                        Text(if (!downloadUrl.isNullOrBlank()) "Tap to open" else "No preview yet",
                             style = MaterialTheme.typography.titleMedium, color = BpscColors.TextSecondary)
                         Text("Open full document in PDF viewer",
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
@@ -807,7 +838,7 @@ private fun MaterialDetailSheet(
                     Spacer(Modifier.width(6.dp))
                     Text(if (isBookmarked) "Saved" else "Save", style = MaterialTheme.typography.titleMedium)
                 }
-                Button(onClick = if (material.downloadUrl != null) {{ onOpenPdf(material.downloadUrl) }} else onDownload,
+                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
@@ -818,7 +849,7 @@ private fun MaterialDetailSheet(
                         Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(when { isDownloaded -> "Downloaded ✓"; material.isPremium -> "Unlock with Pro"; material.downloadUrl != null -> "Open PDF"; else -> "Download Free" },
+                    Text(when { isDownloaded -> "Downloaded ✓"; material.isPremium -> "Unlock with Pro"; !material.resolvedUrl.isNullOrBlank() -> "Open PDF"; else -> "Download Free" },
                         style = MaterialTheme.typography.titleMedium)
                 }
             }

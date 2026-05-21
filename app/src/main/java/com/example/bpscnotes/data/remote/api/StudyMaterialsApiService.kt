@@ -90,9 +90,14 @@ data class MaterialDetailData(
     @SerializedName("uploadedDate")  val uploadedDate: String?,
     @SerializedName("uploaderName")  val uploaderName: String?,
     @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
-    val downloadUrl: String?
+    // FIX: backend sends "fileUrl" on GET /study-materials/:id
+    // "downloadUrl" only comes from POST /study-materials/:id/download
+    val fileUrl: String? = null,
+    val downloadUrl: String? = null,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
+    // Use whichever URL is available — fileUrl (direct) or downloadUrl (after record-download call)
+    val resolvedUrl: String? get() = fileUrl ?: downloadUrl
 }
 
 data class StatsData(

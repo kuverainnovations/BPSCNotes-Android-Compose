@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.studymaterials
 
 import android.app.Application
 import android.app.DownloadManager
+import android.os.Build
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
@@ -38,7 +39,10 @@ import javax.inject.Inject
 //    The server stores files on its local disk and returns a public URL.
 // ════════════════════════════════════════════════════════════
 
+// Permission state for download on Android 9 and below
 data class StudyMaterialsUiState(
+    val needsStoragePermission: Boolean  = false,   // triggers permission request in UI
+    val pendingDownloadMaterial: com.example.bpscnotes.data.remote.api.StudyMaterialDto? = null, // retried after grant
     // List
     val materials:          List<StudyMaterialDto> = emptyList(),
     val isLoadingList:      Boolean                = true,
@@ -230,10 +234,32 @@ class StudyMaterialsViewModel @Inject constructor(
     }
 
     // ── Download via DownloadManager ──────────────────────────
+    /**
+     * On Android 10+ (API 29+): DownloadManager doesn't need any permission.
+     * On Android 9 and below: WRITE_EXTERNAL_STORAGE is a dangerous permission and
+     * must be granted at runtime. We emit needsStoragePermission = true so the UI
+     * can call ActivityCompat.requestPermissions(), then call retryPendingDownload().
+     */
     fun downloadMaterial(material: StudyMaterialDto) {
         if (_state.value.downloadedIds.contains(material.id)) {
             _state.update { it.copy(toastMessage = "Already downloaded") }
             return
+        }
+        // Android 9 and below needs runtime WRITE_EXTERNAL_STORAGE permission
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (!granted) {
+                // Save material so we can retry after the user grants permission
+                _state.update { it.copy(
+                    needsStoragePermission    = true,
+                    pendingDownloadMaterial   = material
+                )}
+                return
+            }
         }
         viewModelScope.launch {
             _state.update { it.copy(downloadingId = material.id) }
@@ -241,15 +267,26 @@ class StudyMaterialsViewModel @Inject constructor(
                 val res = api.recordDownload(material.id)
                 val url = res.data?.downloadUrl ?: throw Exception("No download URL")
 
-                val dm       = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val fileName = "${material.title.replace("[^a-zA-Z0-9]".toRegex(), "_")}.pdf"
-                val request  = DownloadManager.Request(Uri.parse(url))
-                    .setTitle(material.title)
-                    .setDescription("Downloading from BPSCNotes")
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "BPSCNotes/$fileName")
-                    .setAllowedOverMetered(true)
-                    .setAllowedOverRoaming(false)
+                val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+
+                // FIX: Sanitize filename — only safe chars, max 100 chars
+                val safeName = material.title
+                    .replace("[^a-zA-Z0-9 ._-]".toRegex(), "")
+                    .replace(" ", "_")
+                    .take(80)
+                    .ifEmpty { "bpscnotes_material" }
+                val fileName = "$safeName.pdf"
+
+                val request = DownloadManager.Request(Uri.parse(url)).apply {
+                    setTitle(material.title)
+                    setDescription("Downloading from BPSCNotes")
+                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setAllowedOverMetered(true)
+                    setAllowedOverRoaming(false)
+                    // FIX: Don't use a subdirectory — DownloadManager can't create subdirs
+                    // on older Android versions, causing a crash.
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                }
                 dm.enqueue(request)
 
                 _state.update {
