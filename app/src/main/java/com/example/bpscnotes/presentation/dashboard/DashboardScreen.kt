@@ -46,6 +46,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ads.DashboardBannerStrip
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.BannerDto
 import com.example.bpscnotes.data.remote.api.CourseDto
@@ -68,10 +70,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
+    adManager:     AdManager,
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     bookmarkViewModel: BookmarkViewModel   = hiltViewModel()
 ) {
-    val state by dashboardViewModel.uiState.collectAsState()
+    val state    by dashboardViewModel.uiState.collectAsState()
+//    val isProUser = state.user?.subscription != null  // Pro users see no ads
     val bookmarkedIds by bookmarkViewModel.bookmarkedIds.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)

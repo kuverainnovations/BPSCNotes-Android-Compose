@@ -26,7 +26,10 @@ import com.example.bpscnotes.data.remote.api.CheckInDayDto
 import com.example.bpscnotes.data.remote.api.CoinTransactionDto
 import com.example.bpscnotes.data.remote.api.EarnTaskDto
 import com.example.bpscnotes.data.remote.api.mapIcon
+import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ads.WatchAdForCoinsCard
 import com.example.bpscnotes.presentation.wallet.CoinWalletViewModel
+import android.app.Activity
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -42,9 +45,14 @@ enum class CheckInStatus    { DONE, BONUS, TODAY, LOCKED }
 @Composable
 fun CoinWalletScreen(
     navController: NavHostController,
-    viewModel: CoinWalletViewModel = hiltViewModel()
+    adManager:     AdManager,
+    viewModel:     CoinWalletViewModel = hiltViewModel()
 ) {
-    val state        by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? Activity
+    val state           by viewModel.uiState.collectAsState()
+    val rewardedAdReady by adManager.rewardedReady.collectAsState()
+    val adsRemaining    = adManager.rewardedAdsRemainingToday()
     val snackbarHost  = remember { SnackbarHostState() }
     var selectedTab   by remember { mutableIntStateOf(0) }
     val tabs          = listOf("Earn Coins", "History")
@@ -98,6 +106,30 @@ fun CoinWalletScreen(
                             streak    = state.checkInStreak
                         )
                     }
+                    // ── Watch Ad to earn coins ─────────────────────
+                    item(key = "watch_ad_card") {
+                        WatchAdForCoinsCard(
+                            adManager          = adManager,
+                            coinsPerAd         = AdManager.REWARDED_COINS,
+                            adsRemainingToday  = adsRemaining,
+                            isAdReady          = rewardedAdReady,
+                            onWatchAd          = {
+                                activity?.let { act ->
+                                    adManager.showRewardedAd(
+                                        activity  = act,
+                                        onRewarded = { coins ->
+                                            viewModel.onAdRewardEarned(coins)
+                                        },
+                                        onFailed  = { reason ->
+                                            viewModel.showMessage(reason)
+                                        }
+                                    )
+                                }
+                            },
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
                     item { SectionHeader("Earn Coins", "Complete tasks to earn rewards") }
                     state.earnTasks.forEachIndexed { idx, task ->
                         item(key = task.id) {
@@ -161,7 +193,7 @@ private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
             .fillMaxWidth()
             .height(240.dp)
             .background(Brush.verticalGradient(listOf(Color(0xFFFAC84A), Color(0xFFF0A500), Color(0xFFE59400))))
-          //  .statusBarsPadding()
+        //  .statusBarsPadding()
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(Color.White.copy(0.12f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))

@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import dagger.hilt.android.EntryPointAccessors
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen
 import com.example.bpscnotes.presentation.mylearning.MyLearningScreen
 import com.example.bpscnotes.presentation.navigation.BottomNavItem
@@ -29,7 +30,8 @@ import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 
 @Composable
-fun MainShell(rootNavController: NavHostController) {
+fun MainShell(rootNavController: NavHostController,
+              adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
     val bottomNavController = rememberNavController()
 
     val items = listOf(
@@ -74,7 +76,7 @@ fun MainShell(rootNavController: NavHostController) {
                 //.padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
         ) {
-            composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController) }
+            composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
             composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
             //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
             composable(Screen.RoomsHub.route) { backStackEntry ->

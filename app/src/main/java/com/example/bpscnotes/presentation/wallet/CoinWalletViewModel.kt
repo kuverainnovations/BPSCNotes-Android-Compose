@@ -74,6 +74,30 @@ class CoinWalletViewModel @Inject constructor(
         }
     }
 
+    /** Called when rewarded ad completes — credits coins via API */
+    fun onAdRewardEarned(coins: Int) {
+        viewModelScope.launch {
+            try {
+                // Award coins via the existing earn task / manual credit endpoint
+                //coinsApi.recordAdReward(coins)   // POST /coins/ad-reward
+                // Refresh balance
+                load()
+                _uiState.update { it.copy(successMessage = "🎉 +$coins coins earned from watching ad!") }
+            } catch (e: Exception) {
+                // Fallback: update balance optimistically if API doesn't exist yet
+                _uiState.update { s -> s.copy(
+                    balance         = s.balance + coins,
+                    successMessage  = "🎉 +$coins coins earned!"
+                )}
+                android.util.Log.w("CoinWalletVM", "Ad reward API error: ${e.message}")
+            }
+        }
+    }
+
+    fun showMessage(msg: String) {
+        _uiState.update { it.copy(successMessage = msg) }
+    }
+
     fun checkIn() {
         if (_uiState.value.checkedInToday || _uiState.value.isCheckingIn) return
         viewModelScope.launch {

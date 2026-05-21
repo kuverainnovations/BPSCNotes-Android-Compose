@@ -27,6 +27,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
+import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ads.PostSessionAdPrompt
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
 import com.example.bpscnotes.data.remote.api.EndSessionResponseData
 import com.example.bpscnotes.data.remote.api.MyTierResponseData
 import com.example.bpscnotes.data.remote.api.TierMemberDto
@@ -59,18 +63,46 @@ import javax.inject.Inject
 fun StudyFocusScreen(
     navController:  NavHostController,
     viewModel:      StudySessionViewModel,
-    tiersViewModel: TierRoomsViewModel
+    tiersViewModel: TierRoomsViewModel,
+    adManager: AdManager
 ) {
     val state      by viewModel.uiState.collectAsState()
     val tiersState by tiersViewModel.uiState.collectAsState()
+    val activity = LocalContext.current as? Activity
 
-    var showEndConfirm by remember { mutableStateOf(false) }
+    var showEndConfirm    by remember { mutableStateOf(false) }
+    var showPostSessionAd by remember { mutableStateOf(false) }
+    val rewardedAdReady   by adManager.rewardedReady.collectAsState()
+    val adsRemaining       = adManager.rewardedAdsRemainingToday()
 
 //    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
 
     androidx.activity.compose.BackHandler(
         enabled = state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK
     ) { showEndConfirm = true }
+
+    // Post-session rewarded ad prompt
+    if (showPostSessionAd && state.status != SessionStatus.ACTIVE) {
+        PostSessionAdPrompt(
+            studyMinutes       = state.activeMinutes,
+            coinsEarned        = state.coinsLastBeat,
+            adReady            = rewardedAdReady,
+            adsRemainingToday  = adsRemaining,
+            onWatchAd          = {
+                showPostSessionAd = false
+                activity?.let { act ->
+                    adManager.showRewardedAd(
+                        activity   = act,
+                        onRewarded = { coins ->
+                            // ViewModels don't have ad reward - show snackbar/toast via nav
+                        },
+                        onFailed   = { /* ignore */ }
+                    )
+                }
+            },
+            onSkip = { showPostSessionAd = false }
+        )
+    }
 
     // End confirm dialog
     if (showEndConfirm) {
@@ -81,7 +113,7 @@ fun StudyFocusScreen(
             text  = { Text("Your ${state.activeMinutes} min will be saved and coins awarded.") },
             confirmButton = {
                 Button(
-                    onClick = { showEndConfirm = false; viewModel.endSession() },
+                    onClick = { showEndConfirm = false; viewModel.endSession(); showPostSessionAd = true },
                     colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
                 ) { Text("End Session") }
             },

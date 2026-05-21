@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
@@ -49,7 +50,7 @@ import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
 @Composable
-fun BpscNavHost(navController: NavHostController) {
+fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
     NavHost(
         navController    = navController,
         startDestination = Screen.Splash.route
@@ -88,7 +89,7 @@ fun BpscNavHost(navController: NavHostController) {
         }
         // ── Main shell ────────────────────────────────────────────
         composable(Screen.Main.route) {
-            MainShell(rootNavController = navController)
+            MainShell(rootNavController = navController, adManager =adManager)
         }
 
         // ── Real screens ─────────────────────────────────────────
@@ -150,12 +151,12 @@ fun BpscNavHost(navController: NavHostController) {
             arguments = listOf(navArgument("quizId") { type = NavType.StringType })
         ) { backStackEntry ->
             val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
-            QuizPlayScreen(quizId = quizId, navController = navController)
+            QuizPlayScreen(quizId = quizId, navController = navController, adManager = adManager)
         }
 
         composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController) }
         composable(Screen.MockTests.route)     { MockTestsScreen(navController) }
-        composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController) }
+        composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
         // ── Tier Room System (Phase 1) ──────────────────────────
         composable(Screen.RoomsHub.route) { backStackEntry ->
 
@@ -185,7 +186,8 @@ fun BpscNavHost(navController: NavHostController) {
             StudyFocusScreen(
                 navController = navController,
                 viewModel = sessionVM,
-                tiersViewModel = tiersVM
+                tiersViewModel = tiersVM,
+                adManager = adManager
             )
         }
 
@@ -225,7 +227,7 @@ fun BpscNavHost(navController: NavHostController) {
         // ── Placeholders ─────────────────────────────────────────
         composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }
         composable(Screen.Profile.route)       { ProfileScreen(navController) }
-        composable(Screen.CoinWallet.route)    { CoinWalletScreen(navController) }
+        composable(Screen.CoinWallet.route)    { CoinWalletScreen(navController, adManager = adManager) }
         composable(Screen.Subscription.route)  { SubscriptionScreen(navController) }
         composable(Screen.EditProfile.route)    { EditProfileScreen(navController) }
         composable(Screen.Downloads.route)     { DownloadsScreen(navController) }

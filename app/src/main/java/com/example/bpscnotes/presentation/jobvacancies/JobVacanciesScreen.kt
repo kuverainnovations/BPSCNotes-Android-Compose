@@ -25,6 +25,8 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import java.text.SimpleDateFormat
@@ -99,7 +101,8 @@ private fun Long.daysUntil(): Long {
 @Composable
 fun JobVacanciesScreen(
     navController: NavHostController,
-    viewModel: JobVacanciesViewModel = hiltViewModel()
+    viewModel: JobVacanciesViewModel = hiltViewModel(),
+    adManager: AdManager
 ) {
     val vmState by viewModel.uiState.collectAsState()
 
@@ -309,17 +312,19 @@ fun JobVacanciesScreen(
                                 onSave = {
                                     viewModel.toggleSave(job.id)
                                 },
-                                        onClick  = { selectedJob = job })
+                                onClick  = { selectedJob = job })
                         }
                         item { Spacer(Modifier.height(4.dp)) }
                         item { Text("All Jobs", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
                     }
                     val rest = if (selectedCategory == null && searchQuery.isEmpty()) filtered.filter { !it.isFeatured } else filtered
-                    items(rest, key = { it.id }) { job ->
+                    itemsIndexed(rest, key = { _, it -> it.id }) { index, job ->
+                        // Banner ad every 5 job cards — unobtrusive, between items
+                        if (index > 0 && index % 5 == 0) {
+                            BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                        }
                         JobCard(job = job, isSaved = savedJobs.contains(job.id),
-                            onSave = {
-                                viewModel.toggleSave(job.id)
-                            },
+                            onSave  = { viewModel.toggleSave(job.id) },
                             onClick = { selectedJob = job })
                     }
                 }

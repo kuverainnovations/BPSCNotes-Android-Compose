@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.bpscnotes.core.ads.AdManager
+import android.app.Activity
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -36,9 +38,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun QuizPlayScreen(
     navController: NavHostController,
-    quizId: String,
-    viewModel: QuizViewModel = hiltViewModel()
+    quizId:        String,
+    adManager:     AdManager,
+    viewModel:     QuizViewModel = hiltViewModel()
 ) {
+    val context  = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(quizId) {
@@ -53,7 +58,15 @@ fun QuizPlayScreen(
                 session   = state.activeSession!!,
                 result    = state.result!!,
                 onRetake  = { viewModel.exitSession(); viewModel.startQuiz(quizId) },
-                onExit    = { viewModel.exitSession(); navController.popBackStack() }
+                onExit    = {
+                    viewModel.exitSession()
+                    // Show interstitial after quiz result (enforces 20min cooldown internally)
+                    activity?.let { act ->
+                        adManager.showInterstitialIfReady(act) {
+                            navController.popBackStack()
+                        }
+                    } ?: navController.popBackStack()
+                }
             )
         }
         state.activeSession != null && !state.isStartingQuiz -> {

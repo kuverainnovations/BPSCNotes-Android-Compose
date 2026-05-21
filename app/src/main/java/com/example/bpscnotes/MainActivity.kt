@@ -28,6 +28,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var adManager: com.example.bpscnotes.core.ads.AdManager
 
     private val settingsViewModel: SettingsViewModel by viewModels()
 
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
 
             BPSCNotesTheme(darkMode = darkMode) {
                 val navController = rememberNavController()
-                BpscNavHost(navController = navController)
+                BpscNavHost(navController = navController, adManager = adManager)
             }
         }
     }
