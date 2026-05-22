@@ -316,5 +316,8 @@ interface StudyMaterialsApiService {
         @Part("author")                    author:       RequestBody,
         @Part("tags")                      tags:         RequestBody,
         @Part("pageCount")                 pageCount:    RequestBody,
+        @Part("isPremium")                 isPremium:    RequestBody,
+        @Part("freePages")                 freePages:    RequestBody,
+        @Part("price")                     price:        RequestBody,
     ): ApiResponse<UploadResultData>
 }

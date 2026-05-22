@@ -899,7 +899,7 @@ private fun UploadSheet(
     isUploading:    Boolean,
     uploadProgress: Float,
     uploadError:    String?,
-    onSubmit:       (Uri, String, String, String, MaterialType, String, List<String>, Int) -> Unit,
+    onSubmit:       (Uri, String, String, String, MaterialType, String, List<String>, Int, Boolean, Int, Int) -> Unit,
     onDismiss:      () -> Unit
 ) {
     var title       by remember { mutableStateOf("") }
@@ -910,6 +910,10 @@ private fun UploadSheet(
     var selType     by remember { mutableStateOf(MaterialType.PDF) }
     var fileUri     by remember { mutableStateOf<Uri?>(null) }
     var fileName    by remember { mutableStateOf("") }
+    // Marketplace fields
+    var isPremium   by remember { mutableStateOf(false) }
+    var freePages   by remember { mutableStateOf("3") }
+    var price       by remember { mutableStateOf("0") }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -979,6 +983,57 @@ private fun UploadSheet(
                 shape = RoundedCornerShape(12.dp), singleLine = true,
                 placeholder = { Text("Constitution, Parliament, DPSP") })
 
+            // ── Marketplace / Premium Settings ─────────────────
+            Card(shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isPremium) Color(0xFFFFF8E1) else BpscColors.Surface)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Column {
+                            Text("Premium Content", style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                            Text("Charge coins for full access",
+                                style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                        }
+                        Switch(checked = isPremium, onCheckedChange = { isPremium = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = BpscColors.CoinGold,
+                                checkedTrackColor = BpscColors.CoinGold.copy(0.3f)))
+                    }
+                    AnimatedVisibility(visible = isPremium) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedTextField(
+                                    value = price,
+                                    onValueChange = { price = it.filter { c -> c.isDigit() } },
+                                    label = { Text("🪙 Price (coins)") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp), singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                )
+                                OutlinedTextField(
+                                    value = freePages,
+                                    onValueChange = { freePages = it.filter { c -> c.isDigit() } },
+                                    label = { Text("Free pages") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp), singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                )
+                            }
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFFFF3CD)).padding(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text("💡", fontSize = 12.sp)
+                                Text("Users see ${freePages.ifEmpty { "3" }} free pages. Full PDF unlocks after purchase.",
+                                    style = MaterialTheme.typography.bodySmall, color = Color(0xFF856404))
+                            }
+                        }
+                    }
+                }
+            }
+
             // File picker
             Box(modifier = Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(14.dp))
                 .background(if (fileUri != null) BpscColors.Success.copy(0.08f) else BpscColors.Surface)
@@ -1008,7 +1063,8 @@ private fun UploadSheet(
                 onClick = {
                     val uri = fileUri ?: return@Button
                     val tags = tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    onSubmit(uri, title, description, subject, selType, author, tags, 0)
+                    onSubmit(uri, title, description, subject, selType, author, tags, 0,
+                        isPremium, freePages.toIntOrNull() ?: 3, price.toIntOrNull() ?: 0)
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
                 enabled = title.isNotBlank() && subject.isNotBlank() && fileUri != null && !isUploading,

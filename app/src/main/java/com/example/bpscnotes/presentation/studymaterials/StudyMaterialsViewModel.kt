@@ -348,7 +348,10 @@ class StudyMaterialsViewModel @Inject constructor(
         type: MaterialType,
         author: String,
         tags: List<String>,
-        pageCount: Int
+        pageCount: Int,
+        isPremium: Boolean = false,
+        freePages: Int = 3,
+        price: Int = 0
     ) {
         viewModelScope.launch {
 
@@ -379,16 +382,17 @@ class StudyMaterialsViewModel @Inject constructor(
                 )
 
                 val response = api.uploadMaterial(
-                    file = filePart,
-                    title = title.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    description = description.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    subject = subject.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    file         = filePart,
+                    title        = title.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    description  = description.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    subject      = subject.toRequestBody("text/plain".toMediaTypeOrNull()),
                     materialType = type.apiKey.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    author = author.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    tags = Gson().toJson(tags)
-                        .toRequestBody("text/plain".toMediaTypeOrNull()),
-                    pageCount = pageCount.toString()
-                        .toRequestBody("text/plain".toMediaTypeOrNull())
+                    author       = author.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    tags         = Gson().toJson(tags).toRequestBody("text/plain".toMediaTypeOrNull()),
+                    pageCount    = pageCount.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                    isPremium    = isPremium.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                    freePages    = freePages.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                    price        = price.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                 )
 
                 _state.update {
