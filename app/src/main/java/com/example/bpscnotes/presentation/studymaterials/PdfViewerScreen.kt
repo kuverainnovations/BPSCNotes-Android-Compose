@@ -236,7 +236,7 @@ fun PdfViewerScreen(
                         // Render pages
                         items(pdfPages.size, key = { it }) { pageIndex ->
                             val pageNumber   = pageIndex + 1
-                            val isLocked     = !isPurchased && pageNumber > freePages
+                            val isLocked     = pageNumber > effectiveFreePages
 
                             Box(
                                 modifier = Modifier

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
 
 // ════════════════════════════════════════════════════════════
@@ -197,26 +198,16 @@ fun StudyMaterialsScreen(
                 )
                 viewModel.downloadMaterial(dto)
             },
-            onOpenPdf      = { url ->
-                // Try PDF app first, fall back to browser, then Google Docs viewer
-                val uri = Uri.parse(url)
-                // 1. Try native PDF viewer (Adobe, Drive, etc.)
-                val pdfIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "application/pdf")
-                    flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                }
-                if (pdfIntent.resolveActivity(context.packageManager) != null) {
-                    context.startActivity(pdfIntent)
-                } else {
-                    // 2. Fall back to browser with Google Docs viewer (works for any https URL)
-                    val viewerUrl = "https://docs.google.com/viewer?url=${Uri.encode(url)}"
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(viewerUrl))
-                    try { context.startActivity(browserIntent) }
-                    catch (e: Exception) {
-                        // 3. Last resort — plain browser
-                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    }
-                }
+            onOpenPdf      = { url, title, freePages, isPurchased ->
+                // Navigate to our in-app PDF viewer which enforces page locking
+                navController.navigate(
+                    Screen.PdfViewer.createRoute(
+                        fileUrl     = url,
+                        title       = title,
+                        freePages   = freePages,
+                        isPurchased = isPurchased
+                    )
+                )
             },
             onDismiss      = viewModel::closeDetail
         )
@@ -779,7 +770,7 @@ private fun MaterialDetailSheet(
     isDownloading: Boolean,
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
-    onOpenPdf:    (String) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onDismiss:    () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -837,7 +828,10 @@ private fun MaterialDetailSheet(
                 val downloadUrl = material.resolvedUrl
                 Box(modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
                     .background(BpscColors.Surface).border(1.dp, BpscColors.Divider, RoundedCornerShape(16.dp))
-                    .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable { onOpenPdf(downloadUrl) } else Modifier),
+                    .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable {
+                        onOpenPdf(downloadUrl, material.title, material.freePages,
+                            material.isPurchased || material.isFree)  // free materials always fully accessible
+                    } else Modifier),
                     contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(material.type.emoji, fontSize = 44.sp)
@@ -876,7 +870,8 @@ private fun MaterialDetailSheet(
                     Spacer(Modifier.width(6.dp))
                     Text(if (isBookmarked) "Saved" else "Save", style = MaterialTheme.typography.titleMedium)
                 }
-                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!) } } else onDownload,
+                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!, material.title, material.freePages,
+                    material.isPurchased || material.isFree) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
@@ -1152,7 +1147,7 @@ fun DownloadsTab(
     downloads:    List<com.example.bpscnotes.data.remote.api.DownloadHistoryItem>,
     isLoading:    Boolean,
     purchasedIds: Set<String>,
-    onOpenPdf:    (String) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onRefresh:    () -> Unit
 ) {
     when {
@@ -1242,7 +1237,7 @@ fun DownloadsTab(
                         // Action button
                         if (!item.fileUrl.isNullOrBlank()) {
                             Button(
-                                onClick  = { onOpenPdf(item.fileUrl) },
+                                onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased) },
                                 shape    = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(36.dp),
                                 colors   = ButtonDefaults.buttonColors(

@@ -148,14 +148,17 @@ data class MaterialDetailData(
     @SerializedName("uploadedDate")  val uploadedDate: String?,
     @SerializedName("uploaderName")  val uploaderName: String?,
     @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
-    // FIX: backend sends "fileUrl" on GET /study-materials/:id
-    // "downloadUrl" only comes from POST /study-materials/:id/download
     val fileUrl: String? = null,
     val downloadUrl: String? = null,
+    // Marketplace / PDF lock fields
+    val price: Int = 0,
+    @SerializedName("free_pages")    val freePages: Int = 3,
+    @SerializedName("is_premium")    val isPremium2: Boolean = false,
+    @SerializedName("is_purchased")  val isPurchased: Boolean = false,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
-    // Use whichever URL is available — fileUrl (direct) or downloadUrl (after record-download call)
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
+    val isFree: Boolean get() = price == 0
 }
 
 data class StatsData(
