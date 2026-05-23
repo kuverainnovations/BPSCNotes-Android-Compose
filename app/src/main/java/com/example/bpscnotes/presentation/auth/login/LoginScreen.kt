@@ -236,11 +236,17 @@ fun LoginScreen(navController: NavHostController) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.TextSecondary
                 )
+                val context = androidx.compose.ui.platform.LocalContext.current
                 Text(
                     "Terms & Privacy Policy",
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.Primary,
-                    textDecoration = TextDecoration.Underline
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
+                        context.startActivity(intent)
+                    }
                 )
             }
 

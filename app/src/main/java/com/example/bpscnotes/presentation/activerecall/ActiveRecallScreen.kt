@@ -363,10 +363,17 @@ private fun FlashcardSessionScreen(
             }
 
             // Swipe hint
+            // Swipe hint — clarified labels
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(16.dp)); Text("Needs Work", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold) }
-                Text("Swipe to rate", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("Mastered", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold); Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp)) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                    Text("← Revise Again", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                }
+                Text("Swipe card to rate", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Got it! →", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
+                }
             }
 
             // Flip card
@@ -396,8 +403,8 @@ private fun FlashcardSessionScreen(
                         }
                     }
                     if (offsetX.value < -60f) {
-                        Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFE74C3C)).padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text("🔄 WEAK", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF59E0B)).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            Text("🔄 REVISE AGAIN", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
                     }
 
@@ -420,8 +427,15 @@ private fun FlashcardSessionScreen(
                         Icon(Icons.Rounded.Flip, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Reveal Answer", style = MaterialTheme.typography.titleMedium)
                     }
                 } else {
-                    Button(onClick = { rateAndNext(CardRating.Weak) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C))) { Text("🔄 Weak", style = MaterialTheme.typography.titleMedium) }
-                    Button(onClick = { rateAndNext(CardRating.Mastered) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)) { Text("✅ Got it!", style = MaterialTheme.typography.titleMedium) }
+                    // FIX: Renamed "Weak" → "Revise Again" per client request
+                    Button(onClick = { rateAndNext(CardRating.Weak) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))) {
+                        Text("🔄 Revise Again", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Button(onClick = { rateAndNext(CardRating.Mastered) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)) {
+                        Text("✅ Got it!", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         }
