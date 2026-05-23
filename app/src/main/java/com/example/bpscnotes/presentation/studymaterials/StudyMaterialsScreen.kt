@@ -6,7 +6,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ModalBottomSheet
@@ -20,6 +19,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
@@ -270,7 +271,8 @@ fun StudyMaterialsScreen(
             uploadProgress = state.uploadProgress,
             uploadError    = state.uploadError,
             onSubmit       = viewModel::uploadMaterial,
-            onDismiss      = viewModel::hideUpload
+            onDismiss      = viewModel::hideUpload,
+            state =state
         )
     }
 }
@@ -938,11 +940,12 @@ private fun MaterialDetailSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UploadSheet(
-    isUploading:    Boolean,
+    isUploading: Boolean,
     uploadProgress: Float,
-    uploadError:    String?,
-    onSubmit:       (Uri, String, String, String, MaterialType, String, List<String>, Int, Boolean, Int, Int) -> Unit,
-    onDismiss:      () -> Unit
+    uploadError: String?,
+    onSubmit: (Uri, String, String, String, MaterialType, String, List<String>, Int, Boolean, Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+    state: StudyMaterialsUiState
 ) {
     var title       by remember { mutableStateOf("") }
     var subject     by remember { mutableStateOf("") }
@@ -988,9 +991,29 @@ private fun UploadSheet(
                 label = { Text("Notes Title *") }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
-            OutlinedTextField(value = subject, onValueChange = { subject = it },
-                label = { Text("Subject *") }, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true)
+            // FIX: Subject dropdown populated from backend /subjects API
+            var subjectExpanded by remember { mutableStateOf(false) }
+            val backendSubjects = state.subjects.filter { it != "All" }
+                .ifEmpty { listOf("Polity","History","Geography","Economy","Bihar GK","Science","Environment","Current Affairs","BPSC Specific") }
+
+            ExposedDropdownMenuBox(
+                expanded = subjectExpanded, onExpandedChange = { subjectExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = subject, onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Subject *") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = subjectExpanded, onDismissRequest = { subjectExpanded = false }) {
+                    backendSubjects.forEach { s ->
+                        DropdownMenuItem(text = { Text(s) }, onClick = { subject = s; subjectExpanded = false })
+                    }
+                }
+            }
 
             OutlinedTextField(value = author, onValueChange = { author = it },
                 label = { Text("Author (your name)") }, modifier = Modifier.fillMaxWidth(),

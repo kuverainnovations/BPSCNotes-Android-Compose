@@ -405,9 +405,10 @@ class SubscriptionViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = !refresh, isRefreshing = refresh) }
             try {
-                // Load premium materials
-                val matsRes = materialsApi.list(limit = 20, sort = "downloads")
-                val premiumMats = matsRes.data?.materials?.filter { it.isPremium } ?: emptyList()
+                // FIX: Use backend isPremium=true filter — shows ONLY premium content
+                // Previously loaded all materials and filtered client-side → showed non-premium too
+                val matsRes = materialsApi.list(limit = 20, sort = "downloads", isPremium = true)
+                val premiumMats = matsRes.data?.materials ?: emptyList()
 
                 // Load paid courses
                 val coursesRes = try { coursesApi.getCourses().data?.courses ?: emptyList() } catch (e: Exception) { emptyList() }

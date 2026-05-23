@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -216,6 +217,16 @@ fun ProfileScreen(
                 SubjectProgressCard(
                     subjects = uiSubjects,
                     navController = navController
+                )
+
+                // FIX: Study Heatmap (28 days) — matches design screenshot
+                StudyHeatmapCard(studyDays = state.studyHeatmap)
+
+                // FIX: Coin Wallet section — shows balance + recent transactions
+                CoinWalletSection(
+                    balance      = user?.coins ?: 0,
+                    transactions = state.recentTransactions,
+                    onViewAll    = { navController.navigate(Screen.CoinWallet.route) }
                 )
 
                 BadgesCard(badges = uiBadges)
@@ -920,6 +931,142 @@ private fun SubjectProgressItem(subject: SubjectProgress) {
 // BADGES CARD
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// STUDY HEATMAP — 28-day grid matching design screenshot
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun StudyHeatmapCard(studyDays: List<Int>) {
+    // studyDays: list of 28 ints (minutes studied each day, 0 = no study)
+    val days = if (studyDays.size >= 28) studyDays.takeLast(28) else List(28 - studyDays.size) { 0 } + studyDays
+    val maxMins = days.maxOrNull()?.coerceAtLeast(1) ?: 1
+
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("📅", fontSize = 16.sp)
+                    Text("Study Heatmap", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                }
+                Text("Last 28 days", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+            }
+            // Day labels
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach { d ->
+                    Text(d, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp,
+                        modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                }
+            }
+            // 4 rows × 7 days grid
+            repeat(4) { row ->
+                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp)) {
+                    repeat(7) { col ->
+                        val dayIdx = row * 7 + col
+                        val mins   = days.getOrElse(dayIdx) { 0 }
+                        val alpha  = if (mins == 0) 0.12f else (mins.toFloat() / maxMins).coerceIn(0.2f, 1f)
+                        Box(
+                            modifier = Modifier.weight(1f).aspectRatio(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(BpscColors.Primary.copy(alpha = alpha))
+                        )
+                    }
+                }
+            }
+            // Legend
+            Row(Modifier.fillMaxWidth(), Arrangement.End, Alignment.CenterVertically) {
+                Text("Less", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+                Spacer(Modifier.width(4.dp))
+                listOf(0.12f, 0.3f, 0.55f, 0.8f).forEach { a ->
+                    Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Primary.copy(alpha = a)))
+                    Spacer(Modifier.width(2.dp))
+                }
+                Text("More", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// COIN WALLET SECTION — balance + recent transactions
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun CoinWalletSection(
+    balance:      Int,
+    transactions: List<com.example.bpscnotes.data.remote.api.CoinTransactionDto>,
+    onViewAll:    () -> Unit
+) {
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Box(Modifier.fillMaxWidth().background(
+            Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))),
+            RoundedCornerShape(20.dp)
+        )) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("🪙", fontSize = 16.sp)
+                        Text("Coin Wallet", style = MaterialTheme.typography.titleMedium,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    }
+                    TextButton(onClick = onViewAll) {
+                        Text("View all", color = BpscColors.CoinGold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) {
+                    Column {
+                        Text("Current Balance", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("🪙", fontSize = 24.sp)
+                            Text("$balance coins", style = MaterialTheme.typography.headlineMedium,
+                                color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Text("= ₹${balance / 10} discount value", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f))
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("How to earn:", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                        Text("Daily quiz +5", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text("Streak bonus +15", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text("Referral +50", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                    }
+                }
+                // Recent transactions
+                transactions.take(3).forEach { tx ->
+                    val isEarned = tx.type == "earned"
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(0.08f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                        Arrangement.SpaceBetween, Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (isEarned) "🎯" else "🛍️", fontSize = 14.sp)
+//                            Text(tx.description ?: tx.action ?: "Transaction",
+//                                style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.85f), maxLines = 1)
+                        }
+                        Text(
+                            "${if (isEarned) "+" else "-"}${tx.coins} 🪙",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isEarned) Color(0xFF4CAF50) else Color(0xFFE57373),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                if (transactions.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(0.08f)).padding(12.dp), Alignment.Center) {
+                        Text("No transactions yet — complete a quiz to earn coins!", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f), textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun BadgesCard(badges: List<BadgeItem>) {
     Card(

@@ -127,8 +127,12 @@ fun CourseDetailScreen(
                     item { WhatYouLearnSection(course.whatYouLearn, accent) }
                 }
 
-                if (course.hasCertificate) {
-                    item { CertificateBanner() }
+                // Certificate banner — shown always; state changes based on completion
+                item {
+                    CertificateBanner(
+                        isComplete  = allDone,
+                        courseName  = course.title
+                    )
                 }
 
                 item {
@@ -736,7 +740,10 @@ private fun HeroHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoPill(Icons.Rounded.PlayLesson, "$totalLessons lessons")
                 InfoPill(Icons.Rounded.Schedule, "${course.totalHours}h total")
-                InfoPill(Icons.Rounded.Language, course.language)
+                // FIX: Only show language tag if it has a meaningful value
+                if (course.language.isNotBlank() && course.language != "Hindi + English" && course.language != "Hindi+English") {
+                    InfoPill(Icons.Rounded.Language, course.language)
+                }
             }
             if (isEnrolled && totalLessons > 0) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -785,16 +792,42 @@ private fun WhatYouLearnSection(items: List<String>, accent: Color) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun CertificateBanner() {
+private fun CertificateBanner(isComplete: Boolean = false, courseName: String = "") {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         RoundedCornerShape(16.dp), CardDefaults.cardColors(), CardDefaults.cardElevation(3.dp)) {
-        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))) {
-            Row(Modifier.padding(16.dp), Arrangement.spacedBy(14.dp), Alignment.CenterVertically) {
-                Text("🏆", fontSize = 32.sp)
-                Column {
-                    Text("Certificate of Completion", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("Earn a verified certificate after completing all lessons",
-                        style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
+        Box(Modifier.fillMaxWidth().background(
+            Brush.linearGradient(if (isComplete) listOf(Color(0xFF1B5E20), Color(0xFF2E7D32))
+            else listOf(Color(0xFF0A2472), Color(0xFF1565C0)))
+        )) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isComplete) "🎓" else "🏆", fontSize = 32.sp)
+                    Column {
+                        Text(if (isComplete) "Certificate Earned! 🎉" else "Certificate of Completion",
+                            style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text(if (isComplete) "Tap to view & download your certificate"
+                        else "Complete all lessons to earn your certificate",
+                            style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.75f))
+                    }
+                }
+                if (isComplete) {
+                    Button(
+                        onClick = {
+                            // Share/download certificate — open in browser or share as image
+                            val shareText = "I just completed '$courseName' on BPSCNotes! 🎓"
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, "Share Certificate"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape  = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("Share 🎓", color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

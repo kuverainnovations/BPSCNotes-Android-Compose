@@ -25,6 +25,10 @@ data class ProfileUiState(
     val subjects: List<SubjectProgress> = emptyList(),
     val badges: List<BadgeItem>         = emptyList(),
     val weekDays: List<WeekDayUi>       = emptyList(),
+    // Study heatmap — 28 integers (minutes studied per day)
+    val studyHeatmap: List<Int>         = emptyList(),
+    // Recent coin transactions for profile wallet section
+    val recentTransactions: List<com.example.bpscnotes.data.remote.api.CoinTransactionDto> = emptyList(),
     val isLoading: Boolean              = true,
     val isSaving: Boolean               = false,
     val error: String?                  = null,
@@ -75,7 +79,7 @@ class ProfileViewModel @Inject constructor(
 
     // ── Update profile via PATCH /users/profile ───────────────
     fun updateProfile(name: String, email: String?, bio: String?,
-        district: String?, targetYear: Int?, prepLevel: String?) {
+                      district: String?, targetYear: Int?, prepLevel: String?) {
         if (name.isBlank()) {
             _uiState.update { it.copy(error = "Name cannot be empty") }
             return

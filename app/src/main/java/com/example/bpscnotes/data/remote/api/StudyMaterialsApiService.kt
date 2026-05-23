@@ -255,7 +255,8 @@ interface StudyMaterialsApiService {
         @Query("page")           page:          Int     = 1,
         @Query("limit")          limit:         Int     = 20,
         @Query("sort")           sort:          String? = null,
-        @Query("bookmarkedOnly") bookmarkedOnly: Boolean = false
+        @Query("bookmarkedOnly") bookmarkedOnly: Boolean = false,
+        @Query("isPremium")      isPremium:     Boolean? = null   // null = all, true = premium only
     ): ApiResponse<MaterialListData>
 
     /** GET /study-materials/my-uploads */
