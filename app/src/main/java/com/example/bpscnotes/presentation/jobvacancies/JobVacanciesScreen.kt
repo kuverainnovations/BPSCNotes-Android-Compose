@@ -603,7 +603,7 @@ private fun JobAlertSheet(
                     Text("Job Alerts", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                     Text("Get notified when new vacancies are posted", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
-                Icon(Icons.Rounded.Notifications, null, tint = BpscColors.CoinGold, modifier = Modifier.size(26.dp))
+                // Alert icon removed — will be dynamic when job alert API is ready
             }
             HorizontalDivider(color = BpscColors.Divider)
             categories.forEach { cat ->

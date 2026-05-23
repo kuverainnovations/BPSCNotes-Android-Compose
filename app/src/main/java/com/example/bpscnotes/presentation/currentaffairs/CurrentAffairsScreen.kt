@@ -104,6 +104,8 @@ fun CurrentAffairsScreen(
         viewModel.loadArticles(category = selectedCategory)
     }
 
+    val context = LocalContext.current
+
     val articles = state.articles
 
     val filtered = articles.filter { article ->
@@ -120,7 +122,6 @@ fun CurrentAffairsScreen(
                 article.tags.any { it.contains(searchQuery, ignoreCase = true) }
         matchesTab && matchesCat && matchesSearch
     }
-    val context = LocalContext.current
 
     val grouped = filtered.groupBy { it.date }.entries.sortedByDescending { it.key }
 
@@ -189,7 +190,15 @@ fun CurrentAffairsScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         tabs.forEachIndexed { index, tab ->
                             val sel = selectedTab == index
-                            Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) Color.White else Color.White.copy(0.12f)).clickable { selectedTab = index }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)      // equal weight = equal width for ALL tabs
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (sel) Color.White else Color.White.copy(0.12f))
+                                    .clickable { selectedTab = index }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.85f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = if (index == 3) 11.sp else 14.sp)
                             }
                         }
@@ -330,7 +339,12 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onReadMore() },  // FIX: whole card clickable
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

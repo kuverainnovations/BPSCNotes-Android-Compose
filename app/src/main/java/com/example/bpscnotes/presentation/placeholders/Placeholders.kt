@@ -83,34 +83,35 @@ class DownloadsViewModel @Inject constructor(
                 isRefreshing = refresh
             )}
             try {
-                // 1. Get server-side download history (what user has downloaded)
-                val serverHistory = try {
-                    materialsApi.myUploads().data?.uploads ?: emptyList()
+                // FIX: Use getMyDownloads() — the correct endpoint for download history
+                // myUploads() returns what the user UPLOADED, not what they downloaded
+                val downloadHistory = try {
+                    materialsApi.getMyDownloads().data?.downloads ?: emptyList()
                 } catch (e: Exception) { emptyList() }
 
-                // 2. Cross-reference with actual files on device
+                // Also scan local device Downloads/BPSCNotes folder for actual files
                 val localFiles = if (downloadsDir.exists())
                     downloadsDir.walkTopDown().filter { it.isFile && it.extension == "pdf" }.toList()
                 else emptyList()
 
                 val items = mutableListOf<DownloadedFileItem>()
 
-                // Add items from server history that have local files
-                serverHistory.forEach { dto ->
-                    val safeName = dto.title.replace("[^a-zA-Z0-9]".toRegex(), "_") + ".pdf"
-                    val localFile = localFiles.firstOrNull { it.name.contains(dto.id.take(8)) || it.name == safeName }
-                    if (localFile != null || dto.fileUrl != null) {
-                        items.add(DownloadedFileItem(
-                            id           = dto.id,
-                            title        = dto.title,
-                            subject      = dto.subject,
-                            materialType = dto.materialType,
-                            fileSizeMb   = localFile?.length()?.div(1048576f) ?: dto.fileSizeMb,
-                            downloadedAt = dto.uploadedDate ?: "",
-                            localPath    = localFile?.absolutePath ?: "",
-                            fileExists   = localFile?.exists() == true
-                        ))
+                // Map backend download history to UI items
+                downloadHistory.forEach { dto ->
+                    val localFile = localFiles.firstOrNull {
+                        it.name.contains(dto.id.take(8), ignoreCase = true)
                     }
+                    items.add(DownloadedFileItem(
+                        id           = dto.id,
+                        title        = dto.title,
+                        subject      = dto.subject,
+                        materialType = dto.materialType,
+                        fileSizeMb   = localFile?.length()?.div(1048576f)
+                            ?: (dto.fileSizeBytes / 1048576f),
+                        downloadedAt = dto.downloadedAt,
+                        localPath    = localFile?.absolutePath ?: "",
+                        fileExists   = localFile?.exists() == true
+                    ))
                 }
 
                 // Also include local files not in server history (e.g. renamed)
@@ -444,7 +445,7 @@ fun SubscriptionScreen(
                 .background(Brush.linearGradient(
                     listOf(Color(0xFF6A0DAD), Color(0xFF9B59B6), Color(0xFFBA68C8)),
                     Offset(0f, 0f), Offset(500f, 300f)))
-             ) {
+            ) {
                 Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(),

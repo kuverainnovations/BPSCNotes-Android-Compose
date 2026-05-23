@@ -183,10 +183,12 @@ fun ProfileScreen(
 
             Column(
                 modifier = Modifier
+                    .weight(1f)
                     .fillMaxWidth()
                     .offset(y = (-24).dp)
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(BpscColors.Surface)
+                    .verticalScroll(rememberScrollState())
                     .padding(top = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
