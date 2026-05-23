@@ -381,13 +381,21 @@ private fun DownloadedFileCard(
 // ════════════════════════════════════════════════════════════
 // SUBSCRIPTION / PAID CONTENT SCREEN
 // ════════════════════════════════════════════════════════════
+data class SubscriptionPlanItem(
+    val id: String, val name: String, val price: Int,
+    val originalPrice: Int = 0, val duration: String,
+    val billingCycle: String = "", val bonusCoins: Int = 0, val savings: Int = 0
+)
+
 data class SubscriptionUiState(
-    val premiumMaterials: List<StudyMaterialDto> = emptyList(),
-    val premiumCourses:   List<CourseDto>         = emptyList(),
-    val isLoading:        Boolean                 = true,
-    val isRefreshing:     Boolean                 = false,
-    val isPremiumUser:    Boolean                 = false,
-    val error:            String?                 = null
+    val premiumMaterials: List<StudyMaterialDto>    = emptyList(),
+    val premiumCourses:   List<CourseDto>           = emptyList(),
+    val plans:            List<SubscriptionPlanItem> = emptyList(),
+    val activePlan:       String?                   = null,   // current user's plan
+    val isLoading:        Boolean                   = true,
+    val isRefreshing:     Boolean                   = false,
+    val isPremiumUser:    Boolean                   = false,
+    val error:            String?                   = null
 )
 
 @HiltViewModel
@@ -414,9 +422,35 @@ class SubscriptionViewModel @Inject constructor(
                 val coursesRes = try { coursesApi.getCourses().data?.courses ?: emptyList() } catch (e: Exception) { emptyList() }
                 val paidCourses = coursesRes.filter { it.isPaid }
 
+                // Load subscription plans from backend
+                val plansRes = try {
+                    coursesApi.getSubscriptionPlans().data?.plans ?: emptyList()
+                } catch (_: Exception) { emptyList() }
+
+                val planItems = plansRes.map { p ->
+                    SubscriptionPlanItem(
+                        id            = p.id ?: "monthly",
+                        name          = p.name ?: "Monthly",
+                        price         = p.price ?: 199,
+                        originalPrice = p.originalPrice ?: 299,
+                        duration      = p.duration ?: "1 Month",
+                        billingCycle  = p.billingCycle ?: "",
+                        bonusCoins    = p.bonusCoins ?: 0,
+                        savings       = p.savings ?: 0
+                    )
+                }.ifEmpty {
+                    // Hardcoded fallback matching backend PLANS constant
+                    listOf(
+                        SubscriptionPlanItem("monthly", "Monthly", 199, 299, "1 Month", "Billed monthly", 20, 100),
+                        SubscriptionPlanItem("quarterly", "Quarterly", 499, 699, "3 Months", "Billed every 3 months", 50, 200),
+                        SubscriptionPlanItem("annual", "Annual", 1499, 2388, "12 Months", "Billed annually", 100, 889)
+                    )
+                }
+
                 _state.update { it.copy(
                     premiumMaterials = premiumMats,
                     premiumCourses   = paidCourses,
+                    plans            = planItems,
                     isLoading        = false,
                     isRefreshing     = false,
                     error            = null
@@ -475,7 +509,9 @@ fun SubscriptionScreen(
                         }
                     }
 
-                    // PRO card
+                    // FIX: Dynamic plan card from API
+                    val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
+                        "monthly", "BPSCNotes Pro", 199, 299, "1 Month", "Billed monthly", 20, 100)
                     Card(shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f)),
                         border = BorderStroke(1.dp, Color.White.copy(0.3f))) {
@@ -483,7 +519,8 @@ fun SubscriptionScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("BPSCNotes Pro", style = MaterialTheme.typography.titleMedium,
+                                Text("BPSCNotes ${featuredPlan.name}",
+                                    style = MaterialTheme.typography.titleMedium,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text("All premium content · No ads · Priority support",
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
@@ -492,12 +529,28 @@ fun SubscriptionScreen(
                                     SubPill("📚 All Books")
                                     SubPill("🎬 Videos")
                                 }
+                                if (featuredPlan.bonusCoins > 0) {
+                                    SubPill("🪙 +${featuredPlan.bonusCoins} Bonus Coins")
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Text("₹299", style = MaterialTheme.typography.headlineSmall,
+                                if (featuredPlan.originalPrice > featuredPlan.price) {
+                                    Text("₹${featuredPlan.originalPrice}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(0.5f),
+                                        textDecoration = TextDecoration.LineThrough)
+                                }
+                                Text("₹${featuredPlan.price}",
+                                    style = MaterialTheme.typography.headlineSmall,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("/month", style = MaterialTheme.typography.labelSmall,
+                                Text("/${featuredPlan.duration}",
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(0.7f))
+                                if (featuredPlan.savings > 0) {
+                                    Text("Save ₹${featuredPlan.savings}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF81C784), fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

@@ -23,7 +23,10 @@ data class AchievementDto(
     @SerializedName("sort_order")   val sortOrder: Int   = 0,
     @SerializedName("is_earned")    val isEarned: Boolean = false,
     @SerializedName("earned_at")    val earnedAt: String? = null,
-    @SerializedName("is_active")    val isActive: Boolean = true
+    @SerializedName("is_active")    val isActive: Boolean = true,
+    // Progress fields for in-progress achievements
+    @SerializedName("goal_target")  val goalTarget: Int? = null,
+    @SerializedName("current_value")val currentValue: Int? = null
 )
 
 data class AchievementsResponseData(

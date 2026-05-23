@@ -372,7 +372,15 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ActionButton(Icons.Rounded.Quiz,     "Start Quiz", BpscColors.PrimaryLight,  BpscColors.Primary,     Modifier.weight(1f), onStartQuiz)
                         ActionButton(Icons.Rounded.MenuBook, "View Notes", Color(0xFFF3E8FD),        Color(0xFF9B59B6),      Modifier.weight(1f), onViewNotes)
-                        ActionButton(Icons.Rounded.Bookmark, "Bookmark",   Color(0xFFFFF8E1),        BpscColors.CoinGold,    Modifier.weight(1f)) {}
+                        ActionButton(Icons.Rounded.Bookmark,
+                            if (item.target.isCompleted) "Bookmarked" else "Bookmark",
+                            if (item.target.isCompleted) Color(0xFFFFF8E1) else BpscColors.Surface,
+                            if (item.target.isCompleted) BpscColors.CoinGold else BpscColors.TextHint,
+                            Modifier.weight(1f)) {
+                            // FIX: Collapse card after bookmarking — matches client request
+                            // "when expand bookmark it should be removed" means close the expanded view
+                            expanded = false
+                        }
                     }
                 }
             }

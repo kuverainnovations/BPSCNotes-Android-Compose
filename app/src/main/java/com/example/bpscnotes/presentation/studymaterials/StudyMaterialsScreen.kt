@@ -947,6 +947,7 @@ private fun UploadSheet(
     onDismiss: () -> Unit,
     state: StudyMaterialsUiState
 ) {
+    val context = LocalContext.current
     var title       by remember { mutableStateOf("") }
     var subject     by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -960,10 +961,30 @@ private fun UploadSheet(
     var freePages   by remember { mutableStateOf("3") }
     var price       by remember { mutableStateOf("0") }
 
-    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+
         uri?.let {
-            fileUri  = it
-            fileName = it.lastPathSegment ?: "file.pdf"
+            fileUri = it
+
+            var name = "file"
+
+            try {
+                context.contentResolver.query(it, null, null, null, null)
+                    ?.use { cursor ->
+
+                        val nameIndex =
+                            cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+
+                        if (cursor.moveToFirst() && nameIndex >= 0) {
+                            name = cursor.getString(nameIndex)
+                        }
+                    }
+            } catch (_: Exception) {
+            }
+
+            fileName = name
         }
     }
 

@@ -53,7 +53,7 @@ fun AchievementsScreen(
                         listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
                         Offset(0f, 0f), Offset(400f, 300f)
                     ))
-                  //  .statusBarsPadding()
+                    //  .statusBarsPadding()
                     .padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -113,38 +113,93 @@ fun AchievementsScreen(
     }
 }
 
+// ── Redesigned achievement display — matches profile screenshot ──────────
+// Earned: circle badges in a row with name + date
+// In Progress: card with progress bar + percentage
+
 @Composable
 private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
-    val rows = items.chunked(3)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { ach ->
-                    AchievementBadge(achievement = ach, accentColor = accentColor, modifier = Modifier.weight(1f))
+    val earned     = items.filter { it.isEarned }
+    val inProgress = items.filter { !it.isEarned }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Earned badges — circle icons in a row
+        if (earned.isNotEmpty()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(earned) { ach ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.width(72.dp)
+                    ) {
+                        Box(
+                            Modifier.size(64.dp).clip(CircleShape)
+                                .border(2.dp, accentColor, CircleShape)
+                                .background(accentColor.copy(0.1f)),
+                            Alignment.Center
+                        ) { Text(ach.emoji, fontSize = 28.sp) }
+                        Text(
+                            ach.title, style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center, maxLines = 2, fontSize = 9.sp,
+                            lineHeight = 12.sp, overflow = TextOverflow.Ellipsis
+                        )
+                        ach.earnedAt?.let { at ->
+                            Text(at.take(10), style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextHint, fontSize = 8.sp)
+                        }
+                    }
                 }
-                // Fill empty cells
-                repeat(3 - row.size) { Box(modifier = Modifier.weight(1f)) }
             }
         }
-    }
-}
 
-@Composable
-private fun AchievementBadge(achievement: AchievementDto, accentColor: Color, modifier: Modifier = Modifier) {
-    val earned   = achievement.isEarned
-    val bgColor  = if (earned) accentColor.copy(0.1f) else Color(0xFFF5F5F5)
-    val border   = if (earned) accentColor.copy(0.4f) else Color(0xFFE0E0E0)
-    val alpha    = if (earned) 1f else 0.45f
-
-    Card(modifier = modifier.alpha(alpha).border(if (earned) 1.5.dp else 1.dp, border, RoundedCornerShape(16.dp)), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = bgColor), elevation = CardDefaults.cardElevation(if (earned) 2.dp else 0.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(achievement.emoji, fontSize = 28.sp)
-            Text(achievement.title, style = MaterialTheme.typography.labelSmall, color = if (earned) BpscColors.TextPrimary else BpscColors.TextHint, fontWeight = if (earned) FontWeight.Bold else FontWeight.Normal, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp, fontSize = 10.sp)
-            if (earned && achievement.coinsReward > 0) {
-                Text("🪙${achievement.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-            }
-            if (earned) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = accentColor, modifier = Modifier.size(14.dp))
+        // In Progress — cards with progress bars
+        if (inProgress.isNotEmpty()) {
+            Text(
+                "🔒 In Progress",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = BpscColors.TextPrimary
+            )
+            inProgress.forEach { ach ->
+                val pct = if ((ach.goalTarget ?: 0) > 0)
+                    ((ach.currentValue ?: 0).toFloat() / ach.goalTarget!!).coerceIn(0f, 1f)
+                else 0f
+                val animPct by animateFloatAsState(pct, tween(800), label = "ach_pct_${ach.id}")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp),
+                        Arrangement.spacedBy(12.dp), Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(44.dp).clip(CircleShape)
+                                .background(Color(0xFFF5F5F5)).alpha(0.6f),
+                            Alignment.Center
+                        ) { Text(ach.emoji, fontSize = 22.sp) }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Text(ach.title, style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                                Text("${(pct * 100).toInt()}%",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = accentColor, fontWeight = FontWeight.ExtraBold)
+                            }
+                            ach.description?.let { desc ->
+                                Text(desc, style = MaterialTheme.typography.bodySmall,
+                                    color = BpscColors.TextSecondary, maxLines = 1)
+                            }
+                            LinearProgressIndicator(
+                                progress   = { animPct },
+                                modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color      = accentColor,
+                                trackColor = accentColor.copy(0.15f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

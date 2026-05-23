@@ -80,6 +80,15 @@ data class CourseDto(
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
 
+data class SubscriptionPlanDto(
+    val id: String? = null, val name: String? = null,
+    val price: Int? = null, @SerializedName("original_price") val originalPrice: Int? = null,
+    val duration: String? = null, @SerializedName("billing_cycle") val billingCycle: String? = null,
+    @SerializedName("bonus_coins") val bonusCoins: Int? = null, val savings: Int? = null
+)
+
+data class SubscriptionPlansData(val plans: List<SubscriptionPlanDto> = emptyList())
+
 // ══════════════════════════════════════════════════════════════
 // QUIZ DTOs
 // ══════════════════════════════════════════════════════════════
@@ -403,6 +412,10 @@ interface CoursesApiService {
 
     @GET("courses/{id}")
     suspend fun getCourseDetail(@Path("id") id: String): ApiResponse<JsonObject>
+
+    /** GET /subscriptions/plans — subscription plan options */
+    @GET("subscriptions/plans")
+    suspend fun getSubscriptionPlans(): ApiResponse<SubscriptionPlansData>
 
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>

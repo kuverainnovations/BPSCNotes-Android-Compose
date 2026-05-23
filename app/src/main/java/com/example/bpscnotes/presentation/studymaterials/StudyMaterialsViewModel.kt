@@ -372,12 +372,14 @@ class StudyMaterialsViewModel @Inject constructor(
                 val bytes = inputStream.readBytes()
 
                 val requestFile = bytes.toRequestBody(
-                    "application/pdf".toMediaTypeOrNull()
+                    context.contentResolver.getType(uri)?.toMediaTypeOrNull()
                 )
+
+                val realFileName = getFileName(uri) ?: "upload.pdf"
 
                 val filePart = MultipartBody.Part.createFormData(
                     "file",
-                    "upload.pdf",
+                    realFileName,
                     requestFile
                 )
 
