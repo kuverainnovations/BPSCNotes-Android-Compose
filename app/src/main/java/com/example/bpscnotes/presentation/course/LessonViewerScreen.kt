@@ -195,54 +195,106 @@ private fun PdfViewer(notesUrl: String?) {
         NoContentState("No PDF attached to this lesson")
         return
     }
-    var loading by remember { mutableStateOf(true) }
 
-    // Build viewer URL — Google Docs can render PDFs inline
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var loading  by remember { mutableStateOf(true) }
+    var failed   by remember { mutableStateOf(false) }
+    var retryKey by remember { mutableIntStateOf(0) }
+
+    // FIX: Black screen fix — use a robust URL strategy:
+    // 1. If it's a direct PDF URL → use Google Docs embedded viewer
+    // 2. If it's already an HTML/web URL → load directly
+    // 3. On failure → show retry + open-in-browser option
     val viewUrl = remember(notesUrl) {
-        if (notesUrl.endsWith(".pdf", ignoreCase = true) ||
-            notesUrl.contains("pdf", ignoreCase = true)) {
-            "https://docs.google.com/gview?embedded=true&url=${
-                java.net.URLEncoder.encode(notesUrl, "UTF-8")
-            }"
-        } else {
-            notesUrl  // direct URL (HTML notes, etc.)
+        when {
+            notesUrl.endsWith(".pdf", ignoreCase = true) ->
+                "https://docs.google.com/viewer?embedded=true&url=" +
+                        java.net.URLEncoder.encode(notesUrl, "UTF-8")
+            notesUrl.contains("/pdf", ignoreCase = true) ->
+                "https://docs.google.com/viewer?embedded=true&url=" +
+                        java.net.URLEncoder.encode(notesUrl, "UTF-8")
+            else -> notesUrl  // HTML notes or direct link
         }
     }
 
+    if (failed) {
+        // FIX: Show proper error with retry + open-in-browser
+        Column(
+            Modifier.fillMaxSize().background(BpscColors.Surface).padding(32.dp),
+            Arrangement.Center, Alignment.CenterHorizontally
+        ) {
+            Text("📄", fontSize = 48.sp)
+            Spacer(Modifier.height(12.dp))
+            Text("Couldn't load PDF", style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+            Text("The viewer timed out or the link is unavailable.",
+                style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(20.dp))
+            Button(onClick = { failed = false; loading = true; retryKey++ },
+                modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                Text("Retry")
+            }
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(notesUrl))
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)
+            ) { Text("Open in Browser") }
+        }
+        return
+    }
+
     Box(Modifier.fillMaxSize().background(Color.White)) {
-        AndroidView(
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    settings.apply {
-                        javaScriptEnabled       = true
-                        domStorageEnabled       = true
-                        builtInZoomControls     = true
-                        displayZoomControls     = false
-                        useWideViewPort         = true
-                        loadWithOverviewMode    = true
-                        setSupportZoom(true)
-                        cacheMode = WebSettings.LOAD_DEFAULT
-                    }
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            loading = false
+        key(retryKey) {
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        settings.apply {
+                            javaScriptEnabled    = true
+                            domStorageEnabled    = true
+                            builtInZoomControls  = true
+                            displayZoomControls  = false
+                            useWideViewPort      = true
+                            loadWithOverviewMode = true
+                            setSupportZoom(true)
+                            cacheMode = WebSettings.LOAD_NO_CACHE  // FIX: no cache prevents stale blank pages
                         }
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                // FIX: check if WebView actually has content (not just blank loaded)
+                                view?.evaluateJavascript("document.body.innerHTML.length") { result ->
+                                    val bodyLen = result?.trim()?.toIntOrNull() ?: 0
+                                    loading = false
+                                    if (bodyLen < 10) failed = true  // empty page = failed load
+                                }
+                            }
+                            override fun onReceivedError(view: WebView?, errorCode: Int, desc: String?, url: String?) {
+                                loading = false; failed = true
+                            }
+                        }
+                        webChromeClient = WebChromeClient()
+                        loadUrl(viewUrl)
                     }
-                    webChromeClient = WebChromeClient()
-                    loadUrl(viewUrl)
-                }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         if (loading) {
             Box(Modifier.fillMaxSize().background(Color.White), Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Loading PDF…", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text("Loading PDF…", style = MaterialTheme.typography.bodyMedium,
+                        color = BpscColors.TextSecondary)
                 }
             }
         }

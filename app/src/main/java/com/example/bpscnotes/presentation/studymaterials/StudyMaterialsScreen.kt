@@ -288,7 +288,7 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
             ))
         // .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 16.dp),
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 56.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
@@ -841,7 +841,8 @@ private fun MaterialDetailSheet(
                     }
                     Text(material.title, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
-                    Text("By ${material.author ?: material.uploaderName ?: "BPSCNotes Team"} · ${material.uploadedDate ?: ""}",
+                    // FIX: uploaderName from backend, with sensible fallback
+                    Text("By ${material.uploaderName?.ifBlank { null } ?: material.author?.ifBlank { null } ?: "BPSCNotes"} · ${material.uploadedDate?.take(10) ?: ""}",
                         style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         if (material.pageCount > 0) SheetStatWhite("📄", "${material.pageCount} pages")
@@ -910,16 +911,7 @@ private fun MaterialDetailSheet(
             HorizontalDivider(color = BpscColors.Divider)
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onBookmark, modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else BpscColors.Divider),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)) {
-                    Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null,
-                        modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (isBookmarked) "Saved" else "Save", style = MaterialTheme.typography.titleMedium)
-                }
+                // Save button removed — download option already serves this purpose
                 Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!, material.title, material.freePages,
                     material.isPurchased || material.isFree) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
@@ -1244,6 +1236,80 @@ private fun formatCount(count: Int): String {
 }
 
 // needed for text field in search
+
+// ════════════════════════════════════════════════════════════
+// MY UPLOADS TAB — user's own uploaded materials (no lock)
+// ════════════════════════════════════════════════════════════
+@Composable
+fun MyUploadsTab(
+    uploads:   List<StudyMaterialDto>,
+    isLoading: Boolean,
+    onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onRefresh: () -> Unit
+) {
+    when {
+        isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            CircularProgressIndicator(color = BpscColors.Primary)
+        }
+        uploads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("📤", fontSize = 56.sp)
+                Text("No uploads yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Tap Upload to share study materials with others",
+                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+                OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) { Text("Refresh") }
+            }
+        }
+        else -> LazyColumn(
+            contentPadding      = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Text("${uploads.size} uploaded material${if (uploads.size != 1) "s" else ""}",
+                    style = MaterialTheme.typography.labelLarge, color = BpscColors.TextSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            items(uploads, key = { it.id }) { item ->
+                Card(
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(14.dp),
+                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), Arrangement.spacedBy(12.dp), Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight), Alignment.Center) {
+                            Text(when (item.materialType) { "pdf" -> "📄"; "video" -> "🎬"; else -> "📋" }, fontSize = 22.sp)
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(item.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Status badge
+                                val statusColor = when (item.status?.lowercase()) { "approved" -> BpscColors.Success; "rejected" -> Color(0xFFE74C3C); else -> BpscColors.TextHint }
+                                val statusLabel = when (item.status?.lowercase()) { "approved" -> "✅ Published"; "rejected" -> "❌ Rejected"; else -> "⏳ Under Review" }
+                                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(statusColor.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                    Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                }
+                                if (item.price > 0) {
+                                    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.CoinGold.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                        Text("🪙 ${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                        // Open button — owner always gets full access (no lock)
+                        if (!item.resolvedUrl.isNullOrBlank()) {
+                            IconButton(onClick = { onOpenPdf(item.resolvedUrl!!, item.title, item.freePages, true) }) {
+                                Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 // ════════════════════════════════════════════════════════════
 // DOWNLOADS TAB — shows user's download history with PDF access

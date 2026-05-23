@@ -418,18 +418,7 @@ class StudyMaterialsViewModel @Inject constructor(
         }
     }
 
-    // ── My uploads ────────────────────────────────────────────
-    fun loadMyUploads() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoadingMyUploads = true) }
-            try {
-                val res = api.myUploads()
-                _state.update { it.copy(myUploads = res.data?.uploads ?: emptyList(), isLoadingMyUploads = false) }
-            } catch (e: Exception) {
-                _state.update { it.copy(isLoadingMyUploads = false) }
-            }
-        }
-    }
+
 
     fun clearToast() = _state.update { it.copy(toastMessage = null) }
 
@@ -443,6 +432,23 @@ class StudyMaterialsViewModel @Inject constructor(
             }
         } catch (e: Exception) { null }
     }
+    /*// ── My Uploads tab ────────────────────────────────────────
+    fun loadMyUploads() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingMyUploads = true) }
+            try {
+                val res = api.getMyUploads()
+                _state.update { it.copy(
+                    myUploads          = res.data?.uploads ?: emptyList(),
+                    isLoadingMyUploads = false
+                )}
+            } catch (e: Exception) {
+                Log.e(TAG, "loadMyUploads: \${e.message}")
+                _state.update { it.copy(isLoadingMyUploads = false) }
+            }
+        }
+    }*/
+
     // ── Downloads history ─────────────────────────────────────
     fun loadDownloadHistory() {
         viewModelScope.launch {

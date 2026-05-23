@@ -188,14 +188,14 @@ fun DailyTargetsScreen(
                     Spacer(Modifier.height(14.dp))
 
                     // Tabs
-                  /*  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        tabs.forEachIndexed { index, tab ->
-                            val sel = selectedTab == index
-                            Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) Color.White else Color.White.copy(0.12f)).clickable { selectedTab = index }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                                Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.8f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
-                            }
-                        }
-                    }*/
+                    /*  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                          tabs.forEachIndexed { index, tab ->
+                              val sel = selectedTab == index
+                              Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) Color.White else Color.White.copy(0.12f)).clickable { selectedTab = index }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                                  Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.8f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                              }
+                          }
+                      }*/
                 }
             }
 
@@ -260,7 +260,9 @@ fun DailyTargetsScreen(
                         navController.navigate(Screen.DailyQuiz.createRoute(subjectId))
                     },
                     onViewNotes = {
-                        navController.navigate(Screen.ELibrary.route)
+                        // FIX: Navigate to Study Materials (not ELibrary which causes black screen)
+                        // ELibraryScreen just redirects to RoomsHub — wrong destination for notes
+                        navController.navigate(Screen.StudyMaterials.route)
                     }
                 )
             }
@@ -337,12 +339,12 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(if (isCompleted) BpscColors.Success else Color.Transparent).border(2.dp, if (isCompleted) BpscColors.Success else BpscColors.TextHint, CircleShape)
-                .clickable(
+                    .clickable(
                         indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    onToggleComplete()
-                }, contentAlignment = Alignment.Center) {
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        onToggleComplete()
+                    }, contentAlignment = Alignment.Center) {
                     if (isCompleted) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -430,11 +432,11 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                             onDragEnd = {
                                 scope.launch {
                                     when {
-                                       offsetX.value > 100f  -> {
-                                        offsetX.animateTo(400f, tween(200))
-                                        if (currentIndex < items.size - 1) currentIndex++
-                                        offsetX.snapTo(0f)
-                                    }
+                                        offsetX.value > 100f  -> {
+                                            offsetX.animateTo(400f, tween(200))
+                                            if (currentIndex < items.size - 1) currentIndex++
+                                            offsetX.snapTo(0f)
+                                        }
                                         offsetX.value < -100f -> { offsetX.animateTo(-400f, tween(200)); if (currentIndex < items.size - 1) currentIndex++; offsetX.snapTo(0f) }
                                         else                  -> offsetX.animateTo(0f, spring())
                                     }
@@ -459,7 +461,7 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.Surface).padding(12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                         CardStat("⏱️", "${current.target.estimatedMinutes} min",   "Est. Time")
                         CardStat("📝", "${current.target.totalQuestions}Q",         "Questions")
-                        CardStat("🕐", current.timeSlot.range,                      current.timeSlot.label)
+                        CardStat("🕐", java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(java.util.Date()), "Current Time")
                     }
                     Spacer(Modifier.height(20.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

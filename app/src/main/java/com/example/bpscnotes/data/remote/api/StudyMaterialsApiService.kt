@@ -97,6 +97,9 @@ data class StudyMaterialDto(
     @SerializedName("free_pages")
     val freePages: Int = 3,
 
+    val downloadUrl: String? = null,
+
+
     @SerializedName("is_marketplace")
     val isMarketplace: Boolean = false
 ) {
@@ -108,6 +111,8 @@ data class StudyMaterialDto(
 
     val isFree: Boolean
         get() = price == 0
+
+    val resolvedUrl: String? get() = fileUrl ?: downloadUrl
 }
 
 data class PaginationMeta(
