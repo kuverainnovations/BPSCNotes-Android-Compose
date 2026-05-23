@@ -67,6 +67,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -119,6 +120,7 @@ fun CurrentAffairsScreen(
                 article.tags.any { it.contains(searchQuery, ignoreCase = true) }
         matchesTab && matchesCat && matchesSearch
     }
+    val context = LocalContext.current
 
     val grouped = filtered.groupBy { it.date }.entries.sortedByDescending { it.key }
 
@@ -262,7 +264,14 @@ fun CurrentAffairsScreen(
                                     article     = article,
                                     isBookmarked = bookmarkedIds.contains(article.id),
                                     onBookmark  = { viewModel.toggleBookmark(article.id) },
-                                    onShare     = { },
+                                    onShare     = {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
+                                            putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app")
+                                        }
+                                        context.startActivity(android.content.Intent.createChooser(intent, "Share Article"))
+                                    },
                                     onReadMore  = { selectedArticle = article }
                                 )
                                 Spacer(Modifier.height(10.dp))
@@ -288,6 +297,20 @@ fun CurrentAffairsScreen(
 // ─────────────────────────────────────────────────────────────
 // STICKY DATE HEADER
 // ─────────────────────────────────────────────────────────────
+@Composable
+private fun formatArticleDate(isoDate: String): String {
+    return try {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        val parsed = sdf.parse(isoDate)
+        if (parsed != null) {
+            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(parsed)
+        } else isoDate.take(10) // fallback: just the date part
+    } catch (e: Exception) {
+        isoDate.take(10) // e.g. "2026-05-22"
+    }
+}
+
 @Composable
 private fun DateGroupHeader(date: String, count: Int) {
     Row(modifier = Modifier.fillMaxWidth().background(BpscColors.Surface).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

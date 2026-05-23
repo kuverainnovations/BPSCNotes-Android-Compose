@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+
 data class MockTestsUiState(
     val allTests: List<QuizPreviewDto>      = emptyList(),
     val userAccuracy: Double                = 0.0,
@@ -34,6 +35,9 @@ data class MockTestsUiState(
     val submitResult: QuizResultData?          = null,
     val isSubmitting: Boolean                  = false,
     val submitError: String?                   = null,
+    // ── Leaderboard ────────────────────────────────────────────
+    val leaderboard: List<LeaderboardEntry>    = emptyList(),
+    val isLoadingLeaderboard: Boolean          = false,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }

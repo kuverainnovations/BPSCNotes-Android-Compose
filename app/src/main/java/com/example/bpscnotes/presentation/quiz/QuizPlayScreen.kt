@@ -146,9 +146,21 @@ private fun QuizPlayerContent(
         while (timeLeft > 0 && timerRunning) { delay(1000L); timeLeft--; totalTimeSecs++ }
     }
 
-    LaunchedEffect(timeLeft, currentIndex) {
-        if (timeLeft == 0 && isLastQuestion && !submitClicked) {
-            submitClicked = true; viewModel.submitQuiz(totalTimeSecs)
+    // FIX: Timer auto-advances to next question when expired
+    // On last question: submits quiz. On any other question: moves forward.
+    LaunchedEffect(timeLeft) {
+        if (timeLeft == 0) {
+            when {
+                isLastQuestion && !submitClicked -> {
+                    submitClicked = true
+                    viewModel.submitQuiz(totalTimeSecs)
+                }
+                !isLastQuestion -> {
+                    // Auto-advance to next question after 0.5s pause
+                    delay(500L)
+                    currentIndex++
+                }
+            }
         }
     }
 
@@ -175,6 +187,29 @@ private fun QuizPlayerContent(
         .background(BpscColors.Surface)) {
         Column(Modifier.fillMaxSize()) {
 
+            // FIX: Intercept back press — ask user to confirm exit (don't silently quit quiz)
+            var showExitConfirm by remember { mutableStateOf(false) }
+            androidx.activity.compose.BackHandler(enabled = !showReview) {
+                showExitConfirm = true
+            }
+            if (showExitConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showExitConfirm = false },
+                    shape = RoundedCornerShape(16.dp),
+                    title = { Text("Quit Quiz?", fontWeight = FontWeight.Bold) },
+                    text  = { Text("Your progress will be lost if you leave now. Continue later?") },
+                    confirmButton = {
+                        Button(onClick = { showExitConfirm = false; onExit() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C))) {
+                            Text("Quit")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showExitConfirm = false }) { Text("Continue") }
+                    }
+                )
+            }
+
             // ── HEADER ──────────────────────────────────────────
             QuizHeader(
                 currentIndex  = currentIndex,
@@ -186,6 +221,7 @@ private fun QuizPlayerContent(
                 progress      = progress,
                 isImageQuiz   = current.isImageQuestion || current.isImageOptions,
                 onExit        = onExit,
+                // Review button shows question navigator (no answer preview during active quiz)
                 onReview      = { showReview = true }
             )
 
@@ -197,10 +233,9 @@ private fun QuizPlayerContent(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Subject/difficulty tags
+                // Subject chip only — difficulty tags removed per client request
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SubjectChip(current.subject)
-                    DifficultyChip(current.difficulty)
                     if (current.isImageQuestion) {
                         Text("🖼️ Image Q", style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF7B1FA2), fontWeight = FontWeight.Bold,

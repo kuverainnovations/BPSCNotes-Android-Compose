@@ -167,13 +167,22 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
 
 /** Maps API QuizQuestionDto → UI MockQuestion. */
 private fun QuizQuestionDto.toMockQuestion(): MockQuestion = MockQuestion(
-    id           = id,
-    question     = questionText,
-    options      = listOf(optionA, optionB, optionC, optionD),
-    correctIndex = 0,    // not revealed during play; backend returns it on submit
-    explanation  = "",
-    subject      = subject ?: "General",
-    difficulty   = difficulty,
+    id       = id,
+    question = questionText,
+    options  = listOf(optionA, optionB, optionC, optionD),
+
+    // Backend hides correct answers during active quiz
+    correctIndex = when (correctOption?.lowercase()?.trim()) {
+        "a" -> 0
+        "b" -> 1
+        "c" -> 2
+        "d" -> 3
+        else -> -1
+    },
+
+    explanation = explanation ?: "",
+    subject     = subject ?: "General",
+    difficulty  = difficulty,
 )
 
 
@@ -182,8 +191,11 @@ fun MockTestsScreen(navController: NavHostController,
                     viewModel: MockTestsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    // FIX: Only show mock tests — exclude daily quizzes which appear in the daily quiz section
     val allTests = remember(state.allTests) {
-        state.allTests.map { it.toMockTest() }
+        state.allTests
+            .filter { it.type == "mock" || it.type == "previous_year" || it.type == "topic" }
+            .map { it.toMockTest() }
     }
 
     if (state.isLoading && allTests.isEmpty()) {
@@ -346,8 +358,11 @@ private fun MockTestLobbyScreen(
 
     val state by viewModel.uiState.collectAsState()
 
+    // FIX: Only show mock tests — exclude daily quizzes which appear in the daily quiz section
     val allTests = remember(state.allTests) {
-        state.allTests.map { it.toMockTest() }
+        state.allTests
+            .filter { it.type == "mock" || it.type == "previous_year" || it.type == "topic" }
+            .map { it.toMockTest() }
     }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
     val tabs = listOf("All", "Full Mock", "Mini Tests", "Prev. Year", "Custom")
@@ -435,7 +450,14 @@ private fun MockTestLobbyScreen(
                             Box(
                                 modifier = Modifier.clip(RoundedCornerShape(20.dp))
                                     .background(if (sel) Color.White else Color.White.copy(0.15f))
-                                    .clickable { selectedType = if (index == 0) null else type }
+                                    .clickable {
+                                        // FIX: clicking already-selected tab deselects it (returns to All)
+                                        selectedType = when {
+                                            index == 0 -> null  // "All" always clears filter
+                                            type == selectedType -> null  // clicking same filter deselects
+                                            else -> type
+                                        }
+                                    }
                                     .padding(horizontal = 14.dp, vertical = 7.dp)
                             ) {
                                 Text(tab,
@@ -1120,11 +1142,15 @@ private fun TestAnalysisScreen(
     onRetry: () -> Unit,
     onExit: () -> Unit,
 ) {
-    val correct    = questions.count { q -> userAnswers[q.id] == q.correctIndex }
-    val wrong      = questions.count { q -> userAnswers.containsKey(q.id) && userAnswers[q.id] != q.correctIndex }
-    val skipped    = questions.size - correct - wrong
-    val maxScore   = questions.size.toFloat()
-    val percentage = if (maxScore > 0) (score / maxScore * 100).toInt() else 0
+    val resultAnswers = submitResult?.answers ?: emptyList()
+
+    val correct = resultAnswers.count { it.isCorrect }
+
+    val wrong = resultAnswers.count { !it.isCorrect }
+
+    val skipped = questions.size - resultAnswers.size
+
+    val percentage = submitResult?.score ?: 0
     val rank       = 3
     val percentile = 95.2f
     val animProg   by animateFloatAsState(percentage / 100f, tween(1200), label = "ap")

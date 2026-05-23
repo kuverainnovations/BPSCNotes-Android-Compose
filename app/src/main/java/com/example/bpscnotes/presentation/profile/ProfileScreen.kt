@@ -158,21 +158,27 @@ fun ProfileScreen(
     }
 
     // ✅ MAIN UI
-    Box(
-        modifier = Modifier.fillMaxSize().background(BpscColors.Surface)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-        ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
+            // FIX: ProfileHeader pinned — only content below scrolls
             ProfileHeader(
-                name = user?.name ?: "",
-                email = user?.email ?: user?.mobile,
-                coins = user?.coins ?: 0,
-                rank = user?.rank ?: 0,
-                rankTitle = "Gold Achiever",
+                name        = user?.name ?: "",
+                email       = user?.email ?: user?.mobile,
+                coins       = user?.coins ?: 0,
+                rank        = user?.rank ?: 0,
+                rankTitle   = "Gold Achiever",
                 onEditClick = { navController.navigate(Screen.EditProfile.route) },
-                onShareClick = {}
+                onShareClick = {
+                    // FIX: Share profile works
+                    val shareText = "I'm preparing for BPSC on BPSCNotes! Join me 🎯\nhttps://bpscnotes.in"
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                    }
+                    context.startActivity(android.content.Intent.createChooser(intent, "Share Profile"))
+                }
             )
 
             Column(

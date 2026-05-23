@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.navigation.NavGraph
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import com.example.bpscnotes.core.ads.AdManager

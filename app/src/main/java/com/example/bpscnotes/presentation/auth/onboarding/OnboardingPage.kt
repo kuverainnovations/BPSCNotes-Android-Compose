@@ -66,25 +66,26 @@ data class OnboardingPage(
 
 val onboardingPages = listOf(
     OnboardingPage(
-        title = "Daily Targets",
-        subtitle = "Stay on Track",
-        description = "Get system-curated daily study targets with linked quizzes. Never miss a revision day.",
+        title       = "Daily Targets",
+        subtitle    = "Stay on Track",
+        // FIX: User creates custom targets — not system-generated
+        description = "Create your own daily study targets with linked quizzes. You decide what to study, when to study, and we track your progress every step of the way.",
         illustration = R.drawable.ic_onboard_target,
         backgroundColor = Color(0xFFE8F0FD),
         accentColor = BpscColors.Primary,
     ),
     OnboardingPage(
-        title = "Active Recall",
-        subtitle = "Retain More",
-        description = "Flashcards and spaced repetition built into every topic. Study less, remember more.",
+        title       = "Active Recall",
+        subtitle    = "Retain More",
+        description = "Flashcards and spaced repetition built into every topic. Study less, remember more — proven science-backed techniques for BPSC.",
         illustration = R.drawable.ic_onboard_recall,
         backgroundColor = Color(0xFFE8FDF4),
         accentColor = Color(0xFF1A9E75),
     ),
     OnboardingPage(
-        title = "Group Study",
-        subtitle = "Earn While You Learn",
-        description = "Join virtual reading rooms, compete on leaderboards, earn coins redeemable for paid content.",
+        title       = "Group Study Rooms",
+        subtitle    = "Earn While You Learn",
+        description = "Join virtual study rooms with fellow BPSC aspirants. Compete on leaderboards, earn coins and redeem them for premium content.",
         illustration = R.drawable.ic_onboard_group,
         backgroundColor = Color(0xFFFFF4EC),
         accentColor = BpscColors.Accent,

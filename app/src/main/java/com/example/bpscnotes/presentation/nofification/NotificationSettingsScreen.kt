@@ -58,11 +58,13 @@ interface NotificationsApiService {
         @Query("limit") limit: Int = 30
     ): ApiResponse<NotificationsResponseData>
 
-    @POST("notifications/{id}/read")
-    suspend fun markRead(@Path("id") id: String): ApiResponse<Any>
+    // FIX: Backend uses POST /notifications/mark-read with body {ids:[...]}
+    // not POST /notifications/{id}/read
+    @POST("notifications/mark-read")
+    suspend fun markRead(@Body body: Map<String, List<String>>): ApiResponse<Any>
 
-    @POST("notifications/read-all")
-    suspend fun markAllRead(): ApiResponse<Any>
+    @POST("notifications/mark-read")
+    suspend fun markAllRead(@Body body: Map<String, List<String>> = emptyMap()): ApiResponse<Any>
 }
 
 data class NotificationsUiState(
@@ -102,7 +104,11 @@ class NotificationsViewModel @Inject constructor(
 
     fun markRead(id: String) {
         viewModelScope.launch {
-            runCatching { api.markRead(id) }
+            runCatching {
+                api.markRead(
+                    mapOf("ids" to listOf(id))
+                )
+            }
             _state.update { s ->
                 s.copy(
                     notifications = s.notifications.map { if (it.id == id) it.copy(isRead = true) else it },

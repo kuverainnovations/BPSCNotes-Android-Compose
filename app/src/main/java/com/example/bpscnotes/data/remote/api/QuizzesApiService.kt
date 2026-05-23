@@ -45,4 +45,14 @@ interface QuizzesApiService {
         @Path("id") id: String,
         @Body body: QuizSubmitRequest
     ): ApiResponse<QuizResultData>
+
+    /** GET /quizzes/:id/leaderboard — top scores for this quiz */
+    @GET("quizzes/{id}/leaderboard")
+    suspend fun getLeaderboard(
+        @Path("id") id: String
+    ): ApiResponse<LeaderboardData>
 }
+
+data class LeaderboardData(
+    val leaderboard: List<LeaderboardEntryDto> = emptyList()
+)

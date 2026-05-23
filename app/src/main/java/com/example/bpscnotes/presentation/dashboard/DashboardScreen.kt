@@ -75,6 +75,19 @@ fun DashboardScreen(
     bookmarkViewModel: BookmarkViewModel   = hiltViewModel()
 ) {
     val state    by dashboardViewModel.uiState.collectAsState()
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
+
+    // FIX: Refresh coins + user data when dashboard becomes visible
+    // This keeps side nav coins and profile coins always up-to-date
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                dashboardViewModel.refresh()
+            }
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer) }
+    }
 //    val isProUser = state.user?.subscription != null  // Pro users see no ads
     val bookmarkedIds by bookmarkViewModel.bookmarkedIds.collectAsState()
 

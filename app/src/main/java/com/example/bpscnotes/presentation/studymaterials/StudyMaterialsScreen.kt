@@ -45,6 +45,64 @@ import com.example.bpscnotes.data.remote.api.*
 // UI structure preserved from existing mockup.
 // ════════════════════════════════════════════════════════════
 
+// ─────────────────────────────────────────────────────────────
+// TYPE-AWARE MATERIAL OPENER
+// Routes each content type to the correct viewer:
+//   PDF / PYQ / BOOK / NOTES  → PdfViewerScreen (in-app, page-locked)
+//   VIDEO                     → Android's built-in video player (Intent)
+//   IMAGE                     → Full-screen image viewer (Intent)
+//   UNKNOWN                   → Browser fallback
+// ─────────────────────────────────────────────────────────────
+private fun openMaterial(
+    context:     android.content.Context,
+    navController: androidx.navigation.NavHostController,
+    url:         String,
+    title:       String,
+    freePages:   Int,
+    isPurchased: Boolean
+) {
+    val lower = url.lowercase()
+    when {
+        // Video files → system video player (supports locking via isPremium check earlier)
+        lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".webm") ||
+                lower.endsWith(".avi") || lower.endsWith(".mov") || lower.contains("/video/") -> {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse(url), "video/*")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // No video app — open in browser
+                context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            }
+        }
+        // Image files → system image viewer
+        lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
+                lower.endsWith(".webp") || lower.endsWith(".gif") -> {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.parse(url), "image/*")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            }
+        }
+        // Everything else (PDF / PYQ / BOOK / DOC / NOTES) → in-app PDF viewer with locking
+        else -> {
+            navController.navigate(
+                Screen.PdfViewer.createRoute(
+                    fileUrl = url,
+                    title = title,
+                    freePages = freePages,
+                    isPurchased = isPurchased
+                )
+            )
+        }
+    }
+}
 @Composable
 fun StudyMaterialsScreen(
     navController: NavHostController,
@@ -199,15 +257,7 @@ fun StudyMaterialsScreen(
                 viewModel.downloadMaterial(dto)
             },
             onOpenPdf      = { url, title, freePages, isPurchased ->
-                // Navigate to our in-app PDF viewer which enforces page locking
-                navController.navigate(
-                    Screen.PdfViewer.createRoute(
-                        fileUrl     = url,
-                        title       = title,
-                        freePages   = freePages,
-                        isPurchased = isPurchased
-                    )
-                )
+                openMaterial(context, navController, url, title, freePages, isPurchased)
             },
             onDismiss      = viewModel::closeDetail
         )
@@ -770,7 +820,7 @@ private fun MaterialDetailSheet(
     isDownloading: Boolean,
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
-    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onDismiss:    () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)

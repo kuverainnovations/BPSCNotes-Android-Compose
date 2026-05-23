@@ -134,6 +134,8 @@ data class QuizQuestionDto(
     @SerializedName("option_b")           val optionB: String = "",
     @SerializedName("option_c")           val optionC: String = "",
     @SerializedName("option_d")           val optionD: String = "",
+    @SerializedName("correct_option")
+    val correctOption: String? = null,
     val subject: String? = null,
     val difficulty: String = "medium",
     val explanation: String = "Nothing",
@@ -784,17 +786,32 @@ interface CoinsApiService {
         val flashcards: List<FlashcardDto> = emptyList()
     )
 
+    data class FlashcardProgressData(
+        val mastered: List<String> = emptyList(),
+        val weak:     List<String> = emptyList(),
+        val total:    Int          = 0
+    )
+
+    data class SaveProgressRequest(
+        val flashcardId: String,
+        val rating:      String,   // "mastered" | "weak" | "skipped"
+        val streak:      Int = 0
+    )
+
     interface FlashcardsApiService {
-        /**
-         * GET /flashcards
-         * Returns flashcards filtered by subject.
-         * subject = null → all subjects
-         */
         @GET("flashcards")
         suspend fun getFlashcards(
             @Query("subject") subject: String? = null,
-            @Query("limit")   limit: Int = 100
+            @Query("limit")   limit: Int = 200
         ): ApiResponse<FlashcardsResponseData>
+
+        /** GET /flashcards/progress — load user's mastered/weak IDs from backend */
+        @GET("flashcards/progress")
+        suspend fun getProgress(): ApiResponse<FlashcardProgressData>
+
+        /** POST /flashcards/progress — save a card rating to backend */
+        @POST("flashcards/progress")
+        suspend fun saveProgress(@Body request: SaveProgressRequest): ApiResponse<Any>
     }
 
 
@@ -806,10 +823,15 @@ interface CoinsApiService {
 
 data class ExamDto(
     val name: String = "",
-    @SerializedName("full_name") val fullName: String = "",
-    val category: String = "",
-    val emoji: String = "🎯",
-    @SerializedName("sort_order") val sortOrder: Int = 0
+    @SerializedName("full_name")     val fullName: String = "",
+    val category: String              = "",
+    val emoji: String                 = "🎯",
+    @SerializedName("sort_order")    val sortOrder: Int = 0,
+    // Extra fields for the redesigned onboarding UI
+    val difficulty: String?           = null,    // "hard"|"medium"|"easy"
+    val subjects: List<String>        = emptyList(),
+    @SerializedName("student_count") val studentCount: Int = 0,
+    @SerializedName("prep_months")   val prepMonths: Int = 0
 )
 
 data class ExamsResponseData(

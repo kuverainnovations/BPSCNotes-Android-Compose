@@ -415,9 +415,25 @@ private suspend fun downloadPdf(url: String, cacheDir: File, authToken: String =
     val bytes = body.bytes()
     if (bytes.isEmpty()) throw Exception("Downloaded file is empty.")
 
-    // Verify it's actually a PDF (starts with %PDF)
-    if (bytes.size < 4 || !bytes.take(4).toByteArray().toString(Charsets.ISO_8859_1).startsWith("%PDF")) {
-        throw Exception("File is not a valid PDF. Try again or contact support.")
+    // Verify it's actually a PDF (starts with %PDF magic bytes)
+    val magic = bytes.take(4).toByteArray().toString(Charsets.ISO_8859_1)
+
+    if (bytes.size < 4 || !magic.startsWith("%PDF")) {
+
+        val ext = url.substringAfterLast('.').lowercase()
+
+        throw Exception(
+            when {
+                ext in listOf("mp4", "mkv", "webm", "avi", "mov") ->
+                    "This is a video file. Use a video player app to open it.\nTap back and use the external viewer."
+
+                ext in listOf("jpg", "jpeg", "png", "webp") ->
+                    "This is an image file — it can't be rendered as a PDF."
+
+                else ->
+                    "File is not a valid PDF (got: $magic). It may be corrupted or in an unsupported format."
+            }
+        )
     }
 
     FileOutputStream(file).use { out -> out.write(bytes) }
