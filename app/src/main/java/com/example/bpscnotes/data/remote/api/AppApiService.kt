@@ -342,14 +342,22 @@ data class BannersResponseData(val banners: List<BannerDto> = emptyList())
 
 data class WeeklyActivityDto(val date: String = "", val activity: Int = 0)
 
+data class SubjectAccuracyDto(
+    val subject:     String = "",
+    val attempts:    String = "0",                     // backend sends as STRING
+    @SerializedName("avg_accuracy") val avgAccuracy: String? = null  // percentage 0-100, or null
+)
+
 data class UserStatsData(
     @SerializedName("weekly_activity")     val weeklyActivity: List<WeeklyActivityDto> = emptyList(),
     @SerializedName("total_study_minutes") val totalStudyMinutes: Int = 0,
-    @SerializedName("current_streak")      val currentStreak: Int = 0,     // always int from backend
+    @SerializedName("current_streak")      val currentStreak: Int = 0,
     @SerializedName("longest_streak")      val longestStreak: Int = 0,
     val accuracy: Double = 0.0,
     val rank: Int? = null,
-    @SerializedName("quizzes_attempted")   val quizzesAttempted: Int = 0
+    @SerializedName("quizzes_attempted")   val quizzesAttempted: Int = 0,
+    // Subject-wise accuracy from quiz attempts — now mapped from API
+    @SerializedName("subjectAccuracy")     val subjectAccuracy: List<SubjectAccuracyDto> = emptyList()
 )
 
 // ══════════════════════════════════════════════════════════════
@@ -511,13 +519,16 @@ data class LiveClassDto(
     val title: String,
     val instructor: String,
     val subject: String,
-    @SerializedName("scheduled_at") val scheduledAt: String = "",
-    @SerializedName("duration_mins") val durationMins: Int = 60,
-    @SerializedName("meeting_link") val meetingLink: String? = null,
-    @SerializedName("is_live") val isLive: Boolean = false,
+    @SerializedName("scheduled_at")    val scheduledAt: String = "",
+    @SerializedName("duration_mins")   val durationMins: Int = 60,
+    @SerializedName("meeting_link")    val meetingLink: String? = null,
+    @SerializedName("is_live")         val isLive: Boolean = false,
     @SerializedName("registered_count") val registeredCount: Int = 0,
-    @SerializedName("exam_tags") val examTags: List<String> = emptyList(),
-    val status: String = "scheduled"    // "scheduled" | "live" | "ended"
+    @SerializedName("exam_tags")       val examTags: List<String> = emptyList(),
+    val status: String = "scheduled",   // "scheduled" | "live" | "ended"
+    // FIX: is_registered comes from GET /users/live-classes — no extra API call needed
+    // Backend already joins live_class_registrations to set this per user
+    @SerializedName("is_registered")   val isRegistered: Boolean = false
 )
 
 data class LiveClassesResponseData(

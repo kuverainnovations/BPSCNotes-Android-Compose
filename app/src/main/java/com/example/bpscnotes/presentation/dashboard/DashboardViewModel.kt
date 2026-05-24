@@ -89,6 +89,14 @@ class DashboardViewModel @Inject constructor(
                 val targetsData = targetsJob.await()
                 val liveClasses = liveClassesJob.await() ?: emptyList()
 
+                // FIX: Seed registeredClassIds from the is_registered flag the GET API already returns.
+                // No extra API call needed — backend joins live_class_registrations per user in getLiveClasses().
+                // This persists across app restarts because it reads fresh from server every load().
+                val serverRegisteredIds = liveClasses
+                    .filter { it.isRegistered }
+                    .map { it.id }
+                    .toSet()
+
 
                 user?.let { u ->
                     u.mobile?.let { tokenStore.saveUserMobile(it) }
@@ -124,6 +132,8 @@ class DashboardViewModel @Inject constructor(
                         dailyTargets   = targetsData?.targets ?: emptyList(),
                         targetSummary  = targetsData?.summary ?: DailyTargetsSummary(),
                         liveClasses=liveClasses,
+                        // Merge server state with any optimistic local additions
+                        registeredClassIds = serverRegisteredIds + it.registeredClassIds,
                         achievements=achievements,
                         isLoading      = false
                     )
