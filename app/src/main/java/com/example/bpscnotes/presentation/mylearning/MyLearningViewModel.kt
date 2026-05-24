@@ -44,26 +44,31 @@ class MyLearningViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val allCoursesJob  = async { coursesApi.getCourses(limit = 100).data?.courses ?: emptyList() }
-                val savedCoursesJob= async {
-                    try { coursesApi.getSavedCourses().data?.courses ?: emptyList() }
-                    catch (e: Exception) { emptyList() }
+                // CRITICAL FIX: Use supervisorScope so one child failure doesn't crash others
+                // Without supervisorScope, async{}.await() propagates exceptions to parent even
+                // when inner try/catch is present, causing FATAL EXCEPTION in main thread
+                val allCourses = kotlinx.coroutines.supervisorScope {
+                    try { coursesApi.getCourses(limit = 100).data?.courses ?: emptyList() }
+                    catch (e: Exception) {
+                        Log.w("MyLearningVM", "getCourses failed: \${e.message}")
+                        emptyList<com.example.bpscnotes.data.remote.api.CourseDto>()
+                    }
                 }
-                val userJob        = async {
+                val savedCourses = kotlinx.coroutines.supervisorScope {
+                    try { coursesApi.getSavedCourses().data?.courses ?: emptyList() }
+                    catch (e: Exception) {
+                        Log.w("MyLearningVM", "getSavedCourses failed: \${e.message}")
+                        emptyList<com.example.bpscnotes.data.remote.api.CourseDto>()
+                    }
+                }
+                val userCoinsVal = kotlinx.coroutines.supervisorScope {
                     try { authApi.getMe().data?.user?.coins ?: 0 } catch (_: Exception) { 0 }
                 }
-
-                val allCourses     = allCoursesJob.await()
-                val savedCourses   = savedCoursesJob.await()
-                val savedIds       = savedCourses.map { it.id }.toSet()
-
-                // Enrolled = active enrollment
+                val savedIds        = savedCourses.map { it.id }.toSet()
                 val enrolledCourses = allCourses.filter {
                     it.enrollment?.status in listOf("active", "completed")
                 }
                 val enrolledIds     = enrolledCourses.map { it.id }.toSet()
-
-                // FIX 1: Store tab = courses NOT enrolled yet (no Enroll button on already-enrolled courses)
                 val storeCourses    = allCourses.filter { it.id !in enrolledIds }
 
                 _uiState.update {
@@ -72,7 +77,7 @@ class MyLearningViewModel @Inject constructor(
                         enrolledCourses = enrolledCourses,
                         savedCourses    = savedCourses,
                         savedCourseIds  = savedIds,
-                        userCoins       = userJob.await(),
+                        userCoins       = userCoinsVal,
                         isLoading       = false
                     )
                 }

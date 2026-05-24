@@ -1151,8 +1151,8 @@ private fun TestAnalysisScreen(
     val skipped = questions.size - resultAnswers.size
 
     val percentage = submitResult?.score ?: 0
-    val rank       = 3
-    val percentile = 95.2f
+    val rank       = submitResult?.rank
+    val percentile = submitResult?.percentile
     val animProg   by animateFloatAsState(percentage / 100f, tween(1200), label = "ap")
 
     // Subject-wise breakdown

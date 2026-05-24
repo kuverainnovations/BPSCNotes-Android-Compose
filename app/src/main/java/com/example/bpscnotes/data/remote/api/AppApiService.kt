@@ -207,9 +207,14 @@ data class QuizResultData(
     val total: Int = 0,
     val wrong: Int = 0,
     val accuracy: Double = 0.0,
-    @SerializedName("isPassed")       val isPassed: Boolean = false,
-    @SerializedName("coinsEarned")    val coinsEarned: Int = 0,
-    @SerializedName("timeTakenSecs")  val timeTakenSecs: Int = 0,
+
+    val isPassed: Boolean = false,
+    val coinsEarned: Int = 0,
+    val timeTakenSecs: Int = 0,
+
+    val rank: Int = 0,
+    val percentile: Double = 0.0,
+
     val answers: List<QuizAnswerResultDto> = emptyList()
 )
 
@@ -664,17 +669,22 @@ data class CheckInDayDto(
 
 data class EarnTaskDto(
     val id: String,
-    val title: String?="",
-    val subtitle: String,
-    @SerializedName("coins_reward")          val coinsReward: Int = 0,
+    val title: String = "",
+    val subtitle: String = "",
+
+    val coinsReward: Int = 0,
+
     val icon: String = "quiz",
-    @SerializedName("action_label")          val actionLabel: String = "Claim",
-    @SerializedName("is_completed")          val isCompleted: Boolean = false,
-    @SerializedName("is_ad")                 val isAd: Boolean = false,
-    @SerializedName("action_bg")             val actionBgHex: String? = "#1565C0",
-    @SerializedName("icon_bg")               val iconBgHex: String? = "#E3F2FD",
-    @SerializedName("icon_tint")             val iconTintHex: String? = "#1565C0",
-    @SerializedName("action_text_color")     val actionTextColorHex: String? = "#FFFFFF",
+
+    val actionLabel: String = "Claim",
+
+    val isCompleted: Boolean = false,
+    val isAd: Boolean = false,
+
+    val actionBgHex: String? = "#F4B400",
+    val iconBgHex: String? = "#FFF8E1",
+    val iconTintHex: String? = "#F4B400",
+    val actionTextColorHex: String? = "#FFFFFF",
 ) {
     val actionBg: Color         get() = parseColor(actionBgHex, Color(0xFF1565C0))
     val iconBg: Color           get() = parseColor(iconBgHex,   Color(0xFFE3F2FD))

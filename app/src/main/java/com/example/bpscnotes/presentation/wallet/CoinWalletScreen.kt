@@ -30,6 +30,7 @@ import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.WatchAdForCoinsCard
 import com.example.bpscnotes.presentation.wallet.CoinWalletViewModel
 import android.app.Activity
+import android.util.Log
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -71,7 +72,9 @@ fun CoinWalletScreen(
     }
 
     if (state.isLoading && state.balance == 0) {
-        Box(Modifier.fillMaxSize().background(BpscColors.Surface), Alignment.Center) {
+        Box(Modifier
+            .fillMaxSize()
+            .background(BpscColors.Surface), Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.CoinGold)
         }
         return
@@ -83,7 +86,9 @@ fun CoinWalletScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { scaffoldPadding ->
         // FIX: Header and tabs pinned — only content area scrolls
-        Column(Modifier.fillMaxSize().padding(scaffoldPadding)) {
+        Column(Modifier
+            .fillMaxSize()
+            .padding(scaffoldPadding)) {
             // Pinned header — does not scroll
             CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStack() })
             // Pinned tab row — does not scroll
@@ -91,7 +96,9 @@ fun CoinWalletScreen(
 
             // Scrollable content area
             LazyColumn(
-                modifier = Modifier.fillMaxSize().background(BpscColors.Surface),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BpscColors.Surface),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
 
@@ -141,7 +148,9 @@ fun CoinWalletScreen(
                         }
                         if (state.earnTasks.isEmpty() && !state.isLoading) {
                             item {
-                                Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) {
+                                Box(Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp), Alignment.Center) {
                                     Text("No tasks available", color = BpscColors.TextSecondary)
                                 }
                             }
@@ -175,7 +184,9 @@ fun CoinWalletScreen(
                         if (state.hasMoreTransactions && state.transactions.isNotEmpty()) {
                             item(key = "load_more_txn") {
                                 LaunchedEffect(Unit) { viewModel.loadMoreTransactions() }
-                                Box(Modifier.fillMaxWidth().padding(16.dp), Alignment.Center) {
+                                Box(Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp), Alignment.Center) {
                                     if (state.isLoadingTransactions) {
                                         CircularProgressIndicator(
                                             color = BpscColors.CoinGold,
@@ -204,7 +215,15 @@ fun CoinWalletScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(240.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFFFAC84A), Color(0xFFF0A500), Color(0xFFE59400))))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFFAC84A),
+                            Color(0xFFF0A500),
+                            Color(0xFFE59400)
+                        )
+                    )
+                )
             //  .statusBarsPadding()
         ) {
             Canvas(modifier = Modifier.matchParentSize()) {
@@ -220,7 +239,8 @@ fun CoinWalletScreen(
             // Back button
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp).padding(top = 46.dp, bottom = 16.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 46.dp, bottom = 16.dp)
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(0.2f))
@@ -232,7 +252,9 @@ fun CoinWalletScreen(
 
             // Coin icon + balance
             Column(
-                modifier            = Modifier.align(Alignment.Center).padding(top = 16.dp),
+                modifier            = Modifier
+                    .align(Alignment.Center)
+                    .padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -323,13 +345,17 @@ fun CoinWalletScreen(
         streak: Int = 0
     ) {
         Card(
-            modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier  = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             shape     = RoundedCornerShape(20.dp),
             colors    = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Streak header
@@ -367,10 +393,12 @@ fun CoinWalletScreen(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(when (status) {
-                                            CheckInStatus.DONE, CheckInStatus.BONUS -> BpscColors.CoinGold
-                                            else -> Color(0xFFF5F5F5)
-                                        })
+                                        .background(
+                                            when (status) {
+                                                CheckInStatus.DONE, CheckInStatus.BONUS -> BpscColors.CoinGold
+                                                else -> Color(0xFFF5F5F5)
+                                            }
+                                        )
                                         .border(
                                             width = if (status == CheckInStatus.TODAY) 2.dp else 0.dp,
                                             color = if (status == CheckInStatus.TODAY) BpscColors.CoinGold else Color.Transparent,
@@ -406,7 +434,9 @@ fun CoinWalletScreen(
                 // Check-In button
                 Button(
                     onClick  = onCheckIn,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     shape    = RoundedCornerShape(14.dp),
                     enabled  = !doneToday && !isLoading,
                     colors   = ButtonDefaults.buttonColors(
@@ -534,6 +564,7 @@ fun CoinWalletScreen(
                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text("🪙", fontSize = 10.sp)
+                            Log.e("TAG", "EarnTaskRow:${task.coinsReward} ", )
                         Text(
                             "+${task.coinsReward} coins",
                             style      = MaterialTheme.typography.labelSmall,
@@ -567,7 +598,7 @@ fun CoinWalletScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(
                                 if (isClaiming) task.actionBg.copy(alpha = 0.5f)
-                                else            task.actionBg
+                                else task.actionBg
                             )
                             .clickable(enabled = !isClaiming, onClick = onClick)
                             .padding(horizontal = 16.dp, vertical = 9.dp),
@@ -601,7 +632,9 @@ fun CoinWalletScreen(
     @Composable
     private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Card(
@@ -644,7 +677,9 @@ fun CoinWalletScreen(
     @Composable
     private fun EmptyHistoryState() {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp, horizontal = 32.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 40.dp, horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -680,12 +715,17 @@ private fun TransactionRow(transaction: CoinTransactionDto) {
     val iconTint = if (isEarned) Color(0xFF2E7D32) else Color(0xFFC62828)
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(mapIcon(transaction.icon), null, tint = iconTint, modifier = Modifier.size(22.dp))

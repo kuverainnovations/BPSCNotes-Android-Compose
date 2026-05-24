@@ -264,32 +264,7 @@ private fun QuizIntroContent(
                 }
             }
 
-            // Exam tags if available
-            if (quiz.examTags.isNotEmpty()) {
-                Card(
-                    modifier  = Modifier.fillMaxWidth(),
-                    shape     = RoundedCornerShape(16.dp),
-                    colors    = CardDefaults.cardColors(containerColor = BpscColors.PrimaryLight),
-                    elevation = CardDefaults.cardElevation(0.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("📚 Relevant Exams", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            quiz.examTags.forEach { tag ->
-                                Text(
-                                    tag,
-                                    style    = MaterialTheme.typography.labelSmall,
-                                    color    = BpscColors.Primary,
-                                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                                        .background(Color.White)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            // Relevant Exams section removed per client request
 
             Spacer(Modifier.height(8.dp))
 

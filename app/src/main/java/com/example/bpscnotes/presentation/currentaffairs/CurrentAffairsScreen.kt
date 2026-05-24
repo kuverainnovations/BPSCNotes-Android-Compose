@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel          // ← use hiltViewModel, not viewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 // ── NOTE: mockCAArticles and local `categories` removed.
 // ── Articles come from CurrentAffairsViewModel.
@@ -294,10 +295,11 @@ fun CurrentAffairsScreen(
         // Bottom sheet
         selectedArticle?.let { article ->
             ArticleBottomSheet(
-                article     = article,
-                isBookmarked = bookmarkedIds.contains(article.id),
-                onBookmark  = { viewModel.toggleBookmark(article.id) },
-                onDismiss   = { selectedArticle = null }
+                article       = article,
+                isBookmarked  = bookmarkedIds.contains(article.id),
+                navController = navController,
+                onBookmark    = { viewModel.toggleBookmark(article.id) },
+                onDismiss     = { selectedArticle = null }
             )
         }
     }
@@ -377,7 +379,11 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
 // ─────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ArticleBottomSheet(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onDismiss: () -> Unit) {
+private fun ArticleBottomSheet(
+    article: CAArticle, isBookmarked: Boolean,
+    navController: androidx.navigation.NavHostController,
+    onBookmark: () -> Unit, onDismiss: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
@@ -407,7 +413,29 @@ private fun ArticleBottomSheet(article: CAArticle, isBookmarked: Boolean, onBook
                 }
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column { Text("Practice MCQs", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold); Text("${article.mcqCount} questions from this topic", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary) }
-                    Button(onClick = onDismiss, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Start", style = MaterialTheme.typography.titleMedium) }
+                    Button(
+                        onClick = {
+                            onDismiss()   // close sheet first
+                            // Navigate to TopicQuiz filtered by this article's category/subject
+                            val subject = when (article.category) {
+                                "Economy"       -> "Economy"
+                                "Polity"        -> "Polity"
+                                "International" -> "International Relations"
+                                "Science"       -> "Science"
+                                "Bihar GK"      -> "Bihar GK"
+                                "Sports"        -> "Sports"
+                                else            -> article.category
+                            }
+                            navController.navigate(
+                                Screen.TopicQuiz.createRoute(
+                                    subject    = subject,
+                                    topicTitle = article.headline.take(40)
+                                )
+                            )
+                        },
+                        shape  = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                    ) { Text("Start", style = MaterialTheme.typography.titleMedium) }
                 }
             }
             HorizontalDivider(color = BpscColors.Divider)

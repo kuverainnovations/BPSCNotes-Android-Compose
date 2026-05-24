@@ -121,17 +121,32 @@ private fun QuizPlayerContent(
     viewModel: QuizViewModel,
     onExit:    () -> Unit
 ) {
-    val state         by viewModel.uiState.collectAsState()
-    val questions      = session.questions
     var currentIndex  by remember { mutableIntStateOf(0) }
+    val questions      = session.questions
+    val current        = questions.getOrNull(currentIndex) ?: return
+    val state         by viewModel.uiState.collectAsState()
     var showHint      by remember(currentIndex) { mutableStateOf(false) }
-    var timeLeft      by remember(currentIndex) { mutableIntStateOf(45) }
+    // FIX: Per-question time = total quiz duration ÷ question count
+    // e.g. 15 min quiz with 10 Qs → 90s per Q, not static 30/45s
+    val perQuestionSecs = remember(session.durationMins, questions.size) {
+        val total = (session.durationMins * 60).coerceAtLeast(questions.size * 20)
+        (total / questions.size.coerceAtLeast(1)).coerceIn(20, 180)
+    }
+    val perQImageBonus = (perQuestionSecs * 0.5f).toInt().coerceAtMost(60)
+    val timerForCurrent = if (current.isImageQuestion || current.isImageOptions)
+        perQuestionSecs + perQImageBonus else perQuestionSecs
+
+    // FIX: When returning to a previous question, don't reset to full time
+    // Store remaining time per question index in a map
+    val questionTimers = remember { mutableStateMapOf<Int, Int>() }
+    var timeLeft      by remember(currentIndex) {
+        mutableIntStateOf(questionTimers[currentIndex] ?: timerForCurrent)
+    }
     var timerRunning  by remember(currentIndex) { mutableStateOf(true) }
     var totalTimeSecs by remember { mutableIntStateOf(0) }
     var showReview    by remember { mutableStateOf(false) }
     var submitClicked by remember { mutableStateOf(false) }
 
-    val current        = questions.getOrNull(currentIndex) ?: return
     val selectedLetter = viewModel.getAnswer(current.id)
     val hasAnswered     = selectedLetter != null
     val isLastQuestion  = currentIndex == questions.size - 1
@@ -139,11 +154,18 @@ private fun QuizPlayerContent(
     val progress       by animateFloatAsState((currentIndex + 1).toFloat() / questions.size, tween(400), label = "p")
 
     // Timer — 45s for image questions (more time needed), 30s for text
-    val timerMax = if (current.isImageQuestion || current.isImageOptions) 45 else 30
+    val timerMax = timerForCurrent  // dynamic, not static
 
     LaunchedEffect(currentIndex) {
-        timeLeft = timerMax; timerRunning = true
-        while (timeLeft > 0 && timerRunning) { delay(1000L); timeLeft--; totalTimeSecs++ }
+        // Restore saved time or start fresh for this question
+        timeLeft = questionTimers[currentIndex] ?: timerForCurrent
+        timerRunning = true
+        while (timeLeft > 0 && timerRunning) {
+            delay(1000L)
+            timeLeft--
+            totalTimeSecs++
+            questionTimers[currentIndex] = timeLeft  // persist remaining time
+        }
     }
 
     // FIX: Timer auto-advances to next question when expired
@@ -177,8 +199,16 @@ private fun QuizPlayerContent(
         }
     }
 
+    // FIX: Question menu shows NAVIGATOR (numbers only), not answer review
+    // Prevents users from seeing which Qs they got right/wrong before submitting
     if (showReview) {
-        QuizReviewScreen(questions = questions, userAnswers = state.selectedAnswers, onBack = { showReview = false })
+        QuestionNavigatorSheet(
+            questions    = questions,
+            currentIndex = currentIndex,
+            userAnswers  = state.selectedAnswers,
+            onSelectQuestion = { idx -> currentIndex = idx; showReview = false },
+            onBack       = { showReview = false }
+        )
         return
     }
 
@@ -999,5 +1029,81 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
                 }
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// QUESTION NAVIGATOR SHEET
+// Number-only grid: answered=green, current=blue, unanswered=white
+// NO correct/wrong reveal during active quiz session
+// ─────────────────────────────────────────────────────────────
+@Composable
+internal fun QuestionNavigatorSheet(
+    questions:        List<QuizSessionQuestion>,
+    currentIndex:     Int,
+    userAnswers:      Map<String, String>,
+    onSelectQuestion: (Int) -> Unit,
+    onBack:           () -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(BpscColors.Surface)) {
+        // Header
+        Box(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    Modifier.size(34.dp).clip(CircleShape)
+                        .background(Color.White.copy(0.15f)).clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+                Column {
+                    Text("Question Navigator", style = MaterialTheme.typography.titleLarge,
+                        color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text("${userAnswers.size} / ${questions.size} answered",
+                        style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
+                }
+            }
+        }
+        // Legend
+        Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            NavLegendItem(Color(0xFF1565C0), "Current")
+            NavLegendItem(BpscColors.Success, "Answered")
+            NavLegendItem(Color(0xFFF5F5F5), "Unanswered", textColor = BpscColors.TextHint)
+        }
+        // Grid
+        val rows = questions.chunked(5)
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            rows.forEach { rowQs ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowQs.forEach { q ->
+                        val idx       = questions.indexOf(q)
+                        val isCurrent = idx == currentIndex
+                        val answered  = userAnswers.containsKey(q.id)
+                        val bg = when { isCurrent -> Color(0xFF1565C0); answered -> BpscColors.Success; else -> Color.White }
+                        val fg = if (isCurrent || answered) Color.White else BpscColors.TextPrimary
+                        Box(
+                            Modifier.weight(1f).aspectRatio(1f).clip(CircleShape)
+                                .background(bg)
+                                .border(if (!isCurrent && !answered) 1.dp else 0.dp, BpscColors.Divider, CircleShape)
+                                .clickable { onSelectQuestion(idx) },
+                            Alignment.Center
+                        ) { Text("${idx + 1}", style = MaterialTheme.typography.titleSmall, color = fg, fontWeight = FontWeight.ExtraBold) }
+                    }
+                    repeat(5 - rowQs.size) { Box(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavLegendItem(color: Color, label: String, textColor: Color = BpscColors.TextSecondary) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(12.dp).clip(CircleShape).background(color))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = textColor)
     }
 }
