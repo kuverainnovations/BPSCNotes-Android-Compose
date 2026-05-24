@@ -317,18 +317,44 @@ class QuizViewModel @Inject constructor(
     // ── 6. TOPIC QUIZ ─────────────────────────────────────────
 
     fun startTopicQuiz(subject: String) {
-        val match = _uiState.value.dailyQuizzes
-            .firstOrNull { it.subject.equals(subject, ignoreCase = true) && it.type == "topic" }
-            ?: _uiState.value.dailyQuizzes.firstOrNull()
-        if (match != null) {
-            startQuiz(match.id)
-        } else {
-            viewModelScope.launch {
-                loadLobby()
-                val q = _uiState.value.dailyQuizzes
-                    .firstOrNull { it.subject.equals(subject, ignoreCase = true) }
-                    ?: _uiState.value.dailyQuizzes.firstOrNull()
-                q?.let { startQuiz(it.id) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingDetail = true, startError = null) }
+            try {
+                // FIX: Query API directly with subject filter — don't depend on cached dailyQuizzes
+                // which is empty when navigating here from Current Affairs (fresh ViewModel)
+                // Try topic type first, fall back to any quiz for this subject
+                val res = quizzesApi.getQuizzes(subject = subject, type = "topic", limit = 5)
+                val quizzes = res.data?.quizzes ?: emptyList()
+
+                val match = quizzes.firstOrNull { it.subject.equals(subject, ignoreCase = true) }
+                    ?: quizzes.firstOrNull()
+
+                if (match != null) {
+                    startQuiz(match.id)
+                } else {
+                    // No topic quiz for this subject — try any quiz for the subject
+                    val anyRes = quizzesApi.getQuizzes(subject = subject, limit = 3)
+                    val anyQuiz = anyRes.data?.quizzes?.firstOrNull()
+
+                    if (anyQuiz != null) {
+                        startQuiz(anyQuiz.id)
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoadingDetail = false,
+                                startError = "No quiz available for '$subject' yet. Check back soon!"
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("QuizVM", "startTopicQuiz: \${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        isLoadingDetail = false,
+                        startError = "Failed to load quiz. Please check your connection."
+                    )
+                }
             }
         }
     }

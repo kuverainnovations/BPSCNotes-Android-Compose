@@ -875,6 +875,6 @@ data class ExamsResponseData(
 data class ExamTargetRequest(
     @SerializedName("primaryExam")   val primaryExam: String,
     @SerializedName("secondaryExam") val secondaryExam: String? = null,
-    @SerializedName("prepLevel")     val prepLevel: String,       // "beginner"|"intermediate"|"advanced"
+   // @SerializedName("prepLevel")     val prepLevel: String,       // "beginner"|"intermediate"|"advanced"
     @SerializedName("targetYear")    val targetYear: Int? = null
 )

@@ -25,19 +25,6 @@ enum class ExamSetupStep {
     ALL_SET             // Final: Ready to go! (triggers navigation)
 }
 
-data class PrepLevel(
-    val id: String,
-    val label: String,
-    val subtitle: String,
-    val emoji: String
-)
-
-val PREP_LEVELS = listOf(
-    PrepLevel("beginner",      "Beginner",      "Just started preparing",       "🌱"),
-    PrepLevel("intermediate",  "Intermediate",  "Preparing for 6–12 months",    "📘"),
-    PrepLevel("advanced",      "Advanced",      "Preparing for 1+ years",       "🎯"),
-)
-
 data class ExamSetupUiState(
     val exams: List<ExamDto>         = emptyList(),
     val isLoadingExams: Boolean      = true,
@@ -46,7 +33,7 @@ data class ExamSetupUiState(
     val currentStep: ExamSetupStep   = ExamSetupStep.SELECT_PRIMARY,
     val selectedPrimary: ExamDto?    = null,
     val selectedSecondary: List<ExamDto> = emptyList(),
-    val selectedPrepLevel: PrepLevel?= null,
+    // Prep level removed — not used
 
     val isSaving: Boolean            = false,
     val saveError: String?           = null,
@@ -96,7 +83,13 @@ class ExamSetupViewModel @Inject constructor(
 
     fun proceedFromPrimary() {
         if (_uiState.value.selectedPrimary == null) return
-        _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_SECONDARY) }
+        // FIX: Skip SELECT_SECONDARY (merged into same screen) → go straight to target year
+        _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_PREP_LEVEL) }
+    }
+
+    fun deselectPrimaryExam() {
+        // Allow user to deselect primary and re-choose
+        _uiState.update { it.copy(selectedPrimary = null) }
     }
 
     fun toggleSecondaryExam(exam: ExamDto) {
@@ -114,34 +107,34 @@ class ExamSetupViewModel @Inject constructor(
     }
 
     fun proceedFromSecondary() {
+        // Not used anymore — primary and secondary on same screen
         _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_PREP_LEVEL) }
     }
 
-    fun selectPrepLevel(level: PrepLevel) {
-        _uiState.update { it.copy(selectedPrepLevel = level) }
+    fun goBackToExamSelection() {
+        _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_PRIMARY) }
     }
 
     // ── Final save ───────────────────────────────────────────
 
-    fun saveAndFinish() {
+    fun saveAndFinish(targetYear: Int = 2026) {
         val state    = _uiState.value
         val primary  = state.selectedPrimary ?: return
-        val prepLevel = state.selectedPrepLevel ?: return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, saveError = null) }
             try {
                 authApi.saveExamTarget(
                     ExamTargetRequest(
-                        primaryExam = primary.name,
+                        primaryExam   = primary.name,
                         secondaryExam = state.selectedSecondary.firstOrNull()?.name,
-                        prepLevel = prepLevel.id
+                        targetYear    = targetYear
                     )
                 )
                 // Save locally so SplashScreen knows setup is done
                 tokenStore.setExamSetupDone()
                 tokenStore.saveUserPrimaryExam(primary.name)
-                tokenStore.saveUserPrepLevel(prepLevel.id)
+                // prep level no longer saved
 
                 _uiState.update { it.copy(isSaving = false, isDone = true) }
             } catch (e: Exception) {

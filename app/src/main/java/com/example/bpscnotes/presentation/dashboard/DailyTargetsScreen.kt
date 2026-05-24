@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 
 data class TargetItem(
     val target: DailyTargetDto,
-    val difficulty: Difficulty,   // derived from target.difficulty string
+   // val difficulty: Difficulty,   // derived from target.difficulty string
     val timeSlot: TimeSlot,       // derived from target.timeSlot string
 )
 
@@ -56,11 +56,7 @@ enum class TimeSlot(val label: String, val icon: String, val range: String) {
 /** Map a [DailyTargetDto] to the UI [TargetItem] — no static data */
 private fun DailyTargetDto.toTargetItem() = TargetItem(
     target     = this,
-    difficulty = when (difficulty.lowercase()) {
-        "easy" -> Difficulty.Easy
-        "hard" -> Difficulty.Hard
-        else   -> Difficulty.Medium
-    },
+// difficulty mapping removed
     timeSlot = when (timeSlot.lowercase()) {
         "afternoon" -> TimeSlot.Afternoon
         "night"     -> TimeSlot.Night
@@ -352,7 +348,7 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SubjectTag(item.target.subject)
-                        DifficultyBadge(item.difficulty)
+                       // DifficultyBadge(item.difficulty)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
                             Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
@@ -459,7 +455,8 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        SubjectTag(current.target.subject); DifficultyBadge(current.difficulty)
+                        SubjectTag(current.target.subject);
+                        //DifficultyBadge(current.difficulty)
                         Spacer(Modifier.weight(1f))
                         if (current.target.isCarriedForward) Text("📅 Carried Forward", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), fontSize = 10.sp)
                     }
@@ -553,7 +550,8 @@ private fun TimelineTabContent(
                                     Text(item.target.title, style = MaterialTheme.typography.titleMedium, color = if (isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textDecoration = if (isCompleted) TextDecoration.LineThrough else null)
                                     Spacer(Modifier.height(4.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        SubjectTag(item.target.subject); DifficultyBadge(item.difficulty)
+                                        SubjectTag(item.target.subject);
+//                                        DifficultyBadge(item.difficulty)
                                         Text("⏱ ${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                                     }
                                 }

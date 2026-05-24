@@ -114,7 +114,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 viewModel = viewModel
             )
         }
-        /*composable(
+       /* composable(
             Screen.TopicQuiz.route,
             arguments = listOf(
                 navArgument("subject")    { type = NavType.StringType },
@@ -127,6 +127,31 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
             )
         }*/
+
+        composable(
+            Screen.TopicQuiz.route,
+            arguments = listOf(
+                navArgument("subject") { type = NavType.StringType },
+                navArgument("topicTitle") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+
+            val subject = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("subject") ?: "",
+                "UTF-8"
+            )
+
+            val topicTitle = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("topicTitle") ?: "",
+                "UTF-8"
+            )
+
+            TopicQuizScreen(
+                navController = navController,
+                subject = subject,
+                topicTitle = topicTitle
+            )
+        }
 
         // ✅ Quiz List Screen
         composable(Screen.QuizList.route) {

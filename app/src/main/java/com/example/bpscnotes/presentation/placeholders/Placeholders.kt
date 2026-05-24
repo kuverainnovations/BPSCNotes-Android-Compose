@@ -512,7 +512,45 @@ fun SubscriptionScreen(
                     // FIX: Dynamic plan card from API
                     val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
                         "monthly", "BPSCNotes Pro", 199, 299, "1 Month", "Billed monthly", 20, 100)
-                    Card(shape = RoundedCornerShape(16.dp),
+                    // FIX: Premium card is now clickable — shows enroll/subscribe dialog
+                    var showEnrollDialog by remember { mutableStateOf(false) }
+                    if (showEnrollDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showEnrollDialog = false },
+                            shape = RoundedCornerShape(20.dp),
+                            title = { Text("🚀 Get BPSCNotes Pro", fontWeight = FontWeight.ExtraBold) },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Unlock all premium study materials, notes, and videos.")
+                                    val p = state.plans.firstOrNull()
+                                    if (p != null) {
+                                        Text("✅ All premium PDFs & notes", style = MaterialTheme.typography.bodyMedium)
+                                        Text("✅ Offline downloads", style = MaterialTheme.typography.bodyMedium)
+                                        Text("✅ Priority support", style = MaterialTheme.typography.bodyMedium)
+                                        if (p.bonusCoins > 0) Text("✅ +${p.bonusCoins} bonus coins on signup", style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("₹${p.price}/${p.duration} — ${p.billingCycle}", fontWeight = FontWeight.Bold, color = BpscColors.Primary)
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    showEnrollDialog = false
+                                    // Navigate to payment — for now show Razorpay or tell admin to integrate
+                                    nav.navigate(Screen.CoinWallet.route)  // temp: send to coins page
+                                }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                                    Text("Subscribe Now →")
+                                }
+                            },
+                            dismissButton = {
+                                OutlinedButton(onClick = { showEnrollDialog = false }) { Text("Maybe later") }
+                            }
+                        )
+                    }
+
+                    Card(
+                        modifier = Modifier.clickable { showEnrollDialog = true },  // ← CLICKABLE NOW
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f)),
                         border = BorderStroke(1.dp, Color.White.copy(0.3f))) {
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp),

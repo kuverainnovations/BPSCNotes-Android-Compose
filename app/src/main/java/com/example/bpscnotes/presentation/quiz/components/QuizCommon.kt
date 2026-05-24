@@ -50,25 +50,8 @@ fun SubjectChip(subject: String) {
     )
 }
 
-@Composable
-fun DifficultyChip(difficulty: String) {
-    val color = when (difficulty.lowercase()) {
-        "easy" -> Color(0xFF2ECC71)
-        "medium" -> Color(0xFFF39C12)
-        "hard" -> Color(0xFFE74C3C)
-        else -> Color.Gray
-    }
+// DifficultyChip removed — difficulty levels removed from project
 
-    Text(
-        difficulty,
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.15f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        color = color,
-        style = MaterialTheme.typography.labelSmall
-    )
-}
 
 @Composable
 internal fun QuizAnswerReviewScreen(
