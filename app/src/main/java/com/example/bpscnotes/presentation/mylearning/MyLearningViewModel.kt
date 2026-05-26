@@ -25,6 +25,7 @@ data class MyLearningUiState(
     val isLoading:       Boolean         = true,
     val isEnrolling:     Boolean         = false,
     val enrollSuccess:   String?         = null,
+    val justEnrolledId:  String?         = null,   // triggers tab switch in Screen
     val saveToast:       String?         = null,
     val error:           String?         = null
 )
@@ -65,9 +66,9 @@ class MyLearningViewModel @Inject constructor(
                     try { authApi.getMe().data?.user?.coins ?: 0 } catch (_: Exception) { 0 }
                 }
                 val savedIds        = savedCourses.map { it.id }.toSet()
-                val enrolledCourses = allCourses.filter {
-                    it.enrollment?.status in listOf("active", "completed")
-                }
+                val enrolledCourses = allCourses
+                    .filter { it.enrollment?.status in listOf("active", "completed") }
+                    .sortedByDescending { it.enrollment?.enrolled_at ?: it.created_at ?: "" }
                 val enrolledIds     = enrolledCourses.map { it.id }.toSet()
                 val storeCourses    = allCourses.filter { it.id !in enrolledIds }
 
@@ -97,7 +98,11 @@ class MyLearningViewModel @Inject constructor(
             try {
                 coursesApi.enrollCourse(courseId)
                 load() // refresh so enrolled tab shows the new course & store removes it
-                _uiState.update { it.copy(isEnrolling = false, enrollSuccess = "Enrolled! Go to My Courses tab") }
+                _uiState.update { it.copy(
+                    isEnrolling   = false,
+                    enrollSuccess  = "Enrolled successfully!",
+                    justEnrolledId = courseId   // Screen observes this to switch to My Courses tab
+                ) }
             } catch (e: Exception) {
                 Log.e("MyLearningVM", "enroll: ${e.message}", e)
                 _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
@@ -141,5 +146,9 @@ class MyLearningViewModel @Inject constructor(
 
     fun clearMessages() {
         _uiState.update { it.copy(enrollSuccess = null, saveToast = null, error = null) }
+    }
+
+    fun clearJustEnrolled() {
+        _uiState.update { it.copy(justEnrolledId = null) }
     }
 }

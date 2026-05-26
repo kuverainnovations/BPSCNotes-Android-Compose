@@ -69,6 +69,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -210,6 +211,15 @@ fun MyLearningScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
+
+    // Switch to My Courses tab (index 1) when enrollment succeeds
+    // and clear the trigger so it doesn't fire again on recomposition
+    LaunchedEffect (state.justEnrolledId) {
+        if (state.justEnrolledId != null) {
+            selectedTab = 1          // 0 = Store, 1 = My Courses
+            viewModel.clearJustEnrolled()
+        }
+    }
 
     val userCoins = state.userCoins
 

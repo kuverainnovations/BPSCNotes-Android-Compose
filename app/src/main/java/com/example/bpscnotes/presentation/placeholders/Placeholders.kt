@@ -71,8 +71,11 @@ class DownloadsViewModel @Inject constructor(
     private val _state = MutableStateFlow(DownloadsUiState())
     val state: StateFlow<DownloadsUiState> = _state.asStateFlow()
 
+    // FIX: Scan the root Downloads directory — that's where DownloadManager saves files
+    // by default (setDestinationInExternalPublicDir(DIRECTORY_DOWNLOADS, fileName)).
+    // The BPSCNotes subfolder doesn't exist / is never populated by our download code.
     private val downloadsDir: File =
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "BPSCNotes")
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
     init { load() }
 
@@ -97,9 +100,25 @@ class DownloadsViewModel @Inject constructor(
                 val items = mutableListOf<DownloadedFileItem>()
 
                 // Map backend download history to UI items
+                // Build the sanitized filename the same way StudyMaterialsViewModel does
+                fun expectedFileName(title: String) = title
+                    .replace("[^a-zA-Z0-9 ._-]".toRegex(), "")
+                    .replace(" ", "_")
+                    .take(80)
+                    .ifEmpty { "bpscnotes_material" }
+                    .let { "$it.pdf" }
+
                 downloadHistory.forEach { dto ->
-                    val localFile = localFiles.firstOrNull {
-                        it.name.contains(dto.id.take(8), ignoreCase = true)
+                    // Match strategy:
+                    // 1. Title-based filename — matches what DownloadManager saves (most reliable)
+                    // 2. ID prefix — legacy fallback for old downloads
+                    // 3. fileUrl filename — matches the remote filename used in URL
+                    val expectedName = expectedFileName(dto.title)
+                    val urlFileName  = dto.fileUrl?.substringAfterLast("/") ?: ""
+                    val localFile = localFiles.firstOrNull { f ->
+                        f.name.equals(expectedName, ignoreCase = true) ||                          // title match
+                                f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
+                                (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
                     }
                     items.add(DownloadedFileItem(
                         id           = dto.id,
@@ -288,14 +307,52 @@ fun DownloadsScreen(
                                     isDeleting = state.deletingId == item.id,
                                     onOpen     = {
                                         if (item.fileExists) {
+                                            // Files are in public Downloads — query MediaStore for a
+                                            // content:// URI. No FileProvider or manifest config needed.
                                             val file = File(item.localPath)
-                                            val uri  = androidx.core.content.FileProvider.getUriForFile(
-                                                context, "${context.packageName}.fileprovider", file)
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, "application/pdf")
-                                                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                            val mime = when (item.materialType.lowercase()) {
+                                                "video" -> "video/*"
+                                                "pdf"   -> "application/pdf"
+                                                else    -> "*/*"
                                             }
-                                            context.startActivity(intent)
+                                            try {
+                                                // Android 10+ MediaStore query
+                                                val contentUri = if (android.os.Build.VERSION.SDK_INT >= 29) {
+                                                    val projection = arrayOf(android.provider.MediaStore.Downloads._ID)
+                                                    val selection  = android.provider.MediaStore.Downloads.DISPLAY_NAME + " = ?"
+                                                    val selArgs    = arrayOf(file.name)
+                                                    context.contentResolver.query(
+                                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                                        projection, selection, selArgs, null
+                                                    )?.use { cursor ->
+                                                        if (cursor.moveToFirst()) {
+                                                            val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads._ID))
+                                                            android.content.ContentUris.withAppendedId(
+                                                                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, id
+                                                            )
+                                                        } else null
+                                                    }
+                                                } else null
+
+                                                // Fallback: Uri.fromFile works for public storage < Android 10
+                                                val uri = contentUri ?: android.net.Uri.fromFile(file)
+                                                context.startActivity(
+                                                    Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, mime)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                )
+                                            } catch (e: Exception) {
+                                                // Last resort: open with Files app using generic chooser
+                                                context.startActivity(
+                                                    Intent.createChooser(
+                                                        Intent(Intent.ACTION_VIEW).apply {
+                                                            setDataAndType(android.net.Uri.fromFile(file), mime)
+                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        }, "Open with"
+                                                    )
+                                                )
+                                            }
                                         }
                                     },
                                     onDelete   = { viewModel.deleteFile(item) }

@@ -49,6 +49,7 @@ data class StudySessionUiState(
 
     // Live counters (update after each heartbeat)
     val activeMinutes: Int                  = 0,
+    val elapsedSeconds: Int                 = 0,   // live second-by-second counter (ViewModel-owned)
     val coinsThisSession: Int               = 0,
     val xpThisSession: Int                  = 0,
     val afkCount: Int                       = 0,
@@ -110,8 +111,9 @@ class StudySessionViewModel @Inject constructor(
                             tierColorHex  = session.tier?.colorHex,
                         )
                     }
-                    // Resume heartbeat for the restored session
+                    // Resume heartbeat + elapsed timer for the restored session
                     startHeartbeat(session.id)
+                    startElapsedTimer()
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "checkForExistingSession failed: ${e.message}")
@@ -121,14 +123,28 @@ class StudySessionViewModel @Inject constructor(
     }
 
     // ── 2. Start a new session ─────────────────────────────────
-    fun startSession(roomId: String? = null, mode: String = "study") {
+    fun startSession(
+        roomId: String? = null,
+        mode: String = "study",
+        tierName: String? = null,
+        tierEmoji: String? = null,
+        tierColorHex: String? = null
+    ) {
         if (_uiState.value.status == SessionStatus.ACTIVE) {
             Log.w(TAG, "Tried to start session while one is already active")
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(status = SessionStatus.STARTING, error = null) }
+            // FIX: Set tier info immediately so room header shows correct tier name
+            // instead of defaulting to "Silver Room" while the session is starting
+            _uiState.update { it.copy(
+                status       = SessionStatus.STARTING,
+                error        = null,
+                tierName     = tierName,
+                tierEmoji    = tierEmoji,
+                tierColorHex = tierColorHex
+            ) }
             try {
                 val response = tierRoomsApi.startSession(
                     StartSessionRequest(roomId = roomId, mode = mode)
@@ -155,6 +171,7 @@ class StudySessionViewModel @Inject constructor(
                     )
                 }
                 startHeartbeat(data.sessionId)
+                startElapsedTimer()
 
             } catch (e: Exception) {
                 Log.e(TAG, "startSession failed: ${e.message}", e)
@@ -202,13 +219,16 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Heartbeat: afk=${data.isAfk} coins=+${data.coinsEarnedThisBeat} " +
-                    "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
+                            "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
                 )
 
                 _uiState.update { s ->
                     s.copy(
                         status           = if (data.isAfk) SessionStatus.AFK else SessionStatus.ACTIVE,
                         activeMinutes    = data.totalActiveMinutes,
+                        // Sync elapsed seconds to server value on every heartbeat
+                        // so drift doesn't accumulate over long sessions
+                        elapsedSeconds   = data.totalActiveMinutes * 60,
                         coinsThisSession = data.totalCoinsThisSession,
                         xpThisSession    = data.totalXpThisSession,
                         coinsLastBeat    = data.coinsEarnedThisBeat,
@@ -239,6 +259,27 @@ class StudySessionViewModel @Inject constructor(
     }
 
     // ── 5. End session ─────────────────────────────────────────
+    // ── Elapsed timer — runs in ViewModel so it survives navigation (PIP mode) ──
+    private var timerJob: kotlinx.coroutines.Job? = null
+
+    private fun startElapsedTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            var secs = _uiState.value.activeMinutes * 60
+            _uiState.update { it.copy(elapsedSeconds = secs) }
+            while (true) {
+                delay(1_000L)
+                val status = _uiState.value.status
+                if (status == SessionStatus.ACTIVE || status == SessionStatus.AFK) {
+                    secs++
+                    _uiState.update { it.copy(elapsedSeconds = secs) }
+                } else if (status == SessionStatus.ENDED || status == SessionStatus.IDLE) {
+                    break
+                }
+            }
+        }
+    }
+
     fun endSession() {
         val sessionId = _uiState.value.sessionId ?: return
         if (_uiState.value.status == SessionStatus.ENDING) return
@@ -254,7 +295,7 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Session ended: active=${summary.activeMinutes}min " +
-                    "coins=${summary.totalCoins} xp=${summary.totalXp}"
+                            "coins=${summary.totalCoins} xp=${summary.totalXp}"
                 )
 
                 _uiState.update { s ->

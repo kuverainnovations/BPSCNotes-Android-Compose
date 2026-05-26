@@ -77,9 +77,20 @@ fun StudyFocusScreen(
 
 //    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
 
+    // PIP: back press pops StudyFocusScreen from the root stack.
+    // This returns to Screen.Main (MainShell) which contains RoomsHub tab —
+    // exactly where the user came from. The PIP overlay in MainShell appears
+    // automatically because the session is still ACTIVE.
+    // NEVER navigate to RoomsHub directly — it exists as both a root route AND
+    // a MainShell tab; navigating root→RoomsHub bypasses MainShell → black screen.
+    val navigateAwayForPip = {
+        navController.popBackStack(Screen.StudyFocus.route, inclusive = true)
+    }
     androidx.activity.compose.BackHandler(
         enabled = state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK
-    ) { showEndConfirm = true }
+    ) {
+        navigateAwayForPip()
+    }
 
     // Post-session rewarded ad prompt
     if (showPostSessionAd && state.status != SessionStatus.ACTIVE) {
@@ -166,7 +177,7 @@ fun StudyFocusScreen(
             state          = state,
             tiersState     = tiersState,
             onBack         = { showEndConfirm = true },
-            onEnd          = { showEndConfirm = true },
+            onEnd          = { showEndConfirm = true },   // ■ End button = intentional quit
             onDismissAfk   = { viewModel.dismissAfkWarning() },
             tiersViewModel = tiersViewModel
         )
@@ -200,21 +211,30 @@ private fun StartingScreen() {
 private fun ActiveRoomScreen(
     state:          StudySessionUiState,
     tiersState:     TierRoomsUiState,
-    onBack:         () -> Unit,
-    onEnd:          () -> Unit,
+    onBack:         () -> Unit,        // navigate away (PIP mode)
+    onEnd:          () -> Unit,         // intentional end session
     onDismissAfk:   () -> Unit = {},
     tiersViewModel: TierRoomsViewModel
 ) {
-    // Local timer — increments every second
-    // FIX 2: elapsedSeconds synced from backend on every session-state change.
-    // Key includes sessionId so the effect re-fires when STARTING→ACTIVE happens.
-    // Without sessionId in the key the timer block exited before the session was ACTIVE.
+    // Compute elapsed time directly from startedAt timestamp — same approach as PIP overlay.
+    // This is immune to: ViewModel re-creation, startElapsedTimer() resets, re-composition,
+    // and any other state sync issues. It's always: now - sessionStartTime.
     var elapsedSeconds by remember { mutableIntStateOf(0) }
-    LaunchedEffect(state.status, state.sessionId) {
-        elapsedSeconds = state.activeMinutes * 60   // sync from backend value
-        while (state.status == SessionStatus.ACTIVE || state.status == SessionStatus.AFK) {
-            delay(1000L)
-            elapsedSeconds++
+    LaunchedEffect(state.startedAt) {
+        val startStr = state.startedAt ?: return@LaunchedEffect
+        val fmts = listOf(
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()),
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.getDefault())
+        )
+        val startMs = fmts.firstNotNullOfOrNull { sdf ->
+            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            try { sdf.parse(startStr)?.time } catch (_: Exception) { null }
+        } ?: System.currentTimeMillis()
+
+        // Tick every second — always accurate, never resets on navigation
+        while (true) {
+            elapsedSeconds = ((System.currentTimeMillis() - startMs) / 1000L).toInt().coerceAtLeast(0)
+            kotlinx.coroutines.delay(1_000L)
         }
     }
 
@@ -304,6 +324,7 @@ private fun ActiveRoomScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
+                // Back → PIP mode (session continues)
                 IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
                 }
@@ -318,6 +339,23 @@ private fun ActiveRoomScreen(
                                 style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
                         }
                     }
+                }
+                // ■ End Session button (intentional quit only)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEF5350).copy(0.15f))
+                        .border(1.dp, Color(0xFFEF5350).copy(0.5f), CircleShape)
+                        .clickable(onClick = onEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        androidx.compose.material.icons.Icons.Rounded.Stop,
+                        contentDescription = "End Session",
+                        tint     = Color(0xFFEF5350),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
                 Box(
                     modifier = Modifier.clip(RoundedCornerShape(20.dp))

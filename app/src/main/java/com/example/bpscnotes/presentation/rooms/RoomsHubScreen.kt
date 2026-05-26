@@ -128,15 +128,31 @@ fun RoomsHubScreen(
         }
     }
 
-    // When session becomes ACTIVE (after entering a room) → navigate to StudyFocusScreen
     val snackbarHost = remember { SnackbarHostState() }
+
+    // Track previous status so we only auto-navigate to StudyFocus when session
+    // transitions FROM a non-active state TO active (i.e. user just joined a room).
+    // If status is already ACTIVE when RoomsHub loads, the user returned via PIP —
+    // do NOT auto-push them back to StudyFocus. That's what caused the back-press loop.
+    var prevStatus by remember { mutableStateOf(sessionState.status) }
+
     LaunchedEffect(sessionState.status) {
-        when (sessionState.status) {
+        val prev = prevStatus
+        val curr = sessionState.status
+        prevStatus = curr
+
+        when (curr) {
             SessionStatus.ACTIVE, SessionStatus.AFK -> {
-                val current = navController.currentDestination?.route
-                if (current != Screen.StudyFocus.route) {
-                    navController.navigate(Screen.StudyFocus.route) { launchSingleTop = true }
+                // Only navigate to StudyFocus if this is a FRESH join (status just became active).
+                // If prev was already ACTIVE/AFK, user returned from PIP — stay on RoomsHub.
+                val justJoined = prev == SessionStatus.STARTING || prev == SessionStatus.IDLE || prev == SessionStatus.ERROR
+                if (justJoined) {
+                    val current = navController.currentDestination?.route
+                    if (current != Screen.StudyFocus.route) {
+                        navController.navigate(Screen.StudyFocus.route) { launchSingleTop = true }
+                    }
                 }
+                // If prev was ACTIVE/AFK → user came back via PIP. Show PIP overlay, stay here.
             }
 
             SessionStatus.ERROR -> {
@@ -180,7 +196,12 @@ fun RoomsHubScreen(
                             onDismiss = { tiersViewModel.dismissDemotionBanner() },
                             onStudyNow = {
                                 tiersViewModel.dismissDemotionBanner()
-                                sessionViewModel.startSession(mode = "study")
+                                sessionViewModel.startSession(
+                                    mode         = "study",
+                                    tierName     = state.myTierData?.currentTier?.name,
+                                    tierEmoji    = state.myTierData?.currentTier?.iconEmoji,
+                                    tierColorHex = state.myTierData?.currentTier?.colorHex
+                                )
                             }
                         )
                     }
@@ -291,7 +312,12 @@ fun RoomsHubScreen(
                                             // Session backend uses user's DB tier for coins/XP.
                                             // Tapping Silver as a Gold user is fine — rewards
                                             // are determined server-side by current_tier_id.
-                                            else -> sessionViewModel.startSession(mode = "study")
+                                            else -> sessionViewModel.startSession(
+                                                mode         = "study",
+                                                tierName     = tier.name,
+                                                tierEmoji    = tier.iconEmoji,
+                                                tierColorHex = tier.colorHex
+                                            )
                                         }
                                     }
                                 )
@@ -322,170 +348,169 @@ fun RoomsHubScreen(
         }
     }
 }
-    // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 // HERO HEADER
 // ════════════════════════════════════════════════════════════
-    @Composable
-    private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
-        val myTier    = state.myTierData?.currentTier
-        val tierColor = try {
-            Color(android.graphics.Color.parseColor(myTier?.colorHex ?: "#9E9E9E"))
-        } catch (e: Exception) { BpscColors.CoinGold }
+@Composable
+private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
+    val myTier    = state.myTierData?.currentTier
+    val tierColor = try {
+        Color(android.graphics.Color.parseColor(myTier?.colorHex ?: "#9E9E9E"))
+    } catch (e: Exception) { BpscColors.CoinGold }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                        Offset(0f, 0f), Offset(500f, 500f)
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
+                    Offset(0f, 0f), Offset(500f, 500f)
                 )
-            // .statusBarsPadding()
-        ) {
-            Column(modifier = Modifier
-                .padding(horizontal = 20.dp)
-                .padding(top = 46.dp, bottom = 30.dp)) {
+            )
+        // .statusBarsPadding()
+    ) {
+        Column(modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(top = 46.dp, bottom = 30.dp)) {
 
-                // Top bar
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment     = Alignment.CenterVertically
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        /* Box(
-                             modifier = Modifier
-                                 .size(36.dp)
-                                 .clip(CircleShape)
-                                 .background(Color.White.copy(0.12f))
-                                 .clickable(onClick = onBack),
-                             contentAlignment = Alignment.Center
-                         ) {
-                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                         }*/
-                        Column {
-                            Text("Group Study",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold)
-                            Text("Tap your room to start",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(0.6f))
-                        }
+            // Top bar
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    /* Box(
+                         modifier = Modifier
+                             .size(36.dp)
+                             .clip(CircleShape)
+                             .background(Color.White.copy(0.12f))
+                             .clickable(onClick = onBack),
+                         contentAlignment = Alignment.Center
+                     ) {
+                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                     }*/
+                    Column {
+                        Text("Group Study",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold)
+                        Text("Tap your room to start",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(0.6f))
                     }
-                    if (state.isSocketConnected) {
+                }
+                if (state.isSocketConnected) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(BpscColors.Success.copy(0.2f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(BpscColors.Success))
+                        Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            if (state.isLoadingMyTier) {
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(0.08f)))
+                return@Column
+            }
+
+            if (myTier != null) {
+                Card(
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(20.dp),
+                    colors    = CardDefaults.cardColors(containerColor = Color.White.copy(0.12f)),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(BpscColors.Success.copy(0.2f))
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier              = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment     = Alignment.CenterVertically
                         ) {
-                            Box(Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(BpscColors.Success))
-                            Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(18.dp))
-
-                if (state.isLoadingMyTier) {
-                    Box(Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(0.08f)))
-                    return@Column
-                }
-
-                if (myTier != null) {
-                    Card(
-                        modifier  = Modifier.fillMaxWidth(),
-                        shape     = RoundedCornerShape(20.dp),
-                        colors    = CardDefaults.cardColors(containerColor = Color.White.copy(0.12f)),
-                        elevation = CardDefaults.cardElevation(0.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(
-                                modifier              = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment     = Alignment.CenterVertically
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(tierColor.copy(0.25f)),
-                                        contentAlignment = Alignment.Center
-                                    ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp) }
-                                    Column {
-                                        Text(myTier.name ?: "Silver Room",
-                                            style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                        Text("${myTier.displayMembers} members · ${myTier.displayActive} online now",
-                                            style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
-                                    }
-                                }
-                                Box(modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(BpscColors.CoinGold.copy(0.2f))
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)) {
-                                    Text("🪙 ${myTier.coinMultiplier}×/hr",
-                                        style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
-
-                            // Progress bar to next tier
-                            state.myTierData?.nextTier?.let { next ->
-                                val progress  = state.myTierData.nextTierProgress.toFloat()
-                                val animProg  by animateFloatAsState(progress, tween(900), label = "prog")
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Box(modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(Color.White.copy(0.15f))) {
-                                        Box(modifier = Modifier
-                                            .fillMaxWidth(animProg.coerceIn(0f, 1f))
-                                            .fillMaxHeight()
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(
-                                                        Color(0xFF64B5F6),
-                                                        Color.White
-                                                    )
-                                                ), RoundedCornerShape(3.dp)
-                                            ))
-                                    }
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
-                                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 10.sp)
-                                        Text("${(progress * 100).toInt()}%",
-                                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                                    }
-                                }
-                            }
-
-                            // Stats strip
-                            state.myTierData?.userStats?.let { stats ->
-                                Row(
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.White.copy(0.08f))
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                                ) {
-                                    StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", "Studied")
-                                    StatPill("🔥", "${stats.streak}", "Streak")
-                                    StatPill("📝", "${stats.quizzesAttempted}", "Quizzes")
-                                    StatPill("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(tierColor.copy(0.25f)),
+                                    contentAlignment = Alignment.Center
+                                ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp) }
+                                Column {
+                                    Text(myTier.name ?: "Silver Room",
+                                        style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text("${myTier.displayMembers} members · ${myTier.displayActive} online now",
+                                        style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
                                 }
+                            }
+                            Box(modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(BpscColors.CoinGold.copy(0.2f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)) {
+                                Text("🪙 ${myTier.coinMultiplier}×/hr",
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+
+                        // Progress bar to next tier
+                        state.myTierData?.nextTier?.let { next ->
+                            val progress  = state.myTierData.nextTierProgress.toFloat()
+                            val animProg  by animateFloatAsState(progress, tween(900), label = "prog")
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.White.copy(0.15f))) {
+                                    Box(modifier = Modifier
+                                        .fillMaxWidth(animProg.coerceIn(0f, 1f))
+                                        .fillMaxHeight()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    Color(0xFF64B5F6),
+                                                    Color.White
+                                                )
+                                            ), RoundedCornerShape(3.dp)
+                                        ))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
+                                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 10.sp)
+                                    Text("${(progress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                }
+                            }
+                        }
+
+                        // Stats strip
+                        state.myTierData?.userStats?.let { stats ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(0.08f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", "Studied")
+                                StatPill("🔥", "${stats.streak}", "Streak")
+                                StatPill("📝", "${stats.quizzesAttempted}", "Quizzes")
+                                StatPill("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
                             }
                         }
                     }
@@ -493,368 +518,369 @@ fun RoomsHubScreen(
             }
         }
     }
+}
 
-    @Composable
-    private fun StatPill(icon: String, value: String, label: String) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(icon, fontSize = 12.sp)
-            Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f), fontSize = 9.sp)
-        }
+@Composable
+private fun StatPill(icon: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(icon, fontSize = 12.sp)
+        Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f), fontSize = 9.sp)
     }
+}
 
-    // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 // ROOM CARD — tap to enter (own room) or see requirements (locked)
 // ════════════════════════════════════════════════════════════
-    @Composable
-    private fun RoomCard(
-        tier:         RoomTierDto,
-        tierColor:    Color,
-        isMyRoom:     Boolean,
-        isLocked:     Boolean,
-        isClaimReady: Boolean = false,
-        isLowerTier:  Boolean = false,
-        isStarting:   Boolean,
-        onClick:      () -> Unit
+@Composable
+private fun RoomCard(
+    tier:         RoomTierDto,
+    tierColor:    Color,
+    isMyRoom:     Boolean,
+    isLocked:     Boolean,
+    isClaimReady: Boolean = false,
+    isLowerTier:  Boolean = false,
+    isStarting:   Boolean,
+    onClick:      () -> Unit
+) {
+    val bgColor = when {
+        isClaimReady -> BpscColors.Success.copy(0.05f)
+        isMyRoom     -> Color.White
+        isLocked     -> Color(0xFFF7F7F7)
+        else         -> Color.White
+    }
+
+    val borderColor = when {
+        isClaimReady -> BpscColors.Success
+        isMyRoom     -> tierColor.copy(alpha = 0.45f)
+        isLocked     -> Color(0xFFE2E2E2)
+        else         -> BpscColors.Divider
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clickable(onClick = onClick),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = bgColor),
+        border = BorderStroke(
+            width = if (isMyRoom) 1.5.dp else 1.dp,
+            color = borderColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        val bgColor = when {
-            isClaimReady -> BpscColors.Success.copy(0.05f)
-            isMyRoom     -> Color.White
-            isLocked     -> Color(0xFFF7F7F7)
-            else         -> Color.White
-        }
-
-        val borderColor = when {
-            isClaimReady -> BpscColors.Success
-            isMyRoom     -> tierColor.copy(alpha = 0.45f)
-            isLocked     -> Color(0xFFE2E2E2)
-            else         -> BpscColors.Divider
-        }
-
-        Card(
-            modifier = Modifier
+        Row(
+            modifier              = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 5.dp)
-                .clickable(onClick = onClick),
-            shape     = RoundedCornerShape(18.dp),
-            colors    = CardDefaults.cardColors(containerColor = bgColor),
-            border = BorderStroke(
-                width = if (isMyRoom) 1.5.dp else 1.dp,
-                color = borderColor
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                .padding(14.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                modifier              = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            // Icon box
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (isLocked) Color(0xFFE8E8E8) else tierColor.copy(0.15f)),
+                contentAlignment = Alignment.Center
             ) {
-                // Icon box
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (isLocked) Color(0xFFE8E8E8) else tierColor.copy(0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    when {
-                        isStarting   -> CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        isClaimReady -> Text("🎉", fontSize = 24.sp)
-                        isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(22.dp))
-                        else         -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
-                    }
-                }
-
-                // Info
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            tier.name ?: tier.tierKey.replaceFirstChar { it.uppercase() },
-                            style      = MaterialTheme.typography.titleMedium,
-                            color      = if (isLocked) Color(0xFFAAAAAA) else BpscColors.TextPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        when {
-                            isClaimReady -> Box(modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BpscColors.Success.copy(0.15f))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("🎉 Claim Now!", style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                            }
-                            isMyRoom -> Box(modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BpscColors.Success.copy(0.12f))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("Your Room", style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                            }
-                            isLocked -> Box(modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF0F0F0))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("Locked", style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFFAAAAAA), fontSize = 9.sp)
-                            }
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("🪙 ${tier.coinMultiplier}×/hr",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isLocked) Color(0xFFCCCCCC) else tierColor,
-                            fontWeight = FontWeight.SemiBold)
-                        Text("👥 ${tier.displayMembers}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isLocked) Color(0xFFCCCCCC) else BpscColors.TextHint)
-                        // BUG FIX: Only show active count when > 0 and not locked.
-                        // displayActive comes from activeSessions field which is updated via WebSocket.
-                        // If it shows 1 just by opening the page, it means the server is counting
-                        // socket connections (not sessions). We hide counts of 0 to avoid confusion.
-                        if (tier.displayActive > 0 && !isLocked) {
-                            Text("🟢 ${tier.displayActive} studying",
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
-                        }
-                    }
-                    // Perks teaser for locked rooms
-                    if (isLocked && tier.perks.isNotEmpty()) {
-                        Text(tier.perks.firstOrNull() ?: "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFBBBBBB), fontSize = 10.sp, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis)
-                    }
-                }
-
-                // Right arrow for own room; chevron-down for locked
                 when {
-                    isClaimReady -> Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(BpscColors.Success.copy(0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Rounded.ArrowForward, null, tint = BpscColors.Success, modifier = Modifier.size(18.dp)) }
-                    isMyRoom -> Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(tierColor.copy(0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Rounded.PlayArrow, null, tint = tierColor, modifier = Modifier.size(18.dp)) }
-                    isLocked -> Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
+                    isStarting   -> CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    isClaimReady -> Text("🎉", fontSize = 24.sp)
+                    isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(22.dp))
+                    else         -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
                 }
+            }
+
+            // Info
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        tier.name ?: tier.tierKey.replaceFirstChar { it.uppercase() },
+                        style      = MaterialTheme.typography.titleMedium,
+                        color      = if (isLocked) Color(0xFFAAAAAA) else BpscColors.TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    when {
+                        isClaimReady -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.Success.copy(0.15f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
+                            Text("🎉 Claim Now!", style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        }
+                        isMyRoom -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.Success.copy(0.12f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
+                            Text("Your Room", style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        }
+                        isLocked -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF0F0F0))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
+                            Text("Locked", style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFAAAAAA), fontSize = 9.sp)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("🪙 ${tier.coinMultiplier}×/hr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isLocked) Color(0xFFCCCCCC) else tierColor,
+                        fontWeight = FontWeight.SemiBold)
+                    Text("👥 ${tier.displayMembers}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isLocked) Color(0xFFCCCCCC) else BpscColors.TextHint)
+                    // BUG FIX: Only show active count when > 0 and not locked.
+                    // displayActive comes from activeSessions field which is updated via WebSocket.
+                    // If it shows 1 just by opening the page, it means the server is counting
+                    // socket connections (not sessions). We hide counts of 0 to avoid confusion.
+                    if (tier.displayActive > 0 && !isLocked) {
+                        Text("🟢 ${tier.displayActive} studying",
+                            style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
+                    }
+                }
+                // Perks teaser for locked rooms
+                if (isLocked && tier.perks.isNotEmpty()) {
+                    Text(tier.perks.firstOrNull() ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFBBBBBB), fontSize = 10.sp, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            // Right arrow for own room; chevron-down for locked
+            when {
+                isClaimReady -> Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(BpscColors.Success.copy(0.15f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.ArrowForward, null, tint = BpscColors.Success, modifier = Modifier.size(18.dp)) }
+                isMyRoom -> Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(tierColor.copy(0.15f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.PlayArrow, null, tint = tierColor, modifier = Modifier.size(18.dp)) }
+                isLocked -> Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(20.dp))
             }
         }
     }
+}
 
-    // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 // LOCKED ROOM SHEET — shows requirements when tapping locked room
 // ════════════════════════════════════════════════════════════
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    private fun LockedRoomSheet(
-        tier:          RoomTierDto,
-        progressItems: List<TierProgressItemDto>,
-        onDismiss:     () -> Unit
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LockedRoomSheet(
+    tier:          RoomTierDto,
+    progressItems: List<TierProgressItemDto>,
+    onDismiss:     () -> Unit
+) {
+    val tierColor = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState,
+        containerColor   = BpscColors.Surface,
+        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        val tierColor = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState       = sheetState,
-            containerColor   = BpscColors.Surface,
-            shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            Column(
-                modifier              = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 40.dp),
-                horizontalAlignment   = Alignment.CenterHorizontally,
-                verticalArrangement   = Arrangement.spacedBy(16.dp)
-            ) {
-                // Handle
-                Box(Modifier
-                    .size(40.dp, 4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(BpscColors.Divider))
-
-                // Tier badge
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(tierColor.copy(0.12f)),
-                    contentAlignment = Alignment.Center
-                ) { Text(tier.iconEmoji ?: "🔒", fontSize = 36.sp) }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${tier.name} is Locked", style = MaterialTheme.typography.headlineSmall,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text("Complete these requirements in Silver Room first",
-                        style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
-                }
-
-                // Requirements list
-                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Requirements", style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        progressItems.forEach { item ->
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
-                                    else Icon(Icons.Rounded.RadioButtonUnchecked, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp))
-                                    Text(item.label, style = MaterialTheme.typography.bodyMedium,
-                                        color = if (item.done) BpscColors.TextPrimary else BpscColors.TextSecondary)
-                                }
-                                Text("${item.current.toInt()}/${item.required.toInt()} ${item.unit}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (item.done) BpscColors.Success else BpscColors.TextHint, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-
-                // Perks preview
-                if (tier.perks.isNotEmpty()) {
-                    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = tierColor.copy(0.06f)),
-                        border = BorderStroke(1.dp, tierColor.copy(0.2f))) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${tier.iconEmoji ?: ""} Perks you'll unlock:", style = MaterialTheme.typography.labelMedium,
-                                color = tierColor, fontWeight = FontWeight.Bold)
-                            tier.perks.take(3).forEach { perk ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("•", color = tierColor)
-                                    Text(perk, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Button(
-                    onClick  = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) { Text("Got it, I'll keep studying!", fontWeight = FontWeight.Bold) }
-            }
-        }
-    }
-
-    // ════════════════════════════════════════════════════════════
-// PROMOTION READY BANNER
-// ════════════════════════════════════════════════════════════
-    @Composable
-    private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
-        val infiniteTransition = rememberInfiniteTransition(label = "glow")
-        val glowAlpha by infiniteTransition.animateFloat(0.3f, 0.7f,
-            infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
-
-        Card(
-            modifier = Modifier
+        Column(
+            modifier              = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape    = RoundedCornerShape(16.dp),
-            colors   = CardDefaults.cardColors(containerColor = BpscColors.Success.copy(0.12f)),
-            border   = BorderStroke(1.5.dp, BpscColors.Success.copy(glowAlpha))
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
+            horizontalAlignment   = Alignment.CenterHorizontally,
+            verticalArrangement   = Arrangement.spacedBy(16.dp)
         ) {
-            Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("🎉", fontSize = 28.sp)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Ready for $nextTierEmoji $nextTierName!", style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
-                    Text("All requirements met! You'll be promoted at midnight.",
-                        style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
-                }
-            }
-        }
-    }
+            // Handle
+            Box(Modifier
+                .size(40.dp, 4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(BpscColors.Divider))
 
-    // ════════════════════════════════════════════════════════════
-// PROGRESS BREAKDOWN CARD
-// ════════════════════════════════════════════════════════════
-    @Composable
-    private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
-        val next = tierData.nextTier ?: return
-        Card(
-            modifier  = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            shape     = RoundedCornerShape(18.dp),
-            colors    = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
-                    style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                tierData.progressItems.forEach { item ->
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(13.dp))
-                                else Box(Modifier
-                                    .size(13.dp)
-                                    .clip(CircleShape)
-                                    .border(1.5.dp, BpscColors.Divider, CircleShape))
-                                Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary)
+            // Tier badge
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(tierColor.copy(0.12f)),
+                contentAlignment = Alignment.Center
+            ) { Text(tier.iconEmoji ?: "🔒", fontSize = 36.sp) }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${tier.name} is Locked", style = MaterialTheme.typography.headlineSmall,
+                    color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                Text("Complete these requirements in Silver Room first",
+                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+            }
+
+            // Requirements list
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Requirements", style = MaterialTheme.typography.titleMedium,
+                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    progressItems.forEach { item ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
+                                else Icon(Icons.Rounded.RadioButtonUnchecked, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp))
+                                Text(item.label, style = MaterialTheme.typography.bodyMedium,
+                                    color = if (item.done) BpscColors.TextPrimary else BpscColors.TextSecondary)
                             }
                             Text("${item.current.toInt()}/${item.required.toInt()} ${item.unit}",
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (item.done) BpscColors.Success else BpscColors.TextHint, fontWeight = FontWeight.Bold)
                         }
-                        val pct by animateFloatAsState(
-                            (item.current / item.required.coerceAtLeast(0.001)).toFloat().coerceIn(0f, 1f),
-                            tween(700), label = "p_${item.label}")
+                    }
+                }
+            }
+
+            // Perks preview
+            if (tier.perks.isNotEmpty()) {
+                Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = tierColor.copy(0.06f)),
+                    border = BorderStroke(1.dp, tierColor.copy(0.2f))) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${tier.iconEmoji ?: ""} Perks you'll unlock:", style = MaterialTheme.typography.labelMedium,
+                            color = tierColor, fontWeight = FontWeight.Bold)
+                        tier.perks.take(3).forEach { perk ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("•", color = tierColor)
+                                Text(perk, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick  = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+            ) { Text("Got it, I'll keep studying!", fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// PROMOTION READY BANNER
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val glowAlpha by infiniteTransition.animateFloat(0.3f, 0.7f,
+        infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape    = RoundedCornerShape(16.dp),
+        colors   = CardDefaults.cardColors(containerColor = BpscColors.Success.copy(0.12f)),
+        border   = BorderStroke(1.5.dp, BpscColors.Success.copy(glowAlpha))
+    ) {
+        Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("🎉", fontSize = 28.sp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Ready for $nextTierEmoji $nextTierName!", style = MaterialTheme.typography.titleMedium,
+                    color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
+                Text("All requirements met! You'll be promoted at midnight.",
+                    style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// PROGRESS BREAKDOWN CARD
+// ════════════════════════════════════════════════════════════
+@Composable
+private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
+    val next = tierData.nextTier ?: return
+    Card(
+        modifier  = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
+                style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+            tierData.progressItems.forEach { item ->
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (item.done) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(13.dp))
+                            else Box(Modifier
+                                .size(13.dp)
+                                .clip(CircleShape)
+                                .border(1.5.dp, BpscColors.Divider, CircleShape))
+                            Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary)
+                        }
+                        Text("${item.current.toInt()}/${item.required.toInt()} ${item.unit}",
+                            style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    }
+                    val pct by animateFloatAsState(
+                        (item.current / item.required.coerceAtLeast(0.001)).toFloat().coerceIn(0f, 1f),
+                        tween(700), label = "p_${item.label}")
+                    Box(Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(BpscColors.Divider)) {
                         Box(Modifier
-                            .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(BpscColors.Divider)) {
-                            Box(Modifier
-                                .fillMaxWidth(pct)
-                                .fillMaxHeight()
-                                .background(
-                                    if (item.done) BpscColors.Success else BpscColors.Primary,
-                                    RoundedCornerShape(3.dp)
-                                ))
-                        }
+                            .fillMaxWidth(pct)
+                            .fillMaxHeight()
+                            .background(
+                                if (item.done) BpscColors.Success else BpscColors.Primary,
+                                RoundedCornerShape(3.dp)
+                            ))
                     }
                 }
             }
         }
     }
+}
 
-    // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 // QUICK ACTION ROW
 // ════════════════════════════════════════════════════════════
-    @Composable
-    private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
-            QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
-        }
+@Composable
+private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
+        QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
     }
+}
 
-    @Composable
-    private fun QuickActionCard(icon: String, title: String, subtitle: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-        Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = color.copy(0.06f)),
-            border = BorderStroke(1.dp, color.copy(0.15f)), elevation = CardDefaults.cardElevation(0.dp)) {
-            Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(icon, fontSize = 22.sp)
-                Column {
-                    Text(title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    Text(subtitle, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
-                }
+@Composable
+private fun QuickActionCard(icon: String, title: String, subtitle: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(0.06f)),
+        border = BorderStroke(1.dp, color.copy(0.15f)), elevation = CardDefaults.cardElevation(0.dp)) {
+        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 22.sp)
+            Column {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
             }
         }
     }
+}

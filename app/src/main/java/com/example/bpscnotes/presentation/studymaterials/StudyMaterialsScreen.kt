@@ -221,7 +221,7 @@ fun StudyMaterialsScreen(
                                 onView = viewModel::openDetail,
                                 onBookmark = viewModel::toggleBookmark,
                                 onDownload = viewModel::downloadMaterial,
-                                onPurchase = { mat -> viewModel.purchaseMaterial(mat.id, mat.price, mat.title) },
+                                onPurchase = { mat -> showPurchaseDialog = mat },  // show confirmation first
                                 onLoadMore = viewModel::loadMore
                             )
                         }
@@ -239,11 +239,14 @@ fun StudyMaterialsScreen(
         }
     }
     state.selectedMaterial?.let { detail ->
+        // FIX: Pass purchasedIds so sheet knows if user just bought this material
+        val isDetailPurchased = detail.isPurchased || state.purchasedIds.contains(detail.id)
         MaterialDetailSheet(
             material       = detail,
             isBookmarked   = state.bookmarkedIds.contains(detail.id),
             isDownloaded   = state.downloadedIds.contains(detail.id),
             isDownloading  = state.downloadingId == detail.id,
+            isPurchased    = isDetailPurchased,
             onBookmark     = { viewModel.toggleBookmark(detail.id) },
             onDownload     = {
                 val dto = StudyMaterialDto(
@@ -852,6 +855,7 @@ private fun MaterialDetailSheet(
     isBookmarked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
+    isPurchased:  Boolean = false,   // FIX: true if user has purchased this session
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
     onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
@@ -914,8 +918,9 @@ private fun MaterialDetailSheet(
                 Box(modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
                     .background(BpscColors.Surface).border(1.dp, BpscColors.Divider, RoundedCornerShape(16.dp))
                     .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable {
+                        // FIX: use runtime isPurchased (includes purchases made this session)
                         onOpenPdf(downloadUrl, material.title, material.freePages,
-                            material.isPurchased || material.isFree)  // free materials always fully accessible
+                            isPurchased || material.isFree)
                     } else Modifier),
                     contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -947,7 +952,7 @@ private fun MaterialDetailSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Save button removed — download option already serves this purpose
                 Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!, material.title, material.freePages,
-                    material.isPurchased || material.isFree) } } else onDownload,
+                    isPurchased || material.isFree) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(

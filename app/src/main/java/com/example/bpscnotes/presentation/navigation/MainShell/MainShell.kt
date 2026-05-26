@@ -7,6 +7,10 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -27,11 +31,15 @@ import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
 import com.example.bpscnotes.presentation.profile.ProfileScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
+import com.example.bpscnotes.presentation.rooms.StudyRoomPipOverlay
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 
 @Composable
-fun MainShell(rootNavController: NavHostController,
-              adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
+fun MainShell(
+    rootNavController: NavHostController,
+    sessionViewModel:  StudySessionViewModel,
+    tiersViewModel:    TierRoomsViewModel,
+    adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
     val bottomNavController = rememberNavController()
 
     val items = listOf(
@@ -61,6 +69,19 @@ fun MainShell(rootNavController: NavHostController,
         ),
     )
 
+    // Use the ViewModel passed from BpscNavHost — correctly scoped to Screen.Main entry.
+    // This is the SAME instance used by StudyFocusScreen so elapsedSeconds is shared.
+    val sessionStateForPip by sessionViewModel.uiState.collectAsState()
+
+    // Track if user is currently inside StudyFocusScreen
+    val currentRoute by rootNavController.currentBackStackEntryFlow
+        .collectAsState(initial = rootNavController.currentBackStackEntry)
+    val isOnStudyFocus = currentRoute?.destination?.route == Screen.StudyFocus.route
+
+    val sessionIsActive = sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.ACTIVE ||
+            sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.AFK
+    val showPip = sessionIsActive && !isOnStudyFocus
+
     Scaffold(
         bottomBar = {
             BpscBottomNav(
@@ -69,32 +90,52 @@ fun MainShell(rootNavController: NavHostController,
             )
         }
     ) { innerPadding ->
-        NavHost(
-            navController    = bottomNavController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier
-                //.padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
-        ) {
-            composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
-            composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
-            //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
-            composable(Screen.RoomsHub.route) { backStackEntry ->
+        Box(Modifier.consumeWindowInsets(innerPadding)) {
+            NavHost(
+                navController    = bottomNavController,
+                startDestination = Screen.Dashboard.route,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
+                composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
+                //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
+                composable(Screen.RoomsHub.route) { backStackEntry ->
 
-                val parentEntry = remember(backStackEntry) {
-                    rootNavController.getBackStackEntry(Screen.Main.route)
+                    val parentEntry = remember(backStackEntry) {
+                        rootNavController.getBackStackEntry(Screen.Main.route)
+                    }
+
+                    val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+                    val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+
+                    RoomsHubScreen(
+                        navController = rootNavController,
+                        sessionViewModel = sessionVM,
+                        tiersViewModel = tiersVM
+                    )
                 }
-
-                val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
-                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
-
-                RoomsHubScreen(
-                    navController = rootNavController,
-                    sessionViewModel = sessionVM,
-                    tiersViewModel = tiersVM
-                )
+                composable(Screen.Profile.route)    { ProfileScreen(rootNavController) }
             }
-            composable(Screen.Profile.route)    { ProfileScreen(rootNavController) }
+
+            // ── STUDY ROOM PIP OVERLAY ─────────────────────────────────
+            // Floating mini-session card when user navigates away from the room.
+            // Session keeps running and earning coins in the background.
+            StudyRoomPipOverlay(
+                isVisible    = showPip,
+                tierName     = sessionStateForPip.tierName ?: "Study Room",
+                tierEmoji    = sessionStateForPip.tierEmoji ?: "📚",
+                tierColorHex = sessionStateForPip.tierColorHex,
+                startedAt    = sessionStateForPip.startedAt,
+                coinsEarned  = sessionStateForPip.coinsThisSession,
+                onReturn     = {
+                    rootNavController.navigate(Screen.StudyFocus.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onEndSession = {
+                    sessionViewModel.endSession()
+                }
+            )
         }
     }
 }

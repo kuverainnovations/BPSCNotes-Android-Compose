@@ -89,8 +89,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             ExamSetupScreen(navController = navController)
         }
         // ── Main shell ────────────────────────────────────────────
-        composable(Screen.Main.route) {
-            MainShell(rootNavController = navController, adManager =adManager)
+        composable(Screen.Main.route) { backStackEntry ->
+            // Scope the session ViewModel to THIS entry (Screen.Main) so every child
+            // composable (StudyFocusScreen, MainShell PIP) shares the SAME instance.
+            val sessionVM: com.example.bpscnotes.presentation.rooms.StudySessionViewModel =
+                hiltViewModel(backStackEntry)
+            val tiersVM: com.example.bpscnotes.presentation.rooms.TierRoomsViewModel =
+                hiltViewModel(backStackEntry)
+            MainShell(
+                rootNavController = navController,
+                adManager         = adManager,
+                sessionViewModel  = sessionVM,
+                tiersViewModel    = tiersVM
+            )
         }
 
         // ── Real screens ─────────────────────────────────────────
@@ -114,19 +125,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 viewModel = viewModel
             )
         }
-       /* composable(
-            Screen.TopicQuiz.route,
-            arguments = listOf(
-                navArgument("subject")    { type = NavType.StringType },
-                navArgument("topicTitle") { type = NavType.StringType }
-            )
-        ) {
-            TopicQuizScreen(
-                navController = navController,
-                subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
-                topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
-            )
-        }*/
+        /* composable(
+             Screen.TopicQuiz.route,
+             arguments = listOf(
+                 navArgument("subject")    { type = NavType.StringType },
+                 navArgument("topicTitle") { type = NavType.StringType }
+             )
+         ) {
+             TopicQuizScreen(
+                 navController = navController,
+                 subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
+                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
+             )
+         }*/
 
         composable(
             Screen.TopicQuiz.route,
@@ -201,19 +212,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
         }
 
         composable(Screen.StudyFocus.route) { backStackEntry ->
-
+            // Get the SAME ViewModel scoped to Screen.Main that is shared across all
+            // room-related screens (MainShell PIP, RoomsHub, StudyFocusScreen).
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry(Screen.Main.route)
             }
-
             val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
             val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
 
             StudyFocusScreen(
-                navController = navController,
-                viewModel = sessionVM,
+                navController  = navController,
+                viewModel      = sessionVM,
                 tiersViewModel = tiersVM,
-                adManager = adManager
+                adManager      = adManager
             )
         }
 
