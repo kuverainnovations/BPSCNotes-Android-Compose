@@ -155,6 +155,7 @@ data class MaterialDetailData(
     val rating: Float = 0f,
     @SerializedName("uploadedDate")  val uploadedDate: String?,
     @SerializedName("uploaderName")  val uploaderName: String?,
+    @SerializedName("uploader_id")   val uploaderId: String? = null,
     @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
     val fileUrl: String? = null,
     val downloadUrl: String? = null,

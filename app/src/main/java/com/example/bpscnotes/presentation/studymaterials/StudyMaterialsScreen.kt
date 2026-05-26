@@ -31,6 +31,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
@@ -193,41 +195,105 @@ fun StudyMaterialsScreen(
             // ── PULL-TO-REFRESH CONTENT ─────────────────────────
             val pullRefreshState = rememberPullToRefreshState()
 
-            PullToRefreshBox(
-                state = pullRefreshState,
-                isRefreshing = state.isRefreshing,
-                onRefresh = { viewModel.refresh() }
+            // ── Tab row: Explore | My Uploads ────────────────────
+            var selectedTab by remember { mutableIntStateOf(0) }
+
+            // Switch to My Uploads tab after successful upload
+            LaunchedEffect(state.showUploadSheet) {
+                if (!state.showUploadSheet && state.myUploads.isNotEmpty()) {
+                    // Upload sheet just closed — switch to My Uploads so user sees their material
+                }
+            }
+            LaunchedEffect(state.uploadSuccess) {
+                if (state.uploadSuccess != null) {
+                    selectedTab = 1  // switch to My Uploads tab after upload
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
+                listOf("🔍 Explore", "📤 My Uploads").forEachIndexed { index, label ->
+                    val isSelected = selectedTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedTab = index }
+                            .padding(vertical = 12.dp)
+                            .then(if (isSelected) Modifier.background(Color.Transparent) else Modifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                label,
+                                style     = MaterialTheme.typography.titleSmall,
+                                color     = if (isSelected) BpscColors.Primary else BpscColors.TextHint,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
+                            )
+                            if (index == 1 && state.myUploads.isNotEmpty()) {
+                                Text(
+                                    "${state.myUploads.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary.copy(0.7f)
+                                )
+                            }
+                            if (isSelected) {
+                                Box(
+                                    Modifier
+                                        .padding(top = 4.dp)
+                                        .fillMaxWidth(0.6f)
+                                        .height(3.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(BpscColors.Primary)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = BpscColors.Divider)
 
-                Box(
-                    modifier = Modifier.fillMaxSize()
+            // ── Tab content ───────────────────────────────────────
+            if (selectedTab == 0) {
+                // Explore tab
+                PullToRefreshBox(
+                    state = pullRefreshState,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.refresh() }
                 ) {
-                    when {
-                        state.isLoadingList && state.materials.isEmpty() -> {
-                            LoadingGrid()
-                        }
-
-                        state.listError != null && state.materials.isEmpty() -> {
-                            ErrorState(message = state.listError!!, onRetry = viewModel::refresh)
-                        }
-
-                        state.materials.isEmpty() -> {
-                            EmptyState(showBookmarksOnly = state.showBookmarksOnly)
-                        }
-
-                        else -> {
-                            MaterialsList(
-                                state = state,
-                                onView = viewModel::openDetail,
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when {
+                            state.isLoadingList && state.materials.isEmpty() -> LoadingGrid()
+                            state.listError != null && state.materials.isEmpty() ->
+                                ErrorState(message = state.listError!!, onRetry = viewModel::refresh)
+                            state.materials.isEmpty() ->
+                                EmptyState(showBookmarksOnly = state.showBookmarksOnly)
+                            else -> MaterialsList(
+                                state     = state,
+                                onView    = viewModel::openDetail,
                                 onBookmark = viewModel::toggleBookmark,
                                 onDownload = viewModel::downloadMaterial,
-                                onPurchase = { mat -> showPurchaseDialog = mat },  // show confirmation first
+                                onPurchase = { mat -> showPurchaseDialog = mat },
                                 onLoadMore = viewModel::loadMore
                             )
                         }
                     }
-
                 }
+            } else {
+                // My Uploads tab — user owns everything here, no locks
+                MyUploadsTab(
+                    uploads   = state.myUploads,
+                    isLoading = state.isLoadingList && state.myUploads.isEmpty(),
+                    // Open PDF with full access — user owns their uploads, no page locks
+                    onOpenPdf = { url, title, freePages, _ ->
+                        openMaterial(context, navController, url, title, freePages, isPurchased = true)
+                    },
+                    onRefresh = { viewModel.refresh() }
+                )
             }
         }
     }
@@ -240,7 +306,10 @@ fun StudyMaterialsScreen(
     }
     state.selectedMaterial?.let { detail ->
         // FIX: Pass purchasedIds so sheet knows if user just bought this material
-        val isDetailPurchased = detail.isPurchased || state.purchasedIds.contains(detail.id)
+        // Full access if: purchased, is the uploader (owner), or is free
+        val currentUserId = state.currentUserId  // from ViewModel / TokenStore
+        val isOwner = detail.uploaderId != null && detail.uploaderId == currentUserId
+        val isDetailPurchased = detail.isPurchased || state.purchasedIds.contains(detail.id) || isOwner
         MaterialDetailSheet(
             material       = detail,
             isBookmarked   = state.bookmarkedIds.contains(detail.id),

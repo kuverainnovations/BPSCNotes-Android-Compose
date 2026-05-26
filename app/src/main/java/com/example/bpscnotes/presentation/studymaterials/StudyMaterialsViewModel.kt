@@ -85,6 +85,7 @@ data class StudyMaterialsUiState(
 
     // My uploads tab
     val myUploads:          List<StudyMaterialDto> = emptyList(),
+    val currentUserId:      String                 = "",
     val isLoadingMyUploads: Boolean                = false,
 
     // Download
@@ -442,6 +443,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 val res = api.getMyUploads()
                 _state.update { it.copy(
                     myUploads          = res.data?.uploads ?: emptyList(),
+                    currentUserId      = tokenStore.getUserId() ?: "",
                     isLoadingMyUploads = false
                 )}
             } catch (e: Exception) {
