@@ -101,7 +101,10 @@ data class StudyMaterialDto(
 
 
     @SerializedName("is_marketplace")
-    val isMarketplace: Boolean = false
+    val isMarketplace: Boolean = false,
+
+    @SerializedName("is_purchased")
+    val isPurchased: Boolean = false          // true if current user has purchased this premium material
 ) {
     val type: MaterialType
         get() = MaterialType.fromKey(materialType)

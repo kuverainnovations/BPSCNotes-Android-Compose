@@ -221,6 +221,7 @@ fun StudyMaterialsScreen(
                                 onView = viewModel::openDetail,
                                 onBookmark = viewModel::toggleBookmark,
                                 onDownload = viewModel::downloadMaterial,
+                                onPurchase = { mat -> viewModel.purchaseMaterial(mat.id, mat.price, mat.title) },
                                 onLoadMore = viewModel::loadMore
                             )
                         }
@@ -630,6 +631,7 @@ private fun MaterialsList(
     onView:     (String) -> Unit,
     onBookmark: (String) -> Unit,
     onDownload: (StudyMaterialDto) -> Unit,
+    onPurchase: (StudyMaterialDto) -> Unit = {},
     onLoadMore: () -> Unit
 ) {
     val pinned   = state.materials.filter { it.isFeatured }
@@ -645,13 +647,15 @@ private fun MaterialsList(
             item { LibSectionHeader(label, "$count items") }
             items(items, key = { it.id }) { item ->
                 LibraryItemCard(
-                    item         = item,
-                    isBookmarked = state.bookmarkedIds.contains(item.id),
-                    isDownloaded = state.downloadedIds.contains(item.id),
+                    item          = item,
+                    isBookmarked  = state.bookmarkedIds.contains(item.id),
+                    isDownloaded  = state.downloadedIds.contains(item.id),
                     isDownloading = state.downloadingId == item.id,
-                    onBookmark   = { onBookmark(item.id) },
-                    onDownload   = { onDownload(item) },
-                    onView       = { onView(item.id) }
+                    purchasedIds  = state.purchasedIds,
+                    onBookmark    = { onBookmark(item.id) },
+                    onDownload    = { onDownload(item) },
+                    onPurchase    = { onPurchase(item) },
+                    onView        = { onView(item.id) }
                 )
                 Spacer(Modifier.height(10.dp))
             }
@@ -695,8 +699,10 @@ private fun LibraryItemCard(
     isBookmarked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
+    purchasedIds: Set<String> = emptySet(),
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
+    onPurchase:   () -> Unit = {},
     onView:       () -> Unit
 ) {
     val color = typeColor(item.type)
@@ -789,21 +795,47 @@ private fun LibraryItemCard(
                     Spacer(Modifier.width(4.dp))
                     Text("Read", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
-                Button(onClick = onDownload, modifier = Modifier.weight(1f).height(38.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when { isDownloaded -> BpscColors.Success; item.isPremium -> BpscColors.CoinGold; else -> BpscColors.Primary }),
+                // FIX: Unlock (premium) calls onPurchase, Download (free) calls onDownload
+                // FIX: Check BOTH the API field (is_purchased from backend)
+                // AND the local purchasedIds set (optimistic update after buying this session)
+                val isPurchased = item.isPurchased || purchasedIds.contains(item.id)
+                val buttonAction: () -> Unit = when {
+                    item.isPremium && !isPurchased -> { { onPurchase() } }  // Unlock = purchase
+                    else                           -> { { onDownload() } }  // Free/purchased = download
+                }
+                Button(
+                    onClick  = buttonAction,
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    shape    = RoundedCornerShape(10.dp),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = when {
+                            isDownloaded              -> BpscColors.Success
+                            item.isPremium && !isPurchased -> BpscColors.CoinGold  // Unlock
+                            else                      -> BpscColors.Primary
+                        }
+                    ),
                     contentPadding = PaddingValues(horizontal = 8.dp),
-                    enabled = !isDownloading) {
+                    enabled = !isDownloading
+                ) {
                     if (isDownloading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(if (isDownloaded) Icons.Rounded.CheckCircle else Icons.Rounded.Download, null,
-                            modifier = Modifier.size(14.dp))
+                        val icon = when {
+                            isDownloaded                   -> Icons.Rounded.CheckCircle
+                            item.isPremium && !isPurchased -> Icons.Rounded.Lock
+                            else                           -> Icons.Rounded.Download
+                        }
+                        Icon(icon, null, modifier = Modifier.size(14.dp))
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text(when { isDownloaded -> "Saved"; item.isPremium -> "Unlock"; else -> "Download" },
-                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        when {
+                            isDownloaded                   -> "Saved"
+                            item.isPremium && !isPurchased -> "Unlock 🪙${item.price}"
+                            else                           -> "Download"
+                        },
+                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

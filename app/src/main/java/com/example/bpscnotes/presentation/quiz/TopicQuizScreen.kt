@@ -66,15 +66,37 @@ fun TopicQuizScreen(
             }
         }
 
-        // ── Error ──────────────────────────────────────────────
-        state.detailError != null || state.listError != null -> {
+        // ── Error — covers both startError (no quiz found) and network errors ──
+        state.startError != null || state.detailError != null || state.listError != null -> {
+            val msg = state.startError ?: state.detailError ?: state.listError ?: "Failed to load quiz"
+            val isNoQuiz = msg.contains("No quiz") || msg.contains("No MCQ")
             Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("⚠️", fontSize = 40.sp)
-                    Text(state.detailError ?: state.listError ?: "Failed to load quiz",
-                        style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
-                    Button(onClick = { viewModel.startTopicQuiz(subject) }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                        Text("Retry")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text(if (isNoQuiz) "📚" else "⚠️", fontSize = 48.sp)
+                    Text(
+                        // FIX: Never show raw "HTTP 400" — use cleaned message
+                        msg.replace("HTTP 400", "This quiz has no questions yet.")
+                            .replace("HTTP 404", "Quiz not found.")
+                            .replace("HTTP 403", "Access denied.")
+                            .replace("HTTP 500", "Server error. Please try again later."),
+                        style     = MaterialTheme.typography.titleMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color     = BpscColors.TextPrimary
+                    )
+                    if (!isNoQuiz) {
+                        // Network error — show retry
+                        Button(onClick = { viewModel.clearErrors(); viewModel.startTopicQuiz(subject) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                            Text("Retry")
+                        }
+                    }
+                    OutlinedButton(onClick = { navController.popBackStack() }, shape = RoundedCornerShape(12.dp)) {
+                        Text("← Go Back")
                     }
                 }
             }

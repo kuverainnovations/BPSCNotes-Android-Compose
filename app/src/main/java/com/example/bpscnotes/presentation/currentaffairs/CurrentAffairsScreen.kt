@@ -417,14 +417,20 @@ private fun ArticleBottomSheet(
                         onClick = {
                             onDismiss()   // close sheet first
                             // Navigate to TopicQuiz filtered by this article's category/subject
-                            val subject = when (article.category) {
-                                "Economy"       -> "Economy"
-                                "Polity"        -> "Polity"
-                                "International" -> "International Relations"
-                                "Science"       -> "Science"
-                                "Bihar GK"      -> "Bihar GK"
-                                "Sports"        -> "Sports"
-                                else            -> article.category
+                            // FIX: Map CA article categories → exact quiz subject names in DB
+                            // From API logs: subjects are Bihar GK, Economics, Polity, Geography, etc.
+                            val subject = when (article.category.lowercase().trim()) {
+                                "economy", "economics"           -> "Economics"
+                                "polity", "politics", "governance" -> "Polity"
+                                "international", "world", "foreign affairs" -> "Economics"  // fallback
+                                "science", "tech", "technology"  -> "Science"
+                                "bihar gk", "bihar affairs", "bihar", "state"  -> "Bihar GK"
+                                "sports"                         -> "General Knowledge"
+                                "environment", "ecology"         -> "Geography"
+                                "history"                        -> "History"
+                                "geography"                      -> "Geography"
+                                "current affairs"                -> "Economics"  // broadest fallback
+                                else                             -> "General Knowledge"  // always has quizzes
                             }
                             navController.navigate(
                                 Screen.TopicQuiz.createRoute(

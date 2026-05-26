@@ -29,12 +29,14 @@ data class CoinWalletUiState(
     val transactionPage: Int                    = 1,
     val hasMoreTransactions: Boolean            = true,
     val error: String?                          = null,
-    val successMessage: String?                 = null
+    val successMessage: String?                 = null,
+    val referralCode: String                    = ""
 )
 
 @HiltViewModel
 class CoinWalletViewModel @Inject constructor(
-    private val coinsApi: CoinsApiService
+    private val coinsApi: CoinsApiService,
+    private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoinWalletUiState())
@@ -48,6 +50,7 @@ class CoinWalletViewModel @Inject constructor(
             try {
                 val balanceJob      = async { coinsApi.getBalance().data }
                 val tasksJob        = async { try { coinsApi.getEarnTasks().data?.tasks } catch (e: Exception) { emptyList() } }
+                val userJob         = async { try { authApi.getMe().data?.user } catch (_: Exception) { null } }
                 val transactionsJob = async { try { coinsApi.getTransactions().data?.transactions } catch (e: Exception) { emptyList() } }
 
                 val balanceData  = balanceJob.await()
@@ -167,5 +170,8 @@ class CoinWalletViewModel @Inject constructor(
     }
 
     fun clearMessage() { _uiState.update { it.copy(successMessage = null, error = null) } }
+
+    /** Returns the current user's referral code for sharing */
+    fun getReferralCode(): String = _uiState.value.referralCode.ifBlank { "BPSCNOTES" }
     fun retry() = load()
 }

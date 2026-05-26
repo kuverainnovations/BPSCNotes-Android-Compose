@@ -230,9 +230,16 @@ class QuizViewModel @Inject constructor(
                 _uiState.update { it.copy(activeSession = session, isStartingQuiz = false) }
             } catch (e: Exception) {
                 Log.e("QuizVM", "startQuiz: ${e.message}", e)
-                _uiState.update {
-                    it.copy(isStartingQuiz = false, startError = e.message ?: "Failed to start quiz")
+                // Parse the actual message from the API response body
+                // e.message just says "HTTP 400" — the real message is in the JSON body
+                val msg =  when {
+                    e.message?.contains("400") == true ->
+                        "This quiz has no questions yet. Please try another quiz or contact admin."
+                    e.message?.contains("404") == true -> "Quiz not found."
+                    e.message?.contains("403") == true -> "You don't have access to this quiz."
+                    else -> e.message ?: "Failed to start quiz. Please try again."
                 }
+                _uiState.update { it.copy(isStartingQuiz = false, startError = msg) }
             }
         }
     }
@@ -320,39 +327,56 @@ class QuizViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingDetail = true, startError = null) }
             try {
-                // FIX: Query API directly with subject filter — don't depend on cached dailyQuizzes
-                // which is empty when navigating here from Current Affairs (fresh ViewModel)
-                // Try topic type first, fall back to any quiz for this subject
-                val res = quizzesApi.getQuizzes(subject = subject, type = "topic", limit = 5)
-                val quizzes = res.data?.quizzes ?: emptyList()
+                // Strategy 1: exact subject + topic type
+                var quizzes = quizzesApi.getQuizzes(subject = subject, type = "topic", limit = 5)
+                    .data?.quizzes ?: emptyList()
 
-                val match = quizzes.firstOrNull { it.subject.equals(subject, ignoreCase = true) }
-                    ?: quizzes.firstOrNull()
+                // Strategy 2: exact subject, any type
+                if (quizzes.isEmpty()) {
+                    quizzes = quizzesApi.getQuizzes(subject = subject, limit = 5)
+                        .data?.quizzes ?: emptyList()
+                }
 
-                if (match != null) {
-                    startQuiz(match.id)
+                // Strategy 3: broader subject match — filter out quizzes with 0 questions
+                if (quizzes.isEmpty()) {
+                    val all = quizzesApi.getQuizzes(limit = 50).data?.quizzes ?: emptyList()
+                    quizzes = all.filter { q ->
+                        q.totalQuestions > 0 && (
+                                q.subject.contains(subject, ignoreCase = true) ||
+                                        subject.contains(q.subject, ignoreCase = true)
+                                )
+                    }
+                }
+
+                // Strategy 4: absolute fallback — any topic quiz with questions
+                if (quizzes.isEmpty()) {
+                    quizzes = quizzesApi.getQuizzes(type = "topic", limit = 20)
+                        .data?.quizzes?.filter { it.totalQuestions > 0 } ?: emptyList()
+                }
+
+                // Always skip quizzes with 0 questions — they will 400 on start
+                val pick = quizzes.filter { it.totalQuestions > 0 }.firstOrNull()
+                if (pick != null) {
+                    // FIX: Reset isLoadingDetail before handing off to startQuiz
+                    // startQuiz uses isStartingQuiz for its own spinner — it never resets
+                    // isLoadingDetail, so the spinner from startTopicQuiz would stick forever
+                    _uiState.update { it.copy(isLoadingDetail = false) }
+                    startQuiz(pick.id)
                 } else {
-                    // No topic quiz for this subject — try any quiz for the subject
-                    val anyRes = quizzesApi.getQuizzes(subject = subject, limit = 3)
-                    val anyQuiz = anyRes.data?.quizzes?.firstOrNull()
-
-                    if (anyQuiz != null) {
-                        startQuiz(anyQuiz.id)
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isLoadingDetail = false,
-                                startError = "No quiz available for '$subject' yet. Check back soon!"
-                            )
-                        }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingDetail = false,
+                            startError = "No MCQ quiz available right now. The admin needs to add quizzes for this topic."
+                        )
                     }
                 }
             } catch (e: Exception) {
                 Log.e("QuizVM", "startTopicQuiz: \${e.message}", e)
+                val errorMsg = "Failed to load quiz. Please check your connection."
                 _uiState.update {
                     it.copy(
                         isLoadingDetail = false,
-                        startError = "Failed to load quiz. Please check your connection."
+                        startError = errorMsg
                     )
                 }
             }

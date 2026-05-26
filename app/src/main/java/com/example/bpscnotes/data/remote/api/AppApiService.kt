@@ -692,6 +692,11 @@ data class EarnTaskDto(
     val isCompleted: Boolean = false,
     val isAd: Boolean = false,
 
+    // FIX: action tells the app WHERE to navigate when task is tapped
+    // quiz=daily quiz, study=study materials, upload=upload screen,
+    // referral=share/refer, ad=watch ad, checkin=check-in
+    val action: String = "quiz",
+
     val actionBgHex: String? = "#F4B400",
     val iconBgHex: String? = "#FFF8E1",
     val iconTintHex: String? = "#F4B400",
@@ -875,6 +880,5 @@ data class ExamsResponseData(
 data class ExamTargetRequest(
     @SerializedName("primaryExam")   val primaryExam: String,
     @SerializedName("secondaryExam") val secondaryExam: String? = null,
-   // @SerializedName("prepLevel")     val prepLevel: String,       // "beginner"|"intermediate"|"advanced"
     @SerializedName("targetYear")    val targetYear: Int? = null
 )
