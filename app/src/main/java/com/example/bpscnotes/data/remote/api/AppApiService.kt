@@ -666,7 +666,9 @@ data class CoinBalanceDto(
     @SerializedName("totalEarned")        val totalEarned: Int = 0,
     @SerializedName("totalSpent")         val totalSpent: Int = 0,
     @SerializedName("check_in_streak")    val checkInStreak: Int = 0,
-    @SerializedName("checked_in_today")   val checkedInToday: Boolean = false
+    @SerializedName("checked_in_today")   val checkedInToday: Boolean = false,
+    @SerializedName("coinsEarned")        val coinsEarned: Int? = null,
+    @SerializedName("alreadyClaimed")     val alreadyClaimed: Boolean = false
 )
 
 data class CheckInDayDto(
@@ -726,14 +728,21 @@ fun mapIcon(icon: String): ImageVector {
 }
 
 data class CoinTransactionDto(
-    val id: String,
-    val title: String,
-    val subtitle: String = "",
-    val coins: Int = 0,
-    val type: String = "",
-    val date: String = "",
-    val icon: String = ""
-)
+    @SerializedName("id")          val id: String = "",
+    @SerializedName("title")       val title: String = "",
+    @SerializedName("subtitle")    val subtitle: String = "",
+    @SerializedName("coins")       val coins: Int = 0,
+    @SerializedName("amount")      val amount: Int = 0,       // fallback field name
+    @SerializedName("type")        val type: String = "",
+    @SerializedName("date")        val date: String = "",
+    @SerializedName("created_at")  val createdAt: String = "",  // fallback field name
+    @SerializedName("icon")        val icon: String = "",
+    @SerializedName("action")      val action: String = ""
+) {
+    // Use whichever field the backend sends
+    val displayAmount: Int get() = if (coins != 0) coins else amount
+    val displayDate: String get() = date.ifBlank { createdAt }
+}
 
 data class CoinsBalanceResponseData(
     val balance: Int = 0,

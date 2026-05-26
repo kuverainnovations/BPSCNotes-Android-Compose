@@ -69,7 +69,7 @@ class MockTestsViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        allTests             = tests,
+                        allTests             = tests.filter { it.type == "mock" },
                         userAccuracy         = stats?.accuracy ?: 0.0,
                         userRank             = stats?.rank,
                         userQuizzesAttempted = stats?.quizzesAttempted ?: 0,

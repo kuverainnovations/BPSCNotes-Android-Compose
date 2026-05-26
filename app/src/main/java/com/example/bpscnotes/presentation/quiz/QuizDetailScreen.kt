@@ -89,6 +89,9 @@ private fun QuizIntroContent(
         "hard"   -> Color(0xFFE74C3C)
         else     -> Color(0xFFF39C12)
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+
 
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface).verticalScroll(rememberScrollState())) {
 
@@ -271,8 +274,16 @@ private fun QuizIntroContent(
             // ── Start / Retry button ─────────────────────────────
             Button(
                 onClick  = {
-                    // Navigate to QuizPlay — that screen calls startQuiz()
-                    navController.navigate(Screen.QuizPlayer.createRoute(quizId))
+                    // Block if quiz has no questions
+                    if (quiz.totalQuestions == 0 ) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "\"${quiz.title}\" has no questions yet. Try another ${quiz.type}.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        navController.navigate(Screen.QuizPlayer.createRoute(quizId))
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape    = RoundedCornerShape(16.dp),

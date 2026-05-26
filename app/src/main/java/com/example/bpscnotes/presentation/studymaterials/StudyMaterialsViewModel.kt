@@ -122,6 +122,7 @@ class StudyMaterialsViewModel @Inject constructor(
         loadSubjects()
         loadStats()
         loadMaterials(reset = true)
+        loadMyUploads()
         loadDownloadHistory()
     }
 
@@ -435,12 +436,12 @@ class StudyMaterialsViewModel @Inject constructor(
             }
         } catch (e: Exception) { null }
     }
-    /*// ── My Uploads tab ────────────────────────────────────────
+    // ── My Uploads tab ────────────────────────────────────────
     fun loadMyUploads() {
         viewModelScope.launch {
             _state.update { it.copy(isLoadingMyUploads = true) }
             try {
-                val res = api.getMyUploads()
+                val res = api.myUploads()
                 _state.update { it.copy(
                     myUploads          = res.data?.uploads ?: emptyList(),
                     currentUserId      = tokenStore.getUserId() ?: "",
@@ -451,7 +452,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 _state.update { it.copy(isLoadingMyUploads = false) }
             }
         }
-    }*/
+    }
 
     // ── Downloads history ─────────────────────────────────────
     fun loadDownloadHistory() {

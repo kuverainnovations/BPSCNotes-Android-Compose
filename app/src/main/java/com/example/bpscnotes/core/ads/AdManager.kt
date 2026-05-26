@@ -67,8 +67,25 @@ class AdManager @Inject constructor(
     private var lastInterstitialShownMs: Long        = 0L
 
     // Rewarded daily cap tracking (simple in-memory, resets on app restart)
-    private var rewardedWatchedToday                 = 0
-    private var lastRewardedDate                     = ""
+    // Persist ad count in SharedPreferences so daily limit survives app restarts
+    private val adPrefs by lazy {
+        context.getSharedPreferences("bpsc_ad_prefs", android.content.Context.MODE_PRIVATE)
+    }
+
+    private var rewardedWatchedToday: Int
+        get() {
+            val saved = adPrefs.getString("rewarded_date", "") ?: ""
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            return if (saved == today) adPrefs.getInt("rewarded_count", 0) else 0
+        }
+        set(value) {
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            adPrefs.edit().putInt("rewarded_count", value).putString("rewarded_date", today).apply()
+        }
+
+    private var lastRewardedDate: String
+        get() = adPrefs.getString("rewarded_date", "") ?: ""
+        set(value) { adPrefs.edit().putString("rewarded_date", value).apply() }
 
     // ── Initialise SDK ─────────────────────────────────────────
     fun initialize() {

@@ -23,6 +23,9 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.StateFlow
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.mutableStateOf
 import com.example.bpscnotes.data.remote.api.CheckInDayDto
 import com.example.bpscnotes.data.remote.api.CoinTransactionDto
 import com.example.bpscnotes.data.remote.api.EarnTaskDto
@@ -57,6 +60,9 @@ fun CoinWalletScreen(
     val adsRemaining = adManager.rewardedAdsRemainingToday()
     val snackbarHost = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    // Coins are now awarded server-side when actions complete (upload approved, quiz passed).
+    // No client-side claim needed — getEarnTasks() already reflects the updated state.
     val tabs = listOf("Earn Coins", "History")
 
     LaunchedEffect(state.successMessage) {
@@ -795,21 +801,21 @@ private fun TransactionRow(transaction: CoinTransactionDto) {
                 .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(mapIcon(transaction.icon), null, tint = iconTint, modifier = Modifier.size(22.dp))
+            Icon(mapIcon(transaction.icon.ifBlank { transaction.action }), null, tint = iconTint, modifier = Modifier.size(22.dp))
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(transaction.title.orEmpty(), style = MaterialTheme.typography.bodyMedium,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(transaction.subtitle.orEmpty(), style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(formatDate(transaction.date.orEmpty()), style = MaterialTheme.typography.labelSmall,
+            Text(formatDate(transaction.displayDate.orEmpty()), style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextHint, fontSize = 10.sp)
         }
         Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("🪙", fontSize = 11.sp)
                 Text(
-                    if (isEarned) "+${transaction.coins}" else "-${kotlin.math.abs(transaction.coins)}",
+                    if (isEarned) "+${transaction.displayAmount}" else "-${kotlin.math.abs(transaction.displayAmount)}",
                     style      = MaterialTheme.typography.titleMedium,
                     color      = if (isEarned) Color(0xFF2E7D32) else Color(0xFFE53935),
                     fontWeight = FontWeight.ExtraBold,

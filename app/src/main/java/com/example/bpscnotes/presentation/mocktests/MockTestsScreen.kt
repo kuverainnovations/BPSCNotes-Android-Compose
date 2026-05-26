@@ -42,6 +42,7 @@ data class MockTest(
     val totalAttempts: Int = 0,
     val averageScore: Float = 0f,
     val isFeatured: Boolean = false,
+    val coinsReward: Int = 10,
     /** True when scheduledFor is in the future — test cannot be started yet */
     val isScheduledFuture: Boolean = false,
 )
@@ -161,6 +162,7 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         totalAttempts   = attemptCount,
         averageScore    = avgScore.toFloat(),
         isFeatured      = false,
+        coinsReward     = coinsReward,
         isScheduledFuture = isScheduledFuture
     )
 }
@@ -365,7 +367,7 @@ private fun MockTestLobbyScreen(
             .map { it.toMockTest() }
     }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
-    val tabs = listOf("All", "Full Mock", "Mini Tests", "Prev. Year", "Custom")
+    val tabs = listOf("All", "Full Mock", "Mini Tests", "Prev. Year"/*, "Custom"*/)
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -402,17 +404,17 @@ private fun MockTestLobbyScreen(
                             }
                         }
                         // Custom test button
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(0.15f))
-                                .clickable(onClick = onCustomTest)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text("Custom", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        /* Box(
+                             modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                                 .background(Color.White.copy(0.15f))
+                                 .clickable(onClick = onCustomTest)
+                                 .padding(horizontal = 12.dp, vertical = 8.dp)
+                         ) {
+                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                 Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                 Text("Custom", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                             }
+                         }*/
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -622,6 +624,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
             }
 
             HorizontalDivider(color = BpscColors.Divider)
+            val context = androidx.compose.ui.platform.LocalContext.current
 
             // Stats + Start button
             Row(
@@ -633,9 +636,17 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     MiniStat(Icons.Rounded.People, "${(test.totalAttempts / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${test.totalAttempts}" }}", "Attempts")
                     MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", "Avg Score")
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", "Duration")
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("🪙", fontSize = 12.sp)
+                        Text("+${test.coinsReward}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
+                    }
                 }
                 Button(
-                    onClick  = { if (!test.isScheduledFuture) onStart() },
+                    onClick  = { if (!test.isScheduledFuture){ if (test.totalQuestions !=0) onStart() else { android.widget.Toast.makeText(
+                        context,
+                        "\"${test.title}\" has no questions yet. Try another Test.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()}} },
                     enabled  = !test.isScheduledFuture,
                     shape    = RoundedCornerShape(10.dp),
                     colors   = ButtonDefaults.buttonColors(
@@ -691,8 +702,15 @@ private fun TestInstructionsScreen(
                     .statusBarsPadding().padding(20.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFF57F17).copy(0.25f)).padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("🪙", fontSize = 14.sp)
+                            Text("+${test.coinsReward} Coins", style = MaterialTheme.typography.labelLarge, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                     Text(test.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
@@ -865,8 +883,13 @@ private fun ActiveTestScreen(
                             Text(timeStr, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
 
-                        // Navigator + Submit
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Coins + Navigator + Submit
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFF57F17).copy(0.3f)).padding(horizontal = 6.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("🪙", fontSize = 10.sp)
+                                Text("+${test.coinsReward}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                            }
                             Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(0.15f)).clickable { showNavigator = true }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.GridView, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             }
@@ -1153,6 +1176,8 @@ private fun TestAnalysisScreen(
     val percentage = submitResult?.score ?: 0
     val rank       = submitResult?.rank
     val percentile = submitResult?.percentile
+    val coinsEarned  = submitResult?.coinsEarned ?: 0
+
     val animProg   by animateFloatAsState(percentage / 100f, tween(1200), label = "ap")
 
     // Subject-wise breakdown
@@ -1216,20 +1241,60 @@ private fun TestAnalysisScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Stats card
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    AnalysisStat("✅", "$correct",        "Correct",   BpscColors.Success)
-                    AnalysisStat("❌", "$wrong",          "Wrong",     Color(0xFFE74C3C))
-                    AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
-                    AnalysisStat("📊", "${score.toInt()}","Score",     BpscColors.Primary)
+                // Coins earned banner (show even if 0 so user knows why no coins)
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    shape    = RoundedCornerShape(20.dp),
+                    colors   = CardDefaults.cardColors(
+                        containerColor = if (coinsEarned > 0) Color(0xFFFFF8E1) else Color.White.copy(0.12f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("🪙", fontSize = 28.sp)
+                            Column {
+                                Text(
+                                    if (coinsEarned > 0) "Coins Earned!" else "No Coins This Time",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (coinsEarned > 0) "Added to your wallet" else "Already earned coins for this quiz",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
+                                )
+                            }
+                        }
+                        Text(
+                            if (coinsEarned > 0) "+$coinsEarned" else "0",
+                            style     = MaterialTheme.typography.headlineSmall,
+                            color     = if (coinsEarned > 0) Color(0xFFF57F17) else Color.White.copy(0.4f),
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
-            }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Stats card
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        AnalysisStat("✅", "$correct",        "Correct",   BpscColors.Success)
+                        AnalysisStat("❌", "$wrong",          "Wrong",     Color(0xFFE74C3C))
+                        AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
+                        AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
+                    }
+                }
 
             Spacer(Modifier.height(12.dp))
 
             // Subject breakdown
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Subject-wise Analysis", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                     subjectStats.forEach { (subject, correct, total) ->
@@ -1249,7 +1314,7 @@ private fun TestAnalysisScreen(
                         }
                     }
                 }
-            }
+            }*/
 
             Spacer(Modifier.height(16.dp))
 

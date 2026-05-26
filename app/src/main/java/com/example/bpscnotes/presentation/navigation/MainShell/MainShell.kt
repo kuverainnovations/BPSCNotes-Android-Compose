@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,6 +42,25 @@ fun MainShell(
     tiersViewModel:    TierRoomsViewModel,
     adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
     val bottomNavController = rememberNavController()
+
+    // Listen for tab switch requests from other screens (e.g. CoinWallet → "go to RoomsHub")
+    // Screens navigate to Screen.Main with savedStateHandle["tab"] = route
+    val mainBackStackEntry = rootNavController.currentBackStackEntry
+    val requestedTab = mainBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow<String?>("tab", null)
+        ?.collectAsState()
+    LaunchedEffect(requestedTab?.value) {
+        val tab = requestedTab?.value
+        if (!tab.isNullOrBlank()) {
+            bottomNavController.navigate(tab) {
+                popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+                restoreState    = true
+            }
+            mainBackStackEntry?.savedStateHandle?.set("tab", null) // clear after use
+        }
+    }
 
     val items = listOf(
         BottomNavItem(

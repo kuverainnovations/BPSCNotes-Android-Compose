@@ -37,11 +37,12 @@ fun QuizListScreen(
     navController: NavHostController,
     viewModel: QuizViewModel= hiltViewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         // Only reload if list is empty (avoid re-fetching on back navigation)
-        if (state.dailyQuizzes.isEmpty() && state.mockTestQuizzes.isEmpty() && !state.isLoadingList) {
+        if (state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() && state.mockTestQuizzes.isEmpty() && !state.isLoadingList) {
             viewModel.loadLobby()
         }
     }
@@ -153,10 +154,31 @@ fun QuizListScreen(
                     verticalArrangement   = Arrangement.spacedBy(12.dp)
                 ) {
                     if (state.dailyQuizzes.isNotEmpty()) {
-                        item { SectionLabel("📅 Daily Quizzes", "Resets every day at midnight") }
+                        item { SectionLabel("📅 Daily Quizzes", "Today's scheduled quizzes — resets at midnight") }
                         items(state.dailyQuizzes, key = { it.id }) { quiz ->
                             QuizCard(quiz = quiz) {
-                                navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                if (quiz.totalQuestions == 0) {
+                                    android.widget.Toast.makeText(context,
+                                        "\"${quiz.title}\" has no questions yet.",
+                                        android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                }
+                            }
+                        }
+                    }
+                    if (state.topicQuizzes.isNotEmpty()) {
+                        item { Spacer(Modifier.height(4.dp)) }
+                        item { SectionLabel("📝 Topic Quizzes", "Practice specific subjects") }
+                        items(state.topicQuizzes, key = { it.id }) { quiz ->
+                            QuizCard(quiz = quiz) {
+                                if (quiz.totalQuestions == 0) {
+                                    android.widget.Toast.makeText(context,
+                                        "\"${quiz.title}\" has no questions yet.",
+                                        android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                }
                             }
                         }
                     }
@@ -165,7 +187,15 @@ fun QuizListScreen(
                         item { SectionLabel("📋 Mock Tests", "Full length practice exams") }
                         items(state.mockTestQuizzes, key = { it.id }) { quiz ->
                             QuizCard(quiz = quiz) {
-                                navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                if (quiz.totalQuestions == 0) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "\"${quiz.title}\" has no questions yet. Try another quiz.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                }
                             }
                         }
                     }

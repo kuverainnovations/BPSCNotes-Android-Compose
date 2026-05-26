@@ -81,6 +81,7 @@ data class QuizResult(
 data class QuizUiState(
     // ── List / Lobby ──────────────────────────────────────────
     val dailyQuizzes: List<QuizPreviewDto>    = emptyList(),
+    val topicQuizzes: List<QuizPreviewDto>    = emptyList(),
     val mockTestQuizzes: List<QuizPreviewDto> = emptyList(),
     val userProfile: UserDto?                 = null,
     val isLoadingList: Boolean                = true,
@@ -138,8 +139,9 @@ class QuizViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        dailyQuizzes    = all.filter { q -> q.type == "daily" || q.type == "topic" },
-                        mockTestQuizzes = all.filter { q -> q.type == "mock" },
+                        dailyQuizzes    = all.filter { q -> q.type == "daily" },
+                        topicQuizzes    = all.filter { q -> q.type == "topic" },
+                        mockTestQuizzes = /*all.filter { q -> q.type == "mock" }*/emptyList(),
                         userProfile     = profileResponse?.data?.user,
                         isLoadingList   = false
                     )

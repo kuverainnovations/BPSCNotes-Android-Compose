@@ -382,7 +382,7 @@ private fun BannerSection(
                         )
                         banner.subtitle?.let {
                             Spacer(Modifier.height(4.dp))
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f), minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     Box(modifier = Modifier
@@ -462,6 +462,18 @@ private fun DailyQuizSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    var _localError by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(_localError) {
+        _localError?.let {
+            snackbarHostState.showSnackbar(it)
+            _localError = null
+        }
+    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier
@@ -503,7 +515,15 @@ private fun DailyQuizSection(
                             modifier  = Modifier
                                 .width(190.dp)
                                 .clickable {
-                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                    if (quiz.totalQuestions == 0) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "\"${quiz.title}\" has no questions yet. Try another ${quiz.type}.",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                    }
                                 },
                             shape     = RoundedCornerShape(18.dp),
                             colors    = CardDefaults.cardColors(containerColor = Color.White),
@@ -533,7 +553,7 @@ private fun DailyQuizSection(
                                     }
                                 }
                                 Spacer(Modifier.height(8.dp))
-                                Text(quiz.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                                Text(quiz.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                                 Spacer(Modifier.height(8.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
@@ -1125,7 +1145,7 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                     .padding(horizontal = 7.dp, vertical = 3.dp)) { Text("PRO", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.ExtraBold) }
             }
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(8.dp))

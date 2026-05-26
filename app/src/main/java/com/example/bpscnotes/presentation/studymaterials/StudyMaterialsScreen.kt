@@ -234,13 +234,13 @@ fun StudyMaterialsScreen(
                                 color     = if (isSelected) BpscColors.Primary else BpscColors.TextHint,
                                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
                             )
-                            if (index == 1 && state.myUploads.isNotEmpty()) {
+                          /*  if (index == 1 && state.myUploads.isNotEmpty()) {
                                 Text(
                                     "${state.myUploads.size}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Primary.copy(0.7f)
                                 )
-                            }
+                            }*/
                             if (isSelected) {
                                 Box(
                                     Modifier
