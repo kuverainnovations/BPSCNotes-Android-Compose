@@ -323,7 +323,10 @@ fun MockTestsScreen(navController: NavHostController,
                 userAnswers       = userAnswers,
                 score             = finalScore,
                 submitResult      = state.submitResult,
-                onViewLeaderboard = { screenState = MockTestState.Leaderboard },
+                onViewLeaderboard = {
+                    selectedTest?.let { t -> viewModel.loadLeaderboard(t.id) }
+                    screenState = MockTestState.Leaderboard
+                },
                 onRetry           = {
                     userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
                     screenState = MockTestState.Active
@@ -331,10 +334,38 @@ fun MockTestsScreen(navController: NavHostController,
                 onExit            = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
             )
         }
-        MockTestState.Leaderboard -> TestLeaderboardScreen(
-            entries = emptyList(), // Real leaderboard coming in next release
-            onBack  = { screenState = MockTestState.Analysis }
-        )
+        MockTestState.Leaderboard -> {
+            val lbEntries = state.leaderboard.map { e ->
+                LeaderboardEntry(
+                    rank          = e.rank,
+                    name          = e.userName,
+                    score         = e.score,   // score %
+
+                    timeTaken = e.timeTakenSecs.let { s ->
+
+                        val duration =
+                            if (s / 3600 > 0)
+                                "%dh %02dm".format(s / 3600, (s % 3600) / 60)
+                            else
+                                "%dm %02ds".format(s / 60, s % 60)
+
+                        "$duration • ${e.correctAnswers}/${e.totalQuestions} correct"
+                    },
+                    //sec  ${e.correctAnswers}/${e.totalQuestions} correct",
+                    isCurrentUser = e.isCurrentUser
+                )
+            }
+
+
+
+            TestLeaderboardScreen(
+                entries           = lbEntries,
+                isLoading         = state.isLoadingLeaderboard,
+                quizTitle         = selectedTest?.title ?: "Leaderboard",
+                errorMessage      = state.leaderboardError,
+                onBack            = { screenState = MockTestState.Analysis }
+            )
+        }
     }
 
     if (showCustomSheet) {
@@ -1241,80 +1272,80 @@ private fun TestAnalysisScreen(
 
             Spacer(Modifier.height(16.dp))
 
-                // Coins earned banner (show even if 0 so user knows why no coins)
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    shape    = RoundedCornerShape(20.dp),
-                    colors   = CardDefaults.cardColors(
-                        containerColor = if (coinsEarned > 0) Color(0xFFFFF8E1) else Color.White.copy(0.12f)
-                    )
+            // Coins earned banner (show even if 0 so user knows why no coins)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                shape    = RoundedCornerShape(20.dp),
+                colors   = CardDefaults.cardColors(
+                    containerColor = if (coinsEarned > 0) Color(0xFFFFF8E1) else Color.White.copy(0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("🪙", fontSize = 28.sp)
-                            Column {
-                                Text(
-                                    if (coinsEarned > 0) "Coins Earned!" else "No Coins This Time",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    if (coinsEarned > 0) "Added to your wallet" else "Already earned coins for this quiz",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
-                                )
-                            }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🪙", fontSize = 28.sp)
+                        Column {
+                            Text(
+                                if (coinsEarned > 0) "Coins Earned!" else "No Coins This Time",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                if (coinsEarned > 0) "Added to your wallet" else "Already earned coins for this quiz",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
+                            )
                         }
-                        Text(
-                            if (coinsEarned > 0) "+$coinsEarned" else "0",
-                            style     = MaterialTheme.typography.headlineSmall,
-                            color     = if (coinsEarned > 0) Color(0xFFF57F17) else Color.White.copy(0.4f),
-                            fontWeight = FontWeight.ExtraBold
-                        )
                     }
+                    Text(
+                        if (coinsEarned > 0) "+$coinsEarned" else "0",
+                        style     = MaterialTheme.typography.headlineSmall,
+                        color     = if (coinsEarned > 0) Color(0xFFF57F17) else Color.White.copy(0.4f),
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
+            }
 
-                Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
-                // Stats card
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        AnalysisStat("✅", "$correct",        "Correct",   BpscColors.Success)
-                        AnalysisStat("❌", "$wrong",          "Wrong",     Color(0xFFE74C3C))
-                        AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
-                        AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
-                    }
+            // Stats card
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    AnalysisStat("✅", "$correct",        "Correct",   BpscColors.Success)
+                    AnalysisStat("❌", "$wrong",          "Wrong",     Color(0xFFE74C3C))
+                    AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
+                    AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
                 }
+            }
 
             Spacer(Modifier.height(12.dp))
 
             // Subject breakdown
-        /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Subject-wise Analysis", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    subjectStats.forEach { (subject, correct, total) ->
-                        val pct = if (total > 0) correct.toFloat() / total else 0f
-                        val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
-                        val subColors = mapOf("Polity" to Color(0xFF9B59B6), "History" to Color(0xFFE74C3C), "Geography" to Color(0xFF1ABC9C),
-                            "Economy" to Color(0xFFE67E22), "Bihar GK" to Color(0xFFF39C12), "Science" to Color(0xFF2ECC71))
-                        val color = subColors[subject] ?: BpscColors.Primary
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(subject, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                Text("$correct/$total", style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
-                            }
-                            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
-                                Box(modifier = Modifier.fillMaxWidth(animSubProg).fillMaxHeight().background(color, RoundedCornerShape(4.dp)))
+            /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Subject-wise Analysis", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        subjectStats.forEach { (subject, correct, total) ->
+                            val pct = if (total > 0) correct.toFloat() / total else 0f
+                            val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
+                            val subColors = mapOf("Polity" to Color(0xFF9B59B6), "History" to Color(0xFFE74C3C), "Geography" to Color(0xFF1ABC9C),
+                                "Economy" to Color(0xFFE67E22), "Bihar GK" to Color(0xFFF39C12), "Science" to Color(0xFF2ECC71))
+                            val color = subColors[subject] ?: BpscColors.Primary
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(subject, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    Text("$correct/$total", style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
+                                }
+                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
+                                    Box(modifier = Modifier.fillMaxWidth(animSubProg).fillMaxHeight().background(color, RoundedCornerShape(4.dp)))
+                                }
                             }
                         }
                     }
-                }
-            }*/
+                }*/
 
             Spacer(Modifier.height(16.dp))
 
@@ -1359,6 +1390,9 @@ private fun AnalysisStat(icon: String, value: String, label: String, color: Colo
 @Composable
 private fun TestLeaderboardScreen(
     entries: List<LeaderboardEntry>,
+    isLoading: Boolean = false,
+    quizTitle: String = "Leaderboard",
+    errorMessage: String? = null,
     onBack: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.QuizAnswerRequest
+import com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
 import com.example.bpscnotes.data.remote.api.QuizResultData
@@ -36,14 +37,43 @@ data class MockTestsUiState(
     val isSubmitting: Boolean                  = false,
     val submitError: String?                   = null,
     // ── Leaderboard ────────────────────────────────────────────
-    val leaderboard: List<LeaderboardEntry>    = emptyList(),
-    val isLoadingLeaderboard: Boolean          = false,
+    val leaderboard: List<QuizLeaderboardEntry> = emptyList(),
+    val isLoadingLeaderboard: Boolean           = false,
+    val leaderboardError: String?               = null,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
     val previousYears get() = allTests.filter { it.type == "previous_year" }
     val featured      get() = allTests.filter { it.type == "mock" || it.type == "previous_year" }.take(2)
 }
+
+data class QuizLeaderboardEntry(
+    val rank: Int,
+    val userId: String,
+    val userName: String,
+    val avatarUrl: String?,
+    val score: Float,
+    val correctAnswers: Int,
+    val totalQuestions: Int,
+    val timeTakenSecs: Int,
+    val isCurrentUser: Boolean = false
+)
+
+// DTO matching GET /quizzes/:id/leaderboard response
+data class QuizLeaderboardItemDto(
+    @com.google.gson.annotations.SerializedName("rank_position")   val rankPosition: Int = 0,
+    @com.google.gson.annotations.SerializedName("user_id")         val userId: String = "",
+    @com.google.gson.annotations.SerializedName("user_name")       val userName: String = "",
+    @com.google.gson.annotations.SerializedName("score")           val score: Float = 0f,
+    @com.google.gson.annotations.SerializedName("correct_answers") val correctAnswers: Int = 0,
+    @com.google.gson.annotations.SerializedName("total_questions") val totalQuestions: Int = 0,
+    @com.google.gson.annotations.SerializedName("time_taken_secs") val timeTakenSecs: Int = 0,
+    @com.google.gson.annotations.SerializedName("is_current_user") val isCurrentUser: Boolean = false
+)
+
+data class QuizLeaderboardData(
+    val leaderboard: List<QuizLeaderboardItemDto> = emptyList()
+)
 
 @HiltViewModel
 class MockTestsViewModel @Inject constructor(
@@ -150,6 +180,58 @@ class MockTestsViewModel @Inject constructor(
 
     fun clearQuestions() {
         _uiState.update { it.copy(activeQuestions = emptyList(), questionsError = null, submitResult = null) }
+    }
+
+    fun loadLeaderboard(quizId: String, currentUserId: String = "") {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingLeaderboard = true, leaderboardError = null) }
+            try {
+                // QuizLeaderboardResponse has correct @SerializedName fields —
+                // Gson deserializes score/correct_answers/total_questions/time_taken_secs directly
+                val lbData = quizzesApi.getLeaderboard(quizId).data
+
+                val entries = (lbData?.leaderboard ?: emptyList())
+                    .filter { it.totalQuestions > 0 && it.score > 0 }  // skip incomplete
+                    .groupBy { it.userId }                              // deduplicate per user
+                    .values
+                    .map { attempts -> attempts.maxByOrNull { it.score * 10000 - it.timeTakenSecs }!! }
+                    .sortedWith(compareByDescending<QuizLeaderboardItemResponse> { it.score }
+                        .thenBy { it.timeTakenSecs })
+                    .mapIndexed { index, dto ->
+                        QuizLeaderboardEntry(
+                            rank           = index + 1,
+                            userId         = dto.userId,
+                            userName       = dto.userName,
+                            avatarUrl      = null,
+                            score          = dto.score,
+                            correctAnswers = dto.correctAnswers,
+                            totalQuestions = dto.totalQuestions,
+                            timeTakenSecs  = dto.timeTakenSecs,
+                            isCurrentUser  = dto.isCurrentUser || dto.userId == currentUserId
+                        )
+                    }
+                _uiState.update { it.copy(isLoadingLeaderboard = false, leaderboard = entries) }
+            } catch (e: Exception) {
+                // Endpoint may not exist yet — build leaderboard from submit result
+                // Show the current user's result as rank #1 as a temporary fallback
+                val submitResult = _uiState.value.submitResult
+                val fallback = if (submitResult != null && submitResult.isPassed) {
+                    listOf(QuizLeaderboardEntry(
+                        rank           = submitResult.rank.takeIf { it > 0 } ?: 1,
+                        userId         = currentUserId,
+                        userName       = "You",
+                        avatarUrl      = null,
+                        score          = submitResult.score.toFloat(),
+                        correctAnswers = submitResult.correct,
+                        totalQuestions = submitResult.total,
+                        timeTakenSecs  = submitResult.timeTakenSecs,
+                        isCurrentUser  = true
+                    ))
+                } else emptyList()
+                _uiState.update { it.copy(isLoadingLeaderboard = false, leaderboard = fallback,
+                    leaderboardError = if (fallback.isEmpty()) "Leaderboard not available yet" else null) }
+            }
+        }
     }
 
     fun retry() = load()

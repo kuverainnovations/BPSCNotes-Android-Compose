@@ -50,9 +50,20 @@ interface QuizzesApiService {
     @GET("quizzes/{id}/leaderboard")
     suspend fun getLeaderboard(
         @Path("id") id: String
-    ): ApiResponse<LeaderboardData>
+    ): ApiResponse<QuizLeaderboardResponse>
 }
 
-data class LeaderboardData(
-    val leaderboard: List<LeaderboardEntryDto> = emptyList()
+data class QuizLeaderboardResponse(
+    val leaderboard: List<QuizLeaderboardItemResponse> = emptyList()
+)
+
+data class QuizLeaderboardItemResponse(
+    @com.google.gson.annotations.SerializedName("rank_position")   val rankPosition: Int = 0,
+    @com.google.gson.annotations.SerializedName("user_id")         val userId: String = "",
+    @com.google.gson.annotations.SerializedName("user_name")       val userName: String = "",
+    @com.google.gson.annotations.SerializedName("score")           val score: Float = 0f,
+    @com.google.gson.annotations.SerializedName("correct_answers") val correctAnswers: Int = 0,
+    @com.google.gson.annotations.SerializedName("total_questions") val totalQuestions: Int = 0,
+    @com.google.gson.annotations.SerializedName("time_taken_secs") val timeTakenSecs: Int = 0,
+    @com.google.gson.annotations.SerializedName("is_current_user") val isCurrentUser: Boolean = false
 )
