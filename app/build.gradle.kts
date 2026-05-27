@@ -4,14 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    id("com.google.gms.google-services")
+
 }
 
 android {
-    namespace = "com.example.bpscnotes"
+    namespace = "com.kuvera.bpscnotes"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.bpscnotes"
+        applicationId = "com.kuvera.bpscnotes"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -99,6 +101,13 @@ dependencies {
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
 
     implementation("com.google.android.gms:play-services-ads:23.1.0")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-analytics")
+//    implementation("com.posthog.android:posthog:3.4.0")
+    implementation("com.posthog:posthog-android:3.+")
+//    implementation("com.posthog.android:posthog-android:3.4.0")
 
     // Testing
     testImplementation(libs.junit)

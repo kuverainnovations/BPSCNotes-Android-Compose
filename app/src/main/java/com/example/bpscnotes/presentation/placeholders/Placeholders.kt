@@ -593,8 +593,7 @@ fun SubscriptionScreen(
                             confirmButton = {
                                 Button(onClick = {
                                     showEnrollDialog = false
-                                    // Navigate to payment — for now show Razorpay or tell admin to integrate
-                                    nav.navigate(Screen.CoinWallet.route)  // temp: send to coins page
+                                    nav.navigate(Screen.Payment.route)
                                 }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                                     Text("Subscribe Now →")
                                 }

@@ -1,6 +1,6 @@
 package com.example.bpscnotes.presentation.auth.splash
 
-import com.example.bpscnotes.R
+import com.kuvera.bpscnotes.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring

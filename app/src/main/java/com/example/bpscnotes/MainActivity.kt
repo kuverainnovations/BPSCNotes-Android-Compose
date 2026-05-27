@@ -11,48 +11,85 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
+import com.example.bpscnotes.core.analytics.Analytics
+import com.example.bpscnotes.core.analytics.Event
+import com.example.bpscnotes.core.notifications.FcmTokenManager
 import com.example.bpscnotes.core.ui.t.BPSCNotesTheme
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
+import com.example.bpscnotes.presentation.payment.RazorpayPaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
+import com.google.firebase.messaging.FirebaseMessaging
+import com.razorpay.PaymentData
+import com.razorpay.PaymentResultWithDataListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ════════════════════════════════════════════════════════════
-// MainActivity — reads darkMode from SettingsViewModel and
-// passes it to BPSCNotesTheme so toggling in Settings
-// immediately changes the whole app theme.
-// ════════════════════════════════════════════════════════════
-
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(),
+    PaymentResultWithDataListener,
+    RazorpayPaymentListener {
+
     @Inject lateinit var adManager: com.example.bpscnotes.core.ads.AdManager
-
     private val settingsViewModel: SettingsViewModel by viewModels()
-
     @Inject lateinit var coinsApi: CoinsApiService
     @Inject lateinit var tokenStore: TokenStore
+    @Inject lateinit var fcmTokenManager: FcmTokenManager
+
+    // Callbacks registered by PaymentScreen before launching Razorpay checkout
+    private var onPaymentSuccessCallback: ((String, String) -> Unit)? = null
+    private var onPaymentFailureCallback: ((Int, String) -> Unit)? = null
+
+    // ── RazorpayPaymentListener ─────────────────────────────
+    override fun setPaymentCallbacks(
+        onSuccess: (paymentId: String, signature: String) -> Unit,
+        onFailure: (code: Int, message: String) -> Unit
+    ) {
+        onPaymentSuccessCallback = onSuccess
+        onPaymentFailureCallback = onFailure
+    }
+
+    // ── PaymentResultWithDataListener ───────────────────────
+    override fun onPaymentSuccess(paymentId: String?, response: PaymentData?) {
+        Log.d("Razorpay", "Payment success: paymentId=$paymentId orderId=${response?.orderId}")
+        val id        = paymentId ?: ""
+        val signature = response?.signature ?: ""
+        Event.paymentSuccess("subscription", 0, response?.paymentId ?: "upi")
+        onPaymentSuccessCallback?.invoke(id, signature)
+        onPaymentSuccessCallback = null
+        onPaymentFailureCallback = null
+    }
+
+    override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
+        Log.e("Razorpay", "Payment error: code=$code msg=$response")
+        if (code != 0) Event.paymentFailed("subscription", code, response ?: "Payment failed")
+        onPaymentFailureCallback?.invoke(code, response ?: "Payment failed")
+        onPaymentSuccessCallback = null
+        onPaymentFailureCallback = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ── Auto check-in on app open ──────────────────────────
-        // Fire-and-forget: silently awards streak coins if user
-        // hasn't checked in today. No UI impact on failure.
         lifecycleScope.launch {
             try {
                 val token = tokenStore.getToken()
                 if (!token.isNullOrBlank()) {
-                    coinsApi.checkIn()   // idempotent — server ignores duplicate same-day check-ins
+                    coinsApi.checkIn()
                     Log.d("AutoCheckIn", "Daily check-in triggered")
+                    // Sync FCM token — only if Firebase is initialized
+                    if (com.google.firebase.FirebaseApp.getApps(this@MainActivity).isNotEmpty()) {
+                        fcmTokenManager.syncTokenIfNeeded()
+                    }
                 }
             } catch (e: Exception) {
-                // Silently ignore — network error, already checked in, etc.
                 Log.d("AutoCheckIn", "Check-in skipped: ${e.message}")
             }
         }
+        // Track app open
+        Event.appOpen()
 
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -62,16 +99,25 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightStatusBars = false
         }
 
-        setContent {
-            // Collect dark mode from SettingsViewModel.
-            // This StateFlow is backed by SharedPreferences so it
-            // loads the persisted value on the first frame.
-            val settingsState by settingsViewModel.state.collectAsState()
-            val darkMode       = settingsState.darkMode
+        // Handle notification deep-link
+        val initialScreen = intent?.getStringExtra("screen")
+        val notifType     = intent?.getStringExtra("type") ?: ""
+        val notifId       = intent?.getStringExtra("notifId") ?: ""
+        if (notifId.isNotBlank()) Event.notificationTapped(notifType, notifId)
 
-            BPSCNotesTheme(darkMode = darkMode) {
+        // Add this temporarily in MainActivity.onCreate()
+      /*  FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            Log.d("FCM_TOKEN", "Device token: $token")
+        }*/
+        setContent {
+            val settingsState by settingsViewModel.state.collectAsState()
+            BPSCNotesTheme(darkMode = settingsState.darkMode) {
                 val navController = rememberNavController()
-                BpscNavHost(navController = navController, adManager = adManager)
+                BpscNavHost(
+                    navController  = navController,
+                    adManager      = adManager,
+                   // initialScreen  = initialScreen,
+                )
             }
         }
     }

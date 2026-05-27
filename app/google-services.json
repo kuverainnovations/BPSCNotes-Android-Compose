@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "133585364580",
+    "project_id": "bpscnotes-b02f7",
+    "storage_bucket": "bpscnotes-b02f7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133585364580:android:d3b9e4b73f05d76c30e171",
+        "android_client_info": {
+          "package_name": "com.kuvera.bpscnotes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAue6C1fVoi2D05y-19aHD2GuGzLoou368"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

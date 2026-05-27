@@ -89,6 +89,53 @@ data class SubscriptionPlanDto(
 
 data class SubscriptionPlansData(val plans: List<SubscriptionPlanDto> = emptyList())
 
+// ── Payment DTOs ─────────────────────────────────────────────────────────
+data class CreateSubscriptionRequest(
+    val plan: String,
+    val couponCode: String? = null,
+    val coinsToUse: Int = 0
+)
+
+data class CreateSubscriptionResponse(
+    val subscriptionId: String,
+    val razorpayOrderId: String?,
+    val razorpayKeyId: String?,
+    val breakdown: PaymentBreakdown
+)
+
+data class PaymentBreakdown(
+    val baseAmount: Int,
+    val coinDiscount: Int,
+    val couponDiscount: Int,
+    val finalAmount: Int,
+    val coinsUsed: Int,
+    val couponCode: String?
+)
+
+data class ConfirmSubscriptionRequest(
+    val razorpayOrderId: String,
+    val transactionId: String,        // razorpayPaymentId
+    val razorpaySignature: String,
+    val paymentMethod: String = "upi",
+    val upiId: String? = null
+)
+
+data class CoursePurchaseRequiredData(
+    val price: Int,
+    val razorpayOrderId: String?,
+    val razorpayKeyId: String?,
+    val courseTitle: String?,
+    val courseId: String?,
+    val code: String?
+)
+
+data class ConfirmCoursePurchaseRequest(
+    val razorpayOrderId: String,
+    val razorpayPaymentId: String,
+    val razorpaySignature: String,
+    val paymentMethod: String = "upi"
+)
+
 // ══════════════════════════════════════════════════════════════
 // QUIZ DTOs
 // ══════════════════════════════════════════════════════════════
@@ -429,6 +476,28 @@ interface CoursesApiService {
     /** GET /subscriptions/plans — subscription plan options */
     @GET("subscriptions/plans")
     suspend fun getSubscriptionPlans(): ApiResponse<SubscriptionPlansData>
+
+    /** POST /subscriptions/create — create order + get Razorpay order ID */
+    @POST("subscriptions/create")
+    suspend fun createSubscription(@Body dto: CreateSubscriptionRequest): ApiResponse<CreateSubscriptionResponse>
+
+    /** POST /subscriptions/:id/confirm — verify signature, activate subscription */
+    @POST("subscriptions/{id}/confirm")
+    suspend fun confirmSubscription(
+        @Path("id") id: String,
+        @Body dto: ConfirmSubscriptionRequest
+    ): ApiResponse<Any>
+
+    /** GET /subscriptions/status — active subscription for current user */
+    @GET("subscriptions/status")
+    suspend fun getSubscriptionStatus(): ApiResponse<Any>
+
+    /** POST /courses/:id/purchase/confirm — verify payment, enroll in course */
+    @POST("courses/{id}/purchase/confirm")
+    suspend fun confirmCoursePurchase(
+        @Path("id") id: String,
+        @Body dto: ConfirmCoursePurchaseRequest
+    ): ApiResponse<Any>
 
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>

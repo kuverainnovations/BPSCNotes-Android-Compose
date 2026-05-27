@@ -22,6 +22,11 @@ data class CourseDetailUiState(
     val error: String? = null,
     val enrollSuccess: Boolean = false,
     val isEnrolling: Boolean = false,
+    // Payment required
+    val purchaseRequired: Boolean = false,
+    val purchasePrice: Int = 0,
+    val purchaseOrderId: String? = null,
+    val purchaseKeyId: String? = null,
     // Rating
     val showRatingSheet: Boolean = false,
     val isSubmittingRating: Boolean = false,
@@ -89,11 +94,35 @@ class CourseDetailViewModel @Inject constructor(
 
     fun enroll(courseId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isEnrolling = true) }
+            _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
                 api.enrollCourse(courseId)
                 _uiState.update { it.copy(isEnrolling = false, enrollSuccess = true) }
                 load(courseId)
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 402) {
+                    // Parse payment required response
+                    try {
+                        val body = e.response()?.errorBody()?.string() ?: ""
+                        val json = org.json.JSONObject(body)
+                        val data = json.optJSONObject("data") ?: json
+                        val price   = data.optInt("price", 0)
+                        val orderId = data.optString("razorpayOrderId").takeIf { it.isNotBlank() }
+                        val keyId   = data.optString("razorpayKeyId").takeIf { it.isNotBlank() }
+                        _uiState.update { it.copy(
+                            isEnrolling      = false,
+                            purchaseRequired = true,
+                            purchasePrice    = price,
+                            purchaseOrderId  = orderId,
+                            purchaseKeyId    = keyId
+                        )}
+                    } catch (_: Exception) {
+                        _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }
+                    }
+                } else {
+                    Log.e("CourseDetailVM", "enroll: ${e.message}", e)
+                    _uiState.update { it.copy(isEnrolling = false, error = e.message) }
+                }
             } catch (e: Exception) {
                 Log.e("CourseDetailVM", "enroll: ${e.message}", e)
                 _uiState.update { it.copy(isEnrolling = false, error = e.message) }

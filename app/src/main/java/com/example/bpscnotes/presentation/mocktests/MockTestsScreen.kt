@@ -663,7 +663,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MiniStat(Icons.Rounded.People, "${(test.totalAttempts / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${test.totalAttempts}" }}", "Attempts")
                     MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", "Avg Score")
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", "Duration")

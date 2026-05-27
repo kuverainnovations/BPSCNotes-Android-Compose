@@ -16,7 +16,10 @@ import com.example.bpscnotes.presentation.auth.register.RegisterScreen
 import com.example.bpscnotes.presentation.auth.splash.SplashScreen
 import com.example.bpscnotes.presentation.course.CourseDetailScreen
 import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
+import com.example.bpscnotes.core.notifications.FcmDebugScreen
 import com.example.bpscnotes.presentation.currentaffairs.CaMcqQuizScreen
+import com.example.bpscnotes.presentation.payment.SubscriptionPaymentScreen
+import com.example.bpscnotes.presentation.payment.CoursePaymentScreen
 import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
@@ -108,6 +111,34 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
         // ── Real screens ─────────────────────────────────────────
         composable(Screen.DailyTargets.route)   { DailyTargetsScreen(navController) }
         composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController) }
+
+        // ── Payment screens ──────────────────────────────────────
+        composable(Screen.Payment.route) {
+            SubscriptionPaymentScreen(navController)
+        }
+
+        // Debug screen — remove before production release
+        composable("fcm_debug") {
+            FcmDebugScreen(navController)
+        }
+
+        composable(
+            route     = "course_payment/{courseId}/{courseTitle}/{price}/{orderId}/{keyId}",
+            arguments = listOf(
+                navArgument("courseId")    { type = NavType.StringType },
+                navArgument("courseTitle") { type = NavType.StringType },
+                navArgument("price")       { type = NavType.IntType    },
+                navArgument("orderId")     { type = NavType.StringType },
+                navArgument("keyId")       { type = NavType.StringType }
+            )
+        ) { back ->
+            val courseId    = back.arguments?.getString("courseId")    ?: return@composable
+            val courseTitle = back.arguments?.getString("courseTitle") ?: ""
+            val price       = back.arguments?.getInt("price")          ?: 0
+            val orderId     = back.arguments?.getString("orderId")?.takeIf { it != "none" }
+            val keyId       = back.arguments?.getString("keyId")?.takeIf   { it != "none" }
+            CoursePaymentScreen(navController, courseId, courseTitle, price, orderId, keyId)
+        }
 
         composable(
             route     = "ca_mcq_quiz/{affairId}",
