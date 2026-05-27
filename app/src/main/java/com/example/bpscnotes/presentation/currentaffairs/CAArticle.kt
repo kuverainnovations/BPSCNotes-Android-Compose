@@ -36,13 +36,8 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
     val isPrelims     = isImportant || examTagsLower.any { "prelim" in it || "pt" in it }
     val isMains       = examTagsLower.any { "main" in it || "gs" in it }
 
-    // MCQ count: derive from importance + tags (backend doesn't provide this yet)
-    val mcqCount = when {
-        isImportant && tags.size >= 4 -> 8
-        isImportant                   -> 5
-        tags.size >= 3                -> 3
-        else                          -> 2
-    }
+    // MCQ count: use real count from backend (ca_mcqs table)
+    val mcqCount = mcqCount
 
     return CAArticle(
         id          = id,
@@ -52,7 +47,7 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         category    = category,
         date        = date,
         readMinutes = readMins,
-        mcqCount    = mcqCount,
+        mcqCount    = mcqCount,  // real count from API
         isImportant = this.isImportant,
         isPrelims   = isPrelims,
         isMains     = isMains,

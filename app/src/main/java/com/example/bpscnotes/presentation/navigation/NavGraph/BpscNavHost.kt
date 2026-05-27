@@ -16,6 +16,7 @@ import com.example.bpscnotes.presentation.auth.register.RegisterScreen
 import com.example.bpscnotes.presentation.auth.splash.SplashScreen
 import com.example.bpscnotes.presentation.course.CourseDetailScreen
 import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
+import com.example.bpscnotes.presentation.currentaffairs.CaMcqQuizScreen
 import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
@@ -107,6 +108,14 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
         // ── Real screens ─────────────────────────────────────────
         composable(Screen.DailyTargets.route)   { DailyTargetsScreen(navController) }
         composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController) }
+
+        composable(
+            route     = "ca_mcq_quiz/{affairId}",
+            arguments = listOf(navArgument("affairId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
+            CaMcqQuizScreen(navController = navController, affairId = affairId)
+        }
 
         composable(
             Screen.DailyQuiz.route,

@@ -236,9 +236,9 @@ data class CurrentAffairDto(
     @SerializedName("view_count")      val viewCount: Int = 0,
     @SerializedName("bookmark_count")  val bookmarkCount: Int = 0,
     @SerializedName("is_bookmarked")   val isBookmarked: Boolean = false,
-    val chapters: List<Chapter>,
-
-    )
+    @SerializedName("mcq_count")       val mcqCount: Int = 0,
+    val chapters: List<Chapter> = emptyList(),
+)
 data class Chapter(
     val id: String,
     val title: String,
@@ -466,6 +466,22 @@ interface CoursesApiService {
 }
 
 
+data class CaMcqDto(
+    val id: String = "",
+    val question: String = "",
+    @com.google.gson.annotations.SerializedName("option_a") val optionA: String = "",
+    @com.google.gson.annotations.SerializedName("option_b") val optionB: String = "",
+    @com.google.gson.annotations.SerializedName("option_c") val optionC: String = "",
+    @com.google.gson.annotations.SerializedName("option_d") val optionD: String = "",
+    val correct: String = "a",
+    val explanation: String? = null,
+    val difficulty: String = "medium"
+)
+
+data class CaMcqsResponseData(
+    val mcqs: List<CaMcqDto> = emptyList()
+)
+
 interface CurrentAffairsApiService {
     @GET("current-affairs")
     suspend fun getAffairs(
@@ -482,6 +498,9 @@ interface CurrentAffairsApiService {
 
     @POST("current-affairs/{id}/bookmark")
     suspend fun toggleBookmark(@Path("id") id: String): ApiResponse<Any>
+
+    @GET("current-affairs/{id}/mcqs")
+    suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
 }
 
 interface BannersApiService {

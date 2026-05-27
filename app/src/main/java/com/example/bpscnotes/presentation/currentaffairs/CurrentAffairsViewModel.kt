@@ -106,4 +106,25 @@ class CurrentAffairsViewModel @Inject constructor(
     fun refresh() = loadArticles()
 
     fun clearError() { _uiState.update { it.copy(error = null) } }
+
+    // ── MCQs ─────────────────────────────────────────────────────
+    private val _mcqs = MutableStateFlow<List<com.example.bpscnotes.data.remote.api.CaMcqDto>>(emptyList())
+    val mcqs: StateFlow<List<com.example.bpscnotes.data.remote.api.CaMcqDto>> = _mcqs.asStateFlow()
+
+    private val _mcqLoading = MutableStateFlow(false)
+    val mcqLoading: StateFlow<Boolean> = _mcqLoading.asStateFlow()
+
+    fun loadMcqs(affairId: String) {
+        viewModelScope.launch {
+            _mcqLoading.value = true
+            _mcqs.value = emptyList()
+            try {
+                val data = api.getMcqs(affairId).data
+                _mcqs.value = data?.mcqs ?: emptyList()
+            } catch (e: Exception) {
+                _mcqs.value = emptyList()
+            }
+            _mcqLoading.value = false
+        }
+    }
 }

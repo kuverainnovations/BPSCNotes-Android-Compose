@@ -1,6 +1,5 @@
 package com.example.bpscnotes.presentation.currentaffairs
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,7 +77,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel          // ← use hiltViewModel, not viewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
-import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 // ── NOTE: mockCAArticles and local `categories` removed.
 // ── Articles come from CurrentAffairsViewModel.
@@ -282,7 +280,8 @@ fun CurrentAffairsScreen(
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, "Share Article"))
                                     },
-                                    onReadMore  = { selectedArticle = article }
+                                    onReadMore  = { selectedArticle = article },
+                                    viewModel=viewModel
                                 )
                                 Spacer(Modifier.height(10.dp))
                             }
@@ -299,7 +298,8 @@ fun CurrentAffairsScreen(
                 isBookmarked  = bookmarkedIds.contains(article.id),
                 navController = navController,
                 onBookmark    = { viewModel.toggleBookmark(article.id) },
-                onDismiss     = { selectedArticle = null }
+                onDismiss     = { selectedArticle = null },
+                viewModel = viewModel
             )
         }
     }
@@ -337,7 +337,14 @@ private fun DateGroupHeader(date: String, count: Int) {
 // ARTICLE CARD — unchanged
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit) {
+private fun CAArticleCard(
+    article: CAArticle,
+    isBookmarked: Boolean,
+    onBookmark: () -> Unit,
+    onShare: () -> Unit,
+    onReadMore: () -> Unit,
+    viewModel: CurrentAffairsViewModel
+) {
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
@@ -381,10 +388,13 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
 @Composable
 private fun ArticleBottomSheet(
     article: CAArticle, isBookmarked: Boolean,
-    navController: androidx.navigation.NavHostController,
-    onBookmark: () -> Unit, onDismiss: () -> Unit
+    navController: NavHostController,
+    onBookmark: () -> Unit, onDismiss: () -> Unit, viewModel: CurrentAffairsViewModel
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val mcqs by viewModel.mcqs.collectAsState()
+    val mcqLoading by viewModel.mcqLoading.collectAsState()
+    LaunchedEffect(article.id) { viewModel.loadMcqs(article.id) }
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
@@ -412,45 +422,56 @@ private fun ArticleBottomSheet(
                     article.tags.forEach { tag -> Text("#$tag", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 10.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 8.dp, vertical = 3.dp)) }
                 }
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column { Text("Practice MCQs", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold); Text("${article.mcqCount} questions from this topic", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary) }
-                    Button(
-                        onClick = {
-                            onDismiss()   // close sheet first
-                            // Navigate to TopicQuiz filtered by this article's category/subject
-                            // FIX: Map CA article categories → exact quiz subject names in DB
-                            // From API logs: subjects are Bihar GK, Economics, Polity, Geography, etc.
-                            val subject = when (article.category.lowercase().trim()) {
-                                "economy", "economics"           -> "Economics"
-                                "polity", "politics", "governance" -> "Polity"
-                                "international", "world", "foreign affairs" -> "Economics"  // fallback
-                                "science", "tech", "technology"  -> "Science"
-                                "bihar gk", "bihar affairs", "bihar", "state"  -> "Bihar GK"
-                                "sports"                         -> "General Knowledge"
-                                "environment", "ecology"         -> "Geography"
-                                "history"                        -> "History"
-                                "geography"                      -> "Geography"
-                                "current affairs"                -> "Economics"  // broadest fallback
-                                else                             -> "General Knowledge"  // always has quizzes
-                            }
-                            navController.navigate(
-                                Screen.TopicQuiz.createRoute(
-                                    subject    = subject,
-                                    topicTitle = article.headline.take(40)
-                                )
-                            )
-                        },
-                        shape  = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                    ) { Text("Start", style = MaterialTheme.typography.titleMedium) }
+                    Column {
+                        Text("Practice MCQs", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                        Text(when { mcqLoading -> "Loading questions…"; mcqs.isEmpty() -> "No MCQs added yet"; else -> "${mcqs.size} questions from this article" },
+                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    }
+                    if (mcqLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
+                    } else {
+                        Button(
+                            onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
+                            enabled = mcqs.isNotEmpty(),
+                            shape   = RoundedCornerShape(10.dp),
+                            colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                        ) { Text(if (mcqs.isEmpty()) "No MCQs" else "Start", style = MaterialTheme.typography.titleMedium) }
+                    }
                 }
             }
             HorizontalDivider(color = BpscColors.Divider)
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onBookmark, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else BpscColors.Divider), colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)) {
-                    Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(if (isBookmarked) "Saved ✓" else "Save", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick   = onBookmark,
+                    modifier  = Modifier.weight(1f).height(46.dp),
+                    shape     = RoundedCornerShape(12.dp),
+                    border    = androidx.compose.foundation.BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else BpscColors.Divider),
+                    colors    = ButtonDefaults.outlinedButtonColors(contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)
+                ) {
+                    Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (isBookmarked) "Saved ✓" else "Save", style = MaterialTheme.typography.titleMedium)
                 }
-                Button(onClick = {}, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                    Icon(Icons.Rounded.Share, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Share", style = MaterialTheme.typography.titleMedium)
+                Button(
+                    onClick  = {
+                        val shareText = "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app"
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
+                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                        }
+                        navController.context.startActivity(android.content.Intent.createChooser(intent, "Share Article"))
+                    },
+                    modifier = Modifier.weight(1f).height(46.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) {
+                    Icon(Icons.Rounded.Share, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Share", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

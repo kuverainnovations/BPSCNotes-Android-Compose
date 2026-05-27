@@ -26,6 +26,9 @@ sealed class Screen(val route: String) {
     // Dashboard children
     object DailyTargets   : Screen("daily_targets")
     object CurrentAffairs : Screen("current_affairs")
+    data class CaMcqQuiz(val affairId: String = "") : Screen("ca_mcq_quiz/{affairId}") {
+        fun createRoute(id: String) = "ca_mcq_quiz/$id"
+    }
     object DailyQuiz      : Screen("daily_quiz/{date}") {
         fun createRoute(date: String) = "daily_quiz/$date"
     }
