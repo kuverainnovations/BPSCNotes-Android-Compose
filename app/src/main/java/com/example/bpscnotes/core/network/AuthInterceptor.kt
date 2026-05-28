@@ -1,6 +1,8 @@
 package com.example.bpscnotes.core.network
 
+import android.util.Log
 import com.example.bpscnotes.data.local.TokenStore
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -10,23 +12,42 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        // getToken() is now plain synchronous — no runBlocking needed
-        val token = tokenStore.getToken()
 
-        val request = chain.request().newBuilder()
+        // Get token
+        val token = runBlocking {
+            tokenStore.getToken()
+        }
+
+        Log.d("AUTH_INTERCEPTOR", "TOKEN = $token")
+
+        // Add auth header
+        val request = chain.request()
+            .newBuilder()
             .apply {
-                if (!token.isNullOrEmpty()) {
+                if (!token.isNullOrBlank()) {
                     addHeader("Authorization", "Bearer $token")
                 }
             }
             .build()
 
+        Log.d(
+            "AUTH_INTERCEPTOR",
+            "URL = ${request.url} | AUTH = ${request.header("Authorization")}"
+        )
+
         val response = chain.proceed(request)
 
-        // If server rejects token, clear session so app can redirect to login
-        if (response.code == 401) {
-            tokenStore.clearToken()
-        }
+        Log.d(
+            "AUTH_INTERCEPTOR",
+            "RESPONSE CODE = ${response.code}"
+        )
+
+        // IMPORTANT:
+        // Don't auto-clear token for now.
+        // FCM sync request may fail temporarily.
+        // if (response.code == 401) {
+        //     tokenStore.clearToken()
+        // }
 
         return response
     }

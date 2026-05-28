@@ -690,7 +690,7 @@ private fun DashboardHeader(
                         .clip(CircleShape)
                         .background(Color.White.copy(0.12f))
                         .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                        .clickable { navController.navigate(Screen.NotificationSettings.route) }, contentAlignment = Alignment.Center) {
+                        .clickable { /*navController.navigate(Screen.NotificationSettings.route)*/navController.navigate("fcm_debug") }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
