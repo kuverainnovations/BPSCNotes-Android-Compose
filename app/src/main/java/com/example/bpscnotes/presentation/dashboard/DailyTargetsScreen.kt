@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.DailyTargetDto
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -75,6 +76,7 @@ fun DailyTargetsScreen(
     viewModel: DashboardViewModel = hiltViewModel()   // same VM as Dashboard — targets already loaded
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     // Map API DTOs → UI TargetItems once
     val allTargets = remember(state.dailyTargets) {
@@ -123,7 +125,7 @@ fun DailyTargetsScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Daily Targets", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.targetTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text(
                                     "Today — ${java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())}",
                                     style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f)

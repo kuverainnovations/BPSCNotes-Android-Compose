@@ -59,7 +59,7 @@ fun StudyRoomPipOverlay(
             timeZone = TimeZone.getTimeZone("UTC")
         }
         val startMs = try { sdf.parse(startedAt)?.time ?: sdf2.parse(startedAt)?.time ?: System.currentTimeMillis() }
-        catch (_: Exception) { System.currentTimeMillis() }
+                      catch (_: Exception) { System.currentTimeMillis() }
 
         while (true) {
             elapsedSeconds = ((System.currentTimeMillis() - startMs) / 1000L).toInt().coerceAtLeast(0)

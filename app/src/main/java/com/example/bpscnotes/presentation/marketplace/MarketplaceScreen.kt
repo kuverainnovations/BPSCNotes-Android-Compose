@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.google.gson.annotations.SerializedName
@@ -92,6 +93,7 @@ fun MarketplaceScreen(
     viewModel: MarketplaceViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val str = LocalStrings.current
     val snackbarHost = remember { SnackbarHostState() }
 
     LaunchedEffect(state.purchaseSuccess) {
@@ -211,7 +213,7 @@ fun MarketplaceScreen(
                         Text("⚠️", fontSize = 40.sp)
                         Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                         Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Text("Retry")
+                            Text(str.retry)
                         }
                     }
                 }

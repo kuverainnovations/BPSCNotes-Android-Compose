@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 
 // ════════════════════════════════════════════════════════════
@@ -32,6 +33,7 @@ fun EditProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     val user  = state.user
 
     // Pre-populate fields from live user data
@@ -84,7 +86,7 @@ fun EditProfileScreen(
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Text("Edit Profile", style = MaterialTheme.typography.titleLarge,
+                    Text(str.profileEdit, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                         .background(Color.White.copy(0.12f))

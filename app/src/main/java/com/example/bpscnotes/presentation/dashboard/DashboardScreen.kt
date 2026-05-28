@@ -48,6 +48,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.DashboardBannerStrip
+import com.example.bpscnotes.core.language.LanguageManager
+import com.example.bpscnotes.core.language.LanguageSwitchButton
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.BannerDto
 import com.example.bpscnotes.data.remote.api.CourseDto
@@ -74,6 +77,7 @@ fun DashboardScreen(
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     bookmarkViewModel: BookmarkViewModel   = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state    by dashboardViewModel.uiState.collectAsState()
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
 
@@ -462,18 +466,7 @@ private fun DailyQuizSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
-    var _localError by remember { mutableStateOf<String?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(_localError) {
-        _localError?.let {
-            snackbarHostState.showSnackbar(it)
-            _localError = null
-        }
-    }
     val context = androidx.compose.ui.platform.LocalContext.current
-
-
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier
@@ -518,7 +511,7 @@ private fun DailyQuizSection(
                                     if (quiz.totalQuestions == 0) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            "\"${quiz.title}\" has no questions yet. Try another ${quiz.type}.",
+                                            "This quiz has no questions yet.",
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
@@ -582,6 +575,7 @@ private fun DashboardHeader(
     navController: NavHostController
 ) {
     // Computed values — all from API, never hardcoded
+    val str = LocalStrings.current
     val name         = user?.name ?: ""
     val coins        = user?.coins ?: 0
     val streak       = stats?.currentStreak ?: user?.streak ?: 0
@@ -779,7 +773,7 @@ private fun DashboardHeader(
                 HeaderStatDivider()
                 HeaderStat("⏱️", hoursText,  "Study")
                 HeaderStatDivider()
-                HeaderStat("✅", accText,   "Accuracy")
+                HeaderStat("✅", accText,   str.dashboardAccuracy)
             }
         }
     }
@@ -1048,12 +1042,13 @@ private fun WeeklyConsistencyCard(
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun QuickAccessSection(navController: NavHostController, bookmarkCount: Int) {
+    val str = LocalStrings.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
         SectionHeader(title = "Quick Access")
         Spacer(Modifier.height(14.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                LargeQuickCard("Current Affairs", "Today's Updates", Icons.Rounded.Newspaper, listOf(Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1976D2)), Modifier.fillMaxWidth()) { navController.navigate(Screen.CurrentAffairs.route) }
+                LargeQuickCard(str.dashboardCurrentAffairs, "Today's Updates", Icons.Rounded.Newspaper, listOf(Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1976D2)), Modifier.fillMaxWidth()) { navController.navigate(Screen.CurrentAffairs.route) }
                 if (bookmarkCount > 0) {
                     Row(modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -1067,7 +1062,7 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
                     }
                 }
             }
-            LargeQuickCard("My Courses", "Continue Learning", Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearning.route) }
+            LargeQuickCard("My Courses", str.dashboardContinueLearning, Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearning.route) }
         }
         Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1490,17 +1485,17 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHostController) {
+    val str = LocalStrings.current
     val menuItems = listOf(
-        Triple(Icons.Rounded.TrackChanges,  "Daily Targets Module",  Screen.DailyTargets.route),
-        Triple(Icons.Rounded.Quiz,          "Daily Quizzes",         Screen.QuizList.route),
-        Triple(Icons.Rounded.Newspaper,     "Daily Current Affairs", Screen.CurrentAffairs.route),
-        Triple(Icons.Rounded.Star,          "Paid Content",          Screen.Subscription.route),
-        Triple(Icons.Rounded.Download,      "Downloads",             Screen.Downloads.route),
-        Triple(Icons.Rounded.Work,          "Latest Govt Vacancies", Screen.JobVacancies.route),
-        Triple(Icons.Rounded.Psychology,    "Active Recall",         Screen.ActiveRecall.route),
-        // Triple(Icons.Rounded.Groups,        "E-Library",             Screen.ReadingRooms.route),
-        Triple(Icons.Rounded.Notifications, "Notifications", Screen.NotificationSettings.route),
-        Triple(Icons.Rounded.Settings,      "Settings",              Screen.Settings.route),
+        Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
+        Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
+        Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
+        Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
+        Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
+        Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
+        Triple(Icons.Rounded.Psychology,    "Active Recall",          Screen.ActiveRecall.route),
+        Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
+        Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )
     val scrollState = rememberScrollState()
     ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp), drawerContainerColor = Color.White, windowInsets = WindowInsets(0,0,0,0), modifier = Modifier
@@ -1541,6 +1536,9 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                             Text("🪙", fontSize = 11.sp)
                             Text("${user?.coins ?: 0} Coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                         }
+                        Spacer(Modifier.height(6.dp))
+                        // Language switch button in drawer header
+                        LanguageSwitchButton()
                     }
                 }
             }
@@ -1613,7 +1611,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                 OutlinedButton(onClick = { onClose(); navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } } }, modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
-                    Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text("Logout", style = MaterialTheme.typography.titleMedium)
+                    Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(Modifier.height(80.dp))
             }

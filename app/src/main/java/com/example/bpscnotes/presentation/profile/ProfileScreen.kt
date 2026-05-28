@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
@@ -107,6 +108,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     val user     = state.user
     val subjects = state.subjects
@@ -178,7 +180,7 @@ fun ProfileScreen(
                         type = "text/plain"
                         putExtra(android.content.Intent.EXTRA_TEXT, shareText)
                     }
-                    context.startActivity(android.content.Intent.createChooser(intent, "Share Profile"))
+                    context.startActivity(android.content.Intent.createChooser(intent, str.profileShare))
                 }
             )
 
@@ -1069,6 +1071,7 @@ private fun CoinWalletSection(
 }
 @Composable
 private fun BadgesCard(badges: List<BadgeItem>) {
+    val str = LocalStrings.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1084,7 +1087,7 @@ private fun BadgesCard(badges: List<BadgeItem>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Badges",
+                    str.profileBadges,
                     style = MaterialTheme.typography.titleLarge,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -1163,9 +1166,10 @@ private fun BadgesCard(badges: List<BadgeItem>) {
 
 @Composable
 private fun ProfileSettingsRow(navController: NavHostController) {
+    val str = LocalStrings.current
     val items = listOf(
         Triple(Icons.Rounded.MenuBook, "My Courses", Screen.MyLearning.route),
-        Triple(Icons.Rounded.EmojiEvents, "Achievements", Screen.Achievements.route),
+        Triple(Icons.Rounded.EmojiEvents, str.profileAchievements, Screen.Achievements.route),
         Triple(Icons.Rounded.Settings, "Settings", Screen.Settings.route),
     )
 

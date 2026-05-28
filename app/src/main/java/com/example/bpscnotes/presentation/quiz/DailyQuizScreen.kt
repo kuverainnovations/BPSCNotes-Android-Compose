@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
@@ -36,6 +37,7 @@ fun DailyQuizScreen(
     viewModel: QuizViewModel
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     // If a specific quiz was navigated to directly (from dashboard), start it immediately
     LaunchedEffect(date) {
@@ -118,6 +120,8 @@ private fun QuizLobbyScreen(
     onStartQuiz: (String) -> Unit,
     onRetryList: () -> Unit
 ) {
+    val str = LocalStrings.current
+
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -150,7 +154,7 @@ private fun QuizLobbyScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Daily Quiz", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.quizDaily, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text("Test your knowledge today", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
@@ -254,6 +258,7 @@ private fun QuizLobbyScreen(
 
 @Composable
 private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(18.dp),
@@ -303,7 +308,7 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                 modifier  = Modifier.height(38.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp)
             ) {
-                Text(if (quiz.isAttempted) "Retry" else "Start", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(if (quiz.isAttempted) "Retry" else str.quizStart, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }
@@ -552,6 +557,8 @@ internal fun QuizSummaryScreen(
     onExit: () -> Unit,
     navController: NavHostController
 ) {
+    val str = LocalStrings.current
+
     var showReviewAll by remember { mutableStateOf(false) }
 
     if (showReviewAll) {
@@ -595,10 +602,10 @@ internal fun QuizSummaryScreen(
 
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SummaryStatItem("✅", "${result.correctCount}", "Correct",  BpscColors.Success)
-                    SummaryStatItem("❌", "${result.wrongCount}",   "Wrong",    Color(0xFFE74C3C))
+                    SummaryStatItem("✅", "${result.correctCount}", str.quizCorrect,  BpscColors.Success)
+                    SummaryStatItem("❌", "${result.wrongCount}",   str.quizWrong,    Color(0xFFE74C3C))
                     SummaryStatItem("⏭️", "${result.skippedCount}", "Skipped",  BpscColors.TextSecondary)
-                    SummaryStatItem("🪙", "+${result.coinsEarned}", "Coins",    BpscColors.CoinGold)
+                    SummaryStatItem("🪙", "+${result.coinsEarned}", str.coins,    BpscColors.CoinGold)
                 }
             }
 

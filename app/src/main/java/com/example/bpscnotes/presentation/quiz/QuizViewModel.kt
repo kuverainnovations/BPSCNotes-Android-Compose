@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.quiz
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.*
 import com.example.bpscnotes.data.remote.dto.UserDto
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -141,7 +142,7 @@ class QuizViewModel @Inject constructor(
                     it.copy(
                         dailyQuizzes    = all.filter { q -> q.type == "daily" },
                         topicQuizzes    = all.filter { q -> q.type == "topic" },
-                        mockTestQuizzes = /*all.filter { q -> q.type == "mock" }*/emptyList(),
+                        mockTestQuizzes = all.filter { q -> q.type == "mock" },
                         userProfile     = profileResponse?.data?.user,
                         isLoadingList   = false
                     )

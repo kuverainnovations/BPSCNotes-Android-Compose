@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 
 /**
@@ -46,6 +47,7 @@ internal fun QuizReviewScreen(
     userAnswers: Map<String, String>,
     onBack: () -> Unit
 ) {
+    val str = LocalStrings.current
     val optLetters = listOf("a", "b", "c", "d")
 
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
@@ -71,7 +73,7 @@ internal fun QuizReviewScreen(
                 }
                 Column {
                     Text(
-                        "Review Answers",
+                        str.quizReview,
                         style      = MaterialTheme.typography.titleLarge,
                         color      = Color.White,
                         fontWeight = FontWeight.ExtraBold

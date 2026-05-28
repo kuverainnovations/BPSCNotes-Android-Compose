@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.ExamDto
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -45,6 +46,7 @@ fun ExamSetupScreen(
     viewModel: ExamSetupViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     LaunchedEffect(state.isDone) {
         if (state.isDone) {
@@ -118,6 +120,7 @@ private fun SetupHeader(step: Int, title: String, subtitle: String, emoji: Strin
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
+    val str = LocalStrings.current
     var search   by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
     val cats     = listOf("All", "BPSC", "Bihar State", "Central Govt")
@@ -183,7 +186,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 40.sp)
                     Text("Failed to load exams", style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = vm::loadExams) { Text("Retry") }
+                    Button(onClick = vm::loadExams) { Text(str.retry) }
                 }
             }
             else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -39,6 +40,7 @@ fun QuizListScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     LaunchedEffect(Unit) {
         // Only reload if list is empty (avoid re-fetching on back navigation)
@@ -135,7 +137,7 @@ fun QuizListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("⚠️", fontSize = 40.sp)
                         Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
-                        Button(onClick = { viewModel.loadLobby() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Retry") }
+                        Button(onClick = { viewModel.loadLobby() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
             }
@@ -154,7 +156,7 @@ fun QuizListScreen(
                     verticalArrangement   = Arrangement.spacedBy(12.dp)
                 ) {
                     if (state.dailyQuizzes.isNotEmpty()) {
-                        item { SectionLabel("📅 Daily Quizzes", "Today's scheduled quizzes — resets at midnight") }
+                        item { SectionLabel("📅 " + str.quizDaily + "s", "Today's scheduled quizzes — resets at midnight") }
                         items(state.dailyQuizzes, key = { it.id }) { quiz ->
                             QuizCard(quiz = quiz) {
                                 if (quiz.totalQuestions == 0) {
@@ -169,7 +171,7 @@ fun QuizListScreen(
                     }
                     if (state.topicQuizzes.isNotEmpty()) {
                         item { Spacer(Modifier.height(4.dp)) }
-                        item { SectionLabel("📝 Topic Quizzes", "Practice specific subjects") }
+                        item { SectionLabel("📝 " + str.quizTopic + "s", "Practice specific subjects") }
                         items(state.topicQuizzes, key = { it.id }) { quiz ->
                             QuizCard(quiz = quiz) {
                                 if (quiz.totalQuestions == 0) {
@@ -184,7 +186,7 @@ fun QuizListScreen(
                     }
                     if (state.mockTestQuizzes.isNotEmpty()) {
                         item { Spacer(Modifier.height(4.dp)) }
-                        item { SectionLabel("📋 Mock Tests", "Full length practice exams") }
+                        item { SectionLabel("📋 " + str.quizMock + "s", "Full length practice exams") }
                         items(state.mockTestQuizzes, key = { it.id }) { quiz ->
                             QuizCard(quiz = quiz) {
                                 if (quiz.totalQuestions == 0) {

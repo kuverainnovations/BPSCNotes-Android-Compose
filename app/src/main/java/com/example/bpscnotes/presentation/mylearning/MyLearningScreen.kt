@@ -69,7 +69,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -93,9 +92,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.bpscnotes.data.remote.api.CourseDto
 
@@ -210,11 +211,12 @@ fun MyLearningScreen(
     fromScreen: String=""
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
 
     // Switch to My Courses tab (index 1) when enrollment succeeds
     // and clear the trigger so it doesn't fire again on recomposition
-    LaunchedEffect (state.justEnrolledId) {
+    LaunchedEffect(state.justEnrolledId) {
         if (state.justEnrolledId != null) {
             selectedTab = 1          // 0 = Store, 1 = My Courses
             viewModel.clearJustEnrolled()
@@ -286,7 +288,7 @@ fun MyLearningScreen(
                     }
                     Column {
                         Text(
-                            "My Learning",
+                            str.navMyLearning,
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold
@@ -618,9 +620,10 @@ private fun EnrolledCoursesContent(
     savedCourseIds: Set<String>          = emptySet(),
     onToggleSave:   (String) -> Unit     = {}
 ) {
+    val str = LocalStrings.current
     var selectedFilter by remember { mutableIntStateOf(0) }
     val wishlist = remember { mutableStateListOf<String>() }
-    val filters = listOf("All", "In Progress", "Completed", "Saved")
+    val filters = listOf("All", "In Progress", str.coursesCompleted, "Saved")
 
     val filtered = courses.filter { course ->
         when (selectedFilter) {
@@ -693,9 +696,9 @@ private fun EnrolledCoursesContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    LearningStatItem("📚", "${courses.size}", "Enrolled")
+                    LearningStatItem("📚", "${courses.size}", str.coursesEnrolled)
                     LearningStatItem("▶️", "${inProgress.size}", "In Progress")
-                    LearningStatItem("✅", "${completed.size}", "Completed")
+                    LearningStatItem("✅", "${completed.size}", str.coursesCompleted)
                     LearningStatItem("🏆", "${certificates.size}", "Certs")
                 }
             }

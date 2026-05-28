@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.*
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -117,8 +118,8 @@ class DownloadsViewModel @Inject constructor(
                     val urlFileName  = dto.fileUrl?.substringAfterLast("/") ?: ""
                     val localFile = localFiles.firstOrNull { f ->
                         f.name.equals(expectedName, ignoreCase = true) ||                          // title match
-                                f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
-                                (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
+                        f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
+                        (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
                     }
                     items.add(DownloadedFileItem(
                         id           = dto.id,
@@ -193,6 +194,7 @@ fun DownloadsScreen(
     viewModel: DownloadsViewModel = hiltViewModel()
 ) {
     val state       by viewModel.state.collectAsState()
+    val str = LocalStrings.current
     val context      = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -270,7 +272,7 @@ fun DownloadsScreen(
                                     modifier = Modifier.padding(horizontal = 32.dp))
                                 Button(onClick = viewModel::refresh,
                                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                                    Text("Retry")
+                                    Text(str.retry)
                                 }
                             }
                         }

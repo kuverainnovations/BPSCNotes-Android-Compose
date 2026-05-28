@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
@@ -112,6 +113,7 @@ fun StudyMaterialsScreen(
     viewModel:     StudyMaterialsViewModel = hiltViewModel()
 ) {
     val state       by viewModel.state.collectAsState()
+    val str = LocalStrings.current
 
     // ── Storage permission (Android 9 and below only) ──────────
     val storagePermissionLauncher = rememberLauncherForActivityResult(
@@ -234,13 +236,13 @@ fun StudyMaterialsScreen(
                                 color     = if (isSelected) BpscColors.Primary else BpscColors.TextHint,
                                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal
                             )
-                          /*  if (index == 1 && state.myUploads.isNotEmpty()) {
+                            if (index == 1 && state.myUploads.isNotEmpty()) {
                                 Text(
                                     "${state.myUploads.size}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Primary.copy(0.7f)
                                 )
-                            }*/
+                            }
                             if (isSelected) {
                                 Box(
                                     Modifier
@@ -355,6 +357,7 @@ fun StudyMaterialsScreen(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload: () -> Unit) {
+    val str = LocalStrings.current
     Box(
         modifier = Modifier.fillMaxWidth()
             .background(Brush.linearGradient(
@@ -373,7 +376,7 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column {
-                        Text("Study Materials", style = MaterialTheme.typography.titleLarge,
+                        Text(str.materialsTitle, style = MaterialTheme.typography.titleLarge,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
                         Text("Notes, PDFs, PYQs & Books", style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.7f))
@@ -393,6 +396,7 @@ private fun SearchAndStats(
     stats: StatsData?, bookmarkedCount: Int,
     showBookmarksOnly: Boolean, onToggleBookmarks: () -> Unit, onUpload: () -> Unit
 ) {
+    val str = LocalStrings.current
     val focusManager = LocalFocusManager.current
 
     Column(modifier = Modifier.fillMaxWidth().background(Color.White)
@@ -437,7 +441,7 @@ private fun SearchAndStats(
                 .clickable(onClick = onUpload).padding(horizontal = 10.dp, vertical = 6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Rounded.Upload, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
-                    Text("Upload", style = MaterialTheme.typography.labelSmall,
+                    Text(str.materialsUpload, style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
@@ -777,6 +781,7 @@ private fun LibraryItemCard(
     onPurchase:   () -> Unit = {},
     onView:       () -> Unit
 ) {
+    val str = LocalStrings.current
     val color = typeColor(item.type)
     val bg    = typeBg(item.type)
 
@@ -904,7 +909,7 @@ private fun LibraryItemCard(
                         when {
                             isDownloaded                   -> "Saved"
                             item.isPremium && !isPurchased -> "Unlock 🪙${item.price}"
-                            else                           -> "Download"
+                            else                           -> str.materialsDownload
                         },
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
                     )
@@ -1298,13 +1303,14 @@ private fun EmptyState(showBookmarksOnly: Boolean) {
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
             Text(message, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
         }
     }

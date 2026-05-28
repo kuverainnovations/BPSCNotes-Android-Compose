@@ -122,7 +122,6 @@ class StudyMaterialsViewModel @Inject constructor(
         loadSubjects()
         loadStats()
         loadMaterials(reset = true)
-        loadMyUploads()
         loadDownloadHistory()
     }
 

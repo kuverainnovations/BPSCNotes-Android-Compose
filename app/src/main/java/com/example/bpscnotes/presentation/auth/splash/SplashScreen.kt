@@ -36,6 +36,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.example.bpscnotes.core.language.LanguageManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -65,15 +66,14 @@ fun SplashScreen(navController: NavHostController) {
             Screen.Main.route
         }*/
 
+        // First-ever launch — show language selection before anything else
         val destination = when {
-            // Not logged in — show intro slides first time, login otherwise
+            LanguageManager.isFirstLaunch(context) -> Screen.LanguageSelection.route
             token.isNullOrEmpty() -> {
                 if (tokenStore.isOnboarded()) Screen.Login.route
                 else Screen.Onboarding.route
             }
-            // Logged in but exam setup not done → go to exam setup
             !tokenStore.isExamSetupDone() -> Screen.ExamSetup.route
-            // Fully set up → go to main app
             else -> Screen.Main.route
         }
         navController.navigate(destination) {

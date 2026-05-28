@@ -43,6 +43,10 @@ class TokenStore @Inject constructor(
         prefs.getBoolean("pref_$key", default)
     fun setBoolPref(key: String, value: Boolean) =
         prefs.edit().putBoolean("pref_$key", value).apply()
+    fun getStringPref(key: String, default: String = ""): String =
+        prefs.getString("pref_$key", default) ?: default
+    fun setStringPref(key: String, value: String) =
+        prefs.edit().putString("pref_$key", value).apply()
 
     // ── Downloaded material IDs (persisted so "Saved" button survives restart) ──
     fun getDownloadedIds(): Set<String> =

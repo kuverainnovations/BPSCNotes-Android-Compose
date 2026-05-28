@@ -13,6 +13,7 @@ import com.example.bpscnotes.presentation.auth.login.LoginScreen
 import com.example.bpscnotes.presentation.auth.onboarding.OnboardingScreen
 import com.example.bpscnotes.presentation.auth.otp.OtpScreen
 import com.example.bpscnotes.presentation.auth.register.RegisterScreen
+import com.example.bpscnotes.core.language.LanguageSelectionScreen
 import com.example.bpscnotes.presentation.auth.splash.SplashScreen
 import com.example.bpscnotes.presentation.course.CourseDetailScreen
 import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
@@ -61,7 +62,8 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
         startDestination = Screen.Splash.route
     ) {
         // ── Auth ─────────────────────────────────────────────────
-        composable(Screen.Splash.route)     { SplashScreen(navController) }
+        composable(Screen.Splash.route)            { SplashScreen(navController) }
+        composable(Screen.LanguageSelection.route) { LanguageSelectionScreen(navController) }
         composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
         composable(Screen.Login.route)      { LoginScreen(navController) }
 
@@ -165,19 +167,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 viewModel = viewModel
             )
         }
-        /* composable(
-             Screen.TopicQuiz.route,
-             arguments = listOf(
-                 navArgument("subject")    { type = NavType.StringType },
-                 navArgument("topicTitle") { type = NavType.StringType }
-             )
-         ) {
-             TopicQuizScreen(
-                 navController = navController,
-                 subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
-                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
-             )
-         }*/
+       /* composable(
+            Screen.TopicQuiz.route,
+            arguments = listOf(
+                navArgument("subject")    { type = NavType.StringType },
+                navArgument("topicTitle") { type = NavType.StringType }
+            )
+        ) {
+            TopicQuizScreen(
+                navController = navController,
+                subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
+                topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
+            )
+        }*/
 
         composable(
             Screen.TopicQuiz.route,

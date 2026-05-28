@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.bpscnotes.core.language.AppLanguage
+import com.example.bpscnotes.core.language.LanguageManager
+import com.example.bpscnotes.core.language.LanguagePickerRow
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -36,8 +40,10 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     profileViewModel:  ProfileViewModel  = hiltViewModel()
 ) {
+
     val settingsState by settingsViewModel.state.collectAsState()
     val profileState  by profileViewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     val user = profileState.user
 
     val snackbarHost = remember { SnackbarHostState() }
@@ -70,11 +76,10 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = settingsViewModel::hideDeleteConfirm,
             icon  = { Text("⚠️", fontSize = 32.sp) },
-            title = { Text("Delete Account?", fontWeight = FontWeight.ExtraBold) },
+            title = { Text(str.settingsDeleteConfirmTitle, fontWeight = FontWeight.ExtraBold) },
             text  = {
                 Text(
-                    "This will permanently delete your account, all progress, coins, " +
-                    "and study data. This action cannot be undone.",
+                    str.settingsDeleteConfirmBody,
                     color = BpscColors.TextSecondary
                 )
             },
@@ -82,11 +87,11 @@ fun SettingsScreen(
                 Button(
                     onClick = settingsViewModel::deleteAccount,
                     colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
-                ) { Text("Delete Forever") }
+                ) { Text(str.settingsDeleteForever) }
             },
             dismissButton = {
                 TextButton(onClick = settingsViewModel::hideDeleteConfirm) {
-                    Text("Cancel")
+                    Text(str.cancel)
                 }
             }
         )
@@ -112,7 +117,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(4.dp))
 
                 // ── Account ────────────────────────────────────────
-                SettingsSectionLabel("Account")
+                SettingsSectionLabel(str.settingsAccount)
                 AccountCard(
                     name   = user?.name,
                     email  = user?.email ?: user?.mobile,
@@ -121,26 +126,31 @@ fun SettingsScreen(
                 )
 
                 // ── Appearance ────────────────────────────────────
-                SettingsSectionLabel("Appearance")
+                SettingsSectionLabel(str.settingsAppearance)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
                     colors    = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
-                    SettingsToggleRow(
-                        icon     = Icons.Rounded.DarkMode,
-                        iconBg   = Color(0xFF1A237E).copy(0.12f),
-                        iconTint = Color(0xFF3949AB),
-                        title    = "Dark Mode",
-                        subtitle = "Switch to dark theme",
-                        checked  = settingsState.darkMode,
-                        onChange = settingsViewModel::setDarkMode
-                    )
+                    Column {
+                        SettingsToggleRow(
+                            icon     = Icons.Rounded.DarkMode,
+                            iconBg   = Color(0xFF1A237E).copy(0.12f),
+                            iconTint = Color(0xFF3949AB),
+                            title    = str.settingsDarkMode,
+                            subtitle = str.settingsDarkModeSubtitle,
+                            checked  = settingsState.darkMode,
+                            onChange = settingsViewModel::setDarkMode
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        // Language picker
+                        LanguagePickerRow()
+                    }
                 }
 
                 // ── Study Preferences ─────────────────────────────
-                SettingsSectionLabel("Study Preferences")
+                SettingsSectionLabel(str.settingsStudyPrefs)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -152,8 +162,8 @@ fun SettingsScreen(
                             icon     = Icons.Rounded.Alarm,
                             iconBg   = Color(0xFFE3F2FD),
                             iconTint = Color(0xFF1565C0),
-                            title    = "Daily Study Reminder",
-                            subtitle = "Remind me to study every day",
+                            title    = str.settingsReminder,
+                            subtitle = str.settingsReminderSubtitle,
                             checked  = settingsState.studyReminder,
                             onChange = settingsViewModel::setStudyReminder
                         )
@@ -162,8 +172,8 @@ fun SettingsScreen(
                             icon     = Icons.Rounded.PlayCircle,
                             iconBg   = Color(0xFFF3E5F5),
                             iconTint = Color(0xFF7B1FA2),
-                            title    = "Auto-play Videos",
-                            subtitle = "Play next video automatically",
+                            title    = str.settingsAutoPlay,
+                            subtitle = str.settingsAutoPlaySubtitle,
                             checked  = settingsState.autoPlay,
                             onChange = settingsViewModel::setAutoPlay
                         )
@@ -171,7 +181,7 @@ fun SettingsScreen(
                 }
 
                 // ── Sound & Haptics ───────────────────────────────
-                SettingsSectionLabel("Sound & Haptics")
+                SettingsSectionLabel(str.settingsSound.split(" ")[0] + " & Haptics")
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -183,8 +193,8 @@ fun SettingsScreen(
                             icon     = Icons.Rounded.VolumeUp,
                             iconBg   = Color(0xFFE8F5E9),
                             iconTint = Color(0xFF2E7D32),
-                            title    = "Sound Effects",
-                            subtitle = "Play sounds for actions & alerts",
+                            title    = str.settingsSound,
+                            subtitle = str.settingsSoundSubtitle,
                             checked  = settingsState.sound,
                             onChange = settingsViewModel::setSound
                         )
@@ -193,8 +203,8 @@ fun SettingsScreen(
                             icon     = Icons.Rounded.Vibration,
                             iconBg   = Color(0xFFFFF0EA),
                             iconTint = Color(0xFFE67E22),
-                            title    = "Haptic Feedback",
-                            subtitle = "Vibrate on taps & interactions",
+                            title    = str.settingsHaptics,
+                            subtitle = str.settingsHapticsSubtitle,
                             checked  = settingsState.haptics,
                             onChange = settingsViewModel::setHaptics
                         )
@@ -202,7 +212,7 @@ fun SettingsScreen(
                 }
 
                 // ── Storage & Data ────────────────────────────────
-                SettingsSectionLabel("Storage & Data")
+                SettingsSectionLabel(str.settingsStorage)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -215,7 +225,7 @@ fun SettingsScreen(
                             icon         = Icons.Rounded.Download,
                             iconBg       = Color(0xFFEDE7F6),
                             iconTint     = Color(0xFF7E57C2),
-                            title        = "Downloaded Content",
+                            title        = str.materialsDownloaded + " Content",
                             subtitle     = "Manage offline files",
                             trailingLabel = if (settingsState.isComputingStorage) "…"
                                            else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
@@ -227,8 +237,8 @@ fun SettingsScreen(
                             icon         = Icons.Rounded.CleaningServices,
                             iconBg       = Color(0xFFFFF3E0),
                             iconTint     = Color(0xFFFF8F00),
-                            title        = "Clear Cache",
-                            subtitle     = if (settingsState.isClearingCache) "Clearing…" else "Free up storage space",
+                            title        = str.settingsClearCache,
+                            subtitle     = if (settingsState.isClearingCache) "Clearing…" else str.settingsClearCacheSubtitle,
                             trailingLabel = if (settingsState.isComputingStorage || settingsState.isClearingCache) "…"
                                            else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
                             onClick      = { settingsViewModel.clearCache() }
@@ -246,7 +256,7 @@ fun SettingsScreen(
                 }
 
                 // ── About ─────────────────────────────────────────
-                SettingsSectionLabel("About")
+                SettingsSectionLabel(str.settingsAbout)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -256,39 +266,39 @@ fun SettingsScreen(
                     Column {
                         SettingsActionRow(
                             icon = Icons.Rounded.Info, iconBg = Color(0xFFE3F2FD), iconTint = Color(0xFF1565C0),
-                            title = "App Version", subtitle = "BPSCNotes v1.0.0",
+                            title = str.settingsVersion, subtitle = "BPSCNotes v1.0.0",
                             trailingLabel = "v1.0.0", showArrow = false, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Star, iconBg = Color(0xFFFFF8E1), iconTint = Color(0xFFFF8F00),
-                            title = "Rate the App", subtitle = "Love the app? Leave a review!", onClick = {}
+                            title = str.settingsRate, subtitle = str.settingsRateSubtitle, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Share, iconBg = Color(0xFFE8F5E9), iconTint = Color(0xFF2E7D32),
-                            title = "Share with Friends", subtitle = "Invite friends & earn 75 coins", onClick = {}
+                            title = str.settingsShare, subtitle = str.settingsShareSubtitle, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
-                            title = "Privacy Policy", subtitle = "How we handle your data", onClick = {}
+                            title = str.settingsPrivacy, subtitle = "How we handle your data", onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Gavel, iconBg = Color(0xFFF5F5F5), iconTint = Color(0xFF616161),
-                            title = "Terms of Service", subtitle = "Our terms & conditions", onClick = {}
+                            title = str.settingsTerms, subtitle = "Our terms & conditions", onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.HeadsetMic, iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
-                            title = "Contact Support", subtitle = "Get help from our team", onClick = {}
+                            title = str.settingsSupport, subtitle = "Get help from our team", onClick = {}
                         )
                     }
                 }
 
                 // ── Account Actions ───────────────────────────────
-                SettingsSectionLabel("Account Actions")
+                SettingsSectionLabel(str.settingsAccount + " Actions")
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -312,9 +322,9 @@ fun SettingsScreen(
                                     Icon(Icons.Rounded.Logout, null, tint = Color(0xFFC62828), modifier = Modifier.size(20.dp))
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(if (settingsState.isLoggingOut) "Logging out…" else "Log Out",
+                                Text(if (settingsState.isLoggingOut) str.loading else str.settingsLogout,
                                     style = MaterialTheme.typography.bodyLarge, color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold)
-                                Text("Sign out of your account",
+                                Text(str.settingsLogoutSubtitle,
                                     style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                             }
                         }
@@ -335,9 +345,9 @@ fun SettingsScreen(
                                     Icon(Icons.Rounded.DeleteForever, null, tint = Color(0xFFC62828), modifier = Modifier.size(20.dp))
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(if (settingsState.isDeletingAccount) "Deleting account…" else "Delete Account",
+                                Text(if (settingsState.isDeletingAccount) str.loading else str.settingsDeleteAccount,
                                     style = MaterialTheme.typography.bodyLarge, color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold)
-                                Text("Permanently delete all data",
+                                Text(str.settingsDeleteSubtitle,
                                     style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                             }
                             Icon(Icons.Rounded.KeyboardArrowRight, null, tint = Color(0xFFC62828), modifier = Modifier.size(18.dp))
@@ -353,6 +363,7 @@ fun SettingsScreen(
 // ── Header ────────────────────────────────────────────────────
 @Composable
 private fun SettingsHeader(onBack: () -> Unit) {
+    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxWidth()
         .background(Brush.linearGradient(
             colors = listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
@@ -364,7 +375,7 @@ private fun SettingsHeader(onBack: () -> Unit) {
                 .clickable(onClick = onBack), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
             }
-            Text("Settings", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+            Text(str.settingsTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.size(36.dp))
         }
     }

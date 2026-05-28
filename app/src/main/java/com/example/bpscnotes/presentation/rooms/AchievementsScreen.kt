@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.AchievementDto
 
@@ -41,6 +42,7 @@ fun AchievementsScreen(
     viewModel: AchievementsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     val categories = state.grouped.keys.toList()
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
@@ -62,7 +64,7 @@ fun AchievementsScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text("Achievements", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                            Text(str.profileAchievements, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                             Text("Track your milestones", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                         }
                     }
@@ -89,7 +91,7 @@ fun AchievementsScreen(
                 state.error != null -> Box(Modifier.fillMaxSize().padding(24.dp), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("⚠️", fontSize = 40.sp); Text(state.error!!, textAlign = TextAlign.Center, color = BpscColors.TextSecondary)
-                        Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(BpscColors.Primary)) { Text("Retry") }
+                        Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {

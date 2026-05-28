@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 
 // ─────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ fun LessonViewerScreen(
     LaunchedEffect(lessonId) { viewModel.load(courseId, lessonId) }
 
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     Scaffold(
         topBar       = {
@@ -191,6 +193,7 @@ private fun LessonBottomBar(
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun PdfViewer(notesUrl: String?) {
+    val str = LocalStrings.current
     if (notesUrl.isNullOrBlank()) {
         NoContentState("No PDF attached to this lesson")
         return
@@ -234,7 +237,7 @@ private fun PdfViewer(notesUrl: String?) {
             Button(onClick = { failed = false; loading = true; retryKey++ },
                 modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(
@@ -455,12 +458,13 @@ private fun LoadingState() {
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
             Text(message, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
         }
     }

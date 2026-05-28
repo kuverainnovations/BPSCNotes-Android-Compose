@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,6 +57,7 @@ fun CoinWalletScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     val rewardedAdReady by adManager.rewardedReady.collectAsState()
     val adsRemaining = adManager.rewardedAdsRemainingToday()
     val snackbarHost = remember { SnackbarHostState() }
@@ -240,7 +242,7 @@ fun CoinWalletScreen(
                         }
                         item {
                             SectionHeader(
-                                "Transaction History",
+                                str.walletHistory,
                                 "${state.transactions.size} transactions"
                             )
                         }
@@ -282,6 +284,7 @@ fun CoinWalletScreen(
 
 @Composable
 private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
+    val str = LocalStrings.current
     val animCoins by animateFloatAsState(targetValue = coins.toFloat(), animationSpec = tween(1400), label = "coinAnim")
 
     Box(
@@ -331,7 +334,7 @@ private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Coin Wallet", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(0.85f))
+            Text(str.walletTitle, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(0.85f))
             // Coin medallion
             Box(
                 modifier = Modifier

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 
 @Composable
@@ -27,6 +28,7 @@ fun TopicQuizScreen(
     viewModel: QuizViewModel = hiltViewModel()    // shared VM — Hilt provides same instance in same back-stack
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     // Kick off quiz load when screen appears
     LaunchedEffect(subject, topicTitle) {
@@ -92,7 +94,7 @@ fun TopicQuizScreen(
                         Button(onClick = { viewModel.clearErrors(); viewModel.startTopicQuiz(subject) },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Text("Retry")
+                            Text(str.retry)
                         }
                     }
                     OutlinedButton(onClick = { navController.popBackStack() }, shape = RoundedCornerShape(12.dp)) {

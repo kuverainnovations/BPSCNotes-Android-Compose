@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import kotlinx.coroutines.delay
@@ -41,6 +42,7 @@ fun OtpScreen(
     mobile: String,
     viewModel: OtpViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val otpValues       = remember { List(6) { mutableStateOf("") } }
     val focusRequesters = remember { List(6) { FocusRequester() } }
     val isLoading       by viewModel.isLoading.observeAsState(false)
@@ -185,7 +187,7 @@ fun OtpScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = BpscColors.TextSecondary)
             if (canResend) {
-                Text("Resend",
+                Text(str.otpResend,
                     style      = MaterialTheme.typography.bodyMedium,
                     color      = BpscColors.Primary,
                     fontWeight = FontWeight.SemiBold,
@@ -209,7 +211,7 @@ fun OtpScreen(
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
             } else {
-                Text("Verify & Continue",
+                Text(str.otpVerify,
                     style = MaterialTheme.typography.titleMedium, color = Color.White)
             }
         }

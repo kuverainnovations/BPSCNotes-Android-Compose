@@ -2,8 +2,9 @@ package com.example.bpscnotes.presentation.navigation.Routes
 
 sealed class Screen(val route: String) {
     // Auth
-    object Splash       : Screen("splash")
-    object Onboarding   : Screen("onboarding")
+    object Splash              : Screen("splash")
+    object LanguageSelection   : Screen("language_selection")
+    object Onboarding          : Screen("onboarding")
     object Login        : Screen("login")
     object Otp          : Screen("otp/{mobile}") {
         fun createRoute(mobile: String) = "otp/$mobile"

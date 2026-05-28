@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +21,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -29,7 +32,7 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
  * Flow:
  *   Dashboard card click / QuizList card click
  *     → this screen (shows title, rules, stats)
- *     → "Start Quiz" → navigates to QuizPlay
+ *     → str.quizStart → navigates to QuizPlay
  *
  * Does NOT start the quiz — just shows info.
  */
@@ -40,6 +43,17 @@ fun QuizDetailScreen(
     viewModel: QuizViewModel= hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
+    var _localError by remember { mutableStateOf<String?>(null) }
+
+    // Show local error as snackbar (for 0-question block etc.)
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(_localError) {
+        _localError?.let {
+            snackbarHostState.showSnackbar(it)
+            _localError = null
+        }
+    }
 
     LaunchedEffect(quizId) {
         viewModel.loadQuizDetail(quizId)
@@ -58,16 +72,20 @@ fun QuizDetailScreen(
                     Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { navController.popBackStack() }) { Text("Go Back") }
-                        Button(onClick = { viewModel.loadQuizDetail(quizId) }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Retry") }
+                        Button(onClick = { viewModel.loadQuizDetail(quizId) }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
             }
         }
         state.quizDetail != null -> {
             QuizIntroContent(
-                quiz          = state.quizDetail!!,
+                quiz = state.quizDetail!!,
                 navController = navController,
-                quizId        = quizId
+                quizId = quizId,
+                totalQuestions = state.quizDetail?.totalQuestions ?: 0,
+                onShowError = {
+                    _localError = it
+                }
             )
         }
         else -> {
@@ -82,17 +100,18 @@ fun QuizDetailScreen(
 private fun QuizIntroContent(
     quiz: QuizPreviewDto,
     navController: NavHostController,
-    quizId: String
+    quizId: String,
+    totalQuestions: Int,
+    onShowError: (String) -> Unit
 ) {
+    val str = LocalStrings.current
     val difficultyColor = when (quiz.difficulty.lowercase()) {
         "easy"   -> Color(0xFF2ECC71)
         "hard"   -> Color(0xFFE74C3C)
         else     -> Color(0xFFF39C12)
     }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
-
-
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface).verticalScroll(rememberScrollState())) {
 
         // ── Hero header ─────────────────────────────────────────
@@ -168,7 +187,7 @@ private fun QuizIntroContent(
                         .padding(vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatChipWhite("📝", "${quiz.totalQuestions}", "Questions")
+                    StatChipWhite("📝", "${quiz.totalQuestions}", str.quizQuestions)
                     VerticalDividerWhite()
                     StatChipWhite("⏱️", "${quiz.durationMins}m", "Duration")
                     VerticalDividerWhite()
@@ -271,43 +290,54 @@ private fun QuizIntroContent(
 
             Spacer(Modifier.height(8.dp))
 
-            // ── Start / Retry button ─────────────────────────────
-            Button(
-                onClick  = {
-                    // Block if quiz has no questions
-                    if (quiz.totalQuestions == 0 ) {
-                        android.widget.Toast.makeText(
-                            context,
-                            "\"${quiz.title}\" has no questions yet. Try another ${quiz.type}.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        navController.navigate(Screen.QuizPlayer.createRoute(quizId))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape    = RoundedCornerShape(16.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-            ) {
-                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (quiz.isAttempted) "Retake Quiz 🔄" else "Start Quiz 🚀",
-                    style = MaterialTheme.typography.titleLarge
-                )
+                // ── Start / Retry button ─────────────────────────────
+                Button(
+                    onClick = {
+                        if (totalQuestions == 0) {
+                            onShowError("This quiz has no questions yet. Please contact admin.")
+                        } else {
+                            navController.navigate(
+                                Screen.QuizPlayer.createRoute(quizId)
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (quiz.isAttempted) "Retake Quiz 🔄" else "Start Quiz 🚀",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
             }
         }
     }
 }
-
 @Composable
 private fun StatChipWhite(icon: String, value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
         Text(icon, fontSize = 15.sp)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f), fontSize = 9.sp)
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(0.65f),
+            fontSize = 9.sp
+        )
     }
 }
+
 
 @Composable
 private fun VerticalDividerWhite() {

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CourseDto
@@ -47,6 +48,7 @@ fun CourseDetailScreen(
     LaunchedEffect(courseId) { viewModel.load(courseId) }
 
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
     var expandedChapter by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.enrollSuccess) {
@@ -190,7 +192,7 @@ fun CourseDetailScreen(
                 }
             }
 
-            // FIX 4: Bottom bar — "Completed" state when all lessons done
+            // FIX 4: Bottom bar — str.coursesCompleted state when all lessons done
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BottomCta(
                     course      = course,
@@ -1073,12 +1075,13 @@ private fun InstructorStat(icon: ImageVector, text: String) {
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
             Text(message, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
         }
     }

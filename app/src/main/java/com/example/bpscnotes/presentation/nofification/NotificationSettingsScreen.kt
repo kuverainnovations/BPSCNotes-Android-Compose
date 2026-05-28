@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.google.gson.annotations.SerializedName
@@ -137,6 +138,7 @@ fun NotificationSettingsScreen(
     navController: NavHostController,
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state        by viewModel.state.collectAsState()
     val snackbarHost  = remember { SnackbarHostState() }
 
@@ -187,7 +189,7 @@ fun NotificationSettingsScreen(
                         Text("⚠️", fontSize = 40.sp)
                         Text(state.error!!, color = BpscColors.TextSecondary, style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                        Button(onClick = viewModel::refresh, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Retry") }
+                        Button(onClick = viewModel::refresh, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
                 state.notifications.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {

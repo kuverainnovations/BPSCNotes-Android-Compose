@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.core.ads.AdManager
@@ -66,6 +67,7 @@ fun StudyFocusScreen(
     tiersViewModel: TierRoomsViewModel,
     adManager: AdManager
 ) {
+    val str = LocalStrings.current
     val state      by viewModel.uiState.collectAsState()
     val tiersState by tiersViewModel.uiState.collectAsState()
     val activity = LocalContext.current as? Activity
@@ -78,7 +80,7 @@ fun StudyFocusScreen(
 //    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
 
     // PIP: back press pops StudyFocusScreen from the root stack.
-    // This returns to Screen.Main (MainShell) which contains RoomsHub tab —
+    // This returns to Screen.Main (MainShell) which contains RoomsHub tab — 
     // exactly where the user came from. The PIP overlay in MainShell appears
     // automatically because the session is still ACTIVE.
     // NEVER navigate to RoomsHub directly — it exists as both a root route AND
@@ -126,7 +128,7 @@ fun StudyFocusScreen(
                 Button(
                     onClick = { showEndConfirm = false; viewModel.endSession(); showPostSessionAd = true },
                     colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
-                ) { Text("End Session") }
+                ) { Text(str.roomsEndSession) }
             },
             dismissButton = {
                 TextButton(onClick = { showEndConfirm = false }) {
@@ -258,6 +260,8 @@ private fun ActiveRoomScreen(
             }
         }
     }
+    val str = LocalStrings.current
+
     val h = elapsedSeconds / 3600
     val m = (elapsedSeconds % 3600) / 60
     val s = elapsedSeconds % 60
@@ -352,7 +356,7 @@ private fun ActiveRoomScreen(
                 ) {
                     Icon(
                         androidx.compose.material.icons.Icons.Rounded.Stop,
-                        contentDescription = "End Session",
+                        contentDescription = str.roomsEndSession,
                         tint     = Color(0xFFEF5350),
                         modifier = Modifier.size(18.dp)
                     )
@@ -634,7 +638,7 @@ private fun ActiveRoomScreen(
                     } else {
                         Icon(Icons.Rounded.StopCircle, null, modifier = Modifier.size(18.dp), tint = Color(0xFFEF5350))
                         Spacer(Modifier.width(8.dp))
-                        Text("End Session", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.roomsEndSession, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -9,6 +9,7 @@ import com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest
 import com.example.bpscnotes.data.remote.api.ConfirmSubscriptionRequest
 import com.example.bpscnotes.data.remote.api.CreateSubscriptionRequest
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
+import com.example.bpscnotes.core.analytics.Event
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -179,6 +180,9 @@ class PaymentViewModel @Inject constructor(
         val plan = s.selectedPlan ?: return
         viewModelScope.launch {
             _state.update { it.copy(isCreatingOrder = true, error = null, razorpayOrderId = null) }
+                val planId = _state.value.selectedPlan?.id ?: ""
+                val amount = _state.value.finalAmount
+                Event.paymentInitiated(planId, amount)
             try {
                 val res = api.createSubscription(CreateSubscriptionRequest(
                     plan        = plan.id ?: "monthly",
@@ -204,7 +208,7 @@ class PaymentViewModel @Inject constructor(
                             subscriptionId  = data.subscriptionId,
                             finalAmount     = finalAmt,
                             error           = "Payment gateway is not configured yet. Please contact support or try again later. " +
-                                    "(Order ID: ${data.subscriptionId.take(8)})"
+                                              "(Order ID: ${data.subscriptionId.take(8)})"
                         )}
                     }
 
@@ -240,6 +244,8 @@ class PaymentViewModel @Inject constructor(
                     paymentMethod     = "upi"
                 ))
                 val bonusCoins = _state.value.selectedPlan?.bonusCoins ?: 0
+                val plan = _state.value.selectedPlan?.id ?: "subscription"
+                Event.paymentSuccess(plan, _state.value.finalAmount, "razorpay")
                 _state.update { it.copy(
                     isConfirming = false,
                     isSuccess    = true,

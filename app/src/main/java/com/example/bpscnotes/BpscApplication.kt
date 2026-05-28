@@ -1,7 +1,6 @@
 package com.example.bpscnotes
 
 import android.app.Application
-import android.util.Log
 import com.example.bpscnotes.core.analytics.Analytics
 import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
@@ -23,12 +22,6 @@ class BpscApplication : Application() {
         try {
             if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
-                Log.e("TAG", "onCreate: init", )
-
-                // Add this temporarily in MainActivity.onCreate()
-                FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-                    Log.d("FCM_TOKEN", "Device token: $token")
-                }
             }
         } catch (e: Exception) {
             android.util.Log.w("BpscApp", "Firebase init failed (missing google-services.json?): ${e.message}")

@@ -57,12 +57,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val viewModel: LoginViewModel = hiltViewModel()
+    val str = LocalStrings.current
     var mobile by remember { mutableStateOf("") }
     var agreed by remember { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -269,7 +271,7 @@ fun LoginScreen(navController: NavHostController) {
                     )
                 } else {
                     Text(
-                        "Send OTP",
+                        str.loginSendOtp,
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White
                     )

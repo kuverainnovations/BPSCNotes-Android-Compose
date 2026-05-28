@@ -48,8 +48,8 @@ interface AuthApiService {
     @DELETE("users/account")
     suspend fun deleteAccount(): ApiResponse<Any>
 
-    @retrofit2.http.POST("auth/fcm-token")
-    suspend fun updateFcmToken(@retrofit2.http.Body dto: Map<String, String>): ApiResponse<Any>
+    @POST("auth/fcm-token")
+    suspend fun updateFcmToken(@Body dto: Map<String, String>): ApiResponse<Any>
 }
 
 // ── DTOs ──────────────────────────────────────────────────────

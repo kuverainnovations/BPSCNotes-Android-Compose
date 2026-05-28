@@ -51,9 +51,14 @@ val LocalDarkMode = compositionLocalOf { false }
 
 @Composable
 fun BPSCNotesTheme(
-    darkMode: Boolean = false,          // ← read from SettingsViewModel in MainActivity
-    content:  @Composable () -> Unit
+    darkMode:  Boolean = false,          // ← read from SettingsViewModel in MainActivity
+    language:  com.example.bpscnotes.core.language.AppLanguage = com.example.bpscnotes.core.language.AppLanguage.ENGLISH,
+    content:   @Composable () -> Unit
 ) {
+    val strings = when (language) {
+        com.example.bpscnotes.core.language.AppLanguage.HINDI -> com.example.bpscnotes.core.language.HindiStrings
+        else -> com.example.bpscnotes.core.language.EnglishStrings
+    }
     val colors = if (/*darkMode*/false) DarkColors else LightColors
 
     // Keep status bar icons correct for both modes
@@ -67,8 +72,11 @@ fun BPSCNotesTheme(
         }
     }
 
-    // Provide the dark mode value to the whole composition tree
-    CompositionLocalProvider(LocalDarkMode provides darkMode) {
+    // Provide dark mode AND language strings to the whole composition tree
+    CompositionLocalProvider(
+        LocalDarkMode provides darkMode,
+        com.example.bpscnotes.core.language.LocalStrings provides strings
+    ) {
         MaterialTheme(
             colorScheme = colors,
             typography  = BpscTypography,

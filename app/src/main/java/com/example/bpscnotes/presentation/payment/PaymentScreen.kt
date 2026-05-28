@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.payment
 
+import com.kuvera.bpscnotes.R
+
 import android.app.Activity
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
 

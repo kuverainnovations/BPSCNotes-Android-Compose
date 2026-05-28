@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bpscnotes.core.ads.AdManager
 import android.app.Activity
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.t.BpscColors
 import kotlinx.coroutines.delay
@@ -45,6 +46,7 @@ fun QuizPlayScreen(
     val context  = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     LaunchedEffect(quizId) {
         if (state.activeSession == null && !state.isStartingQuiz) {
@@ -121,6 +123,7 @@ private fun QuizPlayerContent(
     viewModel: QuizViewModel,
     onExit:    () -> Unit
 ) {
+    val str = LocalStrings.current
     var currentIndex  by remember { mutableIntStateOf(0) }
     val questions      = session.questions
     val current        = questions.getOrNull(currentIndex) ?: return
@@ -235,7 +238,7 @@ private fun QuizPlayerContent(
                         }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showExitConfirm = false }) { Text("Continue") }
+                        OutlinedButton(onClick = { showExitConfirm = false }) { Text(str.coursesContinue) }
                     }
                 )
             }

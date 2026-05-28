@@ -12,6 +12,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.example.bpscnotes.core.analytics.Analytics
+import com.example.bpscnotes.core.language.LanguageManager
 import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.core.notifications.FcmTokenManager
 import com.example.bpscnotes.core.ui.t.BPSCNotesTheme
@@ -20,7 +21,6 @@ import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
 import com.example.bpscnotes.presentation.payment.RazorpayPaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
-import com.google.firebase.messaging.FirebaseMessaging
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity(),
 
     @Inject lateinit var adManager: com.example.bpscnotes.core.ads.AdManager
     private val settingsViewModel: SettingsViewModel by viewModels()
+    @Inject lateinit var languageManager: LanguageManager
     @Inject lateinit var coinsApi: CoinsApiService
     @Inject lateinit var tokenStore: TokenStore
     @Inject lateinit var fcmTokenManager: FcmTokenManager
@@ -105,18 +106,16 @@ class MainActivity : ComponentActivity(),
         val notifId       = intent?.getStringExtra("notifId") ?: ""
         if (notifId.isNotBlank()) Event.notificationTapped(notifType, notifId)
 
-        // Add this temporarily in MainActivity.onCreate()
-      /*  FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            Log.d("FCM_TOKEN", "Device token: $token")
-        }*/
         setContent {
             val settingsState by settingsViewModel.state.collectAsState()
-            BPSCNotesTheme(darkMode = settingsState.darkMode) {
+            // Collect from static companion — shared by ALL LanguageManager instances
+            // This ensures drawer/settings changes apply instantly without restart
+            val currentLanguage by com.example.bpscnotes.core.language.LanguageManager.language.collectAsState()
+                BPSCNotesTheme(darkMode = settingsState.darkMode, language = currentLanguage) {
                 val navController = rememberNavController()
                 BpscNavHost(
-                    navController  = navController,
-                    adManager      = adManager,
-                   // initialScreen  = initialScreen,
+                    navController = navController,
+                    adManager     = adManager,
                 )
             }
         }

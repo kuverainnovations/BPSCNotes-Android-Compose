@@ -194,8 +194,8 @@ class MockTestsViewModel @Inject constructor(
                     .filter { it.totalQuestions > 0 && it.score > 0 }  // skip incomplete
                     .groupBy { it.userId }                              // deduplicate per user
                     .values
-                    .map { attempts -> attempts.maxByOrNull { it.score * 10000 - it.timeTakenSecs }!! }
-                    .sortedWith(compareByDescending<QuizLeaderboardItemResponse> { it.score }
+                    .map { attempts -> attempts.maxByOrNull { it.score.toDouble() * 10000 - it.timeTakenSecs }!! }
+                    .sortedWith(compareByDescending<QuizLeaderboardItemResponse> { it.score.toDouble() }
                         .thenBy { it.timeTakenSecs })
                     .mapIndexed { index, dto ->
                         QuizLeaderboardEntry(

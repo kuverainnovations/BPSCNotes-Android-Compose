@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.CaMcqDto
 
@@ -37,6 +38,7 @@ fun CaMcqQuizScreen(
     viewModel: CurrentAffairsViewModel = hiltViewModel()
 ) {
     val mcqs      by viewModel.mcqs.collectAsState()
+    val str = LocalStrings.current
     val mcqLoading by viewModel.mcqLoading.collectAsState()
 
     LaunchedEffect(affairId) { viewModel.loadMcqs(affairId) }
@@ -255,6 +257,8 @@ private fun ResultScreen(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val str = LocalStrings.current
+
     val correct = mcqs.count { answers[it.id] == it.correct }
     val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
     val animPct by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
@@ -290,7 +294,7 @@ private fun ResultScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("$pct%", style = MaterialTheme.typography.headlineMedium,
                     color = Color.White, fontWeight = FontWeight.ExtraBold)
-                Text("Score", style = MaterialTheme.typography.labelSmall,
+                Text(str.quizScore, style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(0.7f))
             }
         }
@@ -303,8 +307,8 @@ private fun ResultScreen(
             colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Row(modifier = Modifier.fillMaxWidth().padding(20.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly) {
-                ResultStat("✅", "$correct", "Correct", Color(0xFF2ECC71))
-                ResultStat("❌", "${mcqs.size - correct}", "Wrong", Color(0xFFE74C3C))
+                ResultStat("✅", "$correct", str.quizCorrect, Color(0xFF2ECC71))
+                ResultStat("❌", "${mcqs.size - correct}", str.quizWrong, Color(0xFFE74C3C))
                 ResultStat("📝", "${mcqs.size}", "Total", BpscColors.Primary)
             }
         }

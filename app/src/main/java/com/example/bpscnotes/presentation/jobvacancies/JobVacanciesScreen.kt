@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -105,6 +106,7 @@ fun JobVacanciesScreen(
     adManager: AdManager
 ) {
     val vmState by viewModel.uiState.collectAsState()
+    val str = LocalStrings.current
 
     var searchQuery      by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
@@ -149,7 +151,7 @@ fun JobVacanciesScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("⚠️", fontSize = 40.sp)
                 Text(vmState.error!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Retry") }
+                Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
             }
         }
         return
@@ -179,7 +181,7 @@ fun JobVacanciesScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Job Vacancies", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.jobsTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text("${filtered.size} active openings", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
@@ -230,7 +232,7 @@ fun JobVacanciesScreen(
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                         JobStatChip("🔴", "${filtered.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        JobStatChip("🔖", "${savedJobs.size}", "Saved")
+                        JobStatChip("🔖", "${savedJobs.size}", str.jobsSaved)
                     }
                 }
             }
@@ -441,6 +443,7 @@ private fun JobDetailSheet(
     onSave:   () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context    = LocalContext.current
     val cat        = (job.category ?: "").toJobCategory()
@@ -490,7 +493,7 @@ private fun JobDetailSheet(
 
                 // Quick stats grid — FIXED: all 4 fields from DTO
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatBox("👥", "${if ((job.totalPosts ?: 0) > 0) job.totalPosts else "—"}", "Posts",  Modifier.weight(1f))
+                    StatBox("👥", "${if ((job.totalPosts ?: 0) > 0) job.totalPosts else "—"}", str.jobsPosts,  Modifier.weight(1f))
                     StatBox("📍", job.location?.ifBlank { "—" } ?: "—",                          "Location", Modifier.weight(1f))
                     StatBox("💰", job.salaryRange?.ifBlank { "—" } ?: "—",                       "Salary",   Modifier.weight(1f))
                     StatBox("🎂", job.ageLimit?.ifBlank { "—" } ?: "—",                          "Age Limit",Modifier.weight(1f))
@@ -520,7 +523,7 @@ private fun JobDetailSheet(
                             add(Triple("📢", "Notification",  job.notificationDate.formatDisplay()))
                         if (!job.applyStartDate.isNullOrBlank())
                             add(Triple("▶️", "Apply Start",   job.applyStartDate.formatDisplay()))
-                        add(Triple("🔴", "Last Date",      job.applyEndDate.formatDisplay()))
+                        add(Triple("🔴", str.jobsLastDate,      job.applyEndDate.formatDisplay()))
                         if (!job.examDate.isNullOrBlank())
                             add(Triple("📝", "Exam Date",    job.examDate.formatDisplay()))
                     }
@@ -552,7 +555,7 @@ private fun JobDetailSheet(
                 ) {
                     Icon(if (isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (isSaved) "Saved" else "Save", style = MaterialTheme.typography.titleMedium)
+                    Text(if (isSaved) str.jobsSaved else str.jobsSave, style = MaterialTheme.typography.titleMedium)
                 }
                 Button(
                     // BUG FIX: actually opens the URL

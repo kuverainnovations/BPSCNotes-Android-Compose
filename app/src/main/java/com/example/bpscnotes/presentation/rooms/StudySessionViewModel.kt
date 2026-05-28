@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.rooms
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -219,7 +220,7 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Heartbeat: afk=${data.isAfk} coins=+${data.coinsEarnedThisBeat} " +
-                            "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
+                    "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
                 )
 
                 _uiState.update { s ->
@@ -280,7 +281,7 @@ class StudySessionViewModel @Inject constructor(
         }
     }
 
-    fun endSession() {
+        fun endSession() {
         val sessionId = _uiState.value.sessionId ?: return
         if (_uiState.value.status == SessionStatus.ENDING) return
 
@@ -295,7 +296,7 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Session ended: active=${summary.activeMinutes}min " +
-                            "coins=${summary.totalCoins} xp=${summary.totalXp}"
+                    "coins=${summary.totalCoins} xp=${summary.totalXp}"
                 )
 
                 _uiState.update { s ->
