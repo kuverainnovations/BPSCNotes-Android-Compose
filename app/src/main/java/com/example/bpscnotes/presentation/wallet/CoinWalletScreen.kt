@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
@@ -54,9 +55,13 @@ fun CoinWalletScreen(
     adManager:     AdManager,
     viewModel:     CoinWalletViewModel = hiltViewModel()
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val activity = context as? Activity
-    val state by viewModel.uiState.collectAsState()
+    val context      = androidx.compose.ui.platform.LocalContext.current
+    val activity     = context as? Activity
+    val state        by viewModel.uiState.collectAsState()
+    val adLoopActive: Boolean by adManager.adLoopActive.collectAsState(initial = false)
+
+    // Block back button while ad loop is running — user must watch all ads
+    BackHandler(enabled = adLoopActive) { /* swallow back press during ad loop */ }
     val str = LocalStrings.current
     val rewardedAdReady by adManager.rewardedReady.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
@@ -126,18 +131,14 @@ fun CoinWalletScreen(
                                 onWatchAd        = {
                                     activity?.let { act ->
                                         adManager.showRewardedAdLoop(
-                                            activity       = act,
-                                            count          = state.minAdsPerSession,
-                                            coinsPerAd     = state.adCoinsPerAd,
-                                            onEachRewarded = { coins ->
-                                                viewModel.onAdRewardEarned(coins)
+                                            activity      = act,
+                                            count         = state.minAdsPerSession,
+                                            coinsPerAd    = state.adCoinsPerAd,
+                                            // Called ONCE after ALL ads complete — not per-ad
+                                            onAllComplete = { totalCoins ->
+                                                viewModel.onAdRewardEarned(totalCoins)
                                             },
-                                            onAllComplete  = {
-                                                viewModel.showMessage(
-                                                    "🎉 +${state.adCoinsPerAd * state.minAdsPerSession} coins earned!"
-                                                )
-                                            },
-                                            onFailed       = { reason ->
+                                            onFailed      = { reason ->
                                                 viewModel.showMessage(reason)
                                             }
                                         )

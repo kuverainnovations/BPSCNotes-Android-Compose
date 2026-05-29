@@ -85,29 +85,62 @@ class CoinWalletViewModel @Inject constructor(
     }
 
     /** Called when each rewarded ad completes — credits coins via API */
-    fun onAdRewardEarned(coins: Int) {
-        // Optimistic UI update immediately
+    /**
+     * Called ONCE after all ads in the loop finish.
+     * [totalCoins] is the sum across all ads (e.g. 2 ads × 10 = 20).
+     */
+    fun onAdRewardEarned(totalCoins: Int) {
+        // Optimistic balance bump — user sees coins instantly after ads complete
         _uiState.update { s ->
             s.copy(
-                balance         = s.balance + coins,
-                adsWatchedToday = s.adsWatchedToday + 1,
-                successMessage  = "🎉 +$coins coins earned!"
+                balance         = s.balance + totalCoins,
+                adsWatchedToday = s.adsWatchedToday + 1,  // +1 session (not per-ad)
+                successMessage  = "🎉 +$totalCoins coins earned!"
             )
         }
         viewModelScope.launch {
             try {
+                // POST /coins/ad-reward once for the full session
+                // Backend reads ad_reward_coins from settings and records one transaction
                 val result = coinsApi.recordAdReward(
                     com.example.bpscnotes.data.remote.api.AdRewardRequest(source = "wallet")
                 )
-                // Sync actual server balance
-                result.data?.let { data ->
+                val data = result.data
+                if (data != null) {
+                    // Sync exact server balance
                     _uiState.update { s ->
-                        s.copy(balance = data.balance ?: s.balance)
+                        s.copy(
+                            balance     = data.balance,
+                            totalEarned = data.totalEarned.takeIf { it > 0 } ?: s.totalEarned,
+                        )
                     }
+                    // Refresh history so new "Watched ad" row appears
+                    refreshTransactions()
+                } else {
+                    android.util.Log.w("CoinWalletVM", "Ad reward: empty response — keeping optimistic")
                 }
             } catch (e: Exception) {
-                // Keep optimistic update — server will reconcile on next load()
-                android.util.Log.w("CoinWalletVM", "Ad reward API not yet available: ${e.message}")
+                android.util.Log.e("CoinWalletVM", "Ad reward API failed: ${e.message}", e)
+                _uiState.update { s ->
+                    s.copy(
+                        balance        = s.balance - totalCoins,
+                        successMessage = "Failed to credit coins. Please try again."
+                    )
+                }
+            }
+        }
+    }
+
+    /** Reload just the transactions list without showing the full loading spinner */
+    private fun refreshTransactions() {
+        viewModelScope.launch {
+            try {
+                val txns = coinsApi.getTransactions(limit = 50, page = 1).data?.transactions
+                if (txns != null) {
+                    _uiState.update { it.copy(transactions = txns, transactionPage = 1, hasMoreTransactions = txns.size >= 50) }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("CoinWalletVM", "refreshTransactions failed: ${e.message}")
             }
         }
     }

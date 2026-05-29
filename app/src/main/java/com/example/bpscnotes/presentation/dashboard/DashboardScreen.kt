@@ -992,48 +992,160 @@ private fun WeeklyConsistencyCard(
                 }
                 // Chart (real API data)
                 else -> {
+                    // ── Y-axis = minutes of study activity ─────────────────
+                    // Sources: each quiz completed ≈ 5 min, study room sessions = actual minutes
+                    // Y-axis ceiling is LOCKED per data set using `remember(data)` so it
+                    // doesn't rescale every recompose and make the chart visually jump.
+
+                    // Format as "Xh Ym" when >= 60, else "Xm"
+                    fun fmtMin(m: Int): String = when {
+                        m == 0  -> "0"
+                        m >= 60 -> "${m / 60}h${if (m % 60 > 0) " ${m % 60}m" else ""}"
+                        else    -> "${m}m"
+                    }
+
+                    // Compute ceiling ONCE per data set — stable across recompositions
+                    // so the graph doesn't visually shift when today's score updates
+                    val ceilMins by remember(data) {
+                        val rawMax = data.maxOfOrNull { it.score } ?: 0
+                        // Minimum 60 min ceiling; snap up to next 30-min boundary
+                        val ceil   = maxOf(60, ((rawMax + 29) / 30) * 30)
+                        mutableStateOf(ceil)
+                    }
+                    val maxVal  = ceilMins.toFloat()
+                    val yLabels = listOf(ceilMins, ceilMins * 3 / 4, ceilMins / 2, ceilMins / 4, 0)
+
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)) {
-                        Column(modifier = Modifier
-                            .width(28.dp)
-                            .fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                            listOf("90", "60", "30", "0").forEach { label ->
-                                Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+                        .height(150.dp)) {
+
+                        // Y-axis labels
+                        Column(
+                            modifier = Modifier.width(36.dp).fillMaxHeight(),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            yLabels.forEach { v ->
+                                Text(
+                                    fmtMin(v),
+                                    style    = MaterialTheme.typography.labelSmall,
+                                    color    = BpscColors.TextHint,
+                                    fontSize = 8.sp,
+                                    maxLines = 1,
+                                )
                             }
                         }
-                        val maxVal = 100f
-                        Canvas(modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()) {
+
+                        Canvas(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             val w = size.width; val h = size.height; val count = data.size
                             if (count < 2) return@Canvas
                             val stepX = w / (count - 1).toFloat()
-                            val points = data.mapIndexed { i, d -> Offset(i * stepX, h - (d.score / maxVal) * h) }
-                            val fillPath = Path().apply { moveTo(points.first().x, h); points.forEach { lineTo(it.x, it.y) }; lineTo(points.last().x, h); close() }
-                            drawPath(fillPath, Brush.verticalGradient(listOf(BpscColors.Primary.copy(0.18f), BpscColors.Primary.copy(0f)), 0f, h))
+
+                            // Map each day's minutes → pixel Y (clamped so nothing clips)
+                            val points = data.mapIndexed { i, d ->
+                                val ratio = (d.score.toFloat() / maxVal).coerceIn(0f, 1f)
+                                Offset(i * stepX, h - ratio * h)
+                            }
+
+                            // Horizontal grid lines
+                            listOf(0.25f, 0.5f, 0.75f).forEach { r ->
+                                drawLine(Color(0xFFF0F0F0), Offset(0f, h * r), Offset(w, h * r), 1.dp.toPx())
+                            }
+
+                            // Fill area under curve
+                            val fillPath = Path().apply {
+                                moveTo(points.first().x, h)
+                                points.forEach { lineTo(it.x, it.y) }
+                                lineTo(points.last().x, h)
+                                close()
+                            }
+                            drawPath(fillPath, Brush.verticalGradient(
+                                listOf(BpscColors.Primary.copy(0.18f), BpscColors.Primary.copy(0f)), 0f, h
+                            ))
+
+                            // Smooth bezier curve
                             val linePath = Path()
                             points.forEachIndexed { i, pt ->
                                 if (i == 0) linePath.moveTo(pt.x, pt.y)
-                                else { val prev = points[i-1]; val cx1 = prev.x + (pt.x - prev.x)*0.5f; val cx2 = pt.x - (pt.x - prev.x)*0.5f; linePath.cubicTo(cx1, prev.y, cx2, pt.y, pt.x, pt.y) }
+                                else {
+                                    val prev = points[i - 1]
+                                    val cx1 = prev.x + (pt.x - prev.x) * 0.5f
+                                    val cx2 = pt.x - (pt.x - prev.x) * 0.5f
+                                    linePath.cubicTo(cx1, prev.y, cx2, pt.y, pt.x, pt.y)
+                                }
                             }
                             drawPath(linePath, Color(0xFF1565C0), style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
-                            listOf(0.25f, 0.5f, 0.75f).forEach { r -> drawLine(Color(0xFFF0F0F0), Offset(0f, h*r), Offset(w, h*r), 1.dp.toPx()) }
+
+                            // Data point dots
                             points.forEachIndexed { i, pt ->
                                 val isToday = i == count - 1
-                                drawCircle(if (isToday) BpscColors.Accent else BpscColors.Primary, if (isToday) 7.dp.toPx() else 4.5.dp.toPx(), pt)
-                                drawCircle(Color.White, if (isToday) 3.5.dp.toPx() else 2.dp.toPx(), pt)
+                                val outerR  = if (isToday) 7.dp.toPx() else 4.5.dp.toPx()
+                                val innerR  = if (isToday) 3.5.dp.toPx() else 2.dp.toPx()
+                                drawCircle(if (isToday) BpscColors.Accent else BpscColors.Primary, outerR, pt)
+                                drawCircle(Color.White, innerR, pt)
                             }
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 28.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // X-axis: day label + value below each dot
+                    val maxScore = data.maxOfOrNull { it.score } ?: 0
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 36.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
                         data.forEachIndexed { i, d ->
-                            val isToday = i == data.size - 1
-                            Text(d.day, style = MaterialTheme.typography.labelSmall, color = if (isToday) BpscColors.Primary else BpscColors.TextSecondary, fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Normal, fontSize = 10.sp)
+                            val isToday  = i == data.size - 1
+                            val isMaxDay = d.score == maxScore && maxScore > 0
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(1.dp),
+                            ) {
+                                // Day label
+                                Text(
+                                    d.day,
+                                    style      = MaterialTheme.typography.labelSmall,
+                                    color      = if (isToday) BpscColors.Primary else BpscColors.TextSecondary,
+                                    fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Normal,
+                                    fontSize   = 10.sp,
+                                )
+                                // Show value for every day that has data
+                                if (d.score > 0) {
+                                    Text(
+                                        fmtMin(d.score),
+                                        style      = MaterialTheme.typography.labelSmall,
+                                        color      = when {
+                                            isToday  -> BpscColors.Primary
+                                            isMaxDay -> BpscColors.Accent
+                                            else     -> BpscColors.TextHint
+                                        },
+                                        fontSize   = 8.sp,
+                                        fontWeight = if (isToday || isMaxDay) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                } else {
+                                    // Zero day — show dash so spacing stays consistent
+                                    Text(
+                                        "–",
+                                        style    = MaterialTheme.typography.labelSmall,
+                                        color    = BpscColors.TextHint.copy(alpha = 0.4f),
+                                        fontSize = 8.sp,
+                                    )
+                                }
+                            }
                         }
+                    }
+
+                    // Legend
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Text(
+                            "📖 Study activity: quizzes + study rooms (min)",
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = BpscColors.TextHint,
+                            fontSize = 9.sp,
+                        )
                     }
                 }
             }

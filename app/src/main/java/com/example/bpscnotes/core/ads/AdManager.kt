@@ -61,6 +61,9 @@ class AdManager @Inject constructor(
     private val _rewardedReady                       = MutableStateFlow(false)
     val rewardedReady: StateFlow<Boolean>            = _rewardedReady.asStateFlow()
 
+    private val _adLoopActive                        = MutableStateFlow(false)
+    val adLoopActive: StateFlow<Boolean>             = _adLoopActive.asStateFlow()
+
     // Interstitial ad state
     private var interstitialAd:      InterstitialAd? = null
     private var isLoadingInterstitial                = false
@@ -168,73 +171,94 @@ class AdManager @Inject constructor(
      * Waits for each ad to be FULLY DISMISSED before showing the next.
      * Each completed ad calls [onEachRewarded] with its coins.
      */
+    /**
+     * Shows [count] rewarded ads back-to-back.
+     * Coins are accumulated across all ads and credited ONCE after the
+     * final ad is dismissed — not per-ad. Back button is blocked externally
+     * via [isAdLoopActive] StateFlow.
+     */
     fun showRewardedAdLoop(
-        activity:       Activity,
-        count:          Int = 2,
-        coinsPerAd:     Int = REWARDED_COINS,  // override with admin value
-        onEachRewarded: (coins: Int) -> Unit,
-        onAllComplete:  () -> Unit,
-        onFailed:       (reason: String) -> Unit,
+        activity:      Activity,
+        count:         Int = 2,
+        coinsPerAd:    Int = REWARDED_COINS,
+        onAllComplete: (totalCoins: Int) -> Unit,  // called ONCE after ALL ads done
+        onFailed:      (reason: String) -> Unit,
     ) {
-        var shownCount   = 0
-        var pendingCoins = 0  // earned but wait until dismiss to credit
+        var shownCount    = 0
+        var totalEarned   = 0  // accumulate across all ads, credit at the end
+        var earnedThisAd  = false  // did the user earn reward for the current ad?
+
+        // Signal that the loop is active — UI uses this to block back button
+        _adLoopActive.value = true
+
+        fun finish() {
+            _adLoopActive.value = false
+            loadRewardedAd()  // pre-load for next session
+            onAllComplete(totalEarned)
+        }
 
         fun showNext() {
-            if (shownCount >= count) { onAllComplete(); return }
+            if (shownCount >= count) { finish(); return }
+
             val ad = rewardedAd
             if (ad == null) {
-                // Ad not ready — wait up to 5s then retry
                 loadRewardedAd()
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     val retry = rewardedAd
                     if (retry != null) showNext()
-                    else onFailed("Ad not ready. Please try again in a few seconds.")
+                    else {
+                        _adLoopActive.value = false
+                        // If at least 1 ad completed, still credit those coins
+                        if (totalEarned > 0) onAllComplete(totalEarned)
+                        else onFailed("Ad not ready. Please try again in a few seconds.")
+                    }
                 }, 5_000)
                 return
             }
 
+            earnedThisAd = false
             val adNumber = shownCount + 1
             Log.d(TAG, "📺 Showing loop ad $adNumber/$count")
 
-            // Override the callback for this specific ad in the loop
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
-                    Log.d(TAG, "✅ Ad $adNumber dismissed — crediting $pendingCoins coins")
                     rewardedAd = null
                     _rewardedReady.value = false
-                    // Credit coins only after the ad is fully dismissed
-                    if (pendingCoins > 0) {
-                        onEachRewarded(pendingCoins)
-                        pendingCoins = 0
-                    }
-                    // Load next ad then chain it
+                    Log.d(TAG, "✅ Ad $adNumber dismissed (earned=$earnedThisAd)")
+
                     if (shownCount < count) {
+                        // More ads to show — load next and chain
                         loadRewardedAd()
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                             showNext()
-                        }, 800)  // small delay between ads
+                        }, 600)
                     } else {
-                        onAllComplete()
-                        loadRewardedAd()  // pre-load for next session
+                        // All ads done — credit total now
+                        finish()
                     }
                 }
+
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     Log.e(TAG, "Ad $adNumber failed to show: ${error.message}")
                     rewardedAd = null
                     _rewardedReady.value = false
+                    _adLoopActive.value = false
                     loadRewardedAd()
-                    onFailed("Ad failed. Please try again.")
+                    if (totalEarned > 0) onAllComplete(totalEarned)
+                    else onFailed("Ad failed to show. Please try again.")
                 }
             }
 
-            ad.show(activity) { reward ->
-                // Reward callback — store coins, credit after dismiss
+            ad.show(activity) { _ ->
+                // Reward granted — accumulate, don't credit yet
                 rewardedWatchedToday++
                 shownCount++
-                pendingCoins = coinsPerAd
-                Log.d(TAG, "💰 Reward earned for ad $adNumber: +$coinsPerAd coins (crediting after dismiss)")
+                earnedThisAd = true
+                totalEarned += coinsPerAd
+                Log.d(TAG, "💰 Ad $adNumber reward earned. Total so far: $totalEarned coins")
             }
         }
+
         showNext()
     }
 
