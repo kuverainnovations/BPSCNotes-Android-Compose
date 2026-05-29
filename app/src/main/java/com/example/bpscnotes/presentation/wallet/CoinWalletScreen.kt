@@ -59,7 +59,6 @@ fun CoinWalletScreen(
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
     val rewardedAdReady by adManager.rewardedReady.collectAsState()
-    val adsRemaining = adManager.rewardedAdsRemainingToday()
     val snackbarHost = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -119,18 +118,26 @@ fun CoinWalletScreen(
                         // ── Watch Ad to earn coins ─────────────────────
                         item(key = "watch_ad_card") {
                             WatchAdForCoinsCard(
-                                adManager = adManager,
-                                coinsPerAd = AdManager.REWARDED_COINS,
-                                adsRemainingToday = adsRemaining,
-                                isAdReady = rewardedAdReady,
-                                onWatchAd = {
+                                adManager        = adManager,
+                                coinsPerAd       = state.adCoinsPerAd,
+                                minAdsPerSession = state.minAdsPerSession,
+                                isAdReady        = rewardedAdReady,
+                                watchedCount     = state.adsWatchedToday,
+                                onWatchAd        = {
                                     activity?.let { act ->
-                                        adManager.showRewardedAd(
-                                            activity = act,
-                                            onRewarded = { coins ->
+                                        adManager.showRewardedAdLoop(
+                                            activity       = act,
+                                            count          = state.minAdsPerSession,
+                                            coinsPerAd     = state.adCoinsPerAd,
+                                            onEachRewarded = { coins ->
                                                 viewModel.onAdRewardEarned(coins)
                                             },
-                                            onFailed = { reason ->
+                                            onAllComplete  = {
+                                                viewModel.showMessage(
+                                                    "🎉 +${state.adCoinsPerAd * state.minAdsPerSession} coins earned!"
+                                                )
+                                            },
+                                            onFailed       = { reason ->
                                                 viewModel.showMessage(reason)
                                             }
                                         )

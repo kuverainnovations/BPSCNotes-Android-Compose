@@ -30,7 +30,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.http.*
-import retrofit2.http.Path
 import javax.inject.Inject
 
 // ════════════════════════════════════════════════════════════
@@ -53,6 +52,8 @@ data class NotificationsResponseData(
     @SerializedName("unread_count") val unreadCount: Int = 0
 )
 
+data class MarkReadRequest(val ids: List<String> = emptyList())
+
 interface NotificationsApiService {
     @GET("notifications")
     suspend fun getNotifications(
@@ -60,13 +61,11 @@ interface NotificationsApiService {
         @Query("limit") limit: Int = 30
     ): ApiResponse<NotificationsResponseData>
 
-    // FIX: Backend uses POST /notifications/mark-read with body {ids:[...]}
-    // not POST /notifications/{id}/read
     @POST("notifications/mark-read")
-    suspend fun markRead(@Body body: Map<String, List<String>>): ApiResponse<Any>
+    suspend fun markRead(@Body body: MarkReadRequest): ApiResponse<Any>
 
     @POST("notifications/mark-read")
-    suspend fun markAllRead(@Body body: Map<String, List<String>> = emptyMap()): ApiResponse<Any>
+    suspend fun markAllRead(@Body body: MarkReadRequest = MarkReadRequest()): ApiResponse<Any>
 }
 
 data class NotificationsUiState(
@@ -105,27 +104,44 @@ class NotificationsViewModel @Inject constructor(
     }
 
     fun markRead(id: String) {
+        // Optimistic update — mark as read in UI immediately
+        _state.update { s ->
+            s.copy(
+                notifications = s.notifications.map { if (it.id == id) it.copy(isRead = true) else it },
+                unreadCount = (s.unreadCount - 1).coerceAtLeast(0)
+            )
+        }
+        // Then sync with server
         viewModelScope.launch {
-            runCatching {
-                api.markRead(
-                    mapOf("ids" to listOf(id))
-                )
-            }
-            _state.update { s ->
-                s.copy(
-                    notifications = s.notifications.map { if (it.id == id) it.copy(isRead = true) else it },
-                    unreadCount = (s.unreadCount - 1).coerceAtLeast(0)
-                )
+            try {
+                api.markRead(MarkReadRequest(ids = listOf(id)))
+            } catch (e: Exception) {
+                android.util.Log.e("NotifVM", "markRead failed: ${e.message}", e)
+                // Revert optimistic update on failure
+                _state.update { s ->
+                    s.copy(
+                        notifications = s.notifications.map { if (it.id == id) it.copy(isRead = false) else it },
+                        unreadCount = s.unreadCount + 1
+                    )
+                }
             }
         }
     }
 
-    fun markAllRead(str: AppStrings) {
+    fun markAllRead() {
+        // Optimistic update
+        _state.update { s ->
+            s.copy(
+                notifications = s.notifications.map { it.copy(isRead = true) },
+                unreadCount   = 0,
+                toastMessage  = "All notifications marked as read ✓"
+            )
+        }
         viewModelScope.launch {
-            runCatching { api.markAllRead() }
-            _state.update { s ->
-                s.copy(notifications = s.notifications.map { it.copy(isRead = true) },
-                    unreadCount = 0, toastMessage = str.notifAllRead)
+            try {
+                api.markAllRead(MarkReadRequest())
+            } catch (e: Exception) {
+                android.util.Log.e("NotifVM", "markAllRead failed: ${e.message}", e)
             }
         }
     }
@@ -174,7 +190,7 @@ fun NotificationSettingsScreen(
                         }
                     }
                     if (state.unreadCount > 0)
-                        TextButton(onClick = { viewModel.markAllRead(str) }) {
+                        TextButton(onClick = viewModel::markAllRead) {
                             Text(str.notifMarkRead, color = Color.White.copy(0.85f),
                                 style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }
@@ -225,7 +241,7 @@ fun NotificationSettingsScreen(
 
 @Composable
 private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) {
-    val (icon, iconBg, iconTint) = notifStyle(n.type)
+    val (icon, iconBg, iconTint) = notifStyle(n.type,str)
     Row(modifier = Modifier.fillMaxWidth()
         .background(if (!n.isRead) BpscColors.Primary.copy(0.03f) else Color.White)
         .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -249,7 +265,7 @@ private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) 
     }
 }
 
-private fun notifStyle(type: String): Triple<ImageVector, Color, Color> = when (type) {
+private fun notifStyle(type: String, str: AppStrings): Triple<ImageVector, Color, Color> = when (type) {
     "daily_target" -> Triple(Icons.Rounded.CheckCircle,        Color(0xFFE8F5E9), Color(0xFF2E7D32))
     "quiz"         -> Triple(Icons.Rounded.Quiz,               Color(0xFFE3F2FD), Color(0xFF1565C0))
     "job"          -> Triple(Icons.Rounded.Work,               Color(0xFFF3E5F5), Color(0xFF7B1FA2))

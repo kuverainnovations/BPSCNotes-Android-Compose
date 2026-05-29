@@ -849,6 +849,12 @@ data class CoinTransactionsResponseData(
     val transactions: List<CoinTransactionDto> = emptyList()
 )
 
+data class AdRewardRequest(val source: String = "wallet")
+data class AdConfigDto(
+    @com.google.gson.annotations.SerializedName("coins_per_ad") val coinsPerAd: Int = 10,
+    @com.google.gson.annotations.SerializedName("min_ads_per_session") val minAdsPerSession: Int = 2
+)
+
 interface CoinsApiService {
     @GET("coins/balance")
     suspend fun getBalance(): ApiResponse<CoinsBalanceResponseData>
@@ -866,6 +872,14 @@ interface CoinsApiService {
 
     @POST("coins/tasks/{id}/claim")
     suspend fun claimTask(@Path("id") id: String): ApiResponse<CoinBalanceDto>
+
+    /** POST /coins/ad-reward — credit coins after watching a rewarded ad */
+    @POST("coins/ad-reward")
+    suspend fun recordAdReward(@Body body: AdRewardRequest): ApiResponse<CoinBalanceDto>
+
+    /** GET /coins/ad-config — fetch admin-configured coins per ad */
+    @GET("coins/ad-config")
+    suspend fun getAdConfig(): ApiResponse<AdConfigDto>
 
     // ══════════════════════════════════════════════════════════════
 // FLASHCARD DTOs — GET /flashcards

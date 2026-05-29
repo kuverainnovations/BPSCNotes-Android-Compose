@@ -58,48 +58,48 @@ fun BannerAdView(adUnitId: String) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 fun WatchAdForCoinsCard(
-    adManager:       AdManager,
-    onWatchAd:       () -> Unit,       // caller triggers adManager.showRewardedAd()
-    coinsPerAd:      Int  = AdManager.REWARDED_COINS,
-    adsRemainingToday: Int,
-    isAdReady:       Boolean,
-    modifier:        Modifier = Modifier
+    adManager:         AdManager,
+    onWatchAd:         () -> Unit,
+    coinsPerAd:        Int     = 10,
+    minAdsPerSession:  Int     = 2,
+    adsRemainingToday: Int     = -1,   // -1 = unlimited (ignored)
+    isAdReady:         Boolean,
+    modifier:          Modifier = Modifier,
+    watchedCount:      Int     = 0,    // passed from parent so it survives navigation
 ) {
-    val isAvailable = isAdReady && adsRemainingToday > 0
+    val totalEarnable = coinsPerAd * watchedCount
 
     Card(
         modifier  = modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(4.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF7B1FA2), Color(0xFF1565C0))
-                    )
-                )
+                .background(Brush.linearGradient(listOf(Color(0xFF7B1FA2), Color(0xFF1565C0))))
                 .padding(20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                // Title row
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment     = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             "📺 Watch & Earn",
                             style      = MaterialTheme.typography.titleLarge,
                             color      = Color.White,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
                         )
                         Text(
-                            "Watch a short ad to earn coins",
+                            "No limit — watch as many as you want!",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.75f)
+                            color = Color.White.copy(0.75f),
                         )
                     }
                     Box(
@@ -107,7 +107,7 @@ fun WatchAdForCoinsCard(
                             .size(60.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White.copy(0.15f)),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("🪙", fontSize = 22.sp)
@@ -115,71 +115,76 @@ fun WatchAdForCoinsCard(
                                 "+$coinsPerAd",
                                 style      = MaterialTheme.typography.titleMedium,
                                 color      = Color(0xFFFFD700),
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.ExtraBold,
                             )
                         }
                     }
                 }
 
-                // Remaining today progress
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment     = Alignment.CenterVertically
-                ) {
-                    repeat(3) { i ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(
-                                    if (i < adsRemainingToday) Color.White
-                                    else Color.White.copy(0.25f)
-                                )
+                // Session earnings strip — shows after first watch
+                if (watchedCount > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(0.12f))
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "✅ $watchedCount ad${if (watchedCount == 1) "" else "s"} watched today",
+                            style      = MaterialTheme.typography.labelSmall,
+                            color      = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            "+$totalEarnable coins earned",
+                            style      = MaterialTheme.typography.labelSmall,
+                            color      = Color(0xFFFFD700),
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     }
-                    Text(
-                        "$adsRemainingToday/3 left today",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(0.8f),
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
 
+                // CTA button
                 Button(
-                    onClick  = onWatchAd,
-                    enabled  = isAvailable,
+                    onClick  = { onWatchAd() },
+                    enabled  = isAdReady,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        disabledContainerColor = Color.White.copy(0.3f)
-                    )
+                        containerColor         = Color.White,
+                        disabledContainerColor = Color.White.copy(0.3f),
+                    ),
                 ) {
-                    if (!isAdReady && adsRemainingToday > 0) {
+                    if (!isAdReady) {
                         CircularProgressIndicator(
                             modifier    = Modifier.size(18.dp),
                             color       = Color(0xFF7B1FA2),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text("Loading ad…", color = Color(0xFF7B1FA2), fontWeight = FontWeight.Bold)
-                    } else if (adsRemainingToday == 0) {
-                        Text("Come back tomorrow 🌙", color = Color(0xFF7B1FA2).copy(0.5f), fontWeight = FontWeight.Bold)
                     } else {
-                        Icon(Icons.Rounded.PlayCircle, null,
-                            tint = Color(0xFF7B1FA2), modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Rounded.PlayCircle, null,
+                            tint     = Color(0xFF7B1FA2),
+                            modifier = Modifier.size(20.dp),
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("Watch Ad — Earn $coinsPerAd Coins",
-                            color = Color(0xFF7B1FA2), fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "Watch $minAdsPerSession Ads — Earn ${coinsPerAd * minAdsPerSession} Coins",
+                            color      = Color(0xFF7B1FA2),
+                            fontWeight = FontWeight.ExtraBold,
+                        )
                     }
                 }
 
                 Text(
-                    "📌 Short 30-second ad. No coins deducted. Ever.",
+                    "📌 $minAdsPerSession ads per session · $coinsPerAd coins each · Watch unlimited times.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(0.6f)
+                    color = Color.White.copy(0.6f),
                 )
             }
         }
@@ -304,7 +309,7 @@ fun PostSessionAdPrompt(
     var dismissed by remember { mutableStateOf(false) }
     if (dismissed) return
     // Only show if session was meaningful (>= 5 min) and ad is available
-    if (studyMinutes < 5 || adsRemainingToday == 0) return
+    if (studyMinutes < 5) return  // show regardless of ad count — no limit
 
     Card(
         modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),

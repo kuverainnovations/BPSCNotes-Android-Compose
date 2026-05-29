@@ -51,7 +51,7 @@ class AdManager @Inject constructor(
 
         // ── Frequency limits ───────────────────────────────────
         private const val INTERSTITIAL_COOLDOWN_MS = 20 * 60 * 1000L  // 20 minutes
-        private const val MAX_REWARDED_PER_DAY     = 3
+        // No daily cap on rewarded ads — every view earns revenue for client
         const val REWARDED_COINS                   = 10  // coins per ad watch
     }
 
@@ -143,15 +143,7 @@ class AdManager @Inject constructor(
      * completes the ad. Calls [onFailed] if ad isn't available or daily cap hit.
      */
     fun showRewardedAd(activity: Activity, onRewarded: (coins: Int) -> Unit, onFailed: (reason: String) -> Unit) {
-        // Check daily cap
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-        if (lastRewardedDate != today) { rewardedWatchedToday = 0; lastRewardedDate = today }
-
-        if (rewardedWatchedToday >= MAX_REWARDED_PER_DAY) {
-            onFailed("Daily limit reached. Come back tomorrow for more coins! 🌙")
-            return
-        }
-
+        // No daily cap — every ad watched earns revenue, let users watch freely
         val ad = rewardedAd
         if (ad == null) {
             loadRewardedAd()
@@ -159,27 +151,99 @@ class AdManager @Inject constructor(
             return
         }
 
-        var didEarnReward = false
         ad.show(activity) { reward ->
-            // This fires only if the user completes the ad
-            didEarnReward = true
-            rewardedWatchedToday++
+            rewardedWatchedToday++  // track for analytics only
             onRewarded(REWARDED_COINS)
-            Log.d(TAG, "💰 Reward earned: ${reward.amount} ${reward.type} → +$REWARDED_COINS coins")
+            Log.d(TAG, "💰 Reward earned: ${reward.amount} ${reward.type} → +$REWARDED_COINS coins (total today: $rewardedWatchedToday)")
         }
     }
 
-    fun canWatchRewardedAd(): Boolean {
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-        if (lastRewardedDate != today) { rewardedWatchedToday = 0; lastRewardedDate = today }
-        return rewardedWatchedToday < MAX_REWARDED_PER_DAY
+    /**
+     * Shows [count] rewarded ads back-to-back (default 2).
+     * Each completed ad calls [onEachRewarded] with its coins.
+     * [onAllComplete] fires after all ads finish or on first failure.
+     */
+    /**
+     * Shows [count] rewarded ads back-to-back (default 2).
+     * Waits for each ad to be FULLY DISMISSED before showing the next.
+     * Each completed ad calls [onEachRewarded] with its coins.
+     */
+    fun showRewardedAdLoop(
+        activity:       Activity,
+        count:          Int = 2,
+        coinsPerAd:     Int = REWARDED_COINS,  // override with admin value
+        onEachRewarded: (coins: Int) -> Unit,
+        onAllComplete:  () -> Unit,
+        onFailed:       (reason: String) -> Unit,
+    ) {
+        var shownCount   = 0
+        var pendingCoins = 0  // earned but wait until dismiss to credit
+
+        fun showNext() {
+            if (shownCount >= count) { onAllComplete(); return }
+            val ad = rewardedAd
+            if (ad == null) {
+                // Ad not ready — wait up to 5s then retry
+                loadRewardedAd()
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val retry = rewardedAd
+                    if (retry != null) showNext()
+                    else onFailed("Ad not ready. Please try again in a few seconds.")
+                }, 5_000)
+                return
+            }
+
+            val adNumber = shownCount + 1
+            Log.d(TAG, "📺 Showing loop ad $adNumber/$count")
+
+            // Override the callback for this specific ad in the loop
+            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() {
+                    Log.d(TAG, "✅ Ad $adNumber dismissed — crediting $pendingCoins coins")
+                    rewardedAd = null
+                    _rewardedReady.value = false
+                    // Credit coins only after the ad is fully dismissed
+                    if (pendingCoins > 0) {
+                        onEachRewarded(pendingCoins)
+                        pendingCoins = 0
+                    }
+                    // Load next ad then chain it
+                    if (shownCount < count) {
+                        loadRewardedAd()
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            showNext()
+                        }, 800)  // small delay between ads
+                    } else {
+                        onAllComplete()
+                        loadRewardedAd()  // pre-load for next session
+                    }
+                }
+                override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                    Log.e(TAG, "Ad $adNumber failed to show: ${error.message}")
+                    rewardedAd = null
+                    _rewardedReady.value = false
+                    loadRewardedAd()
+                    onFailed("Ad failed. Please try again.")
+                }
+            }
+
+            ad.show(activity) { reward ->
+                // Reward callback — store coins, credit after dismiss
+                rewardedWatchedToday++
+                shownCount++
+                pendingCoins = coinsPerAd
+                Log.d(TAG, "💰 Reward earned for ad $adNumber: +$coinsPerAd coins (crediting after dismiss)")
+            }
+        }
+        showNext()
     }
 
-    fun rewardedAdsRemainingToday(): Int {
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-        if (lastRewardedDate != today) return MAX_REWARDED_PER_DAY
-        return maxOf(0, MAX_REWARDED_PER_DAY - rewardedWatchedToday)
-    }
+    fun canWatchRewardedAd(): Boolean = true  // no daily limit
+
+    /** Returns how many ads watched today (for analytics). -1 means unlimited. */
+    fun rewardedAdsRemainingToday(): Int = -1  // unlimited — no cap
+
+    fun rewardedAdsWatchedToday(): Int = rewardedWatchedToday
 
     // ════════════════════════════════════════════════════════════
     // INTERSTITIAL ADS — shown after quiz completion (1 per 20min)

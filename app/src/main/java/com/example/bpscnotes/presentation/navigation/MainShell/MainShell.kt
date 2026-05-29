@@ -34,6 +34,7 @@ import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.StudyRoomPipOverlay
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.permissions.NotificationPermissionEffect
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 
 @Composable
@@ -41,7 +42,7 @@ fun MainShell(
     rootNavController: NavHostController,
     sessionViewModel:  StudySessionViewModel,
     tiersViewModel:    TierRoomsViewModel,
-              adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
+    adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
     val bottomNavController = rememberNavController()
 
     // Listen for tab switch requests from other screens (e.g. CoinWallet → "go to RoomsHub")
@@ -63,6 +64,11 @@ fun MainShell(
         }
     }
 
+    // ── Runtime permissions ─────────────────────────────────
+    // Ask for notification permission once after the user lands on the home tabs.
+    // The effect handles Android version checks, rationale dialog, and permanent denial.
+    NotificationPermissionEffect()
+
     val str   = LocalStrings.current
     val items = listOf(
         BottomNavItem(route = Screen.Dashboard.route,  label = str.navDashboard,   icon = Icons.Rounded.Home,                       badgeCount = 0),
@@ -81,7 +87,7 @@ fun MainShell(
     val isOnStudyFocus = currentRoute?.destination?.route == Screen.StudyFocus.route
 
     val sessionIsActive = sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.ACTIVE ||
-                          sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.AFK
+            sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.AFK
     val showPip = sessionIsActive && !isOnStudyFocus
 
     Scaffold(

@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class CoinWalletUiState(
+    val adCoinsPerAd: Int                       = 10,  // fetched from admin config
+    val minAdsPerSession: Int                   = 2,   // fetched from admin config
+    val adsWatchedToday: Int                    = 0,   // persists across navigation
     val balance: Int                            = 0,
     val totalEarned: Int                        = 0,
     val totalSpent: Int                         = 0,
@@ -77,8 +80,16 @@ class CoinWalletViewModel @Inject constructor(
         }
     }
 
-    /** Called when rewarded ad completes — credits coins via API */
+    /** Called when each rewarded ad completes — credits coins via API */
     fun onAdRewardEarned(coins: Int) {
+        // Optimistic UI update immediately
+        _uiState.update { s ->
+            s.copy(
+                balance         = s.balance + coins,
+                adsWatchedToday = s.adsWatchedToday + 1,
+                successMessage  = "🎉 +$coins coins earned!"
+            )
+        }
         viewModelScope.launch {
             try {
                 // Award coins via the existing earn task / manual credit endpoint
