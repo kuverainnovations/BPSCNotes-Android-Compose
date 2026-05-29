@@ -55,22 +55,26 @@ class CoinWalletViewModel @Inject constructor(
                 val tasksJob        = async { try { coinsApi.getEarnTasks().data?.tasks } catch (e: Exception) { emptyList() } }
                 val userJob         = async { try { authApi.getMe().data?.user } catch (_: Exception) { null } }
                 val transactionsJob = async { try { coinsApi.getTransactions().data?.transactions } catch (e: Exception) { emptyList() } }
+                val adConfigJob     = async { try { coinsApi.getAdConfig().data } catch (_: Exception) { null } }
 
                 val balanceData  = balanceJob.await()
                 val tasks        = tasksJob.await() ?: emptyList()
                 val transactions = transactionsJob.await() ?: emptyList()
+                val adConfig     = adConfigJob.await()
 
                 _uiState.update {
                     it.copy(
-                        balance        = balanceData?.balance ?: 0,
-                        totalEarned    = balanceData?.totalEarned ?: 0,
-                        totalSpent     = balanceData?.totalSpent ?: 0,
-                        checkInStreak  = balanceData?.checkInStreak ?: 0,
-                        checkedInToday = balanceData?.checkedInToday ?: false,
-                        checkInDays    = balanceData?.checkInDays ?: emptyList(),
-                        earnTasks      = tasks,
-                        transactions   = transactions,
-                        isLoading      = false
+                        balance          = balanceData?.balance ?: 0,
+                        totalEarned      = balanceData?.totalEarned ?: 0,
+                        totalSpent       = balanceData?.totalSpent ?: 0,
+                        checkInStreak    = balanceData?.checkInStreak ?: 0,
+                        checkedInToday   = balanceData?.checkedInToday ?: false,
+                        checkInDays      = balanceData?.checkInDays ?: emptyList(),
+                        earnTasks        = tasks,
+                        transactions     = transactions,
+                        adCoinsPerAd     = adConfig?.coinsPerAd ?: it.adCoinsPerAd,
+                        minAdsPerSession = adConfig?.minAdsPerSession ?: it.minAdsPerSession,
+                        isLoading        = false
                     )
                 }
             } catch (e: Exception) {
@@ -92,18 +96,18 @@ class CoinWalletViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                // Award coins via the existing earn task / manual credit endpoint
-                //coinsApi.recordAdReward(coins)   // POST /coins/ad-reward
-                // Refresh balance
-                load()
-                _uiState.update { it.copy(successMessage = "🎉 +$coins coins earned from watching ad!") }
+                val result = coinsApi.recordAdReward(
+                    com.example.bpscnotes.data.remote.api.AdRewardRequest(source = "wallet")
+                )
+                // Sync actual server balance
+                result.data?.let { data ->
+                    _uiState.update { s ->
+                        s.copy(balance = data.balance ?: s.balance)
+                    }
+                }
             } catch (e: Exception) {
-                // Fallback: update balance optimistically if API doesn't exist yet
-                _uiState.update { s -> s.copy(
-                    balance         = s.balance + coins,
-                    successMessage  = "🎉 +$coins coins earned!"
-                )}
-                android.util.Log.w("CoinWalletVM", "Ad reward API error: ${e.message}")
+                // Keep optimistic update — server will reconcile on next load()
+                android.util.Log.w("CoinWalletVM", "Ad reward API not yet available: ${e.message}")
             }
         }
     }
