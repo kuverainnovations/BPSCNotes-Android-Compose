@@ -39,7 +39,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 //   1. Screen opens → GET /courses/:courseId/lessons/:lessonId
 //      (loads notesUrl / videoUrl + current is_completed)
 //   2. User reads PDF / watches video
-//   3. "Mark as Complete" button → POST .../complete
+//   3. str.lessonMarkComplete button → POST .../complete
 //      Backend updates lesson_progress + user_enrollments
 //   4. CourseDetailScreen auto-refreshes via viewModel.load()
 // ─────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ fun LessonViewerScreen(
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment =  Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text("Completed", style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(str.coursesCompleted, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -148,6 +148,7 @@ private fun LessonBottomBar(
     isMarking: Boolean,
     onMarkComplete: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,7 +163,7 @@ private fun LessonBottomBar(
             ) {
                 Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Lesson Completed", style = MaterialTheme.typography.titleMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                Text(str.lessonCompleted, style = MaterialTheme.typography.titleMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
             }
         } else {
             Button(
@@ -175,11 +176,11 @@ private fun LessonBottomBar(
                 if (isMarking) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Saving…", style = MaterialTheme.typography.titleMedium)
+                    Text(str.lessonSaving, style = MaterialTheme.typography.titleMedium)
                 } else {
                     Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Mark as Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(str.lessonMarkComplete, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -195,7 +196,7 @@ private fun LessonBottomBar(
 private fun PdfViewer(notesUrl: String?) {
     val str = LocalStrings.current
     if (notesUrl.isNullOrBlank()) {
-        NoContentState("No PDF attached to this lesson")
+        NoContentState(str.lessonNoPdf)
         return
     }
 
@@ -228,7 +229,7 @@ private fun PdfViewer(notesUrl: String?) {
         ) {
             Text("📄", fontSize = 48.sp)
             Spacer(Modifier.height(12.dp))
-            Text("Couldn't load PDF", style = MaterialTheme.typography.titleLarge,
+            Text(str.lessonCantLoadPdf, style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
             Text("The viewer timed out or the link is unavailable.",
                 style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
@@ -247,7 +248,7 @@ private fun PdfViewer(notesUrl: String?) {
                     context.startActivity(intent)
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)
-            ) { Text("Open in Browser") }
+            ) { Text(str.lessonOpenBrowser) }
         }
         return
     }
@@ -296,7 +297,7 @@ private fun PdfViewer(notesUrl: String?) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Loading PDF…", style = MaterialTheme.typography.bodyMedium,
+                    Text(str.lessonLoadingPdf, style = MaterialTheme.typography.bodyMedium,
                         color = BpscColors.TextSecondary)
                 }
             }
@@ -311,8 +312,9 @@ private fun PdfViewer(notesUrl: String?) {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun VideoPlayer(videoUrl: String?) {
+    val str = LocalStrings.current
     if (videoUrl.isNullOrBlank()) {
-        NoContentState("No video attached to this lesson")
+        NoContentState(str.lessonNoVideo)
         return
     }
 
@@ -384,6 +386,7 @@ private fun VideoPlayer(videoUrl: String?) {
 
 @Composable
 private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(32.dp)) {
             Box(
@@ -393,7 +396,7 @@ private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) 
             ) {
                 Text("🔴", fontSize = 36.sp)
             }
-            Text("Live Class", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+            Text(str.lessonLiveClass, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
             if (!lesson.video_url.isNullOrBlank()) {
                 Button(
@@ -403,10 +406,10 @@ private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) 
                 ) {
                     Icon(Icons.Rounded.PlayArrow, null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Join Live Class", fontWeight = FontWeight.Bold)
+                    Text(str.lessonJoinLive, fontWeight = FontWeight.Bold)
                 }
             } else {
-                Text("Live class link will be available when the session starts.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f), textAlign = TextAlign.Center)
+                Text(str.lessonLiveNotReady, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f), textAlign = TextAlign.Center)
             }
         }
     }
@@ -421,12 +424,13 @@ private fun QuizRedirectView(
     lesson: com.example.bpscnotes.data.remote.api.Lesson,
     onQuizTap: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(32.dp)) {
             Box(Modifier.size(80.dp).clip(CircleShape).background(BpscColors.Primary.copy(0.15f)), Alignment.Center) {
                 Text("❓", fontSize = 36.sp)
             }
-            Text("Chapter Quiz", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+            Text(str.lessonChapterQuiz, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
             Text("${lesson.duration_mins} min · Test your knowledge", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
             Button(
@@ -436,7 +440,7 @@ private fun QuizRedirectView(
             ) {
                 Icon(Icons.Rounded.Quiz, null)
                 Spacer(Modifier.width(6.dp))
-                Text("Start Quiz", fontWeight = FontWeight.Bold)
+                Text(str.quizStart, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -448,10 +452,11 @@ private fun QuizRedirectView(
 
 @Composable
 private fun LoadingState() {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator(color = BpscColors.Primary)
-            Text("Loading lesson…", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
+            Text(str.lessonLoading, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
         }
     }
 }

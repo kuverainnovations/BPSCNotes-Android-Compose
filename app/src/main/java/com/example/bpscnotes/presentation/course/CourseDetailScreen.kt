@@ -139,7 +139,7 @@ fun CourseDetailScreen(
 
                 item {
                     SectionHeader(
-                        title    = "📋 Course Content",
+                        title    = str.coursesContent,
                         subtitle = "${chapters.size} chapters · $totalLessons lessons",
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
                     )
@@ -148,7 +148,7 @@ fun CourseDetailScreen(
                 if (chapters.isEmpty()) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
-                            Text("No curriculum available yet.", color = BpscColors.TextSecondary)
+                            Text(str.coursesNoCurriculum, color = BpscColors.TextSecondary)
                         }
                     }
                 } else {
@@ -230,6 +230,7 @@ private fun RatingBottomSheet(
     onDismiss:    () -> Unit,
     onSubmit:     (Int, String) -> Unit
 ) {
+    val str = LocalStrings.current
     var selectedStars by remember { mutableIntStateOf(0) }
     var comment       by remember { mutableStateOf("") }
     val haptic        = LocalHapticFeedback.current
@@ -254,9 +255,9 @@ private fun RatingBottomSheet(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Rate this Course", style = MaterialTheme.typography.headlineSmall,
+                Text(str.coursesRate, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
-                Text("Your feedback helps thousands of students",
+                Text(str.coursesRateSubtitle,
                     style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
             }
 
@@ -303,13 +304,13 @@ private fun RatingBottomSheet(
 
             // Comment
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Write a Review  (Optional)", style = MaterialTheme.typography.labelLarge,
+                Text("${str.coursesRate} (Optional)", style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold, color = BpscColors.TextPrimary)
                 OutlinedTextField(
                     value         = comment,
                     onValueChange = { if (it.length <= 500) comment = it },
                     placeholder   = {
-                        Text("Share what you liked or what could be improved…",
+                        Text(str.coursesRateSubtitle,
                             color = BpscColors.TextHint, style = MaterialTheme.typography.bodyMedium)
                     },
                     modifier  = Modifier.fillMaxWidth().heightIn(min = 110.dp),
@@ -353,7 +354,7 @@ private fun RatingBottomSheet(
                 } else {
                     Icon(Icons.Rounded.RateReview, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Submit Review", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(str.coursesSubmitReview, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -366,6 +367,7 @@ private fun RatingBottomSheet(
 
 @Composable
 private fun RateCourseBanner(accent: Color, onTap: () -> Unit) {
+    val str = LocalStrings.current
     val pulse = rememberInfiniteTransition(label = "pulse")
     val glow by pulse.animateFloat(
         0.08f, 0.18f,
@@ -390,16 +392,16 @@ private fun RateCourseBanner(accent: Color, onTap: () -> Unit) {
                         Text("🎓", fontSize = 26.sp)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("You've completed this course!", style = MaterialTheme.typography.titleMedium,
+                        Text(str.coursesCompleted, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold, color = Color.White)
-                        Text("Help others by sharing your experience",
+                        Text(str.coursesBeFirst,
                             style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f), lineHeight = 18.sp)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     repeat(5) { Icon(Icons.Rounded.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(22.dp)) }
                     Spacer(Modifier.width(6.dp))
-                    Text("Rate now", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.85f))
+                    Text(str.coursesRate, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.85f))
                 }
                 Button(
                     onClick  = onTap,
@@ -409,7 +411,7 @@ private fun RateCourseBanner(accent: Color, onTap: () -> Unit) {
                 ) {
                     Icon(Icons.Rounded.RateReview, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Write a Review", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
+                    Text(str.coursesRate, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
@@ -422,6 +424,7 @@ private fun RateCourseBanner(accent: Color, onTap: () -> Unit) {
 
 @Composable
 private fun ReviewSubmittedBanner() {
+    val str = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -434,7 +437,7 @@ private fun ReviewSubmittedBanner() {
     ) {
         Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(20.dp))
         Text(
-            "Thank you! Your review has been submitted.",
+            str.coursesThankYou,
             style = MaterialTheme.typography.bodyMedium, color = Color(0xFF1B5E20), fontWeight = FontWeight.SemiBold
         )
     }
@@ -442,7 +445,7 @@ private fun ReviewSubmittedBanner() {
 
 // ─────────────────────────────────────────────────────────────
 // REVIEWS SECTION — 100 % API-driven
-// FIX: null and emptyList both show "No reviews yet" — no infinite spinner
+// FIX: null and emptyList both show str.coursesNoReviews — no infinite spinner
 // ─────────────────────────────────────────────────────────────
 
 private const val PAGE_SIZE = 10
@@ -455,6 +458,7 @@ private fun ReviewsSection(
     ratingDistribution: RatingDistribution?,
     accent:             Color
 ) {
+    val str = LocalStrings.current
     // FIX: treat null as empty — API returns null when no reviews exist, not as a loading indicator
     val reviewList = reviews ?: emptyList()
 
@@ -465,11 +469,11 @@ private fun ReviewsSection(
         // Header
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(
-                "⭐ Student Reviews",
+                str.coursesReviews,
                 style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold
             )
             if (reviewCount > 0) {
-                Text("$reviewCount reviews", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
             }
         }
 
@@ -493,9 +497,9 @@ private fun ReviewsSection(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("💬", fontSize = 36.sp)
-                    Text("No reviews yet", style = MaterialTheme.typography.titleMedium,
+                    Text(str.coursesNoReviews, style = MaterialTheme.typography.titleMedium,
                         color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                    Text("Be the first to share your experience!",
+                    Text(str.coursesBeFirst,
                         style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
                         textAlign = TextAlign.Center)
                 }
@@ -527,7 +531,7 @@ private fun ReviewsSection(
                 ) {
                     Icon(Icons.Rounded.ExpandMore, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Show $remaining more reviews",
+                    Text("${str.seeAll} ($remaining)",
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -536,7 +540,7 @@ private fun ReviewsSection(
                 TextButton(onClick = { visibleCount = PAGE_SIZE }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.ExpandLess, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Show less", style = MaterialTheme.typography.bodyMedium)
+                    Text(str.profileShowLess, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -551,6 +555,7 @@ private fun ReviewsSection(
 
 @Composable
 private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistribution: RatingDistribution?) {
+    val str = LocalStrings.current
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(2.dp)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), Arrangement.spacedBy(16.dp), Alignment.CenterVertically) {
             Column(Modifier.width(72.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -568,7 +573,7 @@ private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistributio
                         )
                     }
                 }
-                Text("$reviewCount ratings", style = MaterialTheme.typography.labelSmall,
+                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.labelSmall,
                     color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -603,6 +608,7 @@ private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistributio
 
 @Composable
 private fun ReviewCard(review: CourseReview) {
+    val str = LocalStrings.current
     val avatarColors = listOf(
         Color(0xFF9B59B6), Color(0xFF1565C0), Color(0xFF2ECC71),
         Color(0xFFE67E22), Color(0xFFE74C3C), Color(0xFF16A085), Color(0xFF2C3E50)
@@ -633,7 +639,7 @@ private fun ReviewCard(review: CourseReview) {
                                     Arrangement.spacedBy(2.dp), Alignment.CenterVertically
                                 ) {
                                     Icon(Icons.Rounded.Verified, null, tint = BpscColors.Primary, modifier = Modifier.size(10.dp))
-                                    Text("Verified", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                    Text(str.coursesVerified, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -666,6 +672,7 @@ private fun HeroHeader(
     course: CourseDto, accent: Color, totalLessons: Int,
     completedLessons: Int, animProg: Float, isEnrolled: Boolean, onBack: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(
         Modifier.fillMaxWidth().background(
             Brush.linearGradient(
@@ -705,7 +712,7 @@ private fun HeroHeader(
                                     "I'm studying \"$courseTitle\" on BPSCNotes app! Join me → https://bpscnotes.in/courses/${course.id}"
                                 )
                             }
-                            shareContext.startActivity(android.content.Intent.createChooser(shareIntent, "Share Course"))
+                            shareContext.startActivity(android.content.Intent.createChooser(shareIntent, str.caShare))
                         },
                     Alignment.Center
                 ) {
@@ -715,7 +722,7 @@ private fun HeroHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Badge(course.subject, accent, Color.White)
                 if (course.isPaid) Badge("PRO", BpscColors.CoinGold, Color(0xFFFFF8E1))
-                else Badge("FREE", BpscColors.Success, Color(0xFFE8FDF4))
+                else Badge(str.coursesFree, BpscColors.Success, Color(0xFFE8FDF4))
             }
             Text(course.title, style = MaterialTheme.typography.titleLarge, color = Color.White,
                 fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)

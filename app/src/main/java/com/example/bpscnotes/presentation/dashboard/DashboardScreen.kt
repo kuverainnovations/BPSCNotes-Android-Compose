@@ -253,7 +253,7 @@ fun DashboardScreen(
                         if (state.dailyTargets.size >= 10) {
                             Toast.makeText(
                                 LocalContext.current,
-                                "Max 10 targets allowed",
+                                str.targetMax,
                                 Toast.LENGTH_SHORT
                             ).show()
                             return@Box
@@ -274,6 +274,7 @@ fun DashboardScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun ErrorBanner(message: String, onRetry: () -> Unit) {
+    val str = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,7 +291,7 @@ private fun ErrorBanner(message: String, onRetry: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onRetry) {
-            Text("Retry", color = BpscColors.Primary, style = MaterialTheme.typography.labelSmall)
+            Text(str.retry, color = BpscColors.Primary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -466,6 +467,7 @@ private fun DailyQuizSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(
@@ -475,10 +477,10 @@ private fun DailyQuizSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
-            SectionHeader("Today's Quizzes")
+            SectionHeader(str.dashboardTodayQuizzes)
             TextButton(onClick = {
                 navController.navigate(Screen.QuizList.route)}) {
-                Text("See all", color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
+                Text(str.seeAll, color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
@@ -497,7 +499,7 @@ private fun DailyQuizSection(
             quizzes.isEmpty() -> {
                 EmptyState(
                     emoji    = "📝",
-                    message  = "No quizzes today. Check back later!",
+                    message  = str.dashboardNoQuizzes,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -511,7 +513,7 @@ private fun DailyQuizSection(
                                     if (quiz.totalQuestions == 0) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            "This quiz has no questions yet.",
+                                            str.dashboardQuizNoQuestions,
                                             android.widget.Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
@@ -535,7 +537,7 @@ private fun DailyQuizSection(
                                     )
                                     if (quiz.isAttempted) {
                                         Text(
-                                            "✓ Done",
+                                            str.dashboardDone,
                                             style    = MaterialTheme.typography.labelSmall,
                                             color    = BpscColors.Success,
                                             modifier = Modifier
@@ -575,13 +577,13 @@ private fun DashboardHeader(
     navController: NavHostController
 ) {
     // Computed values — all from API, never hardcoded
-    val str = LocalStrings.current
     val name         = user?.name ?: ""
     val coins        = user?.coins ?: 0
     val streak       = stats?.currentStreak ?: user?.streak ?: 0
     val rank         = user?.rank
     val studyMinutes = stats?.totalStudyMinutes ?: user?.totalStudyMinutes ?: 0
     val accuracy     = stats?.accuracy ?: user?.accuracy ?: 0.0
+    val str = LocalStrings.current
 
     val completed = targets.count { it.isCompleted }
     val total     = targets.size
@@ -714,7 +716,7 @@ private fun DashboardHeader(
                         .padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Rounded.Whatshot, null, tint = BpscColors.CoinGold, modifier = Modifier.size(14.dp))
                         Text(
-                            if (streak > 0) "$streak day streak — keep it up!" else "Start your streak today!",
+                            if (streak > 0) "${str.dashboardStreak}: $streak " + str.profileDayStreak else "${str.dashboardStreak}!",
                             style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -769,9 +771,9 @@ private fun DashboardHeader(
                 .padding(horizontal = 4.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 HeaderStat("📚", topicsText, "Topics")
                 HeaderStatDivider()
-                HeaderStat("🏆", rankText,  "My Rank")
+                HeaderStat("🏆", rankText,  "${str.profileRank}")
                 HeaderStatDivider()
-                HeaderStat("⏱️", hoursText,  "Study")
+                HeaderStat("⏱️", hoursText,  str.profileStudy)
                 HeaderStatDivider()
                 HeaderStat("✅", accText,   str.dashboardAccuracy)
             }
@@ -814,6 +816,7 @@ private fun TodayTargetCard(
     onCreateTarget: () -> Unit,
     onClick: () -> Unit
 ) {
+    val str = LocalStrings.current
     val completed  = targets.count { it.isCompleted }
     val total      = targets.size
     val progress   = if (total > 0) completed.toFloat() / total else 0f
@@ -846,9 +849,9 @@ private fun TodayTargetCard(
                         Icon(Icons.Rounded.TrackChanges, null, tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                     Column {
-                        Text("Today's Focus", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                        Text(str.dashboardTodayFocus, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
                         when {
-                            isLoading && targets.isEmpty() -> Text("Loading...", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                            isLoading && targets.isEmpty() -> Text(str.loading, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                             total == 0                     -> Text("No targets set", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                             else                           -> Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                         }
@@ -1088,13 +1091,14 @@ private fun RecommendedSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    val str = LocalStrings.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             SectionHeader(title = "Recommended for You")
             TextButton(onClick = { navController.navigate(Screen.MyLearning.route) }) {
-                Text("See all", color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
+                Text(str.seeAll, color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
         }
         when {

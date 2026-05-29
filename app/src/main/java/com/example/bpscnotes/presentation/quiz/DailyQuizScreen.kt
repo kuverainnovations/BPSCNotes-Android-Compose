@@ -78,7 +78,7 @@ fun DailyQuizScreen(
             Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Loading quiz...", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                 }
             }
         }
@@ -91,7 +91,7 @@ fun DailyQuizScreen(
                     Text("⚠️", fontSize = 40.sp)
                     Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                        Text("Back to Quizzes")
+                        Text(str.back)
                     }
                 }
             }
@@ -121,7 +121,6 @@ private fun QuizLobbyScreen(
     onRetryList: () -> Unit
 ) {
     val str = LocalStrings.current
-
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -155,7 +154,7 @@ private fun QuizLobbyScreen(
                             }
                             Column {
                                 Text(str.quizDaily, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Test your knowledge today", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.quizDaily, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
                         // Coins — REAL from user profile
@@ -216,7 +215,7 @@ private fun QuizLobbyScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚠️", fontSize = 40.sp)
                             Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
-                            Button(onClick = onRetryList, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text("Try Again") }
+                            Button(onClick = onRetryList, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.tryAgain) }
                         }
                     }
                 }
@@ -224,8 +223,8 @@ private fun QuizLobbyScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("📝", fontSize = 48.sp); Spacer(Modifier.height(8.dp))
-                            Text("No quizzes today", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                            Text("Check back later!", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                            Text(str.dashboardNoQuizzes, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                         }
                     }
                 }
@@ -235,14 +234,14 @@ private fun QuizLobbyScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         if (state.dailyQuizzes.isNotEmpty()) {
-                            item { SectionLabel("🆓 Daily Quizzes", "Resets every day at midnight") }
+                            item { SectionLabel("🆓 " + str.quizDaily + "s", str.quizDaily) }
                             items(state.dailyQuizzes, key = { it.id }) { quiz ->
                                 QuizPreviewCard(quiz = quiz, onStart = { onStartQuiz(quiz.id) })
                             }
                         }
                         if (state.mockTestQuizzes.isNotEmpty()) {
                             item { Spacer(Modifier.height(4.dp)) }
-                            item { SectionLabel("📝 Mock Tests", "Full length practice exams") }
+                            item { SectionLabel("📝 " + str.quizMock + "s", str.quizMock) }
                             items(state.mockTestQuizzes, key = { it.id }) { quiz ->
                                 QuizPreviewCard(quiz = quiz, onStart = { onStartQuiz(quiz.id) })
                             }
@@ -308,7 +307,7 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                 modifier  = Modifier.height(38.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp)
             ) {
-                Text(if (quiz.isAttempted) "Retry" else str.quizStart, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(if (quiz.isAttempted) str.retry else str.quizStart, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }
@@ -326,6 +325,7 @@ internal fun QuizSessionScreen(
     viewModel: QuizViewModel,
     onExit: () -> Unit
 ) {
+    val str = LocalStrings.current
     val state              by viewModel.uiState.collectAsState()
     val questions           = session.questions
     var currentIndex       by remember { mutableIntStateOf(0) }
@@ -444,7 +444,7 @@ internal fun QuizSessionScreen(
                                 Spacer(Modifier.height(12.dp))
                                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFF8E1)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text("💡", fontSize = 16.sp)
-                                    Text("Think carefully about each option before selecting.", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404))
+                                    Text(str.quizSelectCorrect, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404))
                                 }
                             }
                         }
@@ -513,7 +513,7 @@ internal fun QuizSessionScreen(
                             shape    = RoundedCornerShape(12.dp),
                             border   = BorderStroke(1.dp, BpscColors.Divider),
                             colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
-                        ) { Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Skip", style = MaterialTheme.typography.titleMedium) }
+                        ) { Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.quizSkip, style = MaterialTheme.typography.titleMedium) }
                     }
                 } else {
                     if (state.isSubmitting) {
@@ -534,7 +534,7 @@ internal fun QuizSessionScreen(
                             colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                         ) {
                             Text(
-                                if (currentIndex < questions.size - 1) "Next Question →" else "Submit & See Results 🏆",
+                                if (currentIndex < questions.size - 1) str.quizNext else str.quizSubmit,
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -557,10 +557,8 @@ internal fun QuizSummaryScreen(
     onExit: () -> Unit,
     navController: NavHostController
 ) {
-    val str = LocalStrings.current
-
     var showReviewAll by remember { mutableStateOf(false) }
-
+    val str = LocalStrings.current
     if (showReviewAll) {
         // Review screen using populated question data (correct answers + explanations now available)
         QuizAnswerReviewScreen(
@@ -579,7 +577,7 @@ internal fun QuizSummaryScreen(
 
             Text(if (accuracy >= 80) "🏆" else if (accuracy >= 50) "👍" else "💪", fontSize = 64.sp)
             Spacer(Modifier.height(8.dp))
-            Text(when { accuracy >= 80 -> "Excellent!"; accuracy >= 50 -> "Good Job!"; else -> "Keep Practicing!" }, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+            Text(when { accuracy >= 80 -> str.quizExcellent; accuracy >= 50 -> str.quizGoodJob; else -> str.quizKeepPracticing }, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(session.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f))
 
             Spacer(Modifier.height(24.dp))
@@ -647,7 +645,7 @@ internal fun QuizSummaryScreen(
                     colors   = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                 ) {
                     Icon(Icons.Rounded.Home, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                    Text("Back to Quizzes", style = MaterialTheme.typography.titleMedium)
+                    Text(str.back, style = MaterialTheme.typography.titleMedium)
                 }
             }
             Spacer(Modifier.height(32.dp))

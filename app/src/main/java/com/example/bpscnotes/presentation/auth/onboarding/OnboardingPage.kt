@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.auth.onboarding
 
+import com.example.bpscnotes.core.language.LocalStrings
 import com.kuvera.bpscnotes.R
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
@@ -64,38 +65,45 @@ data class OnboardingPage(
     val accentColor: Color,
 )
 
-val onboardingPages = listOf(
-    OnboardingPage(
-        title       = "Daily Targets",
-        subtitle    = "Stay on Track",
-        // FIX: User creates custom targets — not system-generated
-        description = "Create your own daily study targets with linked quizzes. You decide what to study, when to study, and we track your progress every step of the way.",
-        illustration = R.drawable.ic_onboard_target,
-        backgroundColor = Color(0xFFE8F0FD),
-        accentColor = BpscColors.Primary,
-    ),
-    OnboardingPage(
-        title       = "Active Recall",
-        subtitle    = "Retain More",
-        description = "Flashcards and spaced repetition built into every topic. Study less, remember more — proven science-backed techniques for BPSC.",
-        illustration = R.drawable.ic_onboard_recall,
-        backgroundColor = Color(0xFFE8FDF4),
-        accentColor = Color(0xFF1A9E75),
-    ),
-    OnboardingPage(
-        title       = "Group Study Rooms",
-        subtitle    = "Earn While You Learn",
-        description = "Join virtual study rooms with fellow BPSC aspirants. Compete on leaderboards, earn coins and redeem them for premium content.",
-        illustration = R.drawable.ic_onboard_group,
-        backgroundColor = Color(0xFFFFF4EC),
-        accentColor = BpscColors.Accent,
-    ),
-)
+@Composable
+fun rememberOnboardingPages(): List<OnboardingPage> {
+    val str = LocalStrings.current
+    return remember(str) {
+        listOf(
+            OnboardingPage(
+                title           = str.onboarding1Title,
+                subtitle        = str.onboarding1Subtitle,
+                description     = str.onboarding1Body,
+                illustration    = R.drawable.ic_onboard_target,
+                backgroundColor = Color(0xFFE8F0FD),
+                accentColor     = BpscColors.Primary,
+            ),
+            OnboardingPage(
+                title           = str.onboarding2Title,
+                subtitle        = str.onboarding2Subtitle,
+                description     = str.onboarding2Body,
+                illustration    = R.drawable.ic_onboard_recall,
+                backgroundColor = Color(0xFFE8FDF4),
+                accentColor     = Color(0xFF1A9E75),
+            ),
+            OnboardingPage(
+                title           = str.onboarding3Title,
+                subtitle        = str.onboarding3Subtitle,
+                description     = str.onboarding3Body,
+                illustration    = R.drawable.ic_onboard_group,
+                backgroundColor = Color(0xFFFFF4EC),
+                accentColor     = BpscColors.Accent,
+            ),
+        )
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(navController: NavHostController) {
-    val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
+    val str   = LocalStrings.current
+    val pages = rememberOnboardingPages()
+    val pagerState = rememberPagerState(pageCount = { pages.size })
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -104,11 +112,11 @@ fun OnboardingScreen(navController: NavHostController) {
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            OnboardingPage(page = onboardingPages[page])
+            OnboardingPage(page = pages[page])
         }
 
         // Skip button
-        if (pagerState.currentPage < onboardingPages.size - 1) {
+        if (pagerState.currentPage < pages.size - 1) {
             TextButton(
                 onClick = {
                     TokenStore(context).setOnboarded()
@@ -120,7 +128,7 @@ fun OnboardingScreen(navController: NavHostController) {
                     .align(Alignment.TopEnd)
                     .padding(top = 52.dp, end = 16.dp)
             ) {
-                Text("Skip", color = BpscColors.TextSecondary)
+                Text(str.skip, color = BpscColors.TextSecondary)
             }
         }
 
@@ -133,7 +141,7 @@ fun OnboardingScreen(navController: NavHostController) {
         ) {
             // Dots indicator
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(onboardingPages.size) { index ->
+                repeat(pages.size) { index ->
                     val isSelected = index == pagerState.currentPage
                     val width by animateDpAsState(
                         targetValue = if (isSelected) 24.dp else 8.dp,
@@ -146,7 +154,7 @@ fun OnboardingScreen(navController: NavHostController) {
                             .width(width)
                             .clip(CircleShape)
                             .background(
-                                if (isSelected) onboardingPages[pagerState.currentPage].accentColor
+                                if (isSelected) pages[pagerState.currentPage].accentColor
                                 else BpscColors.TextHint
                             )
                     )
@@ -155,7 +163,7 @@ fun OnboardingScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            val isLastPage = pagerState.currentPage == onboardingPages.size - 1
+            val isLastPage = pagerState.currentPage == pages.size - 1
 
             Button(
                 onClick = {
@@ -175,11 +183,11 @@ fun OnboardingScreen(navController: NavHostController) {
                     .height(54.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = onboardingPages[pagerState.currentPage].accentColor
+                    containerColor = pages[pagerState.currentPage].accentColor
                 )
             ) {
                 Text(
-                    text = if (isLastPage) "Get Started" else "Next",
+                    text = if (isLastPage) str.onboardingGetStarted else str.next,
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White
                 )

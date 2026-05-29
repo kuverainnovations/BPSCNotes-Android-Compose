@@ -195,7 +195,7 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
 
 val storeSubjects = listOf(
     "All",
-    "All Subjects",
+    "All",
     "Polity",
     "History",
     "Geography",
@@ -294,7 +294,7 @@ fun MyLearningScreen(
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            "Learn, grow and rank higher",
+                            str.splashTagline,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.6f)
                         )
@@ -309,7 +309,7 @@ fun MyLearningScreen(
                     ) {
                         Text("🪙", fontSize = 14.sp)
                         Text(
-                            "$userCoins coins",
+                            "$userCoins ${str.coins}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = BpscColors.CoinGold,
                             fontWeight = FontWeight.ExtraBold
@@ -328,7 +328,7 @@ fun MyLearningScreen(
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("🛍️  Store", "📚  My Courses").forEachIndexed { index, tab ->
+                    listOf("🛍️  " + str.marketTitle, "📚  " + str.coursesTitle).forEachIndexed { index, tab ->
                         val sel = selectedTab == index
                         Box(
                             modifier = Modifier
@@ -381,14 +381,15 @@ private fun StoreTab(
     savedCourseIds: Set<String>,
     viewModel:      MyLearningViewModel
 ) {
-    var selectedSubject by remember { mutableStateOf("All") }
+    val str = LocalStrings.current
+    var selectedSubject by remember { mutableStateOf(str.filterAll) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf<StoreItem?>(null) }
     // FIX 6: Use savedCourseIds from ViewModel (API-backed) instead of in-memory wishlist
     val focusManager = LocalFocusManager.current
 
     val filtered = courses.filter { course ->
-        val matchesSub = selectedSubject == "All" || course.subject == selectedSubject
+        val matchesSub = selectedSubject == str.filterAll || course.subject == selectedSubject
         val matchesSearch = searchQuery.isEmpty() ||
                 course.title.contains(searchQuery, ignoreCase = true) ||
                 course.tags.any { it.contains(searchQuery, ignoreCase = true) }
@@ -430,7 +431,7 @@ private fun StoreTab(
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 decorationBox = { inner ->
                     if (searchQuery.isEmpty()) Text(
-                        "Search courses...",
+                        str.materialsSearchHint,
                         style = MaterialTheme.typography.bodyLarge,
                         color = BpscColors.TextHint
                     )
@@ -480,7 +481,7 @@ private fun StoreTab(
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             if (featured.isNotEmpty()) {
-                item { StoreSectionHeader("⭐ Featured", "${featured.size} courses") }
+                item { StoreSectionHeader(str.jobsFeatured, "${featured.size} courses") }
                 items(featured) { course ->
                     StoreCourseCard(
                         course,
@@ -491,7 +492,7 @@ private fun StoreTab(
                 item { Spacer(Modifier.height(4.dp)) }
             }
             if (free.isNotEmpty()) {
-                item { StoreSectionHeader("🆓 Free Courses", "${free.size} courses") }
+                item { StoreSectionHeader("🆓 " + str.coursesFree + " Courses", "${free.size} courses") }
                 items(free) { course ->
                     StoreCourseCard(
                         course,
@@ -502,7 +503,7 @@ private fun StoreTab(
                 item { Spacer(Modifier.height(4.dp)) }
             }
             if (paid.isNotEmpty()) {
-                item { StoreSectionHeader("🔒 Premium Courses", "${paid.size} courses") }
+                item { StoreSectionHeader("🔒 " + str.premium + " Courses", "${paid.size} courses") }
                 items(paid) { course ->
                     StoreCourseCard(
                         course,
@@ -550,7 +551,7 @@ private fun MyCoursesTab(navController: NavHostController, courses: List<Learnin
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            listOf("📖 My Courses", "📂 Study Materials").forEachIndexed { index, label ->
+            listOf("📖 " + str.coursesTitle, "📂 " + str.materialsTitle).forEachIndexed { index, label ->
                 val sel = subTab == index
                 Box(
                     modifier = Modifier
@@ -623,7 +624,7 @@ private fun EnrolledCoursesContent(
     val str = LocalStrings.current
     var selectedFilter by remember { mutableIntStateOf(0) }
     val wishlist = remember { mutableStateListOf<String>() }
-    val filters = listOf("All", "In Progress", str.coursesCompleted, "Saved")
+    val filters = listOf(str.filterAll, "In Progress", str.coursesCompleted, "Saved")
 
     val filtered = courses.filter { course ->
         when (selectedFilter) {
@@ -1046,6 +1047,7 @@ private fun LibraryDetailSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UploadNotesSheet(onDismiss: () -> Unit) {
+    val str = LocalStrings.current
     var title by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var selType by remember { mutableStateOf(LibraryContentType.PDF) }
@@ -1086,7 +1088,7 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
             OutlinedTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                label = { Text("Subject") },
+                label = { Text(str.materialsFilterSubject) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -1124,7 +1126,7 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Brief Description") },
+                label = { Text(str.coursesRateSubtitle) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 minLines = 3,
@@ -1423,6 +1425,7 @@ private fun CourseDetailSheet(
     onEnroll: (courseId: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showPayment by remember { mutableStateOf(false) }
     var coinsToUse by remember { mutableIntStateOf(0) }
@@ -1910,7 +1913,7 @@ private fun CourseDetailSheet(
                                         couponCode = it.uppercase(); couponApplied =
                                         false; couponDiscount = 0
                                     },
-                                    placeholder = { Text("Enter coupon code") },
+                                    placeholder = { Text(str.paymentEnterCoupon) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true,
@@ -2539,7 +2542,7 @@ private fun LearningStatItem(icon: String, value: String, label: String) {
 }
 
 private fun subjectColorMap() = mapOf(
-    "All Subjects" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
+    "All" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
     "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)),
     "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)),
     "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)),
@@ -2550,6 +2553,6 @@ private fun subjectColorMap() = mapOf(
 )
 
 private fun subjectEmoji(subject: String) = when (subject) {
-    "All Subjects" -> "📚"; "Polity" -> "⚖️"; "History" -> "🏛️"; "Geography" -> "🗺️"
+    "All" -> "📚"; "Polity" -> "⚖️"; "History" -> "🏛️"; "Geography" -> "🗺️"
     "Economy" -> "💰"; "Bihar GK" -> "🏔️"; "Science" -> "🔬"; "Current Affairs" -> "📰"; else -> "📖"
 }

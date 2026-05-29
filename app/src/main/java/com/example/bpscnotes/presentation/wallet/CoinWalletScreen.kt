@@ -65,7 +65,7 @@ fun CoinWalletScreen(
 
     // Coins are now awarded server-side when actions complete (upload approved, quiz passed).
     // No client-side claim needed — getEarnTasks() already reflects the updated state.
-    val tabs = listOf("Earn Coins", "History")
+    val tabs = listOf(str.walletEarnCoins, str.walletHistory)
 
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
@@ -140,7 +140,7 @@ fun CoinWalletScreen(
                             )
                         }
 
-                        item { SectionHeader("Earn Coins", "Complete tasks to earn rewards") }
+                        item { SectionHeader(str.walletEarnCoins, str.walletEarnCoins) }
                         state.earnTasks.forEachIndexed { idx, task ->
                             item(key = task.id) {
                                 Log.e("TASK_ACTION", task.action)
@@ -201,7 +201,7 @@ fun CoinWalletScreen(
                                                 context.startActivity(
                                                     android.content.Intent.createChooser(
                                                         intent,
-                                                        "Invite a Friend"
+                                                        str.walletInviteFriend
                                                     )
                                                 )
                                             }
@@ -209,7 +209,7 @@ fun CoinWalletScreen(
                                             // Watch Ad
                                             "ad_watch" -> {
                                                 viewModel.showMessage(
-                                                    "Scroll up to watch an ad"
+                                                    str.walletWatchAd
                                                 )
                                             }
 
@@ -226,7 +226,7 @@ fun CoinWalletScreen(
                                 Box(Modifier
                                     .fillMaxWidth()
                                     .padding(24.dp), Alignment.Center) {
-                                    Text("No tasks available", color = BpscColors.TextSecondary)
+                                    Text(str.walletNoTasks, color = BpscColors.TextSecondary)
                                 }
                             }
                         }
@@ -420,6 +420,7 @@ private fun DailyCheckInCard(
     doneToday: Boolean,
     streak: Int = 0
 ) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier
             .fillMaxWidth()
@@ -440,7 +441,7 @@ private fun DailyCheckInCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Daily Streak", style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Text(str.walletDailyStreak, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                 if (streak > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("🔥", fontSize = 14.sp)
@@ -525,15 +526,15 @@ private fun DailyCheckInCard(
                 if (isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Checking in…", style = MaterialTheme.typography.titleMedium)
+                    Text(str.walletCheckingIn, style = MaterialTheme.typography.titleMedium)
                 } else if (doneToday) {
                     Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Checked in today ✓", style = MaterialTheme.typography.titleMedium)
+                    Text(str.walletCheckedIn, style = MaterialTheme.typography.titleMedium)
                 } else {
                     Icon(Icons.Rounded.CalendarToday, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Check In Now — Earn Coins", style = MaterialTheme.typography.titleMedium)
+                    Text(str.walletCheckIn, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -551,6 +552,7 @@ private fun EarnTaskRow(
     isClaiming: Boolean,
     onClick: () -> Unit
 ) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier
             .fillMaxWidth()
@@ -665,7 +667,7 @@ private fun EarnTaskRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(Icons.Rounded.Check, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
-                    Text("Done", style = MaterialTheme.typography.labelMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.ExtraBold)
+                    Text(str.done, style = MaterialTheme.typography.labelMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.ExtraBold)
                 }
             } else {
                 // Active state — solid colored pill button
@@ -707,6 +709,7 @@ private fun EarnTaskRow(
 
 @Composable
 private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
+    val str = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -722,10 +725,10 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Rounded.ArrowUpward, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(14.dp))
-                    Text("Earned", style = MaterialTheme.typography.labelSmall, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                    Text(str.walletEarned, style = MaterialTheme.typography.labelSmall, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                 }
                 Text("+$totalEarned", style = MaterialTheme.typography.titleLarge, color = Color(0xFF2E7D32), fontWeight = FontWeight.ExtraBold)
-                Text("coins total", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
             }
         }
         Card(
@@ -737,10 +740,10 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Rounded.ArrowDownward, null, tint = Color(0xFFC62828), modifier = Modifier.size(14.dp))
-                    Text("Spent", style = MaterialTheme.typography.labelSmall, color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                    Text(str.walletSpent, style = MaterialTheme.typography.labelSmall, color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
                 }
                 Text("-$totalSpent", style = MaterialTheme.typography.titleLarge, color = Color(0xFFC62828), fontWeight = FontWeight.ExtraBold)
-                Text("coins total", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
             }
         }
     }
@@ -752,6 +755,7 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
 
 @Composable
 private fun EmptyHistoryState() {
+    val str = LocalStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -769,7 +773,7 @@ private fun EmptyHistoryState() {
             Text("🪙", fontSize = 36.sp)
         }
         Text(
-            "No transactions yet",
+            str.walletNoTransactions,
             style      = MaterialTheme.typography.titleMedium,
             color      = BpscColors.TextPrimary,
             fontWeight = FontWeight.Bold

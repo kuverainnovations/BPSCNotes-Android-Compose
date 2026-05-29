@@ -53,7 +53,7 @@ fun CaMcqQuizScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         CircularProgressIndicator(color = BpscColors.Primary)
-                        Text("Loading questions…", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.caLoadingQ, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                     }
                 }
             }
@@ -61,10 +61,10 @@ fun CaMcqQuizScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("❓", fontSize = 48.sp)
-                        Text("No MCQs available", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("Admin hasn't added questions for this article yet.", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text(str.caNoMcqs, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.caNoMcqsBody, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                         Button(onClick = { navController.popBackStack() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Text("Go Back")
+                            Text(str.caGoBack)
                         }
                     }
                 }
@@ -100,6 +100,7 @@ private fun QuizScreen(
     onNext: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val str = LocalStrings.current
     val q        = mcqs[currentIndex]
     val answered = answers[q.id]
     val progress by animateFloatAsState((currentIndex + 1f) / mcqs.size, tween(400), label = "prog")
@@ -242,7 +243,7 @@ private fun QuizScreen(
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                    Text(if (currentIndex < mcqs.size - 1) "Next Question →" else "See Results",
+                    Text(if (currentIndex < mcqs.size - 1) str.caNxtQuestion else str.caSeeResults,
                         style = MaterialTheme.typography.titleMedium)
                 }
             }
@@ -258,7 +259,6 @@ private fun ResultScreen(
     onBack: () -> Unit,
 ) {
     val str = LocalStrings.current
-
     val correct = mcqs.count { answers[it.id] == it.correct }
     val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
     val animPct by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
@@ -273,7 +273,7 @@ private fun ResultScreen(
 
         Text(if (pct >= 80) "🏆" else if (pct >= 50) "👍" else "📚", fontSize = 56.sp)
         Spacer(Modifier.height(8.dp))
-        Text(when { pct >= 80 -> "Excellent!"; pct >= 60 -> "Well Done!"; pct >= 40 -> "Good Effort!"; else -> "Keep Practicing!" },
+        Text(when { pct >= 80 -> str.caExcellent; pct >= 60 -> str.caWellDone; pct >= 40 -> str.caGoodEffort; else -> str.caKeepPracticing },
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White, fontWeight = FontWeight.ExtraBold)
 
@@ -324,7 +324,7 @@ private fun ResultScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Try Again", style = MaterialTheme.typography.titleMedium)
+                Text(str.tryAgain, style = MaterialTheme.typography.titleMedium)
             }
             OutlinedButton(onClick = onBack,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -333,7 +333,7 @@ private fun ResultScreen(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                 Icon(Icons.Rounded.ArrowBack, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Back to Article", style = MaterialTheme.typography.titleMedium)
+                Text(str.caBackToArticle, style = MaterialTheme.typography.titleMedium)
             }
         }
         Spacer(Modifier.height(32.dp))

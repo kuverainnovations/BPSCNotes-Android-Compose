@@ -41,6 +41,7 @@ fun SubscriptionPaymentScreen(
     navController: NavHostController,
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -69,8 +70,8 @@ fun SubscriptionPaymentScreen(
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         when {
             state.isSuccess -> SuccessScreen(
-                title   = "Subscription Activated! 🎉",
-                message = "Welcome to BPSCNotes Pro. All premium content is now unlocked.",
+                title   = str.paymentActivated,
+                message = str.paymentWelcome,
                 bonusCoins = state.bonusCoins,
                 onDone  = { navController.popBackStack() }
             )
@@ -88,9 +89,9 @@ fun SubscriptionPaymentScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text("Get BPSCNotes Pro", style = MaterialTheme.typography.headlineSmall,
+                            Text(str.paymentGetPro, style = MaterialTheme.typography.headlineSmall,
                                 color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text("Unlock all premium content", style = MaterialTheme.typography.bodyMedium,
+                            Text(str.paymentUnlockAll, style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(0.7f))
                         }
                     }
@@ -120,16 +121,16 @@ fun SubscriptionPaymentScreen(
                         elevation = CardDefaults.cardElevation(2.dp)) {
                         Column(modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("What's included", style = MaterialTheme.typography.titleMedium,
+                            Text(str.paymentWhatsIncluded, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                             val features = listOf(
-                                "📄 All premium PDFs & study notes",
-                                "🎬 Recorded lectures & video lessons",
-                                "📥 Offline downloads",
-                                "❓ Unlimited mock tests",
-                                "🏆 Leaderboard & rank tracking",
-                                "🤖 AI-powered study assistant",
-                                "🎯 Daily targets & study rooms"
+                                str.paymentBenefit1,
+                                str.paymentBenefit2,
+                                str.paymentBenefit3,
+                                str.paymentBenefit4,
+                                str.paymentBenefit5,
+                                str.paymentBenefit6,
+                                str.paymentBenefit7
                             )
                             features.forEach { f ->
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -144,7 +145,7 @@ fun SubscriptionPaymentScreen(
                     }
 
                     // Plan selector
-                    Text("Choose your plan", style = MaterialTheme.typography.titleMedium,
+                    Text(str.paymentChoosePlan, style = MaterialTheme.typography.titleMedium,
                         color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
 
                     if (state.isLoadingPlans) {
@@ -191,7 +192,7 @@ fun SubscriptionPaymentScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Text("🔒", fontSize = 16.sp)
-                        Text("Secure payment via Razorpay · UPI, Cards, Net Banking accepted",
+                        Text(str.paymentSecure,
                             style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.TextSecondary)
                     }
@@ -210,7 +211,7 @@ fun SubscriptionPaymentScreen(
                         if (state.isCreatingOrder || state.isConfirming) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                             Spacer(Modifier.width(10.dp))
-                            Text(if (state.isCreatingOrder) "Creating order…" else "Confirming payment…",
+                            Text(if (state.isCreatingOrder) str.paymentCreating else str.paymentConfirming,
                                 style = MaterialTheme.typography.titleMedium)
                         } else {
                             Text("Pay ₹${state.finalAmount} →",
@@ -278,14 +279,15 @@ private fun CouponSection(
     couponCode: String, couponApplied: Boolean, couponError: String?,
     onCodeChange: (String) -> Unit, onApply: () -> Unit
 ) {
+    val str = LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Coupon Code", style = MaterialTheme.typography.labelLarge,
+        Text(str.paymentCoupon, style = MaterialTheme.typography.labelLarge,
             color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = couponCode, onValueChange = onCodeChange,
                 modifier = Modifier.weight(1f),
-                singleLine = true, placeholder = { Text("Enter coupon code") },
+                singleLine = true, placeholder = { Text(str.paymentEnterCoupon) },
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BpscColors.Primary,
@@ -301,14 +303,14 @@ private fun CouponSection(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (couponApplied) Color(0xFF2ECC71) else BpscColors.Primary)) {
-                Text(if (couponApplied) "✓ Applied" else "Apply")
+                Text(if (couponApplied) str.paymentApplied else str.paymentApply)
             }
         }
         couponError?.let { err ->
             Text(err, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C))
         }
         if (couponApplied) {
-            Text("✅ Coupon applied successfully!", style = MaterialTheme.typography.labelSmall,
+            Text(str.paymentSuccess, style = MaterialTheme.typography.labelSmall,
                 color = Color(0xFF2ECC71))
         }
     }
@@ -320,17 +322,18 @@ private fun PriceBreakdown(
     baseAmount: Int, couponDiscount: Int, coinDiscount: Int, finalAmount: Int,
     coinsAvailable: Int, coinsToUse: Int, onCoinsToggle: () -> Unit
 ) {
+    val str = LocalStrings.current
     Card(shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Price Breakdown", style = MaterialTheme.typography.titleSmall,
+            Text(str.paymentBreakdown, style = MaterialTheme.typography.titleSmall,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-            PriceRow("Base price", "₹$baseAmount")
-            if (couponDiscount > 0) PriceRow("Coupon discount", "−₹$couponDiscount", Color(0xFF2ECC71))
+            PriceRow(str.paymentBasePrice, "₹$baseAmount")
+            if (couponDiscount > 0) PriceRow(str.paymentCouponDiscount, "−₹$couponDiscount", Color(0xFF2ECC71))
             if (coinDiscount > 0)   PriceRow("Coin discount (${coinsToUse} 🪙)", "−₹$coinDiscount", Color(0xFFF57F17))
             HorizontalDivider(color = BpscColors.Divider)
-            PriceRow("Total payable", "₹$finalAmount", BpscColors.Primary, bold = true)
+            PriceRow(str.paymentTotal, "₹$finalAmount", BpscColors.Primary, bold = true)
 
             // Coins toggle
             if (coinsAvailable > 0) {

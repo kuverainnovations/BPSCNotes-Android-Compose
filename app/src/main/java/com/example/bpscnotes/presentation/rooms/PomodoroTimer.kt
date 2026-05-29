@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -63,6 +64,7 @@ fun PomodoroTimer(
 ) {
     var state by remember { mutableStateOf(PomodoroState()) }
     val context = LocalContext.current
+    val str = LocalStrings.current
 
     // Tick loop — counts down every second when running
     LaunchedEffect(state.isRunning, state.phase, state.cyclesCompleted) {
@@ -88,9 +90,9 @@ fun PomodoroTimer(
         PomodoroPhase.LONG_BREAK -> BpscColors.CoinGold
     }
     val phaseLabel = when (state.phase) {
-        PomodoroPhase.WORK       -> "Focus Time"
-        PomodoroPhase.BREAK      -> "Short Break"
-        PomodoroPhase.LONG_BREAK -> "Long Break 🎉"
+        PomodoroPhase.WORK       -> str.pomodoroFocus
+        PomodoroPhase.BREAK      -> str.pomodoroBreak
+        PomodoroPhase.LONG_BREAK -> str.pomodoroLongBreak
     }
 
     val mins = state.remainingSeconds / 60
@@ -158,7 +160,7 @@ fun PomodoroTimer(
             ) {
                 Icon(if (state.isRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(if (state.isRunning) "Pause" else "Start", style = MaterialTheme.typography.titleMedium)
+                Text(if (state.isRunning) str.pomodoroPause else str.pomodoroStart, style = MaterialTheme.typography.titleMedium)
             }
 
             // Skip phase

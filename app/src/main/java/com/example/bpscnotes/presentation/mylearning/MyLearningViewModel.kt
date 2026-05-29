@@ -68,7 +68,7 @@ class MyLearningViewModel @Inject constructor(
                 val savedIds        = savedCourses.map { it.id }.toSet()
                 val enrolledCourses = allCourses
                     .filter { it.enrollment?.status in listOf("active", "completed") }
-                    .sortedByDescending { it.enrollment?.enrolled_at ?: it.created_at ?: "" }
+                    .sortedByDescending { it.enrollment?.enrolled_at ?: it.created_at }
                 val enrolledIds     = enrolledCourses.map { it.id }.toSet()
                 val storeCourses    = allCourses.filter { it.id !in enrolledIds }
 

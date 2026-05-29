@@ -30,7 +30,7 @@ import com.example.bpscnotes.presentation.quiz.components.SectionLabel
 
 /**
  * QuizListScreen — shows all quizzes grouped by type.
- * Reached from: drawer "Daily Quizzes" / dashboard "See all".
+ * Reached from: drawer str.quizDaily + "s" / dashboard "See all".
  * Card click → QuizDetailScreen (intro).
  */
 @Composable
@@ -82,8 +82,8 @@ fun QuizListScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text("Daily Quizzes", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text("Test your knowledge", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            Text(str.quizDaily + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                            Text(str.quizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                         }
                     }
                     // Real user coins
@@ -145,8 +145,8 @@ fun QuizListScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📝", fontSize = 48.sp)
-                        Text("No quizzes available", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("Check back later!", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.quizNoAvailable, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                     }
                 }
             }
@@ -161,7 +161,7 @@ fun QuizListScreen(
                             QuizCard(quiz = quiz) {
                                 if (quiz.totalQuestions == 0) {
                                     android.widget.Toast.makeText(context,
-                                        "\"${quiz.title}\" has no questions yet.",
+                                        "\"${quiz.title}\" " + str.quizNoQuestions,
                                         android.widget.Toast.LENGTH_SHORT).show()
                                 } else {
                                     navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
@@ -176,7 +176,7 @@ fun QuizListScreen(
                             QuizCard(quiz = quiz) {
                                 if (quiz.totalQuestions == 0) {
                                     android.widget.Toast.makeText(context,
-                                        "\"${quiz.title}\" has no questions yet.",
+                                        "\"${quiz.title}\" " + str.quizNoQuestions,
                                         android.widget.Toast.LENGTH_SHORT).show()
                                 } else {
                                     navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
@@ -209,6 +209,7 @@ fun QuizListScreen(
 
 @Composable
 internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape     = RoundedCornerShape(18.dp),
@@ -226,7 +227,7 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (quiz.isAttempted) {
-                        Text("✓ Done", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        Text(str.dashboardDone, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

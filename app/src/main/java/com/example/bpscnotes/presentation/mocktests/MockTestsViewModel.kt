@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.QuizAnswerRequest
-import com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
 import com.example.bpscnotes.data.remote.api.QuizResultData
@@ -19,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse
 
 
 data class MockTestsUiState(

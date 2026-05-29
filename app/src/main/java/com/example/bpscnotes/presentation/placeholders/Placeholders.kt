@@ -118,8 +118,8 @@ class DownloadsViewModel @Inject constructor(
                     val urlFileName  = dto.fileUrl?.substringAfterLast("/") ?: ""
                     val localFile = localFiles.firstOrNull { f ->
                         f.name.equals(expectedName, ignoreCase = true) ||                          // title match
-                        f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
-                        (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
+                                f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
+                                (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
                     }
                     items.add(DownloadedFileItem(
                         id           = dto.id,
@@ -229,9 +229,9 @@ fun DownloadsScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("My Downloads", style = MaterialTheme.typography.titleLarge,
+                                Text(str.downloadsTitle, style = MaterialTheme.typography.titleLarge,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Offline study files", style = MaterialTheme.typography.bodySmall,
+                                Text(str.downloadsSubtitle, style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(0.7f))
                             }
                         }
@@ -282,9 +282,9 @@ fun DownloadsScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("📂", fontSize = 52.sp)
-                                Text("No downloads yet", style = MaterialTheme.typography.titleLarge,
+                                Text(str.downloadsNone, style = MaterialTheme.typography.titleLarge,
                                     color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                                Text("Download study materials to access them offline",
+                                Text(str.downloadsNoneHint,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = BpscColors.TextSecondary, textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 32.dp))
@@ -295,7 +295,7 @@ fun DownloadsScreen(
                                 ) {
                                     Icon(Icons.Rounded.Download, null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Browse Study Materials")
+                                    Text(str.downloadsBrowse)
                                 }
                             }
                         }
@@ -528,6 +528,7 @@ fun SubscriptionScreen(
     nav: NavHostController,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state     by viewModel.state.collectAsState()
 
     Scaffold(containerColor = BpscColors.Surface,
@@ -554,7 +555,7 @@ fun SubscriptionScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Premium Content", style = MaterialTheme.typography.titleLarge,
+                                Text(str.premium + " Content", style = MaterialTheme.typography.titleLarge,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text("Exclusive notes, papers & courses",
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
@@ -597,11 +598,11 @@ fun SubscriptionScreen(
                                     showEnrollDialog = false
                                     nav.navigate(Screen.Payment.route)
                                 }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                                    Text("Subscribe Now →")
+                                    Text(str.paymentSubscribe + " →")
                                 }
                             },
                             dismissButton = {
-                                OutlinedButton(onClick = { showEnrollDialog = false }) { Text("Maybe later") }
+                                OutlinedButton(onClick = { showEnrollDialog = false }) { Text(str.pdfMaybeLater) }
                             }
                         )
                     }

@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.readingrooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -1880,6 +1881,7 @@ private fun PomodoroTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateRoomSheet(onDismiss: () -> Unit) {
+    val str = LocalStrings.current
     var roomName by remember { mutableStateOf("") }
     var selectedSub by remember { mutableStateOf(RoomSubject.Polity) }
     var isPrivate by remember { mutableStateOf(false) }
@@ -1910,7 +1912,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             OutlinedTextField(
                 value = roomName,
                 onValueChange = { roomName = it },
-                label = { Text("Room Name") },
+                label = { Text(str.roomsTitle) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -2037,6 +2039,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
+    val str = LocalStrings.current
     var code by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
@@ -2069,7 +2072,7 @@ private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
                 label = { Text("Room Code (e.g. BPSC2026)") },
                 isError = isError,
                 supportingText = if (isError) {
-                    { Text("Invalid room code. Try again.") }
+                    { Text("${str.error}. ${str.tryAgain}.") }
                 } else null,
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                 singleLine = true,

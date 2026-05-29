@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -40,6 +41,7 @@ fun StudyRoomPipOverlay(
     onReturn:      () -> Unit,
     onEndSession:  () -> Unit
 ) {
+    val str = LocalStrings.current
     val tierColor = remember(tierColorHex) {
         try { Color(android.graphics.Color.parseColor(tierColorHex ?: "#1565C0")) }
         catch (_: Exception) { Color(0xFF1565C0) }
@@ -128,10 +130,10 @@ fun StudyRoomPipOverlay(
                                     verticalAlignment     = Alignment.CenterVertically
                                 ) {
                                     Box(Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF4CAF50).copy(pulseAlpha)))
-                                    Text("Session Active", style = MaterialTheme.typography.labelSmall,
+                                    Text(str.pipSessionActive, style = MaterialTheme.typography.labelSmall,
                                         color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                                 }
-                                Text(tierName.ifBlank { "Study Room" },
+                                Text(tierName.ifBlank { str.roomsTitle },
                                     style = MaterialTheme.typography.titleSmall,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -151,7 +153,7 @@ fun StudyRoomPipOverlay(
                             ) {
                                 Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Return", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                Text(str.pipReturn, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
 
                             IconButton(onClick = onEndSession, modifier = Modifier.size(36.dp)) {

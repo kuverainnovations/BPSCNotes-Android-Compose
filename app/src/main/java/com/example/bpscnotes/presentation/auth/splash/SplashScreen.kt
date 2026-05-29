@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.auth.splash
 
+import com.example.bpscnotes.core.language.LocalStrings
 import com.kuvera.bpscnotes.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -42,6 +43,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
+    val str = LocalStrings.current
     val context = LocalContext.current
     val tokenStore = remember { TokenStore(context) }
     val scale = remember { Animatable(0.6f) }
@@ -125,7 +127,7 @@ fun SplashScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Study Smart. Recall Better. Rank Higher.",
+                text = str.splashTagline,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.75f),
                 modifier = Modifier.alpha(alpha.value)

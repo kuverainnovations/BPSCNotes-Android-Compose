@@ -2,10 +2,7 @@ package com.example.bpscnotes
 
 import android.app.Application
 import com.example.bpscnotes.core.analytics.Analytics
-import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
-import com.google.firebase.messaging.FirebaseMessaging
-import com.posthog.PostHog
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import dagger.hilt.android.HiltAndroidApp
@@ -32,9 +29,8 @@ class BpscApplication : Application() {
             apiKey = POSTHOG_API_KEY,
             host   = POSTHOG_HOST,
         ).apply {
-            captureScreenViews = false  // we capture manually for better context
+            captureScreenViews = false
             captureDeepLinks   = true
-            debug              = BuildConfig.DEBUG
         }
         PostHogAndroid.setup(this, config)
 

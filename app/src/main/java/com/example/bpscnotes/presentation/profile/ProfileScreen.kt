@@ -255,6 +255,7 @@ private fun ProfileHeader(
     onEditClick: () -> Unit,
     onShareClick: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -337,7 +338,7 @@ private fun ProfileHeader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "My Profile",
+                    str.profileTitle,
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold
@@ -354,7 +355,7 @@ private fun ProfileHeader(
                     ) {
                         Icon(
                             Icons.Rounded.Share,
-                            contentDescription = "Share",
+                            contentDescription = str.profileShare,
                             tint = Color.White,
                             modifier = Modifier.size(17.dp)
                         )
@@ -370,7 +371,7 @@ private fun ProfileHeader(
                     ) {
                         Icon(
                             Icons.Rounded.Edit,
-                            contentDescription = "Edit",
+                            contentDescription = str.profileEdit,
                             tint = Color.White,
                             modifier = Modifier.size(17.dp)
                         )
@@ -442,7 +443,7 @@ private fun ProfileHeader(
                 ) {
                     Text("🪙", fontSize = 13.sp)
                     Text(
-                        "$coins Coins",
+                        "$coins ${str.coins}",
                         style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.CoinGold,
                         fontWeight = FontWeight.ExtraBold,
@@ -489,6 +490,7 @@ private fun ProfileStatsRow(
     studyHours: String,
     accuracy: Int?
 ) {
+    val str = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -498,7 +500,7 @@ private fun ProfileStatsRow(
         listOf(
             Triple("📚", "$topicsCompleted/$topicsTotal", "Topics"),
             Triple("🏆", "#$rank", "Rank"),
-            Triple("⏱️", studyHours, "Study"),
+            Triple("⏱️", studyHours, str.profileStudy),
             Triple("✅", "$accuracy%", "Accuracy"),
         ).forEach { (icon, value, label) ->
             Card(
@@ -546,6 +548,7 @@ private fun RankProgressCard(
     points: Int,
     nextPoints: Int
 ) {
+    val str = LocalStrings.current
     val progress = points.toFloat() / nextPoints
     val animProgress by animateFloatAsState(
         targetValue = progress,
@@ -568,7 +571,7 @@ private fun RankProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Rank & Progress",
+                    str.profileRank,
                     style = MaterialTheme.typography.titleLarge,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -675,6 +678,7 @@ private fun RankProgressCard(
 
 @Composable
 private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int) {
+    val str = LocalStrings.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -690,7 +694,7 @@ private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Weekly Streak",
+                    str.profileWeeklyStreak,
                     style = MaterialTheme.typography.titleLarge,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -710,7 +714,7 @@ private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int) {
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        "$streakCount streak",
+                        "$streakCount ${str.profileStreak}",
                         style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.Accent,
                         fontWeight = FontWeight.Bold
@@ -795,7 +799,7 @@ private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int) {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "day streak — keep it up!",
+                    str.profileDayStreak,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF795548)
                 )
@@ -813,6 +817,7 @@ private fun SubjectProgressCard(
     subjects: List<SubjectProgress>,
     navController: NavHostController
 ) {
+    val str = LocalStrings.current
     var expanded by remember { mutableStateOf(false) }
     val visibleSubjects = if (expanded) subjects else subjects.take(3)
 
@@ -831,14 +836,14 @@ private fun SubjectProgressCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Subject Progress",
+                    str.profileSubjectProgress,
                     style = MaterialTheme.typography.titleLarge,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
                 TextButton(onClick = { navController.navigate(Screen.MyLearning.route) }) {
                     Text(
-                        "See all",
+                        str.seeAll,
                         color = BpscColors.Primary,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -864,7 +869,7 @@ private fun SubjectProgressCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        if (expanded) "Show Less" else "+ ${subjects.size - 3} more subjects",
+                        if (expanded) str.profileShowLess else "+ ${subjects.size - 3} more subjects",
                         style = MaterialTheme.typography.bodyMedium,
                         color = BpscColors.Primary,
                         fontWeight = FontWeight.SemiBold
@@ -938,6 +943,7 @@ private fun SubjectProgressItem(subject: SubjectProgress) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun StudyHeatmapCard(studyDays: List<Int>) {
+    val str = LocalStrings.current
     // studyDays: list of 28 ints (minutes studied each day, 0 = no study)
     val days = if (studyDays.size >= 28) studyDays.takeLast(28) else List(28 - studyDays.size) { 0 } + studyDays
     val maxMins = days.maxOrNull()?.coerceAtLeast(1) ?: 1
@@ -952,9 +958,9 @@ private fun StudyHeatmapCard(studyDays: List<Int>) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("📅", fontSize = 16.sp)
-                    Text("Study Heatmap", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(str.profileHeatmap, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                 }
-                Text("Last 28 days", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                Text(str.profileLast28, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
             }
             // Day labels
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
@@ -980,13 +986,13 @@ private fun StudyHeatmapCard(studyDays: List<Int>) {
             }
             // Legend
             Row(Modifier.fillMaxWidth(), Arrangement.End, Alignment.CenterVertically) {
-                Text("Less", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+                Text(str.profileLess, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
                 Spacer(Modifier.width(4.dp))
                 listOf(0.12f, 0.3f, 0.55f, 0.8f).forEach { a ->
                     Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Primary.copy(alpha = a)))
                     Spacer(Modifier.width(2.dp))
                 }
-                Text("More", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+                Text(str.profileMore, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
             }
         }
     }

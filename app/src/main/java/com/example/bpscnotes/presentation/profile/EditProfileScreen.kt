@@ -45,7 +45,7 @@ fun EditProfileScreen(
     var prepLevel   by remember(user?.prepLevel)   { mutableStateOf(user?.prepLevel ?: "") }
 
     val snackbarHost = remember { SnackbarHostState() }
-    val prepLevels   = listOf("Beginner", "Intermediate", "Advanced")
+    val prepLevels   = listOf(str.prepBeginner, str.prepIntermediate, str.prepAdvanced)
     val targetYears  = (2025..2030).map { it.toString() }
 
     // Navigate back on success
@@ -124,21 +124,21 @@ fun EditProfileScreen(
                 }
 
                 // ── Personal Info ──────────────────────────────
-                SectionHeader("Personal Info")
-                ProfileField(value = name, label = "Full Name *", icon = Icons.Rounded.Person,
+                SectionHeader(str.editPersonalInfo)
+                ProfileField(value = name, label = str.editFullName, icon = Icons.Rounded.Person,
                     onValueChange = { name = it })
-                ProfileField(value = email, label = "Email Address", icon = Icons.Rounded.Email,
+                ProfileField(value = email, label = str.editEmail, icon = Icons.Rounded.Email,
                     keyboardType = KeyboardType.Email, onValueChange = { email = it })
                 ProfileField(value = bio, label = "Bio / About me", icon = Icons.Rounded.Info,
                     singleLine = false, onValueChange = { bio = it }, minLines = 3)
-                ProfileField(value = district, label = "District", icon = Icons.Rounded.LocationOn,
+                ProfileField(value = district, label = str.editDistrict, icon = Icons.Rounded.LocationOn,
                     onValueChange = { district = it })
 
                 // ── Exam Settings ──────────────────────────────
-                SectionHeader("Exam Settings")
+                SectionHeader(str.editExamSettings)
 
                 // Prep level picker
-              /*  Text("Preparation Level", style = MaterialTheme.typography.labelMedium,
+              /*  Text(str.editPrepLevel, style = MaterialTheme.typography.labelMedium,
                     color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     prepLevels.forEach { level ->
@@ -156,7 +156,7 @@ fun EditProfileScreen(
                 }*/
 
                 // Target year picker
-                Text("Target Year", style = MaterialTheme.typography.labelMedium,
+                Text(str.editTargetYear, style = MaterialTheme.typography.labelMedium,
                     color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -191,11 +191,11 @@ fun EditProfileScreen(
                     if (state.isSaving) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Saving…", style = MaterialTheme.typography.titleMedium)
+                        Text(str.editSaving, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Icon(Icons.Rounded.Save, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Save Changes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.editSaveChanges, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -205,12 +205,12 @@ fun EditProfileScreen(
                         verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.PhoneAndroid, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
                         Column {
-                            Text("Mobile Number", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                            Text(user?.mobile ?: "Not available",
+                            Text(str.editMobile, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(user?.mobile ?: str.noData,
                                 style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                         }
                         Spacer(Modifier.weight(1f))
-                        Text("Verified ✓", style = MaterialTheme.typography.labelSmall,
+                        Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }

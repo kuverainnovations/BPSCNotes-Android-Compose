@@ -123,7 +123,7 @@ fun LoginScreen(navController: NavHostController) {
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    "Sign in to continue",
+                    str.loginSubtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(0.75f)
                 )
@@ -141,13 +141,13 @@ fun LoginScreen(navController: NavHostController) {
                 .padding(24.dp)
         ) {
             Text(
-                "Enter Mobile Number",
+                str.loginEnterMobile,
                 style = MaterialTheme.typography.titleLarge,
                 color = BpscColors.TextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "We'll send an OTP to verify your number",
+                str.loginSubtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = BpscColors.TextSecondary
             )
@@ -169,7 +169,7 @@ fun LoginScreen(navController: NavHostController) {
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                placeholder = { Text("Mobile number", color = BpscColors.TextHint) },
+                placeholder = { Text(str.loginMobileHint, color = BpscColors.TextHint) },
                 leadingIcon = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -240,7 +240,7 @@ fun LoginScreen(navController: NavHostController) {
                 )
                 val context = androidx.compose.ui.platform.LocalContext.current
                 Text(
-                    "Terms & Privacy Policy",
+                    str.loginTermsPrivacy,
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.Primary,
                     textDecoration = TextDecoration.Underline,

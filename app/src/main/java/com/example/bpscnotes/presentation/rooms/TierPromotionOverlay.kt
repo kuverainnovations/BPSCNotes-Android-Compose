@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -52,6 +53,7 @@ fun TierPromotionOverlay(
         animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
         label = "confetti_progress"
     )
+    val str = LocalStrings.current
 
     Box(
         modifier  = Modifier.fillMaxSize().background(Color.Black.copy(0.88f)).alpha(alpha),
@@ -92,20 +94,20 @@ fun TierPromotionOverlay(
                         topLeft = Offset(inset, inset), size = sz)
                 }
                 Box(modifier = Modifier.size(96.dp).clip(CircleShape).background(tierColor.copy(0.15f)).border(2.dp, tierColor, CircleShape), contentAlignment = Alignment.Center) {
-                    Text(newTier.iconEmoji?:"Empty", fontSize = 44.sp)
+                    Text(newTier.iconEmoji?:"", fontSize = 44.sp)
                 }
             }
 
-            Text("🎉 Congratulations! 🎉", style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
-            Text("You've been promoted to", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.8f))
-            Text(newTier.name?:"Empty", style = MaterialTheme.typography.displaySmall, color = tierColor, fontWeight = FontWeight.ExtraBold)
+            Text(str.promotionCongrats, style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+            Text(str.promotionPromotedTo, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.8f))
+            Text(newTier.name?:"", style = MaterialTheme.typography.displaySmall, color = tierColor, fontWeight = FontWeight.ExtraBold)
             Text("${newTier.coinMultiplier}× coins/hour · ${newTier.xpMultiplier}× XP", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
 
             // Perks
             if (newTier.perks.isNotEmpty()) {
                 Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = tierColor.copy(0.15f))) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Your new perks:", style = MaterialTheme.typography.titleMedium, color = tierColor, fontWeight = FontWeight.Bold)
+                        Text(str.promotionPerks, style = MaterialTheme.typography.titleMedium, color = tierColor, fontWeight = FontWeight.Bold)
                         newTier.perks.take(3).forEach { perk ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.CheckCircle, null, tint = tierColor, modifier = Modifier.size(14.dp))

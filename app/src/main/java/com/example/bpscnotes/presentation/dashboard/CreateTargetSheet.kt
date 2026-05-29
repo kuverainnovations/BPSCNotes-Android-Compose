@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.dashboard
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ fun CreateTargetSheet(
     viewModel: DashboardViewModel,
     onDismiss: () -> Unit
 ) {
+    val str = LocalStrings.current
     val state       by viewModel.uiState.collectAsState()
     val isLoading    = state.isCreatingTarget
     var inputText   by remember { mutableStateOf("") }
@@ -97,7 +99,7 @@ fun CreateTargetSheet(
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    "Create Today's Targets",
+                    str.targetCreateSheet,
                     style      = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -128,7 +130,7 @@ fun CreateTargetSheet(
                         singleLine    = true,
                         decorationBox = { inner ->
                             if (inputText.isEmpty()) {
-                                Text("e.g. Polity - Fundamental Rights", color = BpscColors.TextHint)
+                                Text(str.targetPlaceholder, color = BpscColors.TextHint)
                             }
                             inner()
                         }

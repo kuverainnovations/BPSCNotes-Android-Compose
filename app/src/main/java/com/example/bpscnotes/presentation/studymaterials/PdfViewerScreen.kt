@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.core.language.LocalStrings
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -63,6 +64,7 @@ fun PdfViewerScreen(
     authToken:     String  = "",      // Bearer token for authenticated file URLs
     onPurchase:    () -> Unit = {}
 ) {
+    val str = LocalStrings.current
     val context    = LocalContext.current
     val listState  = rememberLazyListState()
 
@@ -102,7 +104,7 @@ fun PdfViewerScreen(
             shape            = RoundedCornerShape(20.dp),
             containerColor   = Color.White,
             title = {
-                Text("🔓 Unlock Full PDF", fontWeight = FontWeight.ExtraBold,
+                Text(str.pdfUnlock, fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleLarge)
             },
             text = {
@@ -120,13 +122,13 @@ fun PdfViewerScreen(
                     shape    = RoundedCornerShape(12.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                 ) {
-                    Text("Buy Full Access", style = MaterialTheme.typography.titleMedium,
+                    Text(str.pdfBuyAccess, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBuyDialog = false }) {
-                    Text("Maybe later", color = BpscColors.TextHint)
+                    Text(str.pdfMaybeLater, color = BpscColors.TextHint)
                 }
             }
         )
@@ -142,8 +144,8 @@ fun PdfViewerScreen(
                             color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
                         if (totalPages > 0) {
                             Text(
-                                if (isPurchased) "$totalPages pages · Full access"
-                                else "$freePages of $totalPages pages free",
+                                if (isPurchased) "$totalPages ${str.quizQuestions} · ${str.pdfFullAccess}"
+                                else "$freePages / $totalPages ${str.coursesFree}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isPurchased) Color(0xFF4CAF50) else Color(0xFFFFA726)
                             )
@@ -158,7 +160,7 @@ fun PdfViewerScreen(
                 actions = {
                     if (!isPurchased && totalPages > freePages) {
                         TextButton(onClick = { showBuyDialog = true }) {
-                            Text("🔓 Unlock", color = Color(0xFFFFA726),
+                            Text(str.pdfUnlock, color = Color(0xFFFFA726),
                                 fontWeight = FontWeight.ExtraBold,
                                 style = MaterialTheme.typography.labelLarge)
                         }
@@ -181,7 +183,7 @@ fun PdfViewerScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(44.dp))
-                        Text("Loading PDF…", color = Color.White.copy(0.7f),
+                        Text(str.pdfLoadingPdf, color = Color.White.copy(0.7f),
                             style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -193,19 +195,19 @@ fun PdfViewerScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text("⚠️", fontSize = 48.sp)
-                        Text("Couldn't load PDF", color = Color.White, fontWeight = FontWeight.Bold,
+                        Text(str.pdfCantLoad, color = Color.White, fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleLarge)
                         Text(error!!, color = Color.White.copy(0.6f),
                             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                         Button(onClick = { navController.popBackStack() },
                             shape = RoundedCornerShape(12.dp)) {
-                            Text("Go Back")
+                            Text(str.pdfGoBack)
                         }
                     }
                 }
 
                 pdfPages.isEmpty() -> {
-                    Text("No pages found", color = Color.White.copy(0.5f))
+                    Text(str.pdfNoPages, color = Color.White.copy(0.5f))
                 }
 
                 else -> {
@@ -225,7 +227,7 @@ fun PdfViewerScreen(
                                     color = Color.White.copy(0.5f),
                                     style = MaterialTheme.typography.labelSmall)
                                 if (!isPurchased && totalPages > freePages) {
-                                    Text("🔒 Locked after page $freePages",
+                                    Text("🔒 ${str.roomsLocked} (${str.pdfGoBack} $freePages)",
                                         color = Color(0xFFFFA726),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold)
@@ -320,7 +322,7 @@ fun PdfViewerScreen(
                                                     containerColor = Color(0xFFFFA726)
                                                 )
                                             ) {
-                                                Text("🔓 Unlock Full PDF",
+                                                Text(str.pdfUnlock,
                                                     color = Color(0xFF1A1A1A),
                                                     fontWeight = FontWeight.ExtraBold,
                                                     style = MaterialTheme.typography.titleMedium)
@@ -367,7 +369,7 @@ fun PdfViewerScreen(
                                                 containerColor = Color(0xFFFFA726)
                                             )
                                         ) {
-                                            Text("Unlock", color = Color(0xFF1A1A1A),
+                                            Text(str.pdfUnlock, color = Color(0xFF1A1A1A),
                                                 fontWeight = FontWeight.ExtraBold)
                                         }
                                     }

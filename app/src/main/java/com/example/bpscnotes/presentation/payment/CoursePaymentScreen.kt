@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.payment
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,7 @@ fun CoursePaymentScreen(
     razorpayKeyId: String? = null,
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -68,8 +70,8 @@ fun CoursePaymentScreen(
         .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), BpscColors.Surface)))) {
         when {
             state.isSuccess -> SuccessScreen(
-                title   = "Course Unlocked! 🎉",
-                message = "\"$courseTitle\" is now available in My Learning.",
+                title   = str.courseUnlocked,
+                message = "\"$courseTitle\" " + str.courseUnlockedBody,
                 onDone  = { navController.popBackStack() }
             )
             else -> Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
@@ -83,7 +85,7 @@ fun CoursePaymentScreen(
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Text("Complete Purchase", style = MaterialTheme.typography.titleLarge,
+                    Text(str.coursePurchaseComplete, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold)
                 }
 
@@ -104,7 +106,7 @@ fun CoursePaymentScreen(
 
                         Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Course Price", style = MaterialTheme.typography.bodyLarge,
+                            Text(str.coursePrice, style = MaterialTheme.typography.bodyLarge,
                                 color = BpscColors.TextSecondary)
                             Text("₹$price", style = MaterialTheme.typography.titleLarge,
                                 color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
@@ -124,7 +126,7 @@ fun CoursePaymentScreen(
 
                         // Benefits
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("✅ Lifetime access", "✅ Offline downloads", "✅ Certificate on completion").forEach {
+                            listOf(str.courseLifetime, str.courseOffline, str.courseCertificate).forEach {
                                 Text(it, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
                             }
                         }
@@ -134,7 +136,7 @@ fun CoursePaymentScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("🔒", fontSize = 14.sp)
-                            Text("Secure payment via Razorpay · UPI, Cards, Net Banking",
+                            Text(str.courseSecure,
                                 style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
                         }
 
@@ -152,9 +154,9 @@ fun CoursePaymentScreen(
                             if (state.isConfirming) {
                                 CircularProgressIndicator(Modifier.size(20.dp), Color.White, strokeWidth = 2.dp)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Processing…")
+                                Text(str.courseProcessing)
                             } else {
-                                Text("Pay ₹$price & Enroll →", style = MaterialTheme.typography.titleMedium,
+                                Text("${str.coursePurchaseBtn} ₹$price", style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold)
                             }
                         }

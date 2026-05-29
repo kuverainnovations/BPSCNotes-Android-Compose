@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -29,6 +30,7 @@ fun ChallengesScreen(
     navController: NavHostController,
     viewModel: ChallengesViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.claimSuccess) {
@@ -52,8 +54,8 @@ fun ChallengesScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text("Weekly Challenges", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text(state.weekLabel.ifEmpty { "This week" }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            Text(str.challengesTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                            Text(state.weekLabel.ifEmpty { str.challengesThisWeek }, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                         }
                     }
                     if (state.challenges.isNotEmpty()) {
@@ -72,8 +74,8 @@ fun ChallengesScreen(
                 state.challenges.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("⚡", fontSize = 48.sp)
-                        Text("No challenges this week", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("Check back soon!", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.challengesNone, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.challengesCheckBack, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                     }
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -99,6 +101,7 @@ fun ChallengesScreen(
 
 @Composable
 private fun ChallengeCard(challenge: ChallengeDto, isClaiming: Boolean, onClaim: () -> Unit) {
+    val str = LocalStrings.current
     val isComplete = challenge.isCompleted
     val claimed    = challenge.rewardClaimed
     val pct        = challenge.progressPct
@@ -133,7 +136,7 @@ private fun ChallengeCard(challenge: ChallengeDto, isClaiming: Boolean, onClaim:
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Goal: $goalLabel", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                    Text("${str.challengesGoal}: $goalLabel", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
                     Text("$pct%", style = MaterialTheme.typography.labelSmall, color = if (isComplete) BpscColors.Success else BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
                 Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Divider)) {
@@ -145,14 +148,14 @@ private fun ChallengeCard(challenge: ChallengeDto, isClaiming: Boolean, onClaim:
             when {
                 claimed -> Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(BpscColors.Success.copy(0.1f)).padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp))
-                    Text("Reward Claimed ✅", style = MaterialTheme.typography.titleMedium, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                    Text(str.challengesClaimed, style = MaterialTheme.typography.titleMedium, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                 }
                 isComplete -> Button(onClick = onClaim, enabled = !isClaiming, modifier = Modifier.fillMaxWidth().height(44.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)) {
                     if (isClaiming) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else { Text("🎁 Claim Reward", style = MaterialTheme.typography.titleMedium) }
+                    else { Text(str.challengesClaim, style = MaterialTheme.typography.titleMedium) }
                 }
                 else -> Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(BpscColors.Surface).padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center) {
-                    Text("Keep studying to complete this challenge!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint, textAlign = TextAlign.Center)
+                    Text(str.challengesKeepStudying, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint, textAlign = TextAlign.Center)
                 }
             }
         }

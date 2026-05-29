@@ -84,7 +84,7 @@ fun QuizPlayScreen(
                 .background(BpscColors.Surface), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(40.dp))
-                    Text("Preparing quiz…", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(str.loading, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -94,14 +94,14 @@ fun QuizPlayScreen(
                 .background(BpscColors.Surface), Alignment.Center) {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 48.sp)
-                    Text("Couldn't Start Quiz", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(str.error, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(state.startError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text("Try Again") }
+                        .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
                     OutlinedButton(onClick = { viewModel.exitSession(); navController.popBackStack() }, modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp), shape = RoundedCornerShape(14.dp)) { Text("Go Back") }
+                        .height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(str.goBack) }
                 }
             }
         }
@@ -196,7 +196,7 @@ private fun QuizPlayerContent(
             Card(shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Submitting quiz…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(str.quizSubmitting, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -229,12 +229,12 @@ private fun QuizPlayerContent(
                 AlertDialog(
                     onDismissRequest = { showExitConfirm = false },
                     shape = RoundedCornerShape(16.dp),
-                    title = { Text("Quit Quiz?", fontWeight = FontWeight.Bold) },
-                    text  = { Text("Your progress will be lost if you leave now. Continue later?") },
+                    title = { Text(str.quizQuitTitle, fontWeight = FontWeight.Bold) },
+                    text  = { Text(str.quizQuitBody) },
                     confirmButton = {
                         Button(onClick = { showExitConfirm = false; onExit() },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C))) {
-                            Text("Quit")
+                            Text(str.quizQuit)
                         }
                     },
                     dismissButton = {
@@ -326,6 +326,7 @@ private fun QuizPlayerContent(
 // ═════════════════════════════════════════════════════════════════
 @Composable
 private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
+    val str = LocalStrings.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(20.dp),
@@ -381,9 +382,9 @@ private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
                     Text(
                         question.explanation?.takeIf { it.isNotBlank() }
                             ?: if (question.isImageOptions)
-                                "Look carefully at each image option. Consider shapes, patterns, and relationships."
+                                str.quizSelectCorrect
                             else
-                                "Read each option carefully. Eliminate the obviously wrong answers first.",
+                                str.quizSelectCorrect,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF856404)
                     )
@@ -402,10 +403,11 @@ private fun ImageOptionsGrid(
     selectedLetter: String?,
     onSelect:       (String) -> Unit
 ) {
+    val str = LocalStrings.current
     // 2×2 grid layout
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            "Select the correct option:",
+            str.quizSelectCorrect,
             style  = MaterialTheme.typography.labelLarge,
             color  = BpscColors.TextSecondary,
             fontWeight = FontWeight.SemiBold
@@ -672,6 +674,7 @@ private fun QuizBottomBar(
     onHint: () -> Unit, onNext: () -> Unit,
     onSubmit: () -> Unit, onPrev: () -> Unit
 ) {
+    val str = LocalStrings.current
     Column(
         Modifier
             .fillMaxWidth()
@@ -695,7 +698,7 @@ private fun QuizBottomBar(
             ) {
                 Text("💡", fontSize = 14.sp)
                 Spacer(Modifier.width(4.dp))
-                Text("Hint", style = MaterialTheme.typography.titleMedium)
+                Text(str.quizHint, style = MaterialTheme.typography.titleMedium)
             }
             Button(
                 onClick  = if (isLastQuestion) onSubmit else onNext,
@@ -710,10 +713,10 @@ private fun QuizBottomBar(
             ) {
                 Text(
                     when {
-                        isLastQuestion && hasAnswered -> "Submit Quiz 🏆"
-                        isLastQuestion               -> "Finish & Submit"
-                        hasAnswered                  -> "Next →"
-                        else                         -> "Skip →"
+                        isLastQuestion && hasAnswered -> str.quizSubmit
+                        isLastQuestion               -> str.quizFinish
+                        hasAnswered                  -> str.quizNext
+                        else                         -> str.quizSkip
                     },
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -722,7 +725,7 @@ private fun QuizBottomBar(
         if (currentIndex > 0) {
             TextButton(onClick = onPrev, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Rounded.ChevronLeft, null, modifier = Modifier.size(16.dp))
-                Text("← Previous", style = MaterialTheme.typography.bodyMedium)
+                Text(str.quizPrevious, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -739,6 +742,7 @@ private fun QuizResultScreen(
     var showDetailReview by remember { mutableStateOf(false) }
     val accuracy          = result.accuracy
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
+    val str = LocalStrings.current
 
     if (showDetailReview) {
         QuizAnswerReviewScreen(answerDetails = result.answerDetails, onBack = { showDetailReview = false })
@@ -764,7 +768,7 @@ private fun QuizResultScreen(
                 .statusBarsPadding())
             Text(if (accuracy >= 80) "🏆" else if (accuracy >= 50) "👍" else "💪", fontSize = 64.sp)
             Spacer(Modifier.height(8.dp))
-            Text(when { accuracy >= 80 -> "Excellent!"; accuracy >= 50 -> "Good Job!"; else -> "Keep Practicing!" },
+            Text(when { accuracy >= 80 -> str.quizExcellent; accuracy >= 50 -> str.quizGoodJob; else -> str.quizKeepPracticing },
                 style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(session.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f))
             Spacer(Modifier.height(24.dp))
@@ -780,8 +784,8 @@ private fun QuizResultScreen(
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${accuracy.toInt()}%", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("Score", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
-                    Text(if (result.isPassed) "✅ Passed" else "❌ Failed",
+                    Text(str.quizScore, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                    Text(if (result.isPassed) str.quizPassed else str.quizFailed,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (result.isPassed) Color(0xFF2ECC71) else Color(0xFFFF6B6B),
                         fontWeight = FontWeight.Bold)

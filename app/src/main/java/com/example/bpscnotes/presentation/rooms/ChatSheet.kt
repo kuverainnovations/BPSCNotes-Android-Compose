@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -29,7 +30,7 @@ import com.example.bpscnotes.data.remote.api.TierMemberDto
 // 1. Connection status now uses ChatConnectionStatus enum (CONNECTING/LIVE/RECONNECTING)
 //    instead of a boolean isConnected.
 //    - CONNECTING  = initial state, no grace period needed, shows "Connecting..."
-//    - LIVE        = connected, shows green dot + "Live"
+//    - LIVE        = connected, shows green dot + str.chatLive
 //    - RECONNECTING = was connected, dropped, shows orange dot + "Reconnecting..."
 //    This eliminates the false "Reconnecting" on first open.
 //
@@ -46,6 +47,7 @@ fun ChatSheet(
     onDismiss: () -> Unit,
     viewModel: RoomChatViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val state      by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var inputText  by remember { mutableStateOf("") }
@@ -116,7 +118,7 @@ fun ChatSheet(
 
                         Column {
                             Text(
-                                member?.name ?: "Room Chat",
+                                member?.name ?: str.chatRoomChat,
                                 style      = MaterialTheme.typography.titleSmall,
                                 color      = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -125,9 +127,9 @@ fun ChatSheet(
                             // FIX: Use ChatConnectionStatus instead of Boolean
                             // No more false "Reconnecting" on first open
                             val (dotColor, statusText) = when (state.connectionStatus) {
-                                ChatConnectionStatus.LIVE         -> BpscColors.Success to "Live"
-                                ChatConnectionStatus.CONNECTING   -> Color.Gray          to "Connecting…"
-                                ChatConnectionStatus.RECONNECTING -> Color(0xFFFFA726)   to "Reconnecting…"
+                                ChatConnectionStatus.LIVE         -> BpscColors.Success to str.chatLive
+                                ChatConnectionStatus.CONNECTING   -> Color.Gray          to str.chatConnecting
+                                ChatConnectionStatus.RECONNECTING -> Color(0xFFFFA726)   to str.chatReconnecting
                             }
 
                             Row(
@@ -192,7 +194,7 @@ fun ChatSheet(
                                     strokeWidth = 2.dp
                                 )
                                 Text(
-                                    "Loading messages…",
+                                    str.chatLoading,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(0.4f)
                                 )
@@ -208,13 +210,13 @@ fun ChatSheet(
                             ) {
                                 Text("💬", fontSize = 36.sp)
                                 Text(
-                                    "No messages yet",
+                                    str.chatNoMessages,
                                     style      = MaterialTheme.typography.titleSmall,
                                     color      = Color.White.copy(0.5f),
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "Start the conversation!",
+                                    str.chatStartConversation,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(0.3f)
                                 )
@@ -235,7 +237,7 @@ fun ChatSheet(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        "Today",
+                                        str.chatToday,
                                         style    = MaterialTheme.typography.labelSmall,
                                         color    = Color.White.copy(0.3f),
                                         fontSize = 10.sp,
@@ -279,7 +281,7 @@ fun ChatSheet(
                     placeholder   = {
                         Text(
                             if (member != null) "Message ${member.name.split(" ").first()}…"
-                            else "Message everyone in this room…",
+                            else str.chatMessageHint,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.3f)
                         )
@@ -333,6 +335,7 @@ fun ChatSheet(
 // ════════════════════════════════════════════════════════════
 @Composable
 fun ChatBubble(message: ChatUiMessage) {
+    val str = LocalStrings.current
     val isMe      = message.isMe
     val isPending = message.isPending
 
@@ -405,11 +408,11 @@ fun ChatBubble(message: ChatUiMessage) {
                 Text(
                     message.timeLabel,
                     style    = MaterialTheme.typography.labelSmall,
-                    color    = if (message.timeLabel == "Failed to send") Color(0xFFEF5350)
+                    color    = if (message.timeLabel == str.chatFailedSend) Color(0xFFEF5350)
                     else Color.White.copy(0.35f),
                     fontSize = 9.sp
                 )
-                if (isMe && !isPending && message.timeLabel != "Failed to send") {
+                if (isMe && !isPending && message.timeLabel != str.chatFailedSend) {
                     Icon(
                         Icons.Rounded.DoneAll, null,
                         tint     = BpscColors.Success.copy(0.6f),

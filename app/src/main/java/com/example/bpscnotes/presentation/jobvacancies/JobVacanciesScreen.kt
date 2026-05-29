@@ -211,7 +211,7 @@ fun JobVacanciesScreen(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                             decorationBox = { inner ->
-                                if (searchQuery.isEmpty()) Text("Search jobs, departments, location…", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
+                                if (searchQuery.isEmpty()) Text(str.jobsSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
                                 inner()
                             }
                         )
@@ -251,7 +251,7 @@ fun JobVacanciesScreen(
                             .clickable { selectedCategory = null }
                             .padding(horizontal = 14.dp, vertical = 7.dp)
                     ) {
-                        Text("All", style = MaterialTheme.typography.bodyMedium,
+                        Text(str.filterAll, style = MaterialTheme.typography.bodyMedium,
                             color = if (sel) Color.White else BpscColors.TextSecondary,
                             fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                     }
@@ -295,8 +295,8 @@ fun JobVacanciesScreen(
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("🔍", fontSize = 48.sp)
-                        Text("No jobs found", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("Try a different search or category", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.jobsNoJobs, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.jobsTryFilter, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                         if (vmState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BpscColors.Primary)
                     }
                 }
@@ -308,7 +308,7 @@ fun JobVacanciesScreen(
                     // Featured
                     val featured = filtered.filter { it.isFeatured }
                     if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {
-                        item { Text("⭐ Featured", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
+                        item { Text(str.jobsFeatured, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
                         items(featured, key = { it.id }) { job ->
                             JobCard(job = job, isSaved = savedJobs.contains(job.id),
                                 onSave = {
@@ -317,7 +317,7 @@ fun JobVacanciesScreen(
                                 onClick  = { selectedJob = job })
                         }
                         item { Spacer(Modifier.height(4.dp)) }
-                        item { Text("All Jobs", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
+                        item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
                     }
                     val rest = if (selectedCategory == null && searchQuery.isEmpty()) filtered.filter { !it.isFeatured } else filtered
                     itemsIndexed(rest, key = { _, it -> it.id }) { index, job ->

@@ -45,13 +45,21 @@ data class TargetItem(
 enum class Difficulty(val label: String, val color: Color) {
     Easy  ("Easy",   Color(0xFF2ECC71)),
     Medium("Medium", Color(0xFFF39C12)),
-    Hard  ("Hard",   Color(0xFFE74C3C))
+    Hard  ("Hard",   Color(0xFFE74C3C));
+    @Composable fun localLabel(): String {
+        val str = LocalStrings.current
+        return when(this) { Easy -> str.targetEasy; Medium -> str.targetMedium; Hard -> str.targetHard }
+    }
 }
 
 enum class TimeSlot(val label: String, val icon: String, val range: String) {
     Morning  ("Morning",   "🌅", "6AM – 12PM"),
     Afternoon("Afternoon", "☀️", "12PM – 6PM"),
-    Night    ("Night",     "🌙", "6PM – 10PM")
+    Night    ("Night",     "🌙", "6PM – 10PM");
+    @Composable fun localLabel(): String {
+        val str = LocalStrings.current
+        return when(this) { Morning -> str.targetMorning; Afternoon -> str.targetAfternoon; Night -> str.targetNight }
+    }
 }
 
 /** Map a [DailyTargetDto] to the UI [TargetItem] — no static data */
@@ -95,11 +103,11 @@ fun DailyTargetsScreen(
     )
 
     //var selectedTab    by remember { mutableIntStateOf(0) }
-    var selectedFilter by remember { mutableStateOf("All") }
+    var selectedFilter by remember { mutableStateOf(str.targetAllFilter) }
     var showAddSheet   by remember { mutableStateOf(false) }
 
     //val tabs    = listOf("List", "Cards", "Timeline")
-    val filters = listOf("All") + allTargets.map { it.target.subject }.distinct()
+    val filters = listOf(str.targetAllFilter) + allTargets.map { it.target.subject }.distinct()
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -137,7 +145,7 @@ fun DailyTargetsScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text("Add", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(str.targetAdd, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -150,7 +158,7 @@ fun DailyTargetsScreen(
                             Box(modifier = Modifier.fillMaxWidth().height(50.dp), contentAlignment = Alignment.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                    Text("Loading targets…", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
+                                    Text(str.targetLoading, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
                                 }
                             }
                         }
@@ -158,8 +166,8 @@ fun DailyTargetsScreen(
                         state.error != null && allTargets.isEmpty() -> {
                             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.1f)).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("⚠️", fontSize = 14.sp)
-                                Text("Failed to load targets", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.9f), modifier = Modifier.weight(1f))
-                                TextButton(onClick = { viewModel.refresh() }) { Text("Retry", color = Color.White) }
+                                Text(str.targetFailed, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.9f), modifier = Modifier.weight(1f))
+                                TextButton(onClick = { viewModel.refresh() }) { Text(str.retry, color = Color.White) }
                             }
                         }
                         else -> {
@@ -202,8 +210,8 @@ fun DailyTargetsScreen(
                 Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3CD)).padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("⚠️", fontSize = 16.sp)
                     Column {
-                        Text("Streak at risk!", style = MaterialTheme.typography.titleMedium, color = Color(0xFF856404), fontWeight = FontWeight.Bold)
-                        Text("Complete at least 1 topic to protect your streak", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404))
+                        Text(str.targetStreak, style = MaterialTheme.typography.titleMedium, color = Color(0xFF856404), fontWeight = FontWeight.Bold)
+                        Text(str.targetStreakProtect, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404))
                     }
                 }
             }
@@ -213,10 +221,10 @@ fun DailyTargetsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("🎯", fontSize = 56.sp)
-                        Text("No targets for today", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("Tap + Add to create your daily plan", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.targetNoTargets, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text("", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                         Button(onClick = { showAddSheet = true }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Create Target")
+                            Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.targetCreate)
                         }
                     }
                 }
@@ -268,7 +276,7 @@ fun DailyTargetsScreen(
 
         if (showAddSheet) {
             if (state.dailyTargets.size >= 10) {
-                Toast.makeText(LocalContext.current, "Max 10 targets allowed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(LocalContext.current, str.targetMax, Toast.LENGTH_SHORT).show()
                 return
             }
             CreateTargetSheet(viewModel = viewModel, onDismiss = { showAddSheet = false })
@@ -290,7 +298,8 @@ private fun ListTabContent(
     onStartQuiz: (String) -> Unit,
     onViewNotes: () -> Unit
 ) {
-    val filtered = if (selectedFilter == "All") items else items.filter { it.target.subject == selectedFilter }
+    val str = LocalStrings.current
+    val filtered = if (selectedFilter == str.targetAllFilter) items else items.filter { it.target.subject == selectedFilter }
     val carried  = filtered.filter { it.target.isCarriedForward }
     val today    = filtered.filter { !it.target.isCarriedForward }
 
@@ -332,6 +341,7 @@ private fun SectionLabel(icon: String, title: String, subtitle: String) {
 
 @Composable
 private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onStartQuiz: () -> Unit, onViewNotes: () -> Unit) {
+    val str = LocalStrings.current
     var expanded by remember { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(if (expanded) 4.dp else 2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -356,7 +366,7 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                             Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                         }
                         if (item.target.isCarriedForward) {
-                            Text("Carried", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF0EA)).padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp)
+                            Text(str.targetCarried, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF0EA)).padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp)
                         }
                     }
                 }
@@ -368,10 +378,10 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     HorizontalDivider(color = BpscColors.Divider)
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ActionButton(Icons.Rounded.Quiz,     "Start Quiz", BpscColors.PrimaryLight,  BpscColors.Primary,     Modifier.weight(1f), onStartQuiz)
-                        ActionButton(Icons.Rounded.MenuBook, "View Notes", Color(0xFFF3E8FD),        Color(0xFF9B59B6),      Modifier.weight(1f), onViewNotes)
+                        ActionButton(Icons.Rounded.Quiz,     str.quizStart, BpscColors.PrimaryLight,  BpscColors.Primary,     Modifier.weight(1f), onStartQuiz)
+                        ActionButton(Icons.Rounded.MenuBook, str.materialsView, Color(0xFFF3E8FD),        Color(0xFF9B59B6),      Modifier.weight(1f), onViewNotes)
                         ActionButton(Icons.Rounded.Bookmark,
-                            if (item.target.isCompleted) "Bookmarked" else "Bookmark",
+                            if (item.target.isCompleted) str.caBookmarked else str.caBookmark,
                             if (item.target.isCompleted) Color(0xFFFFF8E1) else BpscColors.Surface,
                             if (item.target.isCompleted) BpscColors.CoinGold else BpscColors.TextHint,
                             Modifier.weight(1f)) {
@@ -412,6 +422,7 @@ private fun DifficultyBadge(difficulty: Difficulty) {
 
 @Composable
 private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) -> Unit, onStartQuiz: (String) -> Unit, onViewNotes: () -> Unit) {
+    val str = LocalStrings.current
     var currentIndex by remember { mutableIntStateOf(0) }
     val scope        = rememberCoroutineScope()
     val current      = items.getOrNull(currentIndex)
@@ -473,10 +484,10 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                     Spacer(Modifier.height(20.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(onClick = { onStartQuiz(current.target.id) }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Icon(Icons.Rounded.Quiz, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Quiz")
+                            Icon(Icons.Rounded.Quiz, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(str.quizTitle)
                         }
                         OutlinedButton(onClick = onViewNotes, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, BpscColors.Primary), colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary)) {
-                            Icon(Icons.Rounded.MenuBook, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Notes")
+                            Icon(Icons.Rounded.MenuBook, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(str.materialsTitle)
                         }
                     }
                     Spacer(Modifier.height(16.dp))

@@ -225,8 +225,8 @@ fun SettingsScreen(
                             icon         = Icons.Rounded.Download,
                             iconBg       = Color(0xFFEDE7F6),
                             iconTint     = Color(0xFF7E57C2),
-                            title        = str.materialsDownloaded + " Content",
-                            subtitle     = "Manage offline files",
+                            title        = str.materialsDownloaded + " " + str.settingsTitle,
+                            subtitle     = str.settingsManageOffline,
                             trailingLabel = if (settingsState.isComputingStorage) "…"
                                            else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
                             onClick      = { navController.navigate(Screen.Downloads.route) }
@@ -238,7 +238,7 @@ fun SettingsScreen(
                             iconBg       = Color(0xFFFFF3E0),
                             iconTint     = Color(0xFFFF8F00),
                             title        = str.settingsClearCache,
-                            subtitle     = if (settingsState.isClearingCache) "Clearing…" else str.settingsClearCacheSubtitle,
+                            subtitle     = if (settingsState.isClearingCache) str.settingsClearing else str.settingsClearCacheSubtitle,
                             trailingLabel = if (settingsState.isComputingStorage || settingsState.isClearingCache) "…"
                                            else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
                             onClick      = { settingsViewModel.clearCache() }
@@ -248,8 +248,8 @@ fun SettingsScreen(
                             icon     = Icons.Rounded.WifiOff,
                             iconBg   = Color(0xFFE8F5E9),
                             iconTint = Color(0xFF2E7D32),
-                            title    = "Offline Mode",
-                            subtitle = "Access saved content offline",
+                            title    = str.settingsOffline,
+                            subtitle = str.settingsOfflineSubtitle,
                             onClick  = { navController.navigate(Screen.Downloads.route) }
                         )
                     }
@@ -266,8 +266,8 @@ fun SettingsScreen(
                     Column {
                         SettingsActionRow(
                             icon = Icons.Rounded.Info, iconBg = Color(0xFFE3F2FD), iconTint = Color(0xFF1565C0),
-                            title = str.settingsVersion, subtitle = "BPSCNotes v1.0.0",
-                            trailingLabel = "v1.0.0", showArrow = false, onClick = {}
+                            title = str.settingsVersion, subtitle = str.settingsVersionSubtitle,
+                            trailingLabel = str.version, showArrow = false, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
@@ -282,23 +282,23 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
-                            title = str.settingsPrivacy, subtitle = "How we handle your data", onClick = {}
+                            title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Gavel, iconBg = Color(0xFFF5F5F5), iconTint = Color(0xFF616161),
-                            title = str.settingsTerms, subtitle = "Our terms & conditions", onClick = {}
+                            title = str.settingsTerms, subtitle = str.settingsTermsSubtitle, onClick = {}
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.HeadsetMic, iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
-                            title = str.settingsSupport, subtitle = "Get help from our team", onClick = {}
+                            title = str.settingsSupport, subtitle = str.settingsSupportSubtitle, onClick = {}
                         )
                     }
                 }
 
                 // ── Account Actions ───────────────────────────────
-                SettingsSectionLabel(str.settingsAccount + " Actions")
+                SettingsSectionLabel(str.settingsAccount + " " + str.settingsAccount)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -384,6 +384,7 @@ private fun SettingsHeader(onBack: () -> Unit) {
 // ── Account Card ──────────────────────────────────────────────
 @Composable
 private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -> Unit) {
+    val str = LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)) {
@@ -398,7 +399,7 @@ private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(name ?: "Loading…", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                Text(name ?: str.loading, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                 Text(email ?: "", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 Spacer(Modifier.height(4.dp))
                 Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFF8E1))

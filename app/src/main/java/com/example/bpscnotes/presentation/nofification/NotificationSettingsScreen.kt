@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
@@ -29,7 +30,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.http.*
-import retrofit2.http.Path
 import javax.inject.Inject
 
 // ════════════════════════════════════════════════════════════
@@ -124,7 +124,7 @@ class NotificationsViewModel @Inject constructor(
             runCatching { api.markAllRead() }
             _state.update { s ->
                 s.copy(notifications = s.notifications.map { it.copy(isRead = true) },
-                    unreadCount = 0, toastMessage = "All notifications marked as read")
+                    unreadCount = 0, toastMessage = "All notifications marked as read ✓")
             }
         }
     }
@@ -165,7 +165,7 @@ fun NotificationSettingsScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text("Notifications", style = MaterialTheme.typography.titleLarge,
+                            Text(str.notifTitle, style = MaterialTheme.typography.titleLarge,
                                 color = Color.White, fontWeight = FontWeight.ExtraBold)
                             if (state.unreadCount > 0)
                                 Text("${state.unreadCount} unread", style = MaterialTheme.typography.bodySmall,
@@ -174,7 +174,7 @@ fun NotificationSettingsScreen(
                     }
                     if (state.unreadCount > 0)
                         TextButton(onClick = viewModel::markAllRead) {
-                            Text("Mark all read", color = Color.White.copy(0.85f),
+                            Text(str.notifMarkRead, color = Color.White.copy(0.85f),
                                 style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }
                 }
@@ -195,7 +195,7 @@ fun NotificationSettingsScreen(
                 state.notifications.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("🔔", fontSize = 52.sp)
-                        Text("No notifications yet", style = MaterialTheme.typography.titleLarge,
+                        Text(str.notifNone, style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Text("We'll notify you about quizzes,\ndaily targets and important updates",
                             style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
@@ -203,15 +203,15 @@ fun NotificationSettingsScreen(
                     }
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 80.dp)) {
-                    val groups = state.notifications.groupBy { it.createdAt.take(10).ifEmpty { "Today" } }
+                    val groups = state.notifications.groupBy { it.createdAt.take(10).ifEmpty { str.notifToday } }
                     groups.forEach { (date, items) ->
                         item(key = "h_$date") {
-                            Text(formatDateHeader(date), style = MaterialTheme.typography.labelMedium,
+                            Text(formatDateHeader(date,str), style = MaterialTheme.typography.labelMedium,
                                 color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         }
                         items(items, key = { it.id }) { notif ->
-                            NotifCard(notif) { if (!notif.isRead) viewModel.markRead(notif.id) }
+                            NotifCard(notif,str) { if (!notif.isRead) viewModel.markRead(notif.id) }
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
                                 color = BpscColors.Divider, thickness = 0.5.dp)
                         }
@@ -223,7 +223,7 @@ fun NotificationSettingsScreen(
 }
 
 @Composable
-private fun NotifCard(n: NotificationDto, onClick: () -> Unit) {
+private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) {
     val (icon, iconBg, iconTint) = notifStyle(n.type)
     Row(modifier = Modifier.fillMaxWidth()
         .background(if (!n.isRead) BpscColors.Primary.copy(0.03f) else Color.White)
@@ -243,7 +243,7 @@ private fun NotifCard(n: NotificationDto, onClick: () -> Unit) {
             }
             Text(n.body, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(formatRelTime(n.createdAt), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+            Text(formatRelTime(n.createdAt,str), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
         }
     }
 }
@@ -259,25 +259,25 @@ private fun notifStyle(type: String): Triple<ImageVector, Color, Color> = when (
     else           -> Triple(Icons.Rounded.Notifications,      Color(0xFFF5F5F5), Color(0xFF616161))
 }
 
-private fun formatDateHeader(date: String): String {
+private fun formatDateHeader(date: String, str: AppStrings): String {
     val sdf   = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
     val today = sdf.format(java.util.Date())
     val cal   = java.util.Calendar.getInstance().also { it.add(java.util.Calendar.DAY_OF_YEAR, -1) }
     val yest  = sdf.format(cal.time)
     return when (date) {
-        today -> "Today"; yest -> "Yesterday"
+        today -> str.notifToday; yest -> str.notifYesterday
         else  -> try {
             java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault()).format(sdf.parse(date) ?: return date)
         } catch (e: Exception) { date }
     }
 }
 
-private fun formatRelTime(iso: String): String {
+private fun formatRelTime(iso: String, str: AppStrings): String {
     return try {
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
         sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
         val diff = System.currentTimeMillis() - (sdf.parse(iso)?.time ?: return "")
         val mins = diff / 60000L
-        when { mins < 1 -> "Just now"; mins < 60 -> "${mins}m ago"; mins < 1440 -> "${mins / 60}h ago"; else -> "${mins / 1440}d ago" }
+        when { mins < 1 -> str.notifJustNow; mins < 60 -> "${mins}m ago"; mins < 1440 -> "${mins / 60}h ago"; else -> "${mins / 1440}d ago" }
     } catch (e: Exception) { "" }
 }

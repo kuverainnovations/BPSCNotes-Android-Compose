@@ -60,10 +60,10 @@ fun RoomsHubScreen(
         AlertDialog(
             onDismissRequest = { showClaimDialog = false },
             icon = { Text("🎉", fontSize = 36.sp) },
-            title = { Text("Claim Promotion!", fontWeight = FontWeight.ExtraBold) },
+            title = { Text(str.roomsClaimPromotion, fontWeight = FontWeight.ExtraBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("You've met all requirements!", color = BpscColors.TextSecondary)
+                    Text(str.roomsMetRequirements, color = BpscColors.TextSecondary)
                     if (claimResultMessage.isNotEmpty()) {
                         Text(
                             claimResultMessage,
@@ -89,10 +89,10 @@ fun RoomsHubScreen(
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)
-                ) { Text("Claim Now 🚀", fontWeight = FontWeight.Bold) }
+                ) { Text(str.roomsClaimNow, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showClaimDialog = false }) { Text("Later") }
+                TextButton(onClick = { showClaimDialog = false }) { Text(str.roomsLater) }
             }
         )
     }
@@ -159,7 +159,7 @@ fun RoomsHubScreen(
             }
 
             SessionStatus.ERROR -> {
-                snackbarHost.showSnackbar(sessionState.error ?: "Failed to start session")
+                snackbarHost.showSnackbar(sessionState.error ?: str.error)
                 sessionViewModel.clearError()
             }
 
@@ -239,14 +239,14 @@ fun RoomsHubScreen(
 
                         // Section title
                         Text(
-                            "Choose Your Room",
+                            str.roomsChoose,
                             style = MaterialTheme.typography.titleMedium,
                             color = BpscColors.TextPrimary,
                             fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
                         )
                         Text(
-                            "Tap your room to start studying. Locked rooms unlock as you progress.",
+                            str.roomsChooseHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = BpscColors.TextHint,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
@@ -356,6 +356,7 @@ fun RoomsHubScreen(
 // ════════════════════════════════════════════════════════════
     @Composable
     private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
+    val str = LocalStrings.current
         val myTier    = state.myTierData?.currentTier
         val tierColor = try {
             Color(android.graphics.Color.parseColor(myTier?.colorHex ?: "#9E9E9E"))
@@ -394,11 +395,11 @@ fun RoomsHubScreen(
                              Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                          }*/
                         Column {
-                            Text("Group Study",
+                            Text(str.roomsGroupStudy,
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
                                 fontWeight = FontWeight.ExtraBold)
-                            Text("Tap your room to start",
+                            Text(str.roomsTapToStart,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(0.6f))
                         }
@@ -416,7 +417,7 @@ fun RoomsHubScreen(
                                 .size(6.dp)
                                 .clip(CircleShape)
                                 .background(BpscColors.Success))
-                            Text("Live", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                            Text(str.roomsLive, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -454,7 +455,7 @@ fun RoomsHubScreen(
                                         contentAlignment = Alignment.Center
                                     ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp) }
                                     Column {
-                                        Text(myTier.name ?: "Silver Room",
+                                        Text(myTier.name ?: str.roomsTierSilver + " Room",
                                             style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                         Text("${myTier.displayMembers} members · ${myTier.displayActive} online now",
                                             style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
@@ -510,7 +511,7 @@ fun RoomsHubScreen(
                                         .padding(horizontal = 12.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceEvenly
                                 ) {
-                                    StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", "Studied")
+                                    StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", str.roomsStudied)
                                     StatPill("🔥", "${stats.streak}", "Streak")
                                     StatPill("📝", "${stats.quizzesAttempted}", "Quizzes")
                                     StatPill("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
@@ -546,6 +547,7 @@ fun RoomsHubScreen(
         isStarting:   Boolean,
         onClick:      () -> Unit
     ) {
+    val str = LocalStrings.current
         val bgColor = when {
             isClaimReady -> BpscColors.Success.copy(0.05f)
             isMyRoom     -> Color.White
@@ -610,21 +612,21 @@ fun RoomsHubScreen(
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(BpscColors.Success.copy(0.15f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("🎉 Claim Now!", style = MaterialTheme.typography.labelSmall,
+                                Text("🎉 " + str.roomsClaimNow, style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                             }
                             isMyRoom -> Box(modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(BpscColors.Success.copy(0.12f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("Your Room", style = MaterialTheme.typography.labelSmall,
+                                Text(str.roomsYourRoom, style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp)
                             }
                             isLocked -> Box(modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFF0F0F0))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                                Text("Locked", style = MaterialTheme.typography.labelSmall,
+                                Text(str.roomsLocked, style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFFAAAAAA), fontSize = 9.sp)
                             }
                         }
@@ -687,6 +689,7 @@ fun RoomsHubScreen(
         progressItems: List<TierProgressItemDto>,
         onDismiss:     () -> Unit
     ) {
+    val str = LocalStrings.current
         val tierColor = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -722,14 +725,14 @@ fun RoomsHubScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("${tier.name} is Locked", style = MaterialTheme.typography.headlineSmall,
                         color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text("Complete these requirements in Silver Room first",
+                    Text(str.roomsChooseHint,
                         style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                 }
 
                 // Requirements list
                 Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Requirements", style = MaterialTheme.typography.titleMedium,
+                        Text(str.roomsRequirements, style = MaterialTheme.typography.titleMedium,
                             color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         progressItems.forEach { item ->
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
@@ -772,7 +775,7 @@ fun RoomsHubScreen(
                         .height(50.dp),
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) { Text("Got it, I'll keep studying!", fontWeight = FontWeight.Bold) }
+                ) { Text(str.roomsKeepStudying, fontWeight = FontWeight.Bold) }
             }
         }
     }
@@ -782,6 +785,7 @@ fun RoomsHubScreen(
 // ════════════════════════════════════════════════════════════
     @Composable
     private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
+    val str = LocalStrings.current
         val infiniteTransition = rememberInfiniteTransition(label = "glow")
         val glowAlpha by infiniteTransition.animateFloat(0.3f, 0.7f,
             infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
@@ -797,9 +801,9 @@ fun RoomsHubScreen(
             Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("🎉", fontSize = 28.sp)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Ready for $nextTierEmoji $nextTierName!", style = MaterialTheme.typography.titleMedium,
+                    Text("${str.roomsReadyForNext} $nextTierEmoji $nextTierName!", style = MaterialTheme.typography.titleMedium,
                         color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
-                    Text("All requirements met! You'll be promoted at midnight.",
+                    Text(str.roomsPromotedMidnight,
                         style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
                 }
             }

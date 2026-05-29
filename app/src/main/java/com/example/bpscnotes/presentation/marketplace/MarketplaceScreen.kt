@@ -130,8 +130,8 @@ fun MarketplaceScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Marketplace", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Buy & sell study notes", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.marketTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.marketSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
                         // Upload button
@@ -141,7 +141,7 @@ fun MarketplaceScreen(
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.Upload, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Text("Sell Notes", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(str.marketSell, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -176,7 +176,7 @@ fun MarketplaceScreen(
                         textStyle     = MaterialTheme.typography.bodyMedium.copy(color = BpscColors.TextPrimary),
                         singleLine    = true,
                         decorationBox = { inner ->
-                            if (searchText.isEmpty()) Text("Search notes, subjects…", color = BpscColors.TextHint)
+                            if (searchText.isEmpty()) Text(str.marketSearchHint, color = BpscColors.TextHint)
                             inner()
                         }
                     )
@@ -220,12 +220,12 @@ fun MarketplaceScreen(
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("📚", fontSize = 48.sp)
-                        Text("No notes yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
-                        Text("Be the first to upload your study notes and earn!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text(str.marketNoNotes, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                        Text(str.marketBeFirst, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                         Button(onClick = { /* upload */ }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                             Icon(Icons.Rounded.Upload, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Upload Notes")
+                            Text(str.marketUpload)
                         }
                     }
                 }
@@ -238,7 +238,7 @@ fun MarketplaceScreen(
                     val featured = state.items.filter { it.isFeatured }
                     if (featured.isNotEmpty()) {
                         item {
-                            Text("⭐ Featured", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
+                            Text(str.marketFeatured, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
                         }
                         item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -372,6 +372,7 @@ private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBu
 
 @Composable
 private fun FeaturedItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: () -> Unit) {
+    val str = LocalStrings.current
     val accent = when (item.subject) {
         "Polity" -> Color(0xFF9B59B6); "History" -> Color(0xFFE74C3C); "Economy" -> Color(0xFFE67E22)
         "Geography" -> Color(0xFF1ABC9C); "Bihar GK" -> Color(0xFFF39C12); else -> BpscColors.Primary
@@ -386,7 +387,7 @@ private fun FeaturedItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: 
             Box(Modifier.fillMaxWidth().height(80.dp).clip(RoundedCornerShape(10.dp)).background(accent.copy(0.1f)), Alignment.Center) {
                 Text(when (item.subject) { "Polity"->"⚖️"; "History"->"🏛️"; "Economy"->"💰"; "Geography"->"🗺️"; "Bihar GK"->"🏔️"; else->"📄" }, fontSize = 32.sp)
                 Box(Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFD700)).padding(horizontal = 5.dp, vertical = 2.dp)) {
-                    Text("⭐ Featured", style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(str.marketFeatured, style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, color = BpscColors.TextPrimary)

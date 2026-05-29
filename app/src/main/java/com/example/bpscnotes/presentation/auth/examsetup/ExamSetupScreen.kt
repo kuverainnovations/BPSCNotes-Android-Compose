@@ -31,7 +31,7 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 // STEP 1: Select exams (combined primary + secondary on ONE screen)
 //         - First tap → marked as PRIMARY
 //         - More taps → SECONDARY
-//         - "Next →" enabled after at least 1 selected
+//         - str.examSetupNext enabled after at least 1 selected
 //
 // STEP 2: Target Year + Personalization preview ("What we'll do for you")
 //         - 2026 / 2027 / 2028 selection
@@ -132,8 +132,8 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
     Column(Modifier.fillMaxSize()) {
         SetupHeader(
             step     = 1,
-            title    = "Choose Your Exams",
-            subtitle = "Tap once to set primary · Tap again to add secondary",
+            title    = str.examSetupChoose,
+            subtitle = str.examSetupTapHint,
             emoji    = "🎯"
         )
 
@@ -155,7 +155,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
         // Search
         OutlinedTextField(
             value = search, onValueChange = { search = it },
-            placeholder = { Text("Search exam...", color = BpscColors.TextHint) },
+            placeholder = { Text(str.examSetupSearch, color = BpscColors.TextHint) },
             leadingIcon  = { Icon(Icons.Rounded.Search, null, tint = BpscColors.TextHint) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             shape = RoundedCornerShape(28.dp),
@@ -234,7 +234,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary, disabledContainerColor = BpscColors.Divider)
                 ) {
-                    Text("Next →", style = MaterialTheme.typography.titleMedium,
+                    Text(str.examSetupNext, style = MaterialTheme.typography.titleMedium,
                         color = if (state.selectedPrimary != null) Color.White else BpscColors.TextHint)
                 }
             }
@@ -247,11 +247,12 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
+    val str = LocalStrings.current
     var targetYear by remember { mutableStateOf(2026) }
-    val years = listOf(2026 to "This year 🔥", 2027 to "Next year", 2028 to "Long term")
+    val years = listOf(2026 to str.thisYear, 2027 to str.nextYear, 2028 to str.longTerm)
 
     Column(Modifier.fillMaxSize()) {
-        SetupHeader(step = 2, title = "Target Exam Year", subtitle = "We'll tailor your study plan accordingly", emoji = "📅")
+        SetupHeader(step = 2, title = str.examSetupTargetYear, subtitle = "We'll tailor your study plan accordingly", emoji = "📅")
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Exam Plan summary
@@ -259,7 +260,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("📋", fontSize = 18.sp)
-                        Text("Your Exam Plan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                        Text(str.examSetupPlan, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     }
                     state.selectedPrimary?.let { pri ->
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(BpscColors.PrimaryLight).padding(12.dp), Arrangement.spacedBy(10.dp), Alignment.CenterVertically) {
@@ -267,7 +268,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(pri.name, style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                    Text("PRIMARY", style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(str.examSetupPrimary, style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
                         }
@@ -278,7 +279,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(sec.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.TextHint.copy(0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                    Text("SECONDARY", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(str.examSetupSecondary, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
                         }
@@ -287,7 +288,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
             }
 
             // Year selector
-            Text("When is your target exam?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            Text(str.examSetupTargetYear, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 years.forEach { (year, label) ->
                     val isSel = targetYear == year
@@ -306,7 +307,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
             // Personalization preview
             Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(Color(0xFFEEF2FF)), elevation = CardDefaults.cardElevation(0.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("✨ What we'll personalize for you", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                    Text("✨ " + str.examSetupPersonalize, style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                     listOf("📚" to "Courses recommended for your exam", "🎯" to "Daily targets based on your syllabus",
                         "📰" to "Current affairs filtered for your exam", "❓" to "Quizzes from your exam's previous papers",
                         "💼" to "Job alerts for your target exam category", "🏆" to "Subscription plans with your exam content first"
@@ -345,6 +346,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun ExamTile(exam: ExamDto, isPrimary: Boolean, isSecondary: Boolean, onClick: () -> Unit) {
+    val str = LocalStrings.current
     val selected  = isPrimary || isSecondary
     val bgColor   = when { isPrimary -> BpscColors.PrimaryLight; isSecondary -> Color(0xFFF0F9F4); else -> Color.White }
     val border    = when { isPrimary -> 2.dp; isSecondary -> 1.5.dp; else -> 1.dp }
@@ -362,7 +364,7 @@ private fun ExamTile(exam: ExamDto, isPrimary: Boolean, isSecondary: Boolean, on
                             Text("PRIMARY · tap to change", style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
-                    if (isSecondary) Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Success.copy(0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("SECONDARY", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold) }
+                    if (isSecondary) Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Success.copy(0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text(str.examSetupSecondary, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold) }
                 }
                 Text(exam.fullName, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

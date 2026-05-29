@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.auth.register
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -46,6 +47,7 @@ fun RegisterScreen(
     tempToken: String,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     var name     by remember { mutableStateOf("") }
     var email    by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
@@ -130,7 +132,7 @@ fun RegisterScreen(
                 value         = name,
                 onValueChange = { name = it },
                 modifier      = Modifier.fillMaxWidth(),
-                label         = { Text("Full Name *") },
+                label         = { Text(str.editFullName) },
                 placeholder   = { Text("e.g. Rahul Kumar") },
                 shape         = RoundedCornerShape(14.dp),
                 singleLine    = true,
@@ -149,7 +151,7 @@ fun RegisterScreen(
                 value         = email,
                 onValueChange = { email = it },
                 modifier      = Modifier.fillMaxWidth(),
-                label         = { Text("Email (optional)") },
+                label         = { Text("${str.editEmail} (Optional)") },
                 placeholder   = { Text("e.g. rahul@gmail.com") },
                 shape         = RoundedCornerShape(14.dp),
                 singleLine    = true,
@@ -172,8 +174,8 @@ fun RegisterScreen(
                     value         = district,
                     onValueChange = { district = it },
                     modifier      = Modifier.fillMaxWidth().menuAnchor(),
-                    label         = { Text("District (optional)") },
-                    placeholder   = { Text("Select your district") },
+                    label         = { Text("${str.editDistrict} (Optional)") },
+                    placeholder   = { Text(str.editDistrict) },
                     shape         = RoundedCornerShape(14.dp),
                     singleLine    = true,
                     readOnly      = true,

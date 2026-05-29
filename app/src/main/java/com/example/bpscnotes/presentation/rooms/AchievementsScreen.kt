@@ -65,7 +65,7 @@ fun AchievementsScreen(
                         }
                         Column {
                             Text(str.profileAchievements, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text("Track your milestones", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            Text(str.achievementsSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                         }
                     }
                     // Progress pill
@@ -121,6 +121,7 @@ fun AchievementsScreen(
 
 @Composable
 private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
+    val str = LocalStrings.current
     val earned     = items.filter { it.isEarned }
     val inProgress = items.filter { !it.isEarned }
 
@@ -158,7 +159,7 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
         // In Progress — cards with progress bars
         if (inProgress.isNotEmpty()) {
             Text(
-                "🔒 In Progress",
+                str.achievementsInProgress,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = BpscColors.TextPrimary

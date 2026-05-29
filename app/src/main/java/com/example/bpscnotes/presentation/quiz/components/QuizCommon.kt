@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.quiz.components
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,7 @@ internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
     onBack: () -> Unit
 ) {
+    val str = LocalStrings.current
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0)))).statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -65,7 +67,7 @@ internal fun QuizAnswerReviewScreen(
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 Column {
-                    Text("Review Questions", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.quizReview, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${answerDetails.size} questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }

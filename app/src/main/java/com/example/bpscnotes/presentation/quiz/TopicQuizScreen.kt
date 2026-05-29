@@ -63,14 +63,14 @@ fun TopicQuizScreen(
             Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Loading quiz...", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                 }
             }
         }
 
         // ── Error — covers both startError (no quiz found) and network errors ──
         state.startError != null || state.detailError != null || state.listError != null -> {
-            val msg = state.startError ?: state.detailError ?: state.listError ?: "Failed to load quiz"
+            val msg = state.startError ?: state.detailError ?: state.listError ?: str.error
             val isNoQuiz = msg.contains("No quiz") || msg.contains("No MCQ")
             Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
                 Column(
@@ -98,7 +98,7 @@ fun TopicQuizScreen(
                         }
                     }
                     OutlinedButton(onClick = { navController.popBackStack() }, shape = RoundedCornerShape(12.dp)) {
-                        Text("← Go Back")
+                        Text("← " + str.back)
                     }
                 }
             }
@@ -127,6 +127,7 @@ private fun TopicQuizIntroScreen(
     navController: NavHostController,
     onStart: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -140,7 +141,7 @@ private fun TopicQuizIntroScreen(
                         androidx.compose.material3.Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Topic Quiz", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                        Text(str.topicQuizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                         Text(topicTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
                     }
                 }
@@ -149,19 +150,19 @@ private fun TopicQuizIntroScreen(
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("Quiz Details", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.topicQuizDetails, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             TopicStat("📝", "10", "Questions")
-                            TopicStat("⏱️", "30s", "Per Question")
+                            TopicStat("⏱️", "30s", str.topicQuizPerQuestion)
                             TopicStat("🪙", "+10", "Max Coins")
                         }
                         HorizontalDivider(color = BpscColors.Divider)
                         listOf(
-                            "✅  Each correct answer earns 1 coin",
-                            "⏭️  You can skip questions",
-                            "💡  Use hints for tricky questions",
-                            "⏰  30 seconds per question",
-                            "📊  Full review available at the end"
+                            "✅  " + str.topicQuizCoin,
+                            "⏭️  " + str.topicQuizSkip,
+                            "💡  " + str.topicQuizHint,
+                            "⏰  " + str.topicQuizTimer,
+                            "📊  " + str.topicQuizReview
                         ).forEach { rule ->
                             Text(rule, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp)
                         }
@@ -178,7 +179,7 @@ private fun TopicQuizIntroScreen(
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                 ) {
-                    Text("Start Topic Quiz 🚀", style = MaterialTheme.typography.titleLarge)
+                    Text(str.topicQuizStart, style = MaterialTheme.typography.titleLarge)
                 }
             }
         }

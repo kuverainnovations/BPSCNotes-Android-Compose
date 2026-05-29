@@ -219,7 +219,7 @@ fun StudyMaterialsScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                listOf("🔍 Explore", "📤 My Uploads").forEachIndexed { index, label ->
+                listOf(str.materialsExplore, str.materialsMyUploads).forEachIndexed { index, label ->
                     val isSelected = selectedTab == index
                     Box(
                         modifier = Modifier
@@ -378,7 +378,7 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
                     Column {
                         Text(str.materialsTitle, style = MaterialTheme.typography.titleLarge,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Notes, PDFs, PYQs & Books", style = MaterialTheme.typography.bodyMedium,
+                        Text(str.materialsSubtitle, style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.7f))
                     }
                 }
@@ -415,7 +415,7 @@ private fun SearchAndStats(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 decorationBox = { inner ->
-                    if (query.isEmpty()) Text("Search notes, papers, books...",
+                    if (query.isEmpty()) Text(str.materialsSearchHint,
                         style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextHint)
                     inner()
                 }
@@ -478,6 +478,7 @@ private fun CompactFilterBar(
     onSubjectSelect: (String) -> Unit,
     onSortSelect:    (String) -> Unit,
 ) {
+    val str = LocalStrings.current
     var showSubjectSheet by remember { mutableStateOf(false) }
 
     Column(
@@ -492,7 +493,7 @@ private fun CompactFilterBar(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item {
-                TypeChip(label = "All", emoji = "📋", selected = selectedType == null) {
+                TypeChip(label = str.filterAll, emoji = "📋", selected = selectedType == null) {
                     onTypeSelect(null)
                 }
             }
@@ -516,7 +517,7 @@ private fun CompactFilterBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Sort pills
-            listOf("downloads" to "🔥 Popular", "newest" to "🆕 Newest").forEach { (key, label) ->
+            listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest).forEach { (key, label) ->
                 val sel = sortBy == key
                 Text(
                     label,
@@ -544,9 +545,9 @@ private fun CompactFilterBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    selectedSubject.ifEmpty { "Subject" },
+                    selectedSubject.ifEmpty { str.materialsFilterSubject },
                     style  = MaterialTheme.typography.labelSmall,
-                    color  = if (selectedSubject.isEmpty() || selectedSubject == "All") BpscColors.TextHint else BpscColors.Primary,
+                    color  = if (selectedSubject.isEmpty() || selectedSubject == str.filterAll) BpscColors.TextHint else BpscColors.Primary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1
                 )
@@ -573,7 +574,7 @@ private fun CompactFilterBar(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    "Filter by Subject",
+                    str.materialsFilterSubject,
                     style      = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color      = BpscColors.TextPrimary,
@@ -635,7 +636,7 @@ private fun TypeChip(label: String, emoji: String, selected: Boolean, onClick: (
 //    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 //        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 //        item {
-//            FilterChip(label = "All", emoji = null, selected = selected == null,
+//            FilterChip(label = str.filterAll, emoji = null, selected = selected == null,
 //                color = BpscColors.Primary, bg = BpscColors.PrimaryLight,
 //                onClick = { onSelect(null) })
 //        }
@@ -663,7 +664,8 @@ private fun SubjectFilterRow(subjects: List<String>, selected: String, onSelect:
 
 @Composable
 private fun SortRow(current: String, onSelect: (String) -> Unit) {
-    val options = listOf("downloads" to "🔥 Popular", "newest" to "🆕 Newest", "rating" to "⭐ Top Rated")
+    val str = LocalStrings.current
+    val options = listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest, "rating" to str.materialsTopRated)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(options) { (key, label) ->
@@ -710,6 +712,7 @@ private fun MaterialsList(
     onPurchase: (StudyMaterialDto) -> Unit = {},
     onLoadMore: () -> Unit
 ) {
+    val str = LocalStrings.current
     val pinned   = state.materials.filter { it.isFeatured }
     val trending = state.materials.filter { it.isTrending && !it.isFeatured }
     val newItems = state.materials.filter { it.isNew && !it.isTrending && !it.isFeatured }
@@ -738,10 +741,10 @@ private fun MaterialsList(
             item { Spacer(Modifier.height(6.dp)) }
         }
 
-        sectionItems("📌 Pinned by Admin", pinned.size, pinned)
-        sectionItems("🔥 Trending This Week", trending.size, trending)
-        sectionItems("🆕 Recently Added", newItems.size, newItems)
-        sectionItems("📂 All Resources", rest.size, rest)
+        sectionItems(str.materialsPinned, pinned.size, pinned)
+        sectionItems(str.materialsTrending, trending.size, trending)
+        sectionItems(str.materialsRecent, newItems.size, newItems)
+        sectionItems(str.materialsAll, rest.size, rest)
 
         // Load more trigger
         if (state.hasNextPage) {
@@ -1058,6 +1061,7 @@ private fun UploadSheet(
     onDismiss: () -> Unit,
     state: StudyMaterialsUiState
 ) {
+    val str = LocalStrings.current
     val context = LocalContext.current
     var title       by remember { mutableStateOf("") }
     var subject     by remember { mutableStateOf("") }
@@ -1125,7 +1129,7 @@ private fun UploadSheet(
 
             // FIX: Subject dropdown populated from backend /subjects API
             var subjectExpanded by remember { mutableStateOf(false) }
-            val backendSubjects = state.subjects.filter { it != "All" }
+            val backendSubjects = state.subjects.filter { it != str.filterAll }
                 .ifEmpty { listOf("Polity","History","Geography","Economy","Bihar GK","Science","Environment","Current Affairs","BPSC Specific") }
 
             ExposedDropdownMenuBox(
@@ -1135,7 +1139,7 @@ private fun UploadSheet(
                 OutlinedTextField(
                     value = subject, onValueChange = {},
                     readOnly = true,
-                    label = { Text("Subject *") },
+                    label = { Text("${str.materialsFilterSubject} *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -1172,7 +1176,7 @@ private fun UploadSheet(
             }
 
             OutlinedTextField(value = description, onValueChange = { description = it },
-                label = { Text("Brief Description") }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(str.coursesRateSubtitle) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
             OutlinedTextField(value = tagsInput, onValueChange = { tagsInput = it },
@@ -1211,7 +1215,7 @@ private fun UploadSheet(
                                 OutlinedTextField(
                                     value = freePages,
                                     onValueChange = { freePages = it.filter { c -> c.isDigit() } },
-                                    label = { Text("Free pages") },
+                                    label = { Text("${str.coursesFree} pages") },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp), singleLine = true,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -1403,6 +1407,7 @@ fun MyUploadsTab(
     onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onRefresh: () -> Unit
 ) {
+    val str = LocalStrings.current
     when {
         isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.Primary)
@@ -1414,7 +1419,7 @@ fun MyUploadsTab(
                 Text("Tap Upload to share study materials with others",
                     style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) { Text("Refresh") }
+                OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) { Text(str.retry) }
             }
         }
         else -> LazyColumn(
@@ -1478,6 +1483,7 @@ fun DownloadsTab(
     onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onRefresh:    () -> Unit
 ) {
+    val str = LocalStrings.current
     when {
         isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.Primary)
@@ -1494,7 +1500,7 @@ fun DownloadsTab(
                     style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) {
-                    Text("Refresh")
+                    Text(str.retry)
                 }
             }
         }
@@ -1593,6 +1599,7 @@ fun PurchaseConfirmDialog(
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
+    val str = LocalStrings.current
     AlertDialog(
         onDismissRequest = onDismiss,
         shape            = RoundedCornerShape(20.dp),
@@ -1657,7 +1664,7 @@ fun PurchaseConfirmDialog(
                     CircularProgressIndicator(color = Color.White,
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Processing…")
+                    Text(str.courseProcessing)
                 } else {
                     Text("🪙 Buy for ${item.price ?: 0} Coins",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -1666,7 +1673,7 @@ fun PurchaseConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = BpscColors.TextSecondary)
+                Text(str.cancel, color = BpscColors.TextSecondary)
             }
         }
     )

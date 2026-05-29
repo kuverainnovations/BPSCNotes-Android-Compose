@@ -122,7 +122,7 @@ fun StudyFocusScreen(
         AlertDialog(
             onDismissRequest = { showEndConfirm = false },
             icon  = { Text("⏱️", fontSize = 28.sp) },
-            title = { Text("End Session?", fontWeight = FontWeight.ExtraBold) },
+            title = { Text(str.focusEndSessionTitle, fontWeight = FontWeight.ExtraBold) },
             text  = { Text("Your ${state.activeMinutes} min will be saved and coins awarded.") },
             confirmButton = {
                 Button(
@@ -132,7 +132,7 @@ fun StudyFocusScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showEndConfirm = false }) {
-                    Text("Keep Studying", color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(str.focusKeepStudying, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -191,6 +191,7 @@ fun StudyFocusScreen(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun StartingScreen() {
+    val str = LocalStrings.current
     Box(
         modifier = Modifier.fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF051D56), Color(0xFF1565C0)))),
@@ -198,9 +199,9 @@ private fun StartingScreen() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(40.dp), strokeWidth = 3.dp)
-            Text("Joining room…", style = MaterialTheme.typography.titleMedium,
+            Text(str.focusJoining, style = MaterialTheme.typography.titleMedium,
                 color = Color.White, fontWeight = FontWeight.Bold)
-            Text("Setting up your session", style = MaterialTheme.typography.bodySmall,
+            Text(str.focusSettingUp, style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(0.6f))
         }
     }
@@ -260,8 +261,6 @@ private fun ActiveRoomScreen(
             }
         }
     }
-    val str = LocalStrings.current
-
     val h = elapsedSeconds / 3600
     val m = (elapsedSeconds % 3600) / 60
     val s = elapsedSeconds % 60
@@ -270,6 +269,7 @@ private fun ActiveRoomScreen(
     val ringProgress by animateFloatAsState(
         (elapsedSeconds % 3600) / 3600f, tween(1000), label = "ring"
     )
+    val str = LocalStrings.current
 
     // Tier colour
     val tierColor = remember(state.tierColorHex) {
@@ -365,7 +365,7 @@ private fun ActiveRoomScreen(
                     modifier = Modifier.clip(RoundedCornerShape(20.dp))
                         .background(Color.White.copy(0.12f)).padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
-                    Text("📚 Focus", style = MaterialTheme.typography.labelSmall,
+                    Text("📚 " + str.pomodoroFocus, style = MaterialTheme.typography.labelSmall,
                         color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
@@ -382,13 +382,13 @@ private fun ActiveRoomScreen(
                         verticalAlignment     = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Warning, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("AFK Detected", style = MaterialTheme.typography.labelMedium,
+                            Text(str.focusAfk, style = MaterialTheme.typography.labelMedium,
                                 color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("Idle time not counted toward coins",
+                            Text(str.focusAfkIdle,
                                 style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
                         }
                         TextButton(onClick = onDismissAfk) {
-                            Text("I'm Back", color = Color.White, fontWeight = FontWeight.Bold,
+                            Text(str.focusImBack, color = Color.White, fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelSmall)
                         }
                     }
@@ -443,7 +443,7 @@ private fun ActiveRoomScreen(
                             ) { Box(Modifier.fillMaxSize().clip(CircleShape).background(BpscColors.Success)) }
                         }
 
-                        Text("You", style = MaterialTheme.typography.labelMedium,
+                        Text(str.focusYou, style = MaterialTheme.typography.labelMedium,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
 
                         // Level badge
@@ -464,7 +464,7 @@ private fun ActiveRoomScreen(
                             Text("🪙 +${state.coinsThisSession}",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
-                            Text("this session", style = MaterialTheme.typography.labelSmall,
+                            Text(str.focusThisSession, style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(0.5f), fontSize = 9.sp)
                         }
 
@@ -508,7 +508,7 @@ private fun ActiveRoomScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(6.dp).clip(CircleShape)
                                     .background(if (state.wasAfkLastBeat) Color(0xFFFF6B35) else BpscColors.Success))
-                                Text(if (state.wasAfkLastBeat) "AFK" else "Active",
+                                Text(if (state.wasAfkLastBeat) str.focusAfk else str.focusActive,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (state.wasAfkLastBeat) Color(0xFFFF6B35) else BpscColors.Success,
                                     fontWeight = FontWeight.Bold)
@@ -558,7 +558,7 @@ private fun ActiveRoomScreen(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(BpscColors.Success))
-                    Text("Studying Now", style = MaterialTheme.typography.titleSmall,
+                    Text(str.roomsStudying, style = MaterialTheme.typography.titleSmall,
                         color = Color.White, fontWeight = FontWeight.ExtraBold)
                     if (liveMembers.isNotEmpty()) {
                         Box(modifier = Modifier.clip(RoundedCornerShape(10.dp))
@@ -569,7 +569,7 @@ private fun ActiveRoomScreen(
                         }
                     }
                 }
-                /* Text("Tap to message", style = MaterialTheme.typography.labelSmall,
+                /* Text(str.focusTapMessage, style = MaterialTheme.typography.labelSmall,
                      color = Color.White.copy(0.4f))*/
             }
 
@@ -579,9 +579,9 @@ private fun ActiveRoomScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("👋", fontSize = 32.sp)
-                        Text("You're the first one here!", style = MaterialTheme.typography.bodyMedium,
+                        Text(str.focusFirstHere, style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.5f))
-                        Text("Others will appear when they join", style = MaterialTheme.typography.labelSmall,
+                        Text(str.focusOthersJoin, style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(0.3f))
                     }
                 }
@@ -634,7 +634,7 @@ private fun ActiveRoomScreen(
                     if (state.status == SessionStatus.ENDING) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Saving session…", style = MaterialTheme.typography.titleMedium)
+                        Text(str.focusSaving, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Icon(Icons.Rounded.StopCircle, null, modifier = Modifier.size(18.dp), tint = Color(0xFFEF5350))
                         Spacer(Modifier.width(8.dp))
@@ -794,13 +794,14 @@ private fun LiveMemberCard(member: TierMemberDto) {
 /*@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
+    val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var inputText  by remember { mutableStateOf("") }
     val messages   = remember {
         mutableStateListOf(
             ChatMessage(
                 "1",
-                "Hey! Are you studying the same topic? 📚",
+                str.chatStartConversation,
                 false,
                 member.name.split(" ").first(),
                 "Just now"
@@ -816,7 +817,7 @@ private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
     fun sendMessage() {
         if (inputText.isNotBlank()) {
             messages.add(ChatMessage(System.currentTimeMillis().toString(),
-                inputText.trim(), true, "You", "Now"))
+                inputText.trim(), true, str.focusYou, str.notifJustNow))
             inputText = ""
         }
     }
@@ -870,7 +871,7 @@ private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
                     value         = inputText,
                     onValueChange = { inputText = it },
                     modifier      = Modifier.weight(1f),
-                    placeholder   = { Text("Message…", style = MaterialTheme.typography.bodyMedium,
+                    placeholder   = { Text(str.chatMessageHint, style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(0.3f)) },
                     shape         = RoundedCornerShape(24.dp),
                     maxLines      = 3,
@@ -936,6 +937,7 @@ private fun SessionSummaryScreen(
     tierData:  MyTierResponseData?,
     onDismiss: () -> Unit
 ) {
+    val str = LocalStrings.current
     val animProg by animateFloatAsState(
         if (summary != null && summary.durationMinutes > 0)
             (summary.activeMinutes.toFloat() / summary.durationMinutes).coerceIn(0f, 1f) else 0f,
@@ -949,9 +951,9 @@ private fun SessionSummaryScreen(
             Spacer(Modifier.height(48.dp))
             Text("✅", fontSize = 60.sp)
             Spacer(Modifier.height(8.dp))
-            Text("Session Complete!", style = MaterialTheme.typography.headlineMedium,
+            Text(str.focusSessionComplete, style = MaterialTheme.typography.headlineMedium,
                 color = Color.White, fontWeight = FontWeight.ExtraBold)
-            Text(summary?.message ?: "Great work!",
+            Text(summary?.message ?: str.focusGreatWork,
                 style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f),
                 textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             Spacer(Modifier.height(24.dp))
@@ -979,8 +981,8 @@ private fun SessionSummaryScreen(
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SumStat("⏱️", "${summary?.durationMinutes ?: 0}m", "Total")
-                    SumStat("🎯", "${summary?.activeMinutes ?: 0}m", "Active")
+                    SumStat("⏱️", "${summary?.durationMinutes ?: 0}m", str.focusTotal)
+                    SumStat("🎯", "${summary?.activeMinutes ?: 0}m", str.focusActive)
                     SumStat("🪙", "+${summary?.totalCoins ?: 0}", "Coins")
                     SumStat("⚡", "+${summary?.totalXp ?: 0}", "XP")
                 }
@@ -1023,7 +1025,7 @@ private fun SessionSummaryScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(54.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Back to Rooms", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(str.focusBackToRooms, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(40.dp))
         }

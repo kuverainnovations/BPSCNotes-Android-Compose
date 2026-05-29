@@ -97,10 +97,10 @@ fun CurrentAffairsScreen(
 
     var selectedTab      by remember { mutableIntStateOf(0) }
     var searchQuery      by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
+    var selectedCategory by remember { mutableStateOf(str.filterAll) }
     var selectedArticle  by remember { mutableStateOf<CAArticle?>(null) }
     val focusManager      = LocalFocusManager.current
-    val tabs              = listOf("All", "Prelims", "Mains", "Saved 🔖")
+    val tabs              = listOf(str.filterAll, str.filterPrelims, str.filterMains, str.filterSaved)
 
     // Reload when category changes
     LaunchedEffect(selectedCategory) {
@@ -118,7 +118,7 @@ fun CurrentAffairsScreen(
             3 -> bookmarkedIds.contains(article.id)
             else -> true
         }
-        val matchesCat = selectedCategory == "All" || article.category == selectedCategory
+        val matchesCat = selectedCategory == str.filterAll || article.category == selectedCategory
         val matchesSearch = searchQuery.isNullOrEmpty() ||
                 article.headline.contains(searchQuery, ignoreCase = true) ||
                 article.summary.contains(searchQuery, ignoreCase = true) ||
@@ -149,7 +149,7 @@ fun CurrentAffairsScreen(
                             }
                             Column {
                                 Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Stay updated, score higher", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
                         // Bookmark count chip — taps to Saved tab
@@ -178,7 +178,7 @@ fun CurrentAffairsScreen(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                             decorationBox = { inner ->
-                                if (searchQuery.isNullOrEmpty()) Text("Search topics, keywords...", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
+                                if (searchQuery.isNullOrEmpty()) Text(str.caSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
                                 inner()
                             }
                         )
@@ -246,7 +246,7 @@ fun CurrentAffairsScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
                             Text("⚠️", fontSize = 40.sp)
-                            Text("Couldn't load articles", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(str.error, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                             Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
                             Button(onClick = { viewModel.refresh() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                                 Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(str.retry)
@@ -260,8 +260,8 @@ fun CurrentAffairsScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (selectedTab == 3) "🔖" else "🔍", fontSize = 48.sp)
-                            Text(if (selectedTab == 3) "No saved articles yet" else "No articles found", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(if (selectedTab == 3) "Bookmark articles to see them here" else "Try a different search or filter", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                            Text(if (selectedTab == 3) str.caNoSaved else str.caNoArticles, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(if (selectedTab == 3) str.caBookmarkHint else str.caTryFilter, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                         }
                     }
                 }
@@ -282,7 +282,7 @@ fun CurrentAffairsScreen(
                                             putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
                                             putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app")
                                         }
-                                        context.startActivity(android.content.Intent.createChooser(intent, "Share Article"))
+                                        context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
                                     onReadMore  = { selectedArticle = article }
                                 )
@@ -365,7 +365,7 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
             Text(article.headline, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
             Spacer(Modifier.height(6.dp))
             Text(article.summary, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            Text("Read more ↓", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp).clickable { onReadMore() })
+            Text(str.caReadMore, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp).clickable { onReadMore() })
             Spacer(Modifier.height(12.dp)); HorizontalDivider(color = BpscColors.Divider); Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("❓", fontSize = 11.sp); Text("${article.mcqCount} MCQs from this topic", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold, fontSize = 10.sp) }
@@ -410,8 +410,8 @@ private fun ArticleBottomSheet(
                     Text(article.headline, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(article.date, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
-                        if (article.isPrelims) Text("Prelims", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1ABC9C), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 6.dp, vertical = 2.dp))
-                        if (article.isMains) Text("Mains", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        if (article.isPrelims) Text(str.filterPrelims, style = MaterialTheme.typography.labelSmall, color = Color(0xFF1ABC9C), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        if (article.isMains) Text(str.filterMains, style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
             }
@@ -462,7 +462,7 @@ private fun ArticleBottomSheet(
                             putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
                             putExtra(android.content.Intent.EXTRA_TEXT, shareText)
                         }
-                        navController.context.startActivity(android.content.Intent.createChooser(intent, "Share Article"))
+                        navController.context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                     },
                     modifier = Modifier.weight(1f).height(46.dp),
                     shape    = RoundedCornerShape(12.dp),

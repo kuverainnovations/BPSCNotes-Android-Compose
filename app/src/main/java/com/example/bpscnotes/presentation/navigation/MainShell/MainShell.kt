@@ -124,7 +124,7 @@ fun MainShell(
             // Session keeps running and earning coins in the background.
             StudyRoomPipOverlay(
                 isVisible    = showPip,
-                tierName     = sessionStateForPip.tierName ?: "Study Room",
+                tierName     = sessionStateForPip.tierName ?: str.roomsTitle,
                 tierEmoji    = sessionStateForPip.tierEmoji ?: "📚",
                 tierColorHex = sessionStateForPip.tierColorHex,
                 startedAt    = sessionStateForPip.startedAt,

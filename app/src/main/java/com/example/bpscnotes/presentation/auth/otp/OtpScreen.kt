@@ -108,7 +108,7 @@ fun OtpScreen(
                     }
                 }
             ) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = "Back", tint = BpscColors.TextPrimary)
+                Icon(Icons.Rounded.ArrowBack, contentDescription = str.back, tint = BpscColors.TextPrimary)
             }
         }
 
@@ -123,7 +123,7 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("Verify Your Number",
+        Text(str.otpTitle,
             style      = MaterialTheme.typography.headlineSmall,
             color      = BpscColors.TextPrimary,
             fontWeight = FontWeight.Bold)
@@ -183,7 +183,7 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Didn't receive OTP? ",
+            Text(str.otpDidntReceive + " ",
                 style = MaterialTheme.typography.bodyMedium,
                 color = BpscColors.TextSecondary)
             if (canResend) {
@@ -226,7 +226,7 @@ fun OtpScreen(
                 }
             }
         ) {
-            Text("Change Mobile Number",
+            Text(str.otpChangeNumber,
                 color = BpscColors.TextSecondary,
                 style = MaterialTheme.typography.bodyMedium)
         }

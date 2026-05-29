@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -48,6 +49,7 @@ fun DemotionWarningBanner(
     onDismiss:   () -> Unit,
     onStudyNow:  () -> Unit,
 ) {
+    val str = LocalStrings.current
     if (!state.isAtRisk) return
 
     val deficit = (state.threshold - state.progress).coerceAtLeast(0f)
@@ -122,7 +124,7 @@ fun DemotionWarningBanner(
                     shape    = RoundedCornerShape(10.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100))
                 ) {
-                    Text("Study Now 🔥", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(str.demotionStudyNow, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
                 OutlinedButton(
                     onClick  = onDismiss,
@@ -131,7 +133,7 @@ fun DemotionWarningBanner(
                     border   = BorderStroke(1.dp, Color(0xFFFF8F00)),
                     colors   = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE65100))
                 ) {
-                    Text("Dismiss", style = MaterialTheme.typography.labelSmall, fontSize = 12.sp)
+                    Text(str.demotionDismiss, style = MaterialTheme.typography.labelSmall, fontSize = 12.sp)
                 }
             }
         }
