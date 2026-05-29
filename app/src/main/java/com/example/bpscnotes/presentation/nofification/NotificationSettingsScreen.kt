@@ -30,6 +30,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.http.*
+import retrofit2.http.Path
 import javax.inject.Inject
 
 // ════════════════════════════════════════════════════════════
@@ -119,12 +120,12 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
-    fun markAllRead() {
+    fun markAllRead(str: AppStrings) {
         viewModelScope.launch {
             runCatching { api.markAllRead() }
             _state.update { s ->
                 s.copy(notifications = s.notifications.map { it.copy(isRead = true) },
-                    unreadCount = 0, toastMessage = "All notifications marked as read ✓")
+                    unreadCount = 0, toastMessage = str.notifAllRead)
             }
         }
     }
@@ -173,7 +174,7 @@ fun NotificationSettingsScreen(
                         }
                     }
                     if (state.unreadCount > 0)
-                        TextButton(onClick = viewModel::markAllRead) {
+                        TextButton(onClick = { viewModel.markAllRead(str) }) {
                             Text(str.notifMarkRead, color = Color.White.copy(0.85f),
                                 style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }

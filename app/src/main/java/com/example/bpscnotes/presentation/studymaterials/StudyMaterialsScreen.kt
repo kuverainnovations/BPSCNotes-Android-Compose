@@ -828,7 +828,7 @@ private fun LibraryItemCard(
                 ) {
                     Icon(
                         if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                        contentDescription = if (isBookmarked) "Remove from saved" else "Save material",
+                        contentDescription = if (isBookmarked) str.materialsRemoveSaved else str.materialsSave,
                         tint     = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextHint,
                         modifier = Modifier.size(20.dp)  // icon also slightly bigger
                     )
@@ -938,6 +938,7 @@ private fun MaterialDetailSheet(
     onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onDismiss:    () -> Unit
 ) {
+    val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val color = typeColor(material.type)
 
@@ -1002,7 +1003,7 @@ private fun MaterialDetailSheet(
                     contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(material.type.emoji, fontSize = 44.sp)
-                        Text(if (!downloadUrl.isNullOrBlank()) "Tap to open" else "No preview yet",
+                        Text(if (!downloadUrl.isNullOrBlank()) str.materialsTapOpen else str.materialsNoPreview,
                             style = MaterialTheme.typography.titleMedium, color = BpscColors.TextSecondary)
                         Text("Open full document in PDF viewer",
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
@@ -1015,7 +1016,7 @@ private fun MaterialDetailSheet(
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("🔒", fontSize = 22.sp)
                         Column(Modifier.weight(1f)) {
-                            Text("Premium Content", style = MaterialTheme.typography.titleMedium,
+                            Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
                             Text("Unlock with BPSCNotes Pro", style = MaterialTheme.typography.bodyMedium,
                                 color = BpscColors.TextSecondary)
@@ -1040,7 +1041,7 @@ private fun MaterialDetailSheet(
                         Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(when { isDownloaded -> "Downloaded ✓"; material.isPremium -> "Unlock with Pro"; !material.resolvedUrl.isNullOrBlank() -> "Open PDF"; else -> "Download Free" },
+                    Text(when { isDownloaded -> str.materialsDownloadedDone; material.isPremium -> str.materialsUnlockPro; !material.resolvedUrl.isNullOrBlank() -> "Open PDF"; else -> str.materialsDownloadFree },
                         style = MaterialTheme.typography.titleMedium)
                 }
             }
@@ -1108,7 +1109,7 @@ private fun UploadSheet(
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp)
             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
-            Text("Upload Your Notes", style = MaterialTheme.typography.headlineSmall,
+            Text(str.materialsUploadTitle, style = MaterialTheme.typography.headlineSmall,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
             Text("Share notes with 10,000+ BPSC aspirants",
                 style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
@@ -1191,9 +1192,9 @@ private fun UploadSheet(
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column {
-                            Text("Premium Content", style = MaterialTheme.typography.titleSmall,
+                            Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
-                            Text("Charge coins for full access",
+                            Text(str.materialsChargeCoins,
                                 style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
                         }
                         Switch(checked = isPremium, onCheckedChange = { isPremium = it },
@@ -1274,15 +1275,15 @@ private fun UploadSheet(
                 if (isUploading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Uploading…", style = MaterialTheme.typography.titleMedium)
+                    Text(str.materialsUploading, style = MaterialTheme.typography.titleMedium)
                 } else {
                     Icon(Icons.Rounded.Upload, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Submit for Review", style = MaterialTheme.typography.titleMedium)
+                    Text(str.materialsSubmitReview, style = MaterialTheme.typography.titleMedium)
                 }
             }
 
-            Text("📋 All uploads are reviewed before publishing",
+            Text(str.materialsReviewNote,
                 style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
@@ -1294,12 +1295,13 @@ private fun UploadSheet(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun EmptyState(showBookmarksOnly: Boolean) {
+    val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (showBookmarksOnly) "🔖" else "🔍", fontSize = 48.sp)
-            Text(if (showBookmarksOnly) "No saved materials" else "No resources found",
+            Text(if (showBookmarksOnly) str.materialsNoSaved else str.materialsNoResources,
                 style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-            Text(if (showBookmarksOnly) "Bookmark materials to see them here" else "Try a different search or filter",
+            Text(if (showBookmarksOnly) str.materialsBookmarkHint else str.caTryFilter,
                 style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
         }
     }
@@ -1361,7 +1363,8 @@ private fun TypeBadge(type: MaterialType) {
             .background(Color(0xFFFFF8E1)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 @Composable private fun NewBadge() {
-    Text("🆕 New", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
+    val str = LocalStrings.current
+    Text(str.jobsNew, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
@@ -1415,8 +1418,8 @@ fun MyUploadsTab(
         uploads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("📤", fontSize = 56.sp)
-                Text("No uploads yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Tap Upload to share study materials with others",
+                Text(str.materialsNoUploads, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(str.materialsUploadHint,
                     style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) { Text(str.retry) }
@@ -1448,7 +1451,7 @@ fun MyUploadsTab(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 // Status badge
                                 val statusColor = when (item.status?.lowercase()) { "approved" -> BpscColors.Success; "rejected" -> Color(0xFFE74C3C); else -> BpscColors.TextHint }
-                                val statusLabel = when (item.status?.lowercase()) { "approved" -> "✅ Published"; "rejected" -> "❌ Rejected"; else -> "⏳ Under Review" }
+                                val statusLabel = when (item.status?.lowercase()) { "approved" -> str.materialsPublished; "rejected" -> str.materialsRejected; else -> "⏳ Under Review" }
                                 Box(Modifier.clip(RoundedCornerShape(6.dp)).background(statusColor.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                     Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
@@ -1494,9 +1497,9 @@ fun DownloadsTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("📂", fontSize = 56.sp)
-                Text("No downloads yet", style = MaterialTheme.typography.titleLarge,
+                Text(str.materialsNoDownloads, style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
-                Text("Download study materials to access them here",
+                Text(str.materialsDownloadHint,
                     style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) {

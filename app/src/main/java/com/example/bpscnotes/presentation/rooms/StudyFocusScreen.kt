@@ -265,11 +265,10 @@ private fun ActiveRoomScreen(
     val m = (elapsedSeconds % 3600) / 60
     val s = elapsedSeconds % 60
     val timeStr = if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
-
+    val str = LocalStrings.current
     val ringProgress by animateFloatAsState(
         (elapsedSeconds % 3600) / 3600f, tween(1000), label = "ring"
     )
-    val str = LocalStrings.current
 
     // Tier colour
     val tierColor = remember(state.tierColorHex) {
@@ -804,7 +803,7 @@ private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
                 str.chatStartConversation,
                 false,
                 member.name.split(" ").first(),
-                "Just now"
+                str.studyFocusJustNow
             )
         )
     }
@@ -937,12 +936,11 @@ private fun SessionSummaryScreen(
     tierData:  MyTierResponseData?,
     onDismiss: () -> Unit
 ) {
-    val str = LocalStrings.current
     val animProg by animateFloatAsState(
         if (summary != null && summary.durationMinutes > 0)
             (summary.activeMinutes.toFloat() / summary.durationMinutes).coerceIn(0f, 1f) else 0f,
         tween(1200), label = "sum")
-
+    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxSize()
         .background(Brush.verticalGradient(listOf(Color(0xFF030D2E), Color(0xFF051D56), BpscColors.Surface))),
         contentAlignment = Alignment.TopCenter) {

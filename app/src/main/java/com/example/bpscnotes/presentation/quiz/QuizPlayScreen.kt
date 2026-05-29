@@ -849,7 +849,7 @@ private fun QuizResultScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                     Icon(Icons.Rounded.RateReview, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Review All Questions", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizReviewAll, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(onClick = onRetake, Modifier
                     .fillMaxWidth()
@@ -858,7 +858,7 @@ private fun QuizResultScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                     Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Retake Quiz", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizRetake, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(onClick = onExit, Modifier
                     .fillMaxWidth()
@@ -867,7 +867,7 @@ private fun QuizResultScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(0.7f))) {
                     Icon(Icons.Rounded.Home, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Back to Quizzes", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizBackToQuizzes, style = MaterialTheme.typography.titleMedium)
                 }
             }
             Spacer(Modifier.height(32.dp))
@@ -889,6 +889,7 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
 // ═════════════════════════════════════════════════════════════════
 @Composable
 fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(16.dp),
@@ -912,7 +913,7 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
                     DifficultyChip(detail.question.difficulty)
                 }
                 Text(
-                    when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> "✅ Correct"; else -> "❌ Wrong" },
+                    when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
                     style = MaterialTheme.typography.labelSmall,
                     color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
                     fontWeight = FontWeight.Bold
@@ -1052,6 +1053,7 @@ internal fun QuestionNavigatorSheet(
     onSelectQuestion: (Int) -> Unit,
     onBack:           () -> Unit
 ) {
+    val str = LocalStrings.current
     Column(Modifier.fillMaxSize().background(BpscColors.Surface)) {
         // Header
         Box(
@@ -1067,7 +1069,7 @@ internal fun QuestionNavigatorSheet(
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                 Column {
-                    Text("Question Navigator", style = MaterialTheme.typography.titleLarge,
+                    Text(str.quizNavTitle, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${userAnswers.size} / ${questions.size} answered",
                         style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))

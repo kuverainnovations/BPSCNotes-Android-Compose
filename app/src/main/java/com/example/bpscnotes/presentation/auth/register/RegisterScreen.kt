@@ -87,13 +87,13 @@ fun RegisterScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Create Your Profile",
+                    str.registerCreateProfile,
                     style      = MaterialTheme.typography.headlineSmall,
                     color      = Color.White,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    "Just a few details to personalise your experience",
+                    str.registerPersonalize,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(0.75f)
                 )
@@ -232,7 +232,7 @@ fun RegisterScreen(
                     )
                 } else {
                     Text(
-                        "Continue to Dashboard",
+                        str.registerContinue,
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White
                     )
@@ -240,7 +240,7 @@ fun RegisterScreen(
             }
 
             Text(
-                "Your data is secure and never shared.",
+                str.registerDataSecure,
                 style    = MaterialTheme.typography.bodySmall,
                 color    = BpscColors.TextHint,
                 modifier = Modifier.align(Alignment.CenterHorizontally)

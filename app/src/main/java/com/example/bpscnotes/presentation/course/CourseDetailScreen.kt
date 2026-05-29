@@ -289,7 +289,7 @@ private fun RatingBottomSheet(
                 }
 
                 AnimatedContent(
-                    targetState  = if (selectedStars > 0) starLabels[selectedStars] else "Tap a star to rate",
+                    targetState  = if (selectedStars > 0) starLabels[selectedStars] else str.courseTapStar,
                     transitionSpec = {
                         (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut())
                     },
@@ -727,7 +727,7 @@ private fun HeroHeader(
             Text(course.title, style = MaterialTheme.typography.titleLarge, color = Color.White,
                 fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
             course.instructor?.let {
-                Text("By $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
+                Text("${str.courseByAuthor} $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
             }
             val ratingFloat = course.rating.toFloatOrNull() ?: 0f
             if (ratingFloat > 0f || course.review_count > 0) {
@@ -750,14 +750,14 @@ private fun HeroHeader(
                 InfoPill(Icons.Rounded.PlayLesson, "$totalLessons lessons")
                 InfoPill(Icons.Rounded.Schedule, "${course.totalHours}h total")
                 // FIX: Only show language tag if it has a meaningful value
-                if (course.language.isNotBlank() && course.language != "Hindi + English" && course.language != "Hindi+English") {
+                if (course.language.isNotBlank() && course.language != str.courseHindiEnglish && course.language != str.courseHindiEnglish) {
                     InfoPill(Icons.Rounded.Language, course.language)
                 }
             }
             if (isEnrolled && totalLessons > 0) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("Your Progress", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
+                        Text(str.courseYourProgress, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
                         Text("$completedLessons/$totalLessons · ${(animProg * 100).toInt()}%",
                             style = MaterialTheme.typography.bodyMedium, color = Color.White, fontWeight = FontWeight.Bold)
                     }
@@ -802,6 +802,7 @@ private fun WhatYouLearnSection(items: List<String>, accent: Color) {
 
 @Composable
 private fun CertificateBanner(isComplete: Boolean = false, courseName: String = "") {
+    val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         RoundedCornerShape(16.dp), CardDefaults.cardColors(), CardDefaults.cardElevation(3.dp)) {
@@ -813,10 +814,10 @@ private fun CertificateBanner(isComplete: Boolean = false, courseName: String = 
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (isComplete) "🎓" else "🏆", fontSize = 32.sp)
                     Column {
-                        Text(if (isComplete) "Certificate Earned! 🎉" else "Certificate of Completion",
+                        Text(if (isComplete) str.courseCertEarned else str.courseCertTitle,
                             style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text(if (isComplete) "Tap to view & download your certificate"
-                        else "Complete all lessons to earn your certificate",
+                        Text(if (isComplete) str.courseCertTap
+                        else str.courseCertComplete,
                             style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.75f))
                     }
                 }
@@ -829,13 +830,13 @@ private fun CertificateBanner(isComplete: Boolean = false, courseName: String = 
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)
                             }
-                            context.startActivity(android.content.Intent.createChooser(intent, "Share Certificate"))
+                            context.startActivity(android.content.Intent.createChooser(intent, str.courseShareCert))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape  = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text("Share 🎓", color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text(str.courseShareCertBtn, color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -953,7 +954,7 @@ private fun InstructorSection(course: CourseDto, accent: Color) {
 
 // ─────────────────────────────────────────────────────────────
 // BOTTOM CTA
-// FIX: allDone = show "Course Completed" chip instead of Continue button
+// FIX: allDone = show str.courseCourseCompleted chip instead of Continue button
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -967,6 +968,7 @@ private fun BottomCta(
     onContinue:  () -> Unit,
     completedLessons: Int
 ) {
+    val str = LocalStrings.current
     Surface(Modifier.fillMaxWidth(), shadowElevation = 16.dp, color = Color.White) {
         Box(
             Modifier.fillMaxWidth()
@@ -993,7 +995,7 @@ private fun BottomCta(
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            "Course Completed",
+                            str.courseCourseCompleted,
                             style      = MaterialTheme.typography.titleMedium,
                             color      = BpscColors.Success,
                             fontWeight = FontWeight.ExtraBold
@@ -1011,9 +1013,9 @@ private fun BottomCta(
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        // FIX 3: Show "Start Learning" if 0 lessons done, "Continue Learning" if started
+                        // FIX 3: Show str.courseStartLearning if 0 lessons done, str.courseContinueLearning if started
                         Text(
-                            if (completedLessons > 0) "Continue Learning" else "Start Learning",
+                            if (completedLessons > 0) str.courseContinueLearning else str.courseStartLearning,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1034,7 +1036,7 @@ private fun BottomCta(
                             Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                if (course.isPaid) "Enroll — ₹${course.price}" else "Enroll Free",
+                                if (course.isPaid) "Enroll — ₹${course.price}" else str.courseEnrollFree,
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }

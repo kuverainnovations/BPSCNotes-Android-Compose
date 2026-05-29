@@ -53,7 +53,7 @@ fun CoursePaymentScreen(
             orderId     = orderId,
             keyId       = keyId,
             amount      = price,
-            description = "Enroll in $courseTitle",
+            description = "${str.courseEnrollTitle} $courseTitle",
             userName    = state.userName,
             userEmail   = state.userEmail,
             userPhone   = state.userPhone,
@@ -62,7 +62,8 @@ fun CoursePaymentScreen(
             },
             onFailure   = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
-            }
+            },
+            str
         )
     }
 

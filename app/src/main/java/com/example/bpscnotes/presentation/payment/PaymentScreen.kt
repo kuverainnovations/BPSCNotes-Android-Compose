@@ -1,12 +1,8 @@
 package com.example.bpscnotes.presentation.payment
 
-import com.kuvera.bpscnotes.R
-
 import android.app.Activity
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
@@ -63,7 +60,8 @@ fun SubscriptionPaymentScreen(
             },
             onFailure   = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
-            }
+            },
+            str = str
         )
     }
 
@@ -372,6 +370,7 @@ private fun PriceRow(label: String, value: String, color: Color = BpscColors.Tex
 // ── Success screen ────────────────────────────────────────────
 @Composable
 fun SuccessScreen(title: String, message: String, bonusCoins: Int = 0, onDone: () -> Unit) {
+    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxSize()
         .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), BpscColors.Surface))),
         contentAlignment = Alignment.Center) {
@@ -402,7 +401,7 @@ fun SuccessScreen(title: String, message: String, bonusCoins: Int = 0, onDone: (
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Start Learning →", style = MaterialTheme.typography.titleMedium)
+                Text(str.paymentStartLearning, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -419,7 +418,8 @@ fun launchRazorpay(
     userEmail: String,
     userPhone: String,
     onSuccess: (paymentId: String, signature: String) -> Unit,
-    onFailure: (code: Int, message: String) -> Unit
+    onFailure: (code: Int, message: String) -> Unit,
+    str: AppStrings
 ) {
     try {
         val checkout = com.razorpay.Checkout()
@@ -476,6 +476,6 @@ fun launchRazorpay(
             ?.setPaymentCallbacks(onSuccess, onFailure)
         checkout.open(activity, options)
     } catch (e: Exception) {
-        onFailure(-1, e.message ?: "Failed to open payment screen")
+        onFailure(-1, e.message ?: str.paymentOpenFailed)
     }
 }

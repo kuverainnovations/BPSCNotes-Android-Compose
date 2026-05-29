@@ -1007,6 +1007,7 @@ private fun CoinWalletSection(
     transactions: List<com.example.bpscnotes.data.remote.api.CoinTransactionDto>,
     onViewAll:    () -> Unit
 ) {
+    val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(20.dp),
@@ -1021,16 +1022,16 @@ private fun CoinWalletSection(
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("🪙", fontSize = 16.sp)
-                        Text("Coin Wallet", style = MaterialTheme.typography.titleMedium,
+                        Text(str.profileCoinWallet, style = MaterialTheme.typography.titleMedium,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
                     }
                     TextButton(onClick = onViewAll) {
-                        Text("View all", color = BpscColors.CoinGold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text(str.profileViewAll, color = BpscColors.CoinGold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) {
                     Column {
-                        Text("Current Balance", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.profileCurrentBalance, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("🪙", fontSize = 24.sp)
                             Text("$balance coins", style = MaterialTheme.typography.headlineMedium,
@@ -1039,10 +1040,10 @@ private fun CoinWalletSection(
                         Text("= ₹${balance / 10} discount value", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f))
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("How to earn:", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
-                        Text("Daily quiz +5", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
-                        Text("Streak bonus +15", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
-                        Text("Referral +50", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.profileHowToEarn, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                        Text(str.profileEarnQuiz, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.profileEarnStreak, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.profileEarnReferral, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                     }
                 }
                 // Recent transactions
@@ -1068,7 +1069,7 @@ private fun CoinWalletSection(
                 }
                 if (transactions.isEmpty()) {
                     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.White.copy(0.08f)).padding(12.dp), Alignment.Center) {
-                        Text("No transactions yet — complete a quiz to earn coins!", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f), textAlign = TextAlign.Center)
+                        Text(str.profileNoTransactions, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.6f), textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -1174,7 +1175,7 @@ private fun BadgesCard(badges: List<BadgeItem>) {
 private fun ProfileSettingsRow(navController: NavHostController) {
     val str = LocalStrings.current
     val items = listOf(
-        Triple(Icons.Rounded.MenuBook, "My Courses", Screen.MyLearning.route),
+        Triple(Icons.Rounded.MenuBook, str.profileMyCourses, Screen.MyLearning.route),
         Triple(Icons.Rounded.EmojiEvents, str.profileAchievements, Screen.Achievements.route),
         Triple(Icons.Rounded.Settings, "Settings", Screen.Settings.route),
     )

@@ -129,7 +129,7 @@ fun EditProfileScreen(
                     onValueChange = { name = it })
                 ProfileField(value = email, label = str.editEmail, icon = Icons.Rounded.Email,
                     keyboardType = KeyboardType.Email, onValueChange = { email = it })
-                ProfileField(value = bio, label = "Bio / About me", icon = Icons.Rounded.Info,
+                ProfileField(value = bio, label = str.editBio, icon = Icons.Rounded.Info,
                     singleLine = false, onValueChange = { bio = it }, minLines = 3)
                 ProfileField(value = district, label = str.editDistrict, icon = Icons.Rounded.LocationOn,
                     onValueChange = { district = it })

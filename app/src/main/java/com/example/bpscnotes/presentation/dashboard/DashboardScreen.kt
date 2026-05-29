@@ -704,7 +704,7 @@ private fun DashboardHeader(
                         Text(greeting, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                     }
                     Text(
-                        if (name.isNotEmpty()) "${name.split(" ").first()} 👋" else "Aspirant 👋",
+                        if (name.isNotEmpty()) "${name.split(" ").first()} 👋" else str.dashboardAspirant,
                         style = MaterialTheme.typography.headlineMedium, color = Color.White,
                         fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp
                     )
@@ -852,7 +852,7 @@ private fun TodayTargetCard(
                         Text(str.dashboardTodayFocus, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
                         when {
                             isLoading && targets.isEmpty() -> Text(str.loading, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                            total == 0                     -> Text("No targets set", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                            total == 0                     -> Text(str.dashboardNoTargets2, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                             else                           -> Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                         }
                     }
@@ -861,7 +861,7 @@ private fun TodayTargetCard(
                     .clip(RoundedCornerShape(20.dp))
                     .background(BpscColors.PrimaryLight)
                     .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("View All", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
+                    Text(str.dashboardViewAll, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
                     Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
                 }
             }
@@ -899,7 +899,7 @@ private fun TodayTargetCard(
                     }
                 }
                 targets.isEmpty() -> {
-                    Text("No targets for today. Create one below!", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.dashboardNoTargets, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
                 else -> {
                     targets.take(3).forEach { t ->
@@ -932,7 +932,7 @@ private fun TodayTargetCard(
                 .clickable(onClick = onCreateTarget), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Rounded.Add, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
-                    Text("Create Custom Target", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(str.dashboardCreateTarget, style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -948,14 +948,15 @@ private fun WeeklyConsistencyCard(
     streak: Int,
     isLoading: Boolean
 ) {
+    val str = LocalStrings.current
     Card(modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Weekly Consistency", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text("Your study activity this week", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.dashboardWeeklyConsistency, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    Text(str.dashboardWeeklySubtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
                 Row(modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -984,8 +985,8 @@ private fun WeeklyConsistencyCard(
                         .height(100.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("📊", fontSize = 32.sp)
-                            Text("No activity data yet", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                            Text("Start studying to see your progress", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.dashboardNoActivity, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text(str.dashboardStartStudying, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
                 }
@@ -1047,7 +1048,7 @@ private fun WeeklyConsistencyCard(
 private fun QuickAccessSection(navController: NavHostController, bookmarkCount: Int) {
     val str = LocalStrings.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-        SectionHeader(title = "Quick Access")
+        SectionHeader(title = str.dashboardQuickAccess)
         Spacer(Modifier.height(14.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
@@ -1096,7 +1097,7 @@ private fun RecommendedSection(
         Row(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            SectionHeader(title = "Recommended for You")
+            SectionHeader(title = str.dashboardRecommended)
             TextButton(onClick = { navController.navigate(Screen.MyLearning.route) }) {
                 Text(str.seeAll, color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
@@ -1176,9 +1177,10 @@ private fun MyScheduleSection(
     navController:      NavHostController,
     viewModel:          DashboardViewModel
 ) {
+    val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        SectionHeader("My Schedule", "Upcoming events")
+        SectionHeader(str.dashboardMySchedule, str.dashboardUpcomingEvents)
         Spacer(Modifier.height(12.dp))
 
         if (liveClasses.isEmpty()) {
@@ -1191,7 +1193,7 @@ private fun MyScheduleSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "No upcoming classes scheduled",
+                    str.dashboardNoClasses,
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.TextSecondary
                 )
@@ -1218,15 +1220,15 @@ private fun MyScheduleSection(
                             )
                             context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
                         } else {
-                            viewModel.setScheduleToast("No meeting link available. Please check back shortly.")
+                            viewModel.setScheduleToast(str.dashboardNoMeetingLink)
                         }
                     }
 
-                    "ended" -> { viewModel.setScheduleToast("This class has already ended.") }
+                    "ended" -> { viewModel.setScheduleToast(str.dashboardClassEnded) }
                     else -> {
                         // Scheduled → register
                         if (!isRegistered) viewModel.registerLiveClass(item.id)
-                        else viewModel.setScheduleToast("You are already registered for this class.")
+                        else viewModel.setScheduleToast(str.dashboardAlreadyRegistered)
                     }
                 }
             }
@@ -1454,11 +1456,11 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
             Column(modifier = Modifier.padding(24.dp).navigationBarsPadding()) {
                 Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Divider).align(Alignment.CenterHorizontally))
                 Spacer(Modifier.height(20.dp))
-                Text("Create Your Daily Target", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Build your plan, one task at a time.", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text(str.dashboardCreateCustomTarget, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(str.dashboardBuildPlan, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 Spacer(Modifier.height(20.dp))
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BpscColors.Surface).padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BasicTextField(value = inputText, onValueChange = { inputText = it }, modifier = Modifier.weight(1f).padding(vertical = 12.dp), textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary), decorationBox = { inner -> if (inputText.isEmpty()) Text("What's your next task?", color = BpscColors.TextHint); inner() }, singleLine = true)
+                    BasicTextField(value = inputText, onValueChange = { inputText = it }, modifier = Modifier.weight(1f).padding(vertical = 12.dp), textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary), decorationBox = { inner -> if (inputText.isEmpty()) Text(str.dashboardWhatNext, color = BpscColors.TextHint); inner() }, singleLine = true)
                     IconButton(onClick = { if (inputText.isNotBlank() && addedItems.size < 5) { addedItems.add(inputText.trim()); inputText = "" } }, modifier = Modifier.size(36.dp).clip(CircleShape).background(BpscColors.Primary)) {
                         Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
@@ -1497,7 +1499,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
         Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
-        Triple(Icons.Rounded.Psychology,    "Active Recall",          Screen.ActiveRecall.route),
+        Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,          Screen.ActiveRecall.route),
         Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )

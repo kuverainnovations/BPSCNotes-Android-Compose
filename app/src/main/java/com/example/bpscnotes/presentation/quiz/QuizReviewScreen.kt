@@ -250,7 +250,7 @@ internal fun QuizReviewScreen(
                             ) {
                                 Text("ℹ️", fontSize = 12.sp)
                                 Text(
-                                    "Correct answer & explanation revealed after submission.",
+                                    str.quizReviewExplanation,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = BpscColors.Primary
                                 )

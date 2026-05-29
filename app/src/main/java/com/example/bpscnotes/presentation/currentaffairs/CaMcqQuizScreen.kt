@@ -258,11 +258,10 @@ private fun ResultScreen(
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val str = LocalStrings.current
     val correct = mcqs.count { answers[it.id] == it.correct }
     val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
     val animPct by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
-
+    val str = LocalStrings.current
     Column(modifier = Modifier.fillMaxSize()
         .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), BpscColors.Surface)))
         .verticalScroll(rememberScrollState()),

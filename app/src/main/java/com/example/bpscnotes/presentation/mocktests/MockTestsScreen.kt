@@ -239,8 +239,8 @@ fun MockTestsScreen(navController: NavHostController,
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(Color.White)) {
                 Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text("Loading questions…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Setting up your test", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.quizLoadingQ, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
             }
         }
@@ -293,7 +293,7 @@ fun MockTestsScreen(navController: NavHostController,
                     Box(Modifier.fillMaxSize(), Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             CircularProgressIndicator(color = BpscColors.Primary)
-                            Text("Preparing questions…", style = MaterialTheme.typography.bodyLarge)
+                            Text(str.quizPreparingQ, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -388,7 +388,7 @@ private fun MockTestLobbyScreen(
             .map { it.toMockTest() }
     }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
-    val tabs = listOf(str.filterAll, "Full Mock", "Mini Tests", "Prev. Year"/*, "Custom"*/)
+    val tabs = listOf(str.filterAll, str.quizFullMock, "Mini Tests", str.quizPrevYear/*, "Custom"*/)
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -421,7 +421,7 @@ private fun MockTestLobbyScreen(
                             ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                             Column {
                                 Text(str.quizMock + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Practice like the real exam", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.quizPracticeReal, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
                         // Custom test button
@@ -516,14 +516,14 @@ private fun MockTestLobbyScreen(
                             ) {
                                 Text("📝", fontSize = 48.sp)
                                 Text(
-                                    if (selectedType != null) "No tests in this category"
-                                    else "No mock tests available yet",
+                                    if (selectedType != null) str.quizNoTestsCategory
+                                    else str.quizNoTestsYet,
                                     style = MaterialTheme.typography.titleLarge,
                                     color = BpscColors.TextPrimary,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "New tests are added regularly. Check back soon!",
+                                    str.quizTestsComingSoon,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = BpscColors.TextSecondary
                                 )
@@ -535,7 +535,7 @@ private fun MockTestLobbyScreen(
                 val featured = filtered.filter { it.isFeatured }
                 if (featured.isNotEmpty() && selectedType == null) {
                     item {
-                        Text("⭐ Featured", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        Text(str.quizFeatured, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                     }
                     items(featured) { test ->
                         MockTestCard(test = test, isFeatured = true, onStart = { onStartTest(test) })
@@ -547,10 +547,10 @@ private fun MockTestLobbyScreen(
                 item {
                     Text(
                         when (selectedType) {
-                            MockTestType.Full         -> "Full Mock Tests"
-                            MockTestType.SubjectWise  -> "Subject-wise Mini Tests"
-                            MockTestType.PreviousYear -> "Previous Year Papers"
-                            null                      -> "All Tests"
+                            MockTestType.Full         -> str.quizFullMock
+                            MockTestType.SubjectWise  -> str.quizMiniTest
+                            MockTestType.PreviousYear -> str.quizPrevYear
+                            null                      -> str.quizAllTests
                             else                      -> "Tests"
                         },
                         style = MaterialTheme.typography.titleLarge,
@@ -585,9 +585,9 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
         MockTestType.Custom       -> Pair(Color(0xFFE67E22), Color(0xFFFFF0EA))
     }
     val typeLabel = when (test.type) {
-        MockTestType.Full         -> "Full Mock"
-        MockTestType.SubjectWise  -> "Mini Test"
-        MockTestType.PreviousYear -> "Prev. Year"
+        MockTestType.Full         -> str.quizFullMock
+        MockTestType.SubjectWise  -> str.quizMiniTest
+        MockTestType.PreviousYear -> str.quizPrevYear
         MockTestType.Custom       -> "Custom"
     }
 
@@ -656,7 +656,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
             ) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     MiniStat(Icons.Rounded.People, "${(test.totalAttempts / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${test.totalAttempts}" }}", "Attempts")
-                    MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", "Avg Score")
+                    MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", str.quizAvgScore)
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", str.quizDuration)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("🪙", fontSize = 12.sp)
@@ -752,7 +752,7 @@ private fun TestInstructionsScreen(
                     elevation = CardDefaults.cardElevation(3.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text("Test Overview", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizTestOverview, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -781,10 +781,10 @@ private fun TestInstructionsScreen(
                             Triple("🔵", "Marked for Review",    "Questions you want to revisit"),
                             Triple("⚪", "Unattempted",          "Questions not yet answered"),
                             Triple("🟡", "Attempted + Marked",   "Answered but flagged for review"),
-                            Triple("📖", "Question Navigator",   "Tap the grid icon to jump to any question"),
+                            Triple("📖", str.quizNavTitle,   "Tap the grid icon to jump to any question"),
                             Triple("🔖", "Bookmark",             "Save important questions for later"),
                             Triple("⏰", "Auto Submit",          "Test submits automatically when timer ends"),
-                            Triple("↩️",  "Resume",              "You can resume if you exit accidentally"),
+                            Triple("↩️",  "Resume",              str.quizCanResume),
                         ).forEach { (emoji, title, desc) ->
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(emoji, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
@@ -808,7 +808,7 @@ private fun TestInstructionsScreen(
                 ) {
                     Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Start Test", style = MaterialTheme.typography.titleLarge)
+                    Text(str.quizStartTest, style = MaterialTheme.typography.titleLarge)
                 }
             }
         }
@@ -1057,7 +1057,7 @@ private fun ActiveTestScreen(
                         colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                     ) {
                         Text(
-                            if (currentIndex < questions.size - 1) "Save & Next →" else "Submit Test",
+                            if (currentIndex < questions.size - 1) str.quizSaveNext else str.quizSubmitTest,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -1074,7 +1074,7 @@ private fun ActiveTestScreen(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(20.dp).navigationBarsPadding()) {
-                        Text("Question Navigator", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizNavTitle, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
                         // Legend
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1120,7 +1120,7 @@ private fun ActiveTestScreen(
                 onDismissRequest = { showSubmitDialog = false },
                 containerColor   = Color.White,
                 shape            = RoundedCornerShape(20.dp),
-                title = { Text("Submit Test?", fontWeight = FontWeight.Bold) },
+                title = { Text(str.quizSubmitTestTitle, fontWeight = FontWeight.Bold) },
                 text  = {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Answered: $attempted / ${questions.size}", style = MaterialTheme.typography.bodyLarge)
@@ -1201,10 +1201,9 @@ private fun TestAnalysisScreen(
     val rank       = submitResult?.rank
     val percentile = submitResult?.percentile
     val coinsEarned  = submitResult?.coinsEarned ?: 0
-    val str = LocalStrings.current
 
     val animProg   by animateFloatAsState(percentage / 100f, tween(1200), label = "ap")
-
+    val str = LocalStrings.current
     // Subject-wise breakdown
     val subjects   = questions.map { it.subject }.distinct()
     val subjectStats = subjects.map { sub ->
@@ -1252,7 +1251,7 @@ private fun TestAnalysisScreen(
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("🏆", fontSize = 24.sp)
                         Text("#$rank", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Your Rank", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.quizYourRank, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                     }
                 }
                 Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f))) {
@@ -1283,13 +1282,13 @@ private fun TestAnalysisScreen(
                             Text("🪙", fontSize = 28.sp)
                             Column {
                                 Text(
-                                    if (coinsEarned > 0) "Coins Earned!" else "No Coins This Time",
+                                    if (coinsEarned > 0) str.quizCoinsEarned2 else str.quizNoCoins,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    if (coinsEarned > 0) "Added to your wallet" else "Already earned coins for this quiz",
+                                    if (coinsEarned > 0) str.quizAddedWallet else str.quizAlreadyEarned,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
                                 )
@@ -1321,7 +1320,7 @@ private fun TestAnalysisScreen(
             // Subject breakdown
         /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Subject-wise Analysis", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(str.quizSubjectAnalysis, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                     subjectStats.forEach { (subject, correct, total) ->
                         val pct = if (total > 0) correct.toFloat() / total else 0f
                         val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
@@ -1349,19 +1348,19 @@ private fun TestAnalysisScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                     Icon(Icons.Rounded.Leaderboard, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("View Leaderboard", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizViewLeaderboard, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, Color.White.copy(0.4f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                     Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Retry Test", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizRetryTest, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, Color.White.copy(0.3f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(0.8f))) {
                     Icon(Icons.Rounded.Home, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Back to Tests", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizBackToTests, style = MaterialTheme.typography.titleMedium)
                 }
             }
             Spacer(Modifier.height(32.dp))
@@ -1504,10 +1503,10 @@ private fun CustomTestSheet(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Create Custom Test", style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+            Text(str.quizCreateCustom, style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
 
             // Subject selection
-            Text("Select Subjects", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+            Text(str.quizSelectSubjects, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(allSubjects) { sub ->
                     val sel = selectedSubs.contains(sub)
@@ -1548,7 +1547,7 @@ private fun CustomTestSheet(
             // Negative marking toggle
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Negative Marking", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(str.quizNegativeMarking, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                     Text("-0.33 per wrong answer", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
                 Switch(
@@ -1563,7 +1562,7 @@ private fun CustomTestSheet(
                 onClick = {
                     val customTest = MockTest(
                         id = "custom_${System.currentTimeMillis()}",
-                        title = "Custom Test",
+                        title = str.quizCustomTest,
                         subtitle = "$questionCount Questions · ${durationMins} min · ${if (selectedSubs.isEmpty()) "All Subjects" else selectedSubs.joinToString(", ")}",
                         type = MockTestType.Custom,
                         totalQuestions = questionCount,
@@ -1578,7 +1577,7 @@ private fun CustomTestSheet(
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
             ) {
-                Text("Start Custom Test 🚀", style = MaterialTheme.typography.titleMedium)
+                Text(str.quizStartCustom, style = MaterialTheme.typography.titleMedium)
             }
         }
     }

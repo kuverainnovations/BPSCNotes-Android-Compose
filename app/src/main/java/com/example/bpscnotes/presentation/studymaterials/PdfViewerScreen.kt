@@ -109,9 +109,9 @@ fun PdfViewerScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("You've read $freePages free pages out of $totalPages.",
+                    Text("${str.pdfReadFreePages} $freePages/$totalPages.",
                         style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
-                    Text("Purchase to unlock all $totalPages pages with lifetime access.",
+                    Text("${str.pdfPurchaseUnlock}",
                         style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
                 }
             },
@@ -248,7 +248,7 @@ fun PdfViewerScreen(
                                 // ── The page bitmap ──────────────────────────
                                 Image(
                                     bitmap              = pdfPages[pageIndex].asImageBitmap(),
-                                    contentDescription  = "Page $pageNumber",
+                                    contentDescription  = "${str.pdfPageNum} $pageNumber",
                                     modifier            = Modifier
                                         .fillMaxWidth()
                                         .then(if (isLocked) Modifier.blur(16.dp) else Modifier),
@@ -302,7 +302,7 @@ fun PdfViewerScreen(
                                                     modifier = Modifier.size(32.dp))
                                             }
 
-                                            Text("Page $pageNumber is locked",
+                                            Text("${str.pdfPageLocked} $pageNumber",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = Color.White,
                                                 fontWeight = FontWeight.ExtraBold)
@@ -358,7 +358,7 @@ fun PdfViewerScreen(
                                                 color = Color(0xFFFFA726),
                                                 fontWeight = FontWeight.ExtraBold,
                                                 style = MaterialTheme.typography.titleSmall)
-                                            Text("Purchase to access all $totalPages pages",
+                                            Text("${str.pdfPurchaseAccess}",
                                                 color = Color.White.copy(0.7f),
                                                 style = MaterialTheme.typography.bodySmall)
                                         }

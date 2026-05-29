@@ -500,12 +500,12 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
             }
             Spacer(Modifier.height(20.dp))
             Button(onClick = { onToggleComplete(current.target.id); if (currentIndex < items.size - 1) currentIndex++ }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = if (isCompleted) BpscColors.Success else BpscColors.Primary)) {
-                Icon(if (isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.Check, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(if (isCompleted) "Completed ✓" else "Mark as Done")
+                Icon(if (isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.Check, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(if (isCompleted) "${str.targetCompleted} ✓" else str.targetComplete)
             }
         } else {
             Column(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("🎉", fontSize = 60.sp)
-                Text("All Topics Done!", style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                Text("${str.targetCompleted}! 🎉", style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                 Text("You've completed today's targets.\nYour streak is safe!", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }

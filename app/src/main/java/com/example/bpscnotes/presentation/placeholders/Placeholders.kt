@@ -351,7 +351,7 @@ fun DownloadsScreen(
                                                         Intent(Intent.ACTION_VIEW).apply {
                                                             setDataAndType(android.net.Uri.fromFile(file), mime)
                                                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        }, "Open with"
+                                                        }, str.placeholdersOpenWith
                                                     )
                                                 )
                                             }
@@ -557,7 +557,7 @@ fun SubscriptionScreen(
                             Column {
                                 Text(str.premium + " Content", style = MaterialTheme.typography.titleLarge,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Exclusive notes, papers & courses",
+                                Text(str.placeholdersExclusiveNotes,
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
@@ -571,7 +571,7 @@ fun SubscriptionScreen(
 
                     // FIX: Dynamic plan card from API
                     val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
-                        "monthly", "BPSCNotes Pro", 199, 299, "1 Month", "Billed monthly", 20, 100)
+                        "monthly", "BPSCNotes Pro", 199, 299, "1 Month", str.placeholdersBilledMonthly, 20, 100)
                     // FIX: Premium card is now clickable — shows enroll/subscribe dialog
                     var showEnrollDialog by remember { mutableStateOf(false) }
                     if (showEnrollDialog) {
@@ -581,12 +581,12 @@ fun SubscriptionScreen(
                             title = { Text("🚀 Get BPSCNotes Pro", fontWeight = FontWeight.ExtraBold) },
                             text = {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("Unlock all premium study materials, notes, and videos.")
+                                    Text(str.placeholdersUnlockAll)
                                     val p = state.plans.firstOrNull()
                                     if (p != null) {
                                         Text("✅ All premium PDFs & notes", style = MaterialTheme.typography.bodyMedium)
                                         Text("✅ Offline downloads", style = MaterialTheme.typography.bodyMedium)
-                                        Text("✅ Priority support", style = MaterialTheme.typography.bodyMedium)
+                                        Text(str.placeholdersPrioritySupport, style = MaterialTheme.typography.bodyMedium)
                                         if (p.bonusCoins > 0) Text("✅ +${p.bonusCoins} bonus coins on signup", style = MaterialTheme.typography.bodyMedium)
                                         Spacer(Modifier.height(4.dp))
                                         Text("₹${p.price}/${p.duration} — ${p.billingCycle}", fontWeight = FontWeight.Bold, color = BpscColors.Primary)
@@ -619,7 +619,7 @@ fun SubscriptionScreen(
                                 Text("BPSCNotes ${featuredPlan.name}",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("All premium content · No ads · Priority support",
+                                Text(str.placeholdersAllPremium,
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     SubPill("📄 Premium PDFs")
@@ -701,9 +701,9 @@ fun SubscriptionScreen(
                                         Column(horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                             Text("⭐", fontSize = 52.sp)
-                                            Text("No premium content yet",
+                                            Text(str.placeholdersNoPremiumYet,
                                                 style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary)
-                                            Text("Check back soon for exclusive content",
+                                            Text(str.placeholdersCheckBack,
                                                 style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                                         }
                                     }
@@ -802,4 +802,7 @@ fun PlaceholderScreen(title: String) {
 }
 
 @Composable
-fun NotesReaderScreen(nav: NavHostController, noteId: String) = PlaceholderScreen("Notes Reader")
+fun NotesReaderScreen(nav: NavHostController, noteId: String) {
+    val str = LocalStrings.current
+    PlaceholderScreen(str.placeholdersNotesReader)
+}

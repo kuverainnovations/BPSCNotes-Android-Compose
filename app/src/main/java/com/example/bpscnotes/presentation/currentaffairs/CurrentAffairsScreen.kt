@@ -423,7 +423,7 @@ private fun ArticleBottomSheet(
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text(str.caMcqPractice, style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                        Text(when { mcqLoading -> "Loading questions…"; mcqs.isNullOrEmpty() -> "No MCQs added yet"; else -> "${mcqs.size} questions from this article" },
+                        Text(when { mcqLoading -> str.caLoadingQuestions; mcqs.isNullOrEmpty() -> "No MCQs added yet"; else -> "${mcqs.size} questions from this article" },
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                     }
                     if (mcqLoading) {
@@ -452,7 +452,7 @@ private fun ArticleBottomSheet(
                 ) {
                     Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (isBookmarked) "Saved ✓" else "Save", style = MaterialTheme.typography.titleMedium)
+                    Text(if (isBookmarked) str.caSavedDone else "Save", style = MaterialTheme.typography.titleMedium)
                 }
                 Button(
                     onClick  = {

@@ -320,6 +320,7 @@ private fun RoomLobbyScreen(
     viewModel: ReadingRoomsViewModel,
     onJoinRoom: (StudyRoom) -> Unit,
 ) {
+    val str = LocalStrings.current
 
     val vmState by viewModel.uiState.collectAsState()
     var selectedSubject by remember { mutableStateOf(RoomSubject.All) }
@@ -432,13 +433,13 @@ private fun RoomLobbyScreen(
                             }*/
                             Column {
                                 Text(
-                                    "E- Library",
+                                    str.materialsTitle,
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = Color.White,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    "Study together, rank higher",
+                                    str.roomsTodayStudyTogether,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(0.7f)
                                 )
@@ -527,7 +528,7 @@ private fun RoomLobbyScreen(
                             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                             decorationBox = { inner ->
                                 if (searchQuery.isEmpty()) Text(
-                                    "Search rooms, topics...",
+                                    str.roomsSearchHint,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = Color.White.copy(0.5f)
                                 )
@@ -615,7 +616,7 @@ private fun RoomLobbyScreen(
                 if (featured.isNotEmpty()) {
                     item {
                         Text(
-                            "⭐ Featured Rooms",
+                            str.roomsFeatured,
                             style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.TextPrimary,
                             fontWeight = FontWeight.ExtraBold
@@ -647,7 +648,7 @@ private fun RoomLobbyScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "All Rooms",
+                            str.roomsAllRooms,
                             style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.TextPrimary,
                             fontWeight = FontWeight.ExtraBold
@@ -1240,6 +1241,7 @@ private fun ActiveRoomScreen(room: StudyRoom, onExit: () -> Unit) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun ChatTab(room: StudyRoom) {
+    val str = LocalStrings.current
     val messages = remember { mutableStateListOf(*room.messages.toTypedArray()) }
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -1403,7 +1405,7 @@ private fun ChatTab(room: StudyRoom) {
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary),
                     decorationBox = { inner ->
                         if (inputText.isEmpty()) Text(
-                            "Type a message...",
+                            str.chatMessageHint,
                             color = BpscColors.TextHint,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -1564,6 +1566,7 @@ private fun MembersTab(room: StudyRoom) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun LeaderboardTab(room: StudyRoom) {
+    val str = LocalStrings.current
     val sorted = room.members.sortedByDescending { it.studyMinutes }
 
     LazyColumn(
@@ -1576,13 +1579,13 @@ private fun LeaderboardTab(room: StudyRoom) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "Today's Leaderboard",
+                    str.roomsLeaderboard,
                     style = MaterialTheme.typography.titleMedium,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Resets midnight",
+                    str.roomsLeaderboardResets,
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.TextHint
                 )
@@ -1730,7 +1733,7 @@ private fun PomodoroTab(
     onToggle: () -> Unit, onReset: () -> Unit,
 ) {
     val animProg by animateFloatAsState(progress, tween(500), label = "pomo")
-
+    val str = LocalStrings.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1741,7 +1744,7 @@ private fun PomodoroTab(
     ) {
 
         Text(
-            if (isRunning) "🎯 Focus Session" else "⏸ Paused",
+            if (isRunning) str.roomsFocusSession else "⏸ Paused",
             style = MaterialTheme.typography.titleLarge,
             color = BpscColors.TextPrimary,
             fontWeight = FontWeight.Bold
@@ -1855,10 +1858,10 @@ private fun PomodoroTab(
                     fontWeight = FontWeight.Bold
                 )
                 listOf(
-                    "Focus for 25 min, then take a 5 min break",
-                    "After 4 sessions, take a longer 15 min break",
-                    "Keep phone away during focus session",
-                    "Note down distracting thoughts, revisit in break"
+                    str.roomsFocusTip1,
+                    str.roomsFocusTip2,
+                    str.roomsFocusTip3,
+                    str.roomsFocusTip4
                 ).forEach { tip ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("•", color = accentColor, fontWeight = FontWeight.ExtraBold)
@@ -1901,7 +1904,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Create Study Room",
+                str.roomsCreate,
                 style = MaterialTheme.typography.headlineSmall,
                 color = BpscColors.TextPrimary,
                 fontWeight = FontWeight.ExtraBold
@@ -1922,7 +1925,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             OutlinedTextField(
                 value = focusTopic,
                 onValueChange = { focusTopic = it },
-                label = { Text("Today's Focus Topic") },
+                label = { Text(str.roomsTodayTopic) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -1965,7 +1968,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Max Members",
+                    str.roomsMaxMembers,
                     style = MaterialTheme.typography.titleMedium,
                     color = BpscColors.TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -2002,7 +2005,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Requires join code to enter",
+                        str.roomsRequiresCode,
                         style = MaterialTheme.typography.bodyMedium,
                         color = BpscColors.TextSecondary
                     )
@@ -2027,7 +2030,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             ) {
                 Icon(Icons.Rounded.Groups, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Create Room 🚀", style = MaterialTheme.typography.titleMedium)
+                Text(str.roomsCreateBtn, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -2062,7 +2065,7 @@ private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Enter the room code shared by the admin",
+                str.roomsEnterCode,
                 style = MaterialTheme.typography.bodyLarge,
                 color = BpscColors.TextSecondary
             )
@@ -2092,7 +2095,7 @@ private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
             ) {
                 Icon(Icons.Rounded.Login, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Join Room", style = MaterialTheme.typography.titleMedium)
+                Text(str.roomsJoinBtn, style = MaterialTheme.typography.titleMedium)
             }
         }
     }

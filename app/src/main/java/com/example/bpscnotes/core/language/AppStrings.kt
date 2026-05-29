@@ -54,6 +54,16 @@ data class DashboardStrings(
     val drawerMockTests: String, val drawerJobAlerts: String, val drawerStudyRooms: String,
     val drawerCoinWallet: String, val drawerAchievements: String,
     val drawerSettings: String, val drawerLanguage: String, val drawerLogout: String,
+    val dashboardAspirant: String, val dashboardNoTargets2: String,
+    val dashboardViewAll: String, val dashboardCreateTarget: String,
+    val dashboardWeeklyConsistency: String, val dashboardWeeklySubtitle: String,
+    val dashboardNoActivity: String, val dashboardStartStudying: String,
+    val dashboardQuickAccess: String, val dashboardRecommended: String,
+    val dashboardMySchedule: String, val dashboardUpcomingEvents: String,
+    val dashboardNoClasses: String, val dashboardNoMeetingLink: String,
+    val dashboardClassEnded: String, val dashboardAlreadyRegistered: String,
+    val dashboardCreateCustomTarget: String, val dashboardBuildPlan: String,
+    val dashboardWhatNext: String,
 )
 
 data class CourseStrings(
@@ -69,6 +79,26 @@ data class CourseStrings(
     val lessonLiveClass: String, val lessonJoinLive: String, val lessonLiveNotReady: String,
     val lessonChapterQuiz: String, val lessonCantLoadPdf: String,
     val lessonOpenBrowser: String, val lessonLoadingPdf: String,
+    val courseByAuthor: String, val courseYourProgress: String,
+    val courseCertEarned: String, val courseCertTitle: String,
+    val courseCertTap: String, val courseCertComplete: String,
+    val courseShareCert: String, val courseShareCertBtn: String,
+    val courseCourseCompleted: String, val courseContinueLearning: String,
+    val courseStartLearning: String, val courseEnrollFree: String,
+    val courseAbout: String, val courseFreeTrial: String,
+    val courseWatch: String, val courseSyllabus: String,
+    val courseShowLess: String, val courseShowAll: String,
+    val courseStudentReviews: String, val coursePriceSummary: String,
+    val courseCoinsDiscount: String, val courseCouponApplied: String,
+    val courseTotalPayable: String, val courseUseCoins: String,
+    val courseYouHaveCoins: String, val courseCouponCode: String,
+    val courseCouponSaved: String, val courseSecurePayment: String,
+    val courseGrabNow: String, val courseTapStar: String,
+    val courseHindiEnglish: String,
+    val courseInProgress: String, val courseNoCoursesYet: String,
+    val courseExploreStore: String, val courseMyCertificates: String,
+    val courseOverallProgress: String, val courseTapRead: String,
+    val courseEnrollTitle: String,
 )
 
 data class QuizStrings(
@@ -85,6 +115,25 @@ data class QuizStrings(
     val quizExcellent: String, val quizGoodJob: String, val quizKeepPracticing: String,
     val quizSelectCorrect: String, val quizSkipped: String, val quizAnswered: String,
     val quizNoAvailable: String, val quizCheckLater: String,
+    val quizReviewAll: String, val quizRetakeQuiz: String, val quizBackToQuizzes: String,
+    val quizNavTitle: String, val quizCorrectAns: String, val quizWrongAns: String,
+    val quizPassed2: String, val quizNotPassed: String,
+    val quizSaveNext: String, val quizSubmitTest: String,
+    val quizStartTest: String, val quizTestOverview: String,
+    val quizCanResume: String, val quizAvgScore: String,
+    val quizFullMock: String, val quizMiniTest: String, val quizPrevYear: String,
+    val quizAllTests: String, val quizFeatured: String,
+    val quizPracticeReal: String, val quizNoTestsCategory: String,
+    val quizNoTestsYet: String, val quizTestsComingSoon: String,
+    val quizCoinsEarned2: String, val quizNoCoins: String,
+    val quizAddedWallet: String, val quizAlreadyEarned: String,
+    val quizSubjectAnalysis: String, val quizViewLeaderboard: String,
+    val quizRetryTest: String, val quizBackToTests: String,
+    val quizCreateCustom: String, val quizSelectSubjects: String,
+    val quizNegativeMarking: String, val quizCustomTest: String,
+    val quizStartCustom: String, val quizSubmitTestTitle: String,
+    val quizLoadingQ: String, val quizSettingUp: String, val quizPreparingQ: String,
+    val quizYourRank: String,
 )
 
 data class ContentStrings(
@@ -105,6 +154,21 @@ data class ContentStrings(
     val materialsExplore: String, val materialsMyUploads: String,
 )
 
+data class ContentStrings2(
+    val materialsSave: String, val materialsRemoveSaved: String,
+    val materialsTapOpen: String, val materialsNoPreview: String,
+    val materialsUploadTitle: String,
+    val materialsUploading: String, val materialsSubmitReview: String,
+    val materialsReviewNote: String, val materialsNoSaved: String,
+    val materialsNoResources: String, val materialsBookmarkHint: String,
+    val materialsNoUploads: String, val materialsUploadHint: String,
+    val materialsPublished: String, val materialsRejected: String,
+    val materialsNoDownloads: String, val materialsDownloadHint: String,
+    val materialsPremiumContent: String, val materialsChargeCoins: String,
+    val materialsDownloadedDone: String, val materialsUnlockPro: String, val materialsDownloadFree: String,
+    val caLoadingQuestions: String, val caSavedDone: String,
+)
+
 data class JobRoomStrings(
     val jobsTitle: String, val jobsApplyNow: String, val jobsLastDate: String,
     val jobsPosts: String, val jobsSave: String, val jobsSaved: String,
@@ -122,6 +186,18 @@ data class JobRoomStrings(
     val roomsClaimNow: String, val roomsLater: String, val roomsRequirements: String,
     val roomsKeepStudying: String, val roomsReadyForNext: String, val roomsPromotedMidnight: String,
     val roomsGroupStudy: String, val roomsTapToStart: String,
+    val jobsNew: String, val jobsApplicationClosed: String, val jobsNoLink: String,
+    val jobsApplyOfficialSite: String, val jobsAboutJob: String,
+    val jobsEligibility: String, val jobsImportantDates: String,
+    val jobsApplyStart: String, val jobsAlerts: String, val jobsAlertsSubtitle: String,
+    val roomsSearchHint: String, val roomsFeatured: String, val roomsAllRooms: String,
+    val roomsLeaderboard: String, val roomsLeaderboardResets: String,
+    val roomsFocusSession: String, val roomsFocusTip1: String, val roomsFocusTip2: String,
+    val roomsFocusTip3: String, val roomsFocusTip4: String,
+    val roomsCreate: String, val roomsTodayTopic: String, val roomsMaxMembers: String,
+    val roomsRequiresCode: String, val roomsCreateBtn: String,
+    val roomsEnterCode: String, val roomsJoinBtn: String,
+    val roomsTodayStudyTogether: String,
 )
 
 data class FocusProfileStrings(
@@ -140,6 +216,13 @@ data class FocusProfileStrings(
     val profileHeatmap: String, val profileLast28: String,
     val profileLess: String, val profileMore: String,
     val profileDayStreak: String, val profileShowLess: String, val profileStudy: String,
+    val profileCoinWallet: String, val profileViewAll: String,
+    val profileCurrentBalance: String, val profileHowToEarn: String,
+    val profileEarnQuiz: String, val profileEarnStreak: String, val profileEarnReferral: String,
+    val profileNoTransactions: String, val profileMyCourses: String,
+    val recallKeepGoing: String, val recallSwipeRate: String, val recallGotIt: String,
+    val recallMastered: String, val recallTapReveal: String, val recallRevealAnswer: String,
+    val recallGotItBtn: String, val recallSessionComplete: String, val recallBackToSubjects: String,
 )
 
 data class SettingsStrings(
@@ -209,6 +292,17 @@ data class MiscStrings(
     val walletCheckedIn: String, val walletCheckingIn: String,
     val walletNoTasks: String, val walletNoTransactions: String,
     val walletInviteFriend: String, val walletWatchAd: String,
+    val pdfReadFreePages: String, val pdfPurchaseUnlock: String,
+    val pdfPageNum: String, val pdfPageLocked: String, val pdfPurchaseAccess: String,
+    val loginIAgree: String, val editBio: String,
+    val registerCreateProfile: String, val registerPersonalize: String,
+    val registerContinue: String, val registerDataSecure: String,
+    val examStartPreparing: String, val examPrimaryTip: String, val examPrimaryTapChange: String,
+    val examBiharState: String,
+    val marketGetFree: String,
+    val paymentStartLearning: String, val paymentOpenFailed: String,
+    val studyFocusJustNow: String,
+    val notifAllRead: String,
 )
 
 data class MiscStrings3(
@@ -235,6 +329,11 @@ data class MiscStrings2(
     val pdfGoBack: String, val pdfNoPages: String,
     val marketTitle: String, val marketSubtitle: String, val marketSell: String,
     val marketSearchHint: String, val marketNoNotes: String,
+    val placeholdersBilledMonthly: String, val placeholdersBilledQuarterly: String,
+    val placeholdersBilledAnnually: String, val placeholdersExclusiveNotes: String,
+    val placeholdersUnlockAll: String, val placeholdersPrioritySupport: String,
+    val placeholdersAllPremium: String, val placeholdersNoPremiumYet: String,
+    val placeholdersCheckBack: String, val placeholdersNotesReader: String, val placeholdersOpenWith: String,
 )
 
 data class MiscStrings4(
@@ -249,13 +348,16 @@ data class MiscStrings4(
     val downloadsTitle: String, val downloadsSubtitle: String,
     val downloadsNone: String, val downloadsNoneHint: String, val downloadsBrowse: String,
     val filterAll: String, val filterPrelims: String, val filterMains: String, val filterSaved: String,
+    val quizReviewExplanation: String,
+    val dashboardActiveRecall: String,
+    val mockSampleQ1: String, val mockSampleA: String, val mockSampleQ2: String,
 )
 
 // ── Facade — 12 fields, all call sites keep using str.xxx unchanged ───────────
 data class AppStrings(
     val _c: CommonStrings, val _n: NavAuthStrings, val _pe: ProfileEditStrings,
     val _db: DashboardStrings, val _co: CourseStrings, val _qz: QuizStrings,
-    val _ct: ContentStrings, val _jr: JobRoomStrings, val _fp: FocusProfileStrings,
+    val _ct: ContentStrings, val _ct2: ContentStrings2, val _jr: JobRoomStrings, val _fp: FocusProfileStrings,
     val _st: SettingsStrings, val _st2: SettingsStrings2, val _pay: PaymentStrings,
     val _m: MiscStrings, val _m3: MiscStrings3, val _m2: MiscStrings2, val _m4: MiscStrings4,
 ) {
@@ -491,16 +593,142 @@ data class AppStrings(
     val downloadsTitle get() = _m4.downloadsTitle; val downloadsSubtitle get() = _m4.downloadsSubtitle
     val downloadsNone get() = _m4.downloadsNone; val downloadsNoneHint get() = _m4.downloadsNoneHint; val downloadsBrowse get() = _m4.downloadsBrowse
     val filterAll get() = _m4.filterAll; val filterPrelims get() = _m4.filterPrelims; val filterMains get() = _m4.filterMains; val filterSaved get() = _m4.filterSaved
+    // ── Quiz extras ──────────────────────────────────────────────
+    val quizReviewAll get() = _qz.quizReviewAll; val quizRetakeQuiz get() = _qz.quizRetakeQuiz
+    val quizBackToQuizzes get() = _qz.quizBackToQuizzes; val quizNavTitle get() = _qz.quizNavTitle
+    val quizCorrectAns get() = _qz.quizCorrectAns; val quizWrongAns get() = _qz.quizWrongAns
+    val quizPassed2 get() = _qz.quizPassed2; val quizNotPassed get() = _qz.quizNotPassed
+    val quizSaveNext get() = _qz.quizSaveNext; val quizSubmitTest get() = _qz.quizSubmitTest
+    val quizStartTest get() = _qz.quizStartTest; val quizTestOverview get() = _qz.quizTestOverview
+    val quizCanResume get() = _qz.quizCanResume; val quizAvgScore get() = _qz.quizAvgScore
+    val quizFullMock get() = _qz.quizFullMock; val quizMiniTest get() = _qz.quizMiniTest
+    val quizPrevYear get() = _qz.quizPrevYear; val quizAllTests get() = _qz.quizAllTests
+    val quizFeatured get() = _qz.quizFeatured; val quizPracticeReal get() = _qz.quizPracticeReal
+    val quizNoTestsCategory get() = _qz.quizNoTestsCategory; val quizNoTestsYet get() = _qz.quizNoTestsYet
+    val quizTestsComingSoon get() = _qz.quizTestsComingSoon
+    val quizCoinsEarned2 get() = _qz.quizCoinsEarned2; val quizNoCoins get() = _qz.quizNoCoins
+    val quizAddedWallet get() = _qz.quizAddedWallet; val quizAlreadyEarned get() = _qz.quizAlreadyEarned
+    val quizSubjectAnalysis get() = _qz.quizSubjectAnalysis
+    val quizViewLeaderboard get() = _qz.quizViewLeaderboard; val quizRetryTest get() = _qz.quizRetryTest
+    val quizBackToTests get() = _qz.quizBackToTests; val quizCreateCustom get() = _qz.quizCreateCustom
+    val quizSelectSubjects get() = _qz.quizSelectSubjects; val quizNegativeMarking get() = _qz.quizNegativeMarking
+    val quizCustomTest get() = _qz.quizCustomTest; val quizStartCustom get() = _qz.quizStartCustom
+    val quizSubmitTestTitle get() = _qz.quizSubmitTestTitle
+    val quizLoadingQ get() = _qz.quizLoadingQ; val quizSettingUp get() = _qz.quizSettingUp
+    val quizPreparingQ get() = _qz.quizPreparingQ; val quizYourRank get() = _qz.quizYourRank
+    // ── Content extras ────────────────────────────────────────────
+    val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
+    val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
+    val materialsUploadTitle get() = _ct2.materialsUploadTitle
+    val materialsUploading get() = _ct2.materialsUploading; val materialsSubmitReview get() = _ct2.materialsSubmitReview
+    val materialsReviewNote get() = _ct2.materialsReviewNote
+    val materialsNoSaved get() = _ct2.materialsNoSaved; val materialsNoResources get() = _ct2.materialsNoResources
+    val materialsBookmarkHint get() = _ct2.materialsBookmarkHint
+    val materialsNoUploads get() = _ct2.materialsNoUploads; val materialsUploadHint get() = _ct2.materialsUploadHint
+    val materialsPublished get() = _ct2.materialsPublished; val materialsRejected get() = _ct2.materialsRejected
+    val materialsNoDownloads get() = _ct2.materialsNoDownloads; val materialsDownloadHint get() = _ct2.materialsDownloadHint
+    val materialsPremiumContent get() = _ct2.materialsPremiumContent; val materialsChargeCoins get() = _ct2.materialsChargeCoins
+    val materialsDownloadedDone get() = _ct2.materialsDownloadedDone; val materialsUnlockPro get() = _ct2.materialsUnlockPro
+    val materialsDownloadFree get() = _ct2.materialsDownloadFree
+    val caLoadingQuestions get() = _ct2.caLoadingQuestions; val caSavedDone get() = _ct2.caSavedDone
+    // ── Job/Room extras ───────────────────────────────────────────
+    val jobsNew get() = _jr.jobsNew; val jobsApplicationClosed get() = _jr.jobsApplicationClosed
+    val jobsNoLink get() = _jr.jobsNoLink; val jobsApplyOfficialSite get() = _jr.jobsApplyOfficialSite
+    val jobsAboutJob get() = _jr.jobsAboutJob; val jobsEligibility get() = _jr.jobsEligibility
+    val jobsImportantDates get() = _jr.jobsImportantDates; val jobsApplyStart get() = _jr.jobsApplyStart
+    val jobsAlerts get() = _jr.jobsAlerts; val jobsAlertsSubtitle get() = _jr.jobsAlertsSubtitle
+    val roomsSearchHint get() = _jr.roomsSearchHint
+    val roomsFeatured get() = _jr.roomsFeatured; val roomsAllRooms get() = _jr.roomsAllRooms
+    val roomsLeaderboard get() = _jr.roomsLeaderboard; val roomsLeaderboardResets get() = _jr.roomsLeaderboardResets
+    val roomsFocusSession get() = _jr.roomsFocusSession
+    val roomsFocusTip1 get() = _jr.roomsFocusTip1; val roomsFocusTip2 get() = _jr.roomsFocusTip2
+    val roomsFocusTip3 get() = _jr.roomsFocusTip3; val roomsFocusTip4 get() = _jr.roomsFocusTip4
+    val roomsCreate get() = _jr.roomsCreate; val roomsTodayTopic get() = _jr.roomsTodayTopic
+    val roomsMaxMembers get() = _jr.roomsMaxMembers; val roomsRequiresCode get() = _jr.roomsRequiresCode
+    val roomsCreateBtn get() = _jr.roomsCreateBtn; val roomsEnterCode get() = _jr.roomsEnterCode
+    val roomsJoinBtn get() = _jr.roomsJoinBtn; val roomsTodayStudyTogether get() = _jr.roomsTodayStudyTogether
+    // ── Dashboard extras ──────────────────────────────────────────
+    val dashboardAspirant get() = _db.dashboardAspirant; val dashboardNoTargets2 get() = _db.dashboardNoTargets2
+    val dashboardViewAll get() = _db.dashboardViewAll; val dashboardCreateTarget get() = _db.dashboardCreateTarget
+    val dashboardWeeklyConsistency get() = _db.dashboardWeeklyConsistency
+    val dashboardWeeklySubtitle get() = _db.dashboardWeeklySubtitle
+    val dashboardNoActivity get() = _db.dashboardNoActivity; val dashboardStartStudying get() = _db.dashboardStartStudying
+    val dashboardQuickAccess get() = _db.dashboardQuickAccess; val dashboardRecommended get() = _db.dashboardRecommended
+    val dashboardMySchedule get() = _db.dashboardMySchedule; val dashboardUpcomingEvents get() = _db.dashboardUpcomingEvents
+    val dashboardNoClasses get() = _db.dashboardNoClasses; val dashboardNoMeetingLink get() = _db.dashboardNoMeetingLink
+    val dashboardClassEnded get() = _db.dashboardClassEnded; val dashboardAlreadyRegistered get() = _db.dashboardAlreadyRegistered
+    val dashboardCreateCustomTarget get() = _db.dashboardCreateCustomTarget
+    val dashboardBuildPlan get() = _db.dashboardBuildPlan; val dashboardWhatNext get() = _db.dashboardWhatNext
+    // ── Course extras ─────────────────────────────────────────────
+    val courseByAuthor get() = _co.courseByAuthor; val courseYourProgress get() = _co.courseYourProgress
+    val courseCertEarned get() = _co.courseCertEarned; val courseCertTitle get() = _co.courseCertTitle
+    val courseCertTap get() = _co.courseCertTap; val courseCertComplete get() = _co.courseCertComplete
+    val courseShareCert get() = _co.courseShareCert; val courseShareCertBtn get() = _co.courseShareCertBtn
+    val courseCourseCompleted get() = _co.courseCourseCompleted
+    val courseContinueLearning get() = _co.courseContinueLearning; val courseStartLearning get() = _co.courseStartLearning
+    val courseEnrollFree get() = _co.courseEnrollFree; val courseAbout get() = _co.courseAbout
+    val courseFreeTrial get() = _co.courseFreeTrial; val courseWatch get() = _co.courseWatch
+    val courseSyllabus get() = _co.courseSyllabus; val courseShowLess get() = _co.courseShowLess
+    val courseShowAll get() = _co.courseShowAll; val courseStudentReviews get() = _co.courseStudentReviews
+    val coursePriceSummary get() = _co.coursePriceSummary; val courseCoinsDiscount get() = _co.courseCoinsDiscount
+    val courseCouponApplied get() = _co.courseCouponApplied; val courseTotalPayable get() = _co.courseTotalPayable
+    val courseUseCoins get() = _co.courseUseCoins; val courseYouHaveCoins get() = _co.courseYouHaveCoins
+    val courseCouponCode get() = _co.courseCouponCode; val courseCouponSaved get() = _co.courseCouponSaved
+    val courseSecurePayment get() = _co.courseSecurePayment; val courseGrabNow get() = _co.courseGrabNow
+    val courseTapStar get() = _co.courseTapStar; val courseHindiEnglish get() = _co.courseHindiEnglish
+    val courseInProgress get() = _co.courseInProgress; val courseNoCoursesYet get() = _co.courseNoCoursesYet
+    val courseExploreStore get() = _co.courseExploreStore; val courseMyCertificates get() = _co.courseMyCertificates
+    val courseOverallProgress get() = _co.courseOverallProgress; val courseTapRead get() = _co.courseTapRead
+    val courseEnrollTitle get() = _co.courseEnrollTitle
+    // ── Focus/Profile extras ──────────────────────────────────────
+    val profileCoinWallet get() = _fp.profileCoinWallet; val profileViewAll get() = _fp.profileViewAll
+    val profileCurrentBalance get() = _fp.profileCurrentBalance; val profileHowToEarn get() = _fp.profileHowToEarn
+    val profileEarnQuiz get() = _fp.profileEarnQuiz; val profileEarnStreak get() = _fp.profileEarnStreak
+    val profileEarnReferral get() = _fp.profileEarnReferral
+    val profileNoTransactions get() = _fp.profileNoTransactions; val profileMyCourses get() = _fp.profileMyCourses
+    val recallKeepGoing get() = _fp.recallKeepGoing; val recallSwipeRate get() = _fp.recallSwipeRate
+    val recallGotIt get() = _fp.recallGotIt; val recallMastered get() = _fp.recallMastered
+    val recallTapReveal get() = _fp.recallTapReveal; val recallRevealAnswer get() = _fp.recallRevealAnswer
+    val recallGotItBtn get() = _fp.recallGotItBtn; val recallSessionComplete get() = _fp.recallSessionComplete
+    val recallBackToSubjects get() = _fp.recallBackToSubjects
+    // ── Misc extras ───────────────────────────────────────────────
+    val pdfReadFreePages get() = _m.pdfReadFreePages; val pdfPurchaseUnlock get() = _m.pdfPurchaseUnlock
+    val pdfPageNum get() = _m.pdfPageNum; val pdfPageLocked get() = _m.pdfPageLocked
+    val pdfPurchaseAccess get() = _m.pdfPurchaseAccess
+    val loginIAgree get() = _m.loginIAgree; val editBio get() = _m.editBio
+    val registerCreateProfile get() = _m.registerCreateProfile; val registerPersonalize get() = _m.registerPersonalize
+    val registerContinue get() = _m.registerContinue; val registerDataSecure get() = _m.registerDataSecure
+    val examStartPreparing get() = _m.examStartPreparing; val examPrimaryTip get() = _m.examPrimaryTip
+    val examPrimaryTapChange get() = _m.examPrimaryTapChange; val examBiharState get() = _m.examBiharState
+    val marketGetFree get() = _m.marketGetFree
+    val paymentStartLearning get() = _m.paymentStartLearning; val paymentOpenFailed get() = _m.paymentOpenFailed
+    val studyFocusJustNow get() = _m.studyFocusJustNow; val notifAllRead get() = _m.notifAllRead
+    // ── Placeholders extras ───────────────────────────────────────
+    val placeholdersBilledMonthly get() = _m2.placeholdersBilledMonthly
+    val placeholdersBilledQuarterly get() = _m2.placeholdersBilledQuarterly
+    val placeholdersBilledAnnually get() = _m2.placeholdersBilledAnnually
+    val placeholdersExclusiveNotes get() = _m2.placeholdersExclusiveNotes
+    val placeholdersUnlockAll get() = _m2.placeholdersUnlockAll
+    val placeholdersPrioritySupport get() = _m2.placeholdersPrioritySupport
+    val placeholdersAllPremium get() = _m2.placeholdersAllPremium
+    val placeholdersNoPremiumYet get() = _m2.placeholdersNoPremiumYet
+    val placeholdersCheckBack get() = _m2.placeholdersCheckBack
+    val placeholdersNotesReader get() = _m2.placeholdersNotesReader
+    val placeholdersOpenWith get() = _m2.placeholdersOpenWith
+    // ── MiscStrings4 extras ───────────────────────────────────────
+    val quizReviewExplanation get() = _m4.quizReviewExplanation
+    val dashboardActiveRecall get() = _m4.dashboardActiveRecall
+
 }
 
 // ── Helper to build AppStrings from grouped sub-objects ───────────────────────
 private fun mkAppStrings(
     c: CommonStrings, n: NavAuthStrings, pe: ProfileEditStrings,
     db: DashboardStrings, co: CourseStrings, qz: QuizStrings,
-    ct: ContentStrings, jr: JobRoomStrings, fp: FocusProfileStrings,
+    ct: ContentStrings, ct2: ContentStrings2, jr: JobRoomStrings, fp: FocusProfileStrings,
     st: SettingsStrings, st2: SettingsStrings2, pay: PaymentStrings,
     m: MiscStrings, m3: MiscStrings3, m2: MiscStrings2, m4: MiscStrings4,
-) = AppStrings(_c=c,_n=n,_pe=pe,_db=db,_co=co,_qz=qz,_ct=ct,_jr=jr,_fp=fp,
+) = AppStrings(_c=c,_n=n,_pe=pe,_db=db,_co=co,_qz=qz,_ct=ct,_ct2=ct2,_jr=jr,_fp=fp,
     _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4)
 
 // ── ENGLISH ───────────────────────────────────────────────────────────────────
@@ -561,6 +789,21 @@ val EnglishStrings: AppStrings = mkAppStrings(
         drawerJobAlerts="Job Alerts", drawerStudyRooms="Study Rooms",
         drawerCoinWallet="Coin Wallet", drawerAchievements="Achievements",
         drawerSettings="Settings", drawerLanguage="Language", drawerLogout="Logout",
+        dashboardAspirant="Aspirant 👋", dashboardNoTargets2="No targets set",
+        dashboardViewAll="View All", dashboardCreateTarget="Create Custom Target",
+        dashboardWeeklyConsistency="Weekly Consistency",
+        dashboardWeeklySubtitle="Your study activity this week",
+        dashboardNoActivity="No activity data yet",
+        dashboardStartStudying="Start studying to see your progress",
+        dashboardQuickAccess="Quick Access", dashboardRecommended="Recommended for You",
+        dashboardMySchedule="My Schedule", dashboardUpcomingEvents="Upcoming events",
+        dashboardNoClasses="No upcoming classes scheduled",
+        dashboardNoMeetingLink="No meeting link available. Please check back shortly.",
+        dashboardClassEnded="This class has already ended.",
+        dashboardAlreadyRegistered="You are already registered for this class.",
+        dashboardCreateCustomTarget="Create Your Daily Target",
+        dashboardBuildPlan="Build your plan, one task at a time.",
+        dashboardWhatNext="What's your next task?",
     ),
     co = CourseStrings(
         coursesTitle="Courses", coursesEnrollNow="Enroll Now", coursesEnrolled="Enrolled",
@@ -577,6 +820,28 @@ val EnglishStrings: AppStrings = mkAppStrings(
         lessonLiveNotReady="Live class link will be available when the session starts.",
         lessonChapterQuiz="Chapter Quiz", lessonCantLoadPdf="Couldn't load PDF",
         lessonOpenBrowser="Open in Browser", lessonLoadingPdf="Loading PDF…",
+        courseByAuthor="By", courseYourProgress="Your Progress",
+        courseCertEarned="Certificate Earned! 🎉", courseCertTitle="Certificate of Completion",
+        courseCertTap="Tap to view & download your certificate",
+        courseCertComplete="Complete all lessons to earn your certificate",
+        courseShareCert="Share Certificate", courseShareCertBtn="Share 🎓",
+        courseCourseCompleted="Course Completed", courseContinueLearning="Continue Learning",
+        courseStartLearning="Start Learning", courseEnrollFree="Enroll Free",
+        courseAbout="About this Course", courseFreeTrial="Free Trial Lesson",
+        courseWatch="Watch →", courseSyllabus="Course Syllabus",
+        courseShowLess="Show less ↑", courseShowAll="Show all ↓",
+        courseStudentReviews="Student Reviews", coursePriceSummary="Price Summary",
+        courseCoinsDiscount="Coins Discount", courseCouponApplied="✅ Coupon applied!",
+        courseTotalPayable="Total Payable", courseUseCoins="Use Coins for Discount",
+        courseYouHaveCoins="You have", courseCouponCode="Coupon Code",
+        courseCouponSaved="Saved ₹", courseSecurePayment="🔒 Secure payment · Instant access after payment",
+        courseGrabNow="Grab now →", courseTapStar="Tap a star to rate",
+        courseHindiEnglish="Hindi + English",
+        courseInProgress="In Progress", courseNoCoursesYet="No courses here yet",
+        courseExploreStore="Explore Store tab to enroll",
+        courseMyCertificates="🏆 My Certificates",
+        courseOverallProgress="Overall Progress", courseTapRead="Tap Read to open full document",
+        courseEnrollTitle="Enroll in",
     ),
     qz = QuizStrings(
         quizTitle="Quizzes", quizDaily="Daily Quiz", quizTopic="Topic Quiz", quizMock="Mock Test",
@@ -596,6 +861,31 @@ val EnglishStrings: AppStrings = mkAppStrings(
         quizSelectCorrect="Select the correct option:",
         quizSkipped="⏭ Skipped", quizAnswered="📝 Answered",
         quizNoAvailable="No quizzes available", quizCheckLater="Check back later!",
+        quizReviewAll="Review All Questions", quizRetakeQuiz="Retake Quiz",
+        quizBackToQuizzes="Back to Quizzes", quizNavTitle="Question Navigator",
+        quizCorrectAns="✅ Correct", quizWrongAns="❌ Wrong",
+        quizPassed2="✅ Passed", quizNotPassed="❌ Not passed",
+        quizSaveNext="Save & Next →", quizSubmitTest="Submit Test",
+        quizStartTest="Start Test", quizTestOverview="Test Overview",
+        quizCanResume="You can resume if you exit accidentally",
+        quizAvgScore="Avg Score", quizFullMock="Full Mock Tests",
+        quizMiniTest="Subject-wise Mini Tests", quizPrevYear="Previous Year Papers",
+        quizAllTests="All Tests", quizFeatured="⭐ Featured",
+        quizPracticeReal="Practice like the real exam",
+        quizNoTestsCategory="No tests in this category",
+        quizNoTestsYet="No mock tests available yet",
+        quizTestsComingSoon="New tests are added regularly. Check back soon!",
+        quizCoinsEarned2="Coins Earned!", quizNoCoins="No Coins This Time",
+        quizAddedWallet="Added to your wallet",
+        quizAlreadyEarned="Already earned coins for this quiz",
+        quizSubjectAnalysis="Subject-wise Analysis",
+        quizViewLeaderboard="View Leaderboard", quizRetryTest="Retry Test",
+        quizBackToTests="Back to Tests", quizCreateCustom="Create Custom Test",
+        quizSelectSubjects="Select Subjects", quizNegativeMarking="Negative Marking",
+        quizCustomTest="Custom Test", quizStartCustom="Start Custom Test 🚀",
+        quizSubmitTestTitle="Submit Test?",
+        quizLoadingQ="Loading questions…", quizSettingUp="Setting up your test",
+        quizPreparingQ="Preparing questions…", quizYourRank="Your Rank",
     ),
     ct = ContentStrings(
         caTitle="Current Affairs", caBookmark="Bookmark", caBookmarked="Bookmarked",
@@ -618,6 +908,24 @@ val EnglishStrings: AppStrings = mkAppStrings(
         materialsFilterSubject="Filter by Subject", materialsExplore="🔍 Explore",
         materialsMyUploads="📤 My Uploads",
     ),
+    ct2 = ContentStrings2(
+        materialsSave="Save material", materialsRemoveSaved="Remove from saved",
+        materialsTapOpen="Tap to open", materialsNoPreview="No preview yet",
+        materialsUploadTitle="Upload Your Notes",
+        materialsUploading="Uploading…", materialsSubmitReview="Submit for Review",
+        materialsReviewNote="📋 All uploads are reviewed before publishing",
+        materialsNoSaved="No saved materials", materialsNoResources="No resources found",
+        materialsBookmarkHint="Bookmark materials to see them here",
+        materialsNoUploads="No uploads yet",
+        materialsUploadHint="Tap Upload to share study materials with others",
+        materialsPublished="✅ Published", materialsRejected="❌ Rejected",
+        materialsNoDownloads="No downloads yet",
+        materialsDownloadHint="Download study materials to access them here",
+        materialsPremiumContent="Premium Content", materialsChargeCoins="Charge coins for full access",
+        materialsDownloadedDone="Downloaded ✓", materialsUnlockPro="Unlock with Pro",
+        materialsDownloadFree="Download Free",
+        caLoadingQuestions="Loading questions…", caSavedDone="Saved ✓",
+    ),
     jr = JobRoomStrings(
         jobsTitle="Job Vacancies", jobsApplyNow="Apply Now", jobsLastDate="Last Date",
         jobsPosts="Posts", jobsSave="Save", jobsSaved="Saved",
@@ -638,6 +946,23 @@ val EnglishStrings: AppStrings = mkAppStrings(
         roomsKeepStudying="Got it, I'll keep studying!",
         roomsReadyForNext="Ready for promotion!", roomsPromotedMidnight="All requirements met! You'll be promoted at midnight.",
         roomsGroupStudy="Group Study", roomsTapToStart="Tap your room to start",
+        jobsNew="🆕 New", jobsApplicationClosed="Application Closed",
+        jobsNoLink="No Link Available", jobsApplyOfficialSite="Apply / Official Site",
+        jobsAboutJob="About this Job", jobsEligibility="Eligibility & Details",
+        jobsImportantDates="Important Dates", jobsApplyStart="Apply Start",
+        jobsAlerts="Job Alerts", jobsAlertsSubtitle="Get notified when new vacancies are posted",
+        roomsSearchHint="Search rooms, topics...",
+        roomsFeatured="⭐ Featured Rooms", roomsAllRooms="All Rooms",
+        roomsLeaderboard="Today's Leaderboard", roomsLeaderboardResets="Resets midnight",
+        roomsFocusSession="🎯 Focus Session",
+        roomsFocusTip1="Focus for 25 min, then take a 5 min break",
+        roomsFocusTip2="After 4 sessions, take a longer 15 min break",
+        roomsFocusTip3="Keep phone away during focus session",
+        roomsFocusTip4="Note down distracting thoughts, revisit in break",
+        roomsCreate="Create Study Room", roomsTodayTopic="Today's Focus Topic",
+        roomsMaxMembers="Max Members", roomsRequiresCode="Requires join code to enter",
+        roomsCreateBtn="Create Room 🚀", roomsEnterCode="Enter the room code shared by the admin",
+        roomsJoinBtn="Join Room", roomsTodayStudyTogether="Study together, rank higher",
     ),
     fp = FocusProfileStrings(
         focusEndSessionTitle="End Session?", focusKeepStudying="Keep Studying",
@@ -656,6 +981,17 @@ val EnglishStrings: AppStrings = mkAppStrings(
         profileHeatmap="Study Heatmap", profileLast28="Last 28 days",
         profileLess="Less", profileMore="More",
         profileDayStreak="day streak — keep it up!", profileShowLess="Show Less", profileStudy="Study",
+        profileCoinWallet="Coin Wallet", profileViewAll="View all",
+        profileCurrentBalance="Current Balance", profileHowToEarn="How to earn:",
+        profileEarnQuiz="Daily quiz +5", profileEarnStreak="Streak bonus +15",
+        profileEarnReferral="Referral +50",
+        profileNoTransactions="No transactions yet — complete a quiz to earn coins!",
+        profileMyCourses="My Courses",
+        recallKeepGoing="Keep going", recallSwipeRate="Swipe card to rate",
+        recallGotIt="Got it! →", recallMastered="✅ MASTERED",
+        recallTapReveal="Tap card to reveal answer", recallRevealAnswer="Reveal Answer",
+        recallGotItBtn="✅ Got it!", recallSessionComplete="Session Complete",
+        recallBackToSubjects="Back to Subjects",
     ),
     st = SettingsStrings(
         achievementsSubtitle="Track your milestones", achievementsInProgress="🔒 In Progress",
@@ -738,6 +1074,25 @@ val EnglishStrings: AppStrings = mkAppStrings(
         walletCheckedIn="Checked in today ✓", walletCheckingIn="Checking in…",
         walletNoTasks="No tasks available", walletNoTransactions="No transactions yet",
         walletInviteFriend="Invite a Friend", walletWatchAd="Scroll up to watch an ad",
+        pdfReadFreePages="You've read free pages out of",
+        pdfPurchaseUnlock="Purchase to unlock all pages with lifetime access.",
+        pdfPageNum="Page", pdfPageLocked="Page is locked",
+        pdfPurchaseAccess="Purchase to access all pages",
+        loginIAgree="I agree to the ",
+        editBio="Bio / About me",
+        registerCreateProfile="Create Your Profile",
+        registerPersonalize="Just a few details to personalise your experience",
+        registerContinue="Continue to Dashboard",
+        registerDataSecure="Your data is secure and never shared.",
+        examStartPreparing="Start Preparing 🚀",
+        examPrimaryTip="First exam you tap becomes your PRIMARY.",
+        examPrimaryTapChange="PRIMARY · tap to change",
+        examBiharState="Bihar State",
+        marketGetFree="Get Free",
+        paymentStartLearning="Start Learning →",
+        paymentOpenFailed="Failed to open payment screen",
+        studyFocusJustNow="Just now",
+        notifAllRead="All notifications marked as read ✓",
     ),
     m3 = MiscStrings3(
         notifTitle="Notifications", notifMarkRead="Mark all read", notifNone="No notifications yet",
@@ -767,6 +1122,16 @@ val EnglishStrings: AppStrings = mkAppStrings(
         marketTitle="Marketplace", marketSubtitle="Buy & sell study notes",
         marketSell="Sell Notes", marketSearchHint="Search notes, subjects…",
         marketNoNotes="No notes yet",
+        placeholdersBilledMonthly="Billed monthly",
+        placeholdersBilledQuarterly="Billed every 3 months",
+        placeholdersBilledAnnually="Billed annually",
+        placeholdersExclusiveNotes="Exclusive notes, papers & courses",
+        placeholdersUnlockAll="Unlock all premium study materials, notes, and videos.",
+        placeholdersPrioritySupport="✅ Priority support",
+        placeholdersAllPremium="All premium content · No ads · Priority support",
+        placeholdersNoPremiumYet="No premium content yet",
+        placeholdersCheckBack="Check back soon for exclusive content",
+        placeholdersNotesReader="Notes Reader", placeholdersOpenWith="Open with",
     ),
     m4 = MiscStrings4(
         marketBeFirst="Be the first to upload your study notes and earn!",
@@ -785,6 +1150,10 @@ val EnglishStrings: AppStrings = mkAppStrings(
         downloadsNoneHint="Download study materials to access them offline",
         downloadsBrowse="Browse Study Materials",
         filterAll="All", filterPrelims="Prelims", filterMains="Mains", filterSaved="Saved 🔖",
+        quizReviewExplanation="Correct answer & explanation revealed after submission.",
+        dashboardActiveRecall="Active Recall",
+        mockSampleQ1="Which Article abolishes untouchability?",
+        mockSampleA="Article 17", mockSampleQ2="The Dandi March was led in which year?",
     ),
 )
 
@@ -850,6 +1219,21 @@ val HindiStrings: AppStrings = mkAppStrings(
         drawerJobAlerts="नौकरी अलर्ट", drawerStudyRooms="स्टडी रूम",
         drawerCoinWallet="सिक्का वॉलेट", drawerAchievements="उपलब्धियां",
         drawerSettings="सेटिंग", drawerLanguage="भाषा", drawerLogout="लॉग आउट",
+        dashboardAspirant="अभ्यर्थी 👋", dashboardNoTargets2="कोई लक्ष्य निर्धारित नहीं",
+        dashboardViewAll="सभी देखें", dashboardCreateTarget="कस्टम लक्ष्य बनाएं",
+        dashboardWeeklyConsistency="साप्ताहिक निरंतरता",
+        dashboardWeeklySubtitle="इस सप्ताह आपकी अध्ययन गतिविधि",
+        dashboardNoActivity="अभी कोई गतिविधि डेटा नहीं",
+        dashboardStartStudying="प्रगति देखने के लिए पढ़ाई शुरू करें",
+        dashboardQuickAccess="त्वरित पहुँच", dashboardRecommended="आपके लिए अनुशंसित",
+        dashboardMySchedule="मेरा शेड्यूल", dashboardUpcomingEvents="आगामी कार्यक्रम",
+        dashboardNoClasses="कोई आगामी क्लास निर्धारित नहीं",
+        dashboardNoMeetingLink="मीटिंग लिंक उपलब्ध नहीं। कृपया बाद में देखें।",
+        dashboardClassEnded="यह क्लास पहले ही समाप्त हो चुकी है।",
+        dashboardAlreadyRegistered="आप पहले से इस क्लास के लिए पंजीकृत हैं।",
+        dashboardCreateCustomTarget="अपना दैनिक लक्ष्य बनाएं",
+        dashboardBuildPlan="एक-एक कार्य से अपनी योजना बनाएं।",
+        dashboardWhatNext="आपका अगला कार्य क्या है?",
     ),
     co = CourseStrings(
         coursesTitle="कोर्स", coursesEnrollNow="अभी नामांकन करें", coursesEnrolled="नामांकित",
@@ -867,6 +1251,28 @@ val HindiStrings: AppStrings = mkAppStrings(
         lessonLiveNotReady="सत्र शुरू होने पर लाइव लिंक उपलब्ध होगा।",
         lessonChapterQuiz="अध्याय क्विज़", lessonCantLoadPdf="PDF लोड नहीं हो सका",
         lessonOpenBrowser="ब्राउज़र में खोलें", lessonLoadingPdf="PDF लोड हो रहा है…",
+        courseByAuthor="द्वारा", courseYourProgress="आपकी प्रगति",
+        courseCertEarned="प्रमाणपत्र अर्जित! 🎉", courseCertTitle="पूर्णता प्रमाणपत्र",
+        courseCertTap="अपना प्रमाणपत्र देखने और डाउनलोड करने के लिए टैप करें",
+        courseCertComplete="प्रमाणपत्र अर्जित करने के लिए सभी पाठ पूरे करें",
+        courseShareCert="प्रमाणपत्र साझा करें", courseShareCertBtn="साझा करें 🎓",
+        courseCourseCompleted="कोर्स पूर्ण", courseContinueLearning="सीखना जारी रखें",
+        courseStartLearning="सीखना शुरू करें", courseEnrollFree="मुफ़्त नामांकन",
+        courseAbout="इस कोर्स के बारे में", courseFreeTrial="मुफ़्त ट्रायल पाठ",
+        courseWatch="देखें →", courseSyllabus="कोर्स पाठ्यक्रम",
+        courseShowLess="कम दिखाएं ↑", courseShowAll="सब दिखाएं ↓",
+        courseStudentReviews="छात्र समीक्षाएं", coursePriceSummary="मूल्य सारांश",
+        courseCoinsDiscount="सिक्का छूट", courseCouponApplied="✅ कूपन लागू!",
+        courseTotalPayable="कुल देय", courseUseCoins="छूट के लिए सिक्के उपयोग करें",
+        courseYouHaveCoins="आपके पास हैं", courseCouponCode="कूपन कोड",
+        courseCouponSaved="बचाया ₹", courseSecurePayment="🔒 सुरक्षित भुगतान · भुगतान के बाद तुरंत पहुँच",
+        courseGrabNow="अभी लें →", courseTapStar="रेट करने के लिए स्टार टैप करें",
+        courseHindiEnglish="हिंदी + अंग्रेज़ी",
+        courseInProgress="प्रगति में", courseNoCoursesYet="अभी यहाँ कोई कोर्स नहीं",
+        courseExploreStore="नामांकन के लिए Store टैब देखें",
+        courseMyCertificates="🏆 मेरे प्रमाणपत्र",
+        courseOverallProgress="समग्र प्रगति", courseTapRead="पूरा दस्तावेज़ खोलने के लिए टैप करें",
+        courseEnrollTitle="नामांकन करें",
     ),
     qz = QuizStrings(
         quizTitle="क्विज़", quizDaily="दैनिक क्विज़", quizTopic="विषय क्विज़", quizMock="मॉक टेस्ट",
@@ -886,6 +1292,31 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizSelectCorrect="सही विकल्प चुनें:",
         quizSkipped="⏭ छोड़ा", quizAnswered="📝 उत्तर दिया",
         quizNoAvailable="कोई क्विज़ उपलब्ध नहीं", quizCheckLater="बाद में देखें!",
+        quizReviewAll="सभी प्रश्न देखें", quizRetakeQuiz="क्विज़ दोबारा दें",
+        quizBackToQuizzes="क्विज़ पर वापस जाएं", quizNavTitle="प्रश्न नेविगेटर",
+        quizCorrectAns="✅ सही", quizWrongAns="❌ गलत",
+        quizPassed2="✅ उत्तीर्ण", quizNotPassed="❌ उत्तीर्ण नहीं",
+        quizSaveNext="सहेजें और अगला →", quizSubmitTest="टेस्ट जमा करें",
+        quizStartTest="टेस्ट शुरू करें", quizTestOverview="टेस्ट अवलोकन",
+        quizCanResume="यदि गलती से बाहर हो जाएं तो फिर से शुरू कर सकते हैं",
+        quizAvgScore="औसत अंक", quizFullMock="पूर्ण मॉक टेस्ट",
+        quizMiniTest="विषयवार मिनी टेस्ट", quizPrevYear="पिछले वर्ष के प्रश्न",
+        quizAllTests="सभी टेस्ट", quizFeatured="⭐ विशेष",
+        quizPracticeReal="असली परीक्षा की तरह अभ्यास करें",
+        quizNoTestsCategory="इस श्रेणी में कोई टेस्ट नहीं",
+        quizNoTestsYet="अभी कोई मॉक टेस्ट उपलब्ध नहीं",
+        quizTestsComingSoon="नए टेस्ट नियमित रूप से जोड़े जाते हैं। बाद में देखें!",
+        quizCoinsEarned2="सिक्के अर्जित!", quizNoCoins="इस बार कोई सिक्का नहीं",
+        quizAddedWallet="आपके वॉलेट में जोड़ा गया",
+        quizAlreadyEarned="इस क्विज़ के लिए सिक्के पहले ही अर्जित हो चुके हैं",
+        quizSubjectAnalysis="विषयवार विश्लेषण",
+        quizViewLeaderboard="लीडरबोर्ड देखें", quizRetryTest="टेस्ट फिर दें",
+        quizBackToTests="टेस्ट पर वापस जाएं", quizCreateCustom="कस्टम टेस्ट बनाएं",
+        quizSelectSubjects="विषय चुनें", quizNegativeMarking="नेगेटिव मार्किंग",
+        quizCustomTest="कस्टम टेस्ट", quizStartCustom="कस्टम टेस्ट शुरू करें 🚀",
+        quizSubmitTestTitle="टेस्ट जमा करें?",
+        quizLoadingQ="प्रश्न लोड हो रहे हैं…", quizSettingUp="आपका टेस्ट सेट हो रहा है",
+        quizPreparingQ="प्रश्न तैयार हो रहे हैं…", quizYourRank="आपकी रैंक",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",
@@ -909,6 +1340,24 @@ val HindiStrings: AppStrings = mkAppStrings(
         materialsFilterSubject="विषय से फ़िल्टर", materialsExplore="🔍 खोजें",
         materialsMyUploads="📤 मेरे अपलोड",
     ),
+    ct2 = ContentStrings2(
+        materialsSave="सामग्री सहेजें", materialsRemoveSaved="सहेजे से हटाएं",
+        materialsTapOpen="खोलने के लिए टैप करें", materialsNoPreview="अभी कोई प्रीव्यू नहीं",
+        materialsUploadTitle="अपने नोट्स अपलोड करें",
+        materialsUploading="अपलोड हो रहा है…", materialsSubmitReview="समीक्षा के लिए जमा करें",
+        materialsReviewNote="📋 सभी अपलोड प्रकाशन से पहले समीक्षा किए जाते हैं",
+        materialsNoSaved="कोई सहेजी सामग्री नहीं", materialsNoResources="कोई संसाधन नहीं मिला",
+        materialsBookmarkHint="सामग्री बुकमार्क करें और यहाँ देखें",
+        materialsNoUploads="अभी कोई अपलोड नहीं",
+        materialsUploadHint="अध्ययन सामग्री साझा करने के लिए अपलोड टैप करें",
+        materialsPublished="✅ प्रकाशित", materialsRejected="❌ अस्वीकृत",
+        materialsNoDownloads="अभी कोई डाउनलोड नहीं",
+        materialsDownloadHint="यहाँ देखने के लिए अध्ययन सामग्री डाउनलोड करें",
+        materialsPremiumContent="प्रीमियम सामग्री", materialsChargeCoins="पूर्ण पहुँच के लिए सिक्के लें",
+        materialsDownloadedDone="डाउनलोड ✓", materialsUnlockPro="Pro से अनलॉक करें",
+        materialsDownloadFree="मुफ़्त डाउनलोड",
+        caLoadingQuestions="प्रश्न लोड हो रहे हैं…", caSavedDone="सहेजा ✓",
+    ),
     jr = JobRoomStrings(
         jobsTitle="नौकरी रिक्तियां", jobsApplyNow="अभी आवेदन करें", jobsLastDate="अंतिम तारीख",
         jobsPosts="पद", jobsSave="सहेजें", jobsSaved="सहेजा गया",
@@ -929,6 +1378,23 @@ val HindiStrings: AppStrings = mkAppStrings(
         roomsKeepStudying="ठीक है, मैं पढ़ाई जारी रखूंगा!",
         roomsReadyForNext="पदोन्नति के लिए तैयार!", roomsPromotedMidnight="सभी आवश्यकताएं पूरी! आधी रात को पदोन्नति होगी।",
         roomsGroupStudy="ग्रुप स्टडी", roomsTapToStart="शुरू करने के लिए रूम टैप करें",
+        jobsNew="🆕 नया", jobsApplicationClosed="आवेदन बंद",
+        jobsNoLink="लिंक उपलब्ध नहीं", jobsApplyOfficialSite="आवेदन / आधिकारिक साइट",
+        jobsAboutJob="इस नौकरी के बारे में", jobsEligibility="पात्रता और विवरण",
+        jobsImportantDates="महत्वपूर्ण तिथियाँ", jobsApplyStart="आवेदन शुरू",
+        jobsAlerts="नौकरी अलर्ट", jobsAlertsSubtitle="नई रिक्तियाँ पोस्ट होने पर सूचना पाएं",
+        roomsSearchHint="रूम, विषय खोजें...",
+        roomsFeatured="⭐ विशेष रूम", roomsAllRooms="सभी रूम",
+        roomsLeaderboard="आज का लीडरबोर्ड", roomsLeaderboardResets="आधी रात रीसेट",
+        roomsFocusSession="🎯 फ़ोकस सत्र",
+        roomsFocusTip1="25 मिनट फ़ोकस करें, फिर 5 मिनट ब्रेक लें",
+        roomsFocusTip2="4 सत्रों के बाद 15 मिनट का लंबा ब्रेक लें",
+        roomsFocusTip3="फ़ोकस सत्र के दौरान फ़ोन दूर रखें",
+        roomsFocusTip4="विचलित करने वाले विचार लिखें, ब्रेक में देखें",
+        roomsCreate="स्टडी रूम बनाएं", roomsTodayTopic="आज का फ़ोकस विषय",
+        roomsMaxMembers="अधिकतम सदस्य", roomsRequiresCode="प्रवेश के लिए कोड चाहिए",
+        roomsCreateBtn="रूम बनाएं 🚀", roomsEnterCode="एडमिन द्वारा साझा रूम कोड दर्ज करें",
+        roomsJoinBtn="रूम जॉइन करें", roomsTodayStudyTogether="साथ पढ़ें, ऊंचा रैंक पाएं",
     ),
     fp = FocusProfileStrings(
         focusEndSessionTitle="सत्र समाप्त करें?", focusKeepStudying="पढ़ाई जारी रखें",
@@ -948,6 +1414,17 @@ val HindiStrings: AppStrings = mkAppStrings(
         profileWeeklyStreak="साप्ताहिक स्ट्रीक", profileHeatmap="स्टडी हीटमैप",
         profileLast28="पिछले 28 दिन", profileLess="कम", profileMore="ज्यादा",
         profileDayStreak="दिन की स्ट्रीक — जारी रखें!", profileShowLess="कम दिखाएं", profileStudy="पढ़ाई",
+        profileCoinWallet="सिक्का वॉलेट", profileViewAll="सभी देखें",
+        profileCurrentBalance="वर्तमान शेष", profileHowToEarn="कैसे कमाएं:",
+        profileEarnQuiz="दैनिक क्विज़ +5", profileEarnStreak="स्ट्रीक बोनस +15",
+        profileEarnReferral="रेफरल +50",
+        profileNoTransactions="अभी कोई लेनदेन नहीं — सिक्के कमाने के लिए क्विज़ दें!",
+        profileMyCourses="मेरे कोर्स",
+        recallKeepGoing="जारी रखें", recallSwipeRate="रेट करने के लिए कार्ड स्वाइप करें",
+        recallGotIt="समझ गया! →", recallMastered="✅ महारत हासिल",
+        recallTapReveal="उत्तर देखने के लिए कार्ड टैप करें", recallRevealAnswer="उत्तर दिखाएं",
+        recallGotItBtn="✅ समझ गया!", recallSessionComplete="सत्र पूर्ण",
+        recallBackToSubjects="विषयों पर वापस जाएं",
     ),
     st = SettingsStrings(
         achievementsSubtitle="अपने मील के पत्थर ट्रैक करें", achievementsInProgress="🔒 प्रगति में",
@@ -1031,6 +1508,25 @@ val HindiStrings: AppStrings = mkAppStrings(
         walletCheckedIn="आज चेक इन हो गया ✓", walletCheckingIn="चेक इन हो रहा है…",
         walletNoTasks="कोई कार्य उपलब्ध नहीं", walletNoTransactions="अभी कोई लेनदेन नहीं",
         walletInviteFriend="दोस्त को आमंत्रित करें", walletWatchAd="सिक्के कमाने के लिए ऊपर स्क्रॉल करें",
+        pdfReadFreePages="आपने पढ़े पृष्ठ कुल में से",
+        pdfPurchaseUnlock="आजीवन पहुँच के साथ सभी पृष्ठ अनलॉक करने के लिए खरीदें।",
+        pdfPageNum="पृष्ठ", pdfPageLocked="पृष्ठ लॉक है",
+        pdfPurchaseAccess="सभी पृष्ठ देखने के लिए खरीदें",
+        loginIAgree="मैं सहमत हूं ",
+        editBio="बायो / मेरे बारे में",
+        registerCreateProfile="अपनी प्रोफ़ाइल बनाएं",
+        registerPersonalize="आपका अनुभव व्यक्तिगत बनाने के लिए कुछ विवरण",
+        registerContinue="डैशबोर्ड पर जारी रखें",
+        registerDataSecure="आपका डेटा सुरक्षित है और कभी साझा नहीं किया जाता।",
+        examStartPreparing="तैयारी शुरू करें 🚀",
+        examPrimaryTip="पहले टैप की गई परीक्षा प्राथमिक बनती है।",
+        examPrimaryTapChange="प्राथमिक · बदलने के लिए टैप करें",
+        examBiharState="बिहार राज्य",
+        marketGetFree="मुफ़्त में लें",
+        paymentStartLearning="पढ़ाई शुरू करें →",
+        paymentOpenFailed="भुगतान स्क्रीन खोलने में विफल",
+        studyFocusJustNow="अभी",
+        notifAllRead="सभी सूचनाएं पढ़ी चिह्नित ✓",
     ),
     m3 = MiscStrings3(
         notifTitle="सूचनाएं", notifMarkRead="सभी पढ़ा चिह्नित करें",
@@ -1061,6 +1557,16 @@ val HindiStrings: AppStrings = mkAppStrings(
         marketTitle="मार्केटप्लेस", marketSubtitle="स्टडी नोट्स खरीदें और बेचें",
         marketSell="नोट्स बेचें", marketSearchHint="नोट्स, विषय खोजें…",
         marketNoNotes="अभी कोई नोट्स नहीं",
+        placeholdersBilledMonthly="मासिक बिल",
+        placeholdersBilledQuarterly="हर 3 महीने बिल",
+        placeholdersBilledAnnually="वार्षिक बिल",
+        placeholdersExclusiveNotes="एक्सक्लूसिव नोट्स, पेपर और कोर्स",
+        placeholdersUnlockAll="सभी प्रीमियम अध्ययन सामग्री, नोट्स और वीडियो अनलॉक करें।",
+        placeholdersPrioritySupport="✅ प्राथमिकता सहायता",
+        placeholdersAllPremium="सभी प्रीमियम · कोई विज्ञापन नहीं · प्राथमिकता सहायता",
+        placeholdersNoPremiumYet="अभी कोई प्रीमियम सामग्री नहीं",
+        placeholdersCheckBack="एक्सक्लूसिव सामग्री के लिए जल्द वापस देखें",
+        placeholdersNotesReader="नोट्स रीडर", placeholdersOpenWith="इससे खोलें",
     ),
     m4 = MiscStrings4(
         marketBeFirst="अपने स्टडी नोट्स अपलोड करें और कमाएं!",
@@ -1079,5 +1585,9 @@ val HindiStrings: AppStrings = mkAppStrings(
         downloadsNoneHint="ऑफ़लाइन पहुँच के लिए अध्ययन सामग्री डाउनलोड करें",
         downloadsBrowse="अध्ययन सामग्री देखें",
         filterAll="सभी", filterPrelims="प्रारंभिक", filterMains="मुख्य", filterSaved="सहेजे 🔖",
+        quizReviewExplanation="जमा करने के बाद सही उत्तर और व्याख्या दिखाई जाएगी।",
+        dashboardActiveRecall="सक्रिय स्मरण",
+        mockSampleQ1="कौन सा अनुच्छेद अस्पृश्यता समाप्त करता है?",
+        mockSampleA="अनुच्छेद 17", mockSampleQ2="दांडी मार्च किस वर्ष नेतृत्व किया गया था?",
     ),
 )

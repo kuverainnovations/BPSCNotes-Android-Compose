@@ -274,6 +274,7 @@ fun MarketplaceScreen(
 
 @Composable
 private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: () -> Unit) {
+    val str = LocalStrings.current
     val subjectColor = when (item.subject) {
         "Polity"    -> Color(0xFF9B59B6)
         "History"   -> Color(0xFFE74C3C)
@@ -360,7 +361,7 @@ private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBu
                             if (purchasing) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                             } else {
-                                Text(if (item.isFree) "Get Free" else "Buy", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Text(if (item.isFree) str.marketGetFree else "Buy", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

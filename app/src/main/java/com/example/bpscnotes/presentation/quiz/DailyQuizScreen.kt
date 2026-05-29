@@ -620,7 +620,7 @@ internal fun QuizSummaryScreen(
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                        Text(if (result.isPassed) "✅ Passed" else "❌ Not passed", style = MaterialTheme.typography.bodyMedium, color = if (result.isPassed) BpscColors.Success else Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
+                        Text(if (result.isPassed) str.quizPassed2 else str.quizNotPassed, style = MaterialTheme.typography.bodyMedium, color = if (result.isPassed) BpscColors.Success else Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -635,7 +635,7 @@ internal fun QuizSummaryScreen(
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                 ) {
                     Icon(Icons.Rounded.RateReview, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                    Text("Review All Questions", style = MaterialTheme.typography.titleMedium)
+                    Text(str.quizReviewAll, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(
                     onClick  = onExit,
@@ -671,6 +671,7 @@ internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
     onBack: () -> Unit
 ) {
+    val str = LocalStrings.current
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0)))).statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -678,7 +679,7 @@ internal fun QuizAnswerReviewScreen(
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 Column {
-                    Text("Review Questions", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.quizReviewAll, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${answerDetails.size} questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }
@@ -711,7 +712,7 @@ internal fun QuizAnswerReviewScreen(
                                 DifficultyChip(detail.question.difficulty)
                             }
                             Text(
-                                when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> "✅ Correct"; else -> "❌ Wrong" },
+                                when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
                                 fontWeight = FontWeight.Bold

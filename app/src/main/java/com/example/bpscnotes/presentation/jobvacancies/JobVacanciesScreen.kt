@@ -363,6 +363,7 @@ private fun JobCard(
     onSave:  () -> Unit,
     onClick: () -> Unit,
 ) {
+    val str = LocalStrings.current
     val cat      = (job.category ?: "").toJobCategory()
     val endMs    = job.applyEndDate.parseToMillis()
     val daysLeft = endMs.daysUntil()
@@ -387,7 +388,7 @@ private fun JobCard(
                     // Badges
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallBadge(cat.label, cat.color, cat.bg)
-                        if (job.isNew)    SmallBadge("🆕 New",    BpscColors.Success,     Color(0xFFE8FDF4))
+                        if (job.isNew)    SmallBadge(str.jobsNew,    BpscColors.Success,     Color(0xFFE8FDF4))
                         if (isUrgent)     SmallBadge("🔴 Urgent", Color(0xFFE74C3C),      Color(0xFFFEE8E8))
                         else if (isClosing) SmallBadge("⚡ Closing", Color(0xFFE67E22),   Color(0xFFFFF0EA))
                         if (isPassed)     SmallBadge("Closed",    BpscColors.TextHint,    BpscColors.Surface)
@@ -475,8 +476,8 @@ private fun JobDetailSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SmallBadge(cat.label, cat.color, cat.bg)
-                        if (job.isNew) SmallBadge("🆕 New", BpscColors.Success, Color(0xFFE8FDF4))
-                        if (isPassed)  SmallBadge("Application Closed", BpscColors.TextHint, Color.White.copy(0.2f))
+                        if (job.isNew) SmallBadge(str.jobsNew, BpscColors.Success, Color(0xFFE8FDF4))
+                        if (isPassed)  SmallBadge(str.jobsApplicationClosed, BpscColors.TextHint, Color.White.copy(0.2f))
                     }
                     Text(job.title, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
                     if (!job.department.isNullOrBlank())
@@ -501,13 +502,13 @@ private fun JobDetailSheet(
 
                 // Description — FIXED: now wired to DTO field
                 if (!job.description.isNullOrBlank()) {
-                    SectionCard(title = "About this Job") {
+                    SectionCard(title = str.jobsAboutJob) {
                         Text(job.description.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, lineHeight = 24.sp)
                     }
                 }
 
                 // Eligibility — FIXED: all fields rendered
-                SectionCard(title = "Eligibility & Details", accentColor = BpscColors.Primary, accentBg = BpscColors.PrimaryLight) {
+                SectionCard(title = str.jobsEligibility, accentColor = BpscColors.Primary, accentBg = BpscColors.PrimaryLight) {
                     if (!job.qualification.isNullOrBlank()) DetailRow("🎓", "Qualification", job.qualification.orEmpty())
                     if (!job.ageLimit.isNullOrBlank())      DetailRow("🎂", "Age Limit",     job.ageLimit.orEmpty())
                     if (!job.location.isNullOrBlank())      DetailRow("📍", "Location",      job.location.orEmpty())
@@ -517,12 +518,12 @@ private fun JobDetailSheet(
                 }
 
                 // Important dates — FIXED: all date fields
-                SectionCard(title = "Important Dates") {
+                SectionCard(title = str.jobsImportantDates) {
                     val dates = buildList {
                         if (!job.notificationDate.isNullOrBlank())
                             add(Triple("📢", "Notification",  job.notificationDate.formatDisplay()))
                         if (!job.applyStartDate.isNullOrBlank())
-                            add(Triple("▶️", "Apply Start",   job.applyStartDate.formatDisplay()))
+                            add(Triple("▶️", str.jobsApplyStart,   job.applyStartDate.formatDisplay()))
                         add(Triple("🔴", str.jobsLastDate,      job.applyEndDate.formatDisplay()))
                         if (!job.examDate.isNullOrBlank())
                             add(Triple("📝", "Exam Date",    job.examDate.formatDisplay()))
@@ -571,9 +572,9 @@ private fun JobDetailSheet(
                     Icon(Icons.Rounded.OpenInNew, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        if (isPassed) "Application Closed"
-                        else if (job.officialLink.isNullOrBlank()) "No Link Available"
-                        else "Apply / Official Site",
+                        if (isPassed) str.jobsApplicationClosed
+                        else if (job.officialLink.isNullOrBlank()) str.jobsNoLink
+                        else str.jobsApplyOfficialSite,
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -591,6 +592,7 @@ private fun JobAlertSheet(
     categories: List<JobCategory?>,
     onDismiss:  () -> Unit,
 ) {
+    val str = LocalStrings.current
     val selected = remember { mutableStateListOf<String>() }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -603,8 +605,8 @@ private fun JobAlertSheet(
         ) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Column {
-                    Text("Job Alerts", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text("Get notified when new vacancies are posted", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.jobsAlerts, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    Text(str.jobsAlertsSubtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                 }
                 // Alert icon removed — will be dynamic when job alert API is ready
             }
@@ -752,6 +754,7 @@ private fun TimelineView(steps: List<Triple<String, String, String>>) {
 
 @Composable
 private fun DeadlineBar(daysLeft: Long, isPassed: Boolean, applyEndDate: String?) {
+    val str = LocalStrings.current
     val (bg, fg, text) = when {
         isPassed     -> Triple(Color(0xFFF2F3F4), BpscColors.TextHint, "Application closed · ${applyEndDate.formatDisplay()}")
         daysLeft <= 3  -> Triple(Color(0xFFFEE8E8), Color(0xFFE74C3C), "🔴 ${daysLeft}d left — Apply now!")
@@ -764,7 +767,7 @@ private fun DeadlineBar(daysLeft: Long, isPassed: Boolean, applyEndDate: String?
         Arrangement.SpaceBetween, Alignment.CenterVertically
     ) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = fg, fontWeight = FontWeight.SemiBold)
-        if (!isPassed) Text("View →", style = MaterialTheme.typography.bodyMedium, color = fg, fontWeight = FontWeight.ExtraBold)
+        if (!isPassed) Text("${str.materialsView} →", style = MaterialTheme.typography.bodyMedium, color = fg, fontWeight = FontWeight.ExtraBold)
     }
 }
 

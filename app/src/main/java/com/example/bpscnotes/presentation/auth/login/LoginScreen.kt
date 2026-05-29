@@ -234,7 +234,7 @@ fun LoginScreen(navController: NavHostController) {
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    "I agree to the ",
+                    str.loginIAgree,
                     style = MaterialTheme.typography.bodyMedium,
                     color = BpscColors.TextSecondary
                 )

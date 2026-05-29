@@ -35,7 +35,7 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 //
 // STEP 2: Target Year + Personalization preview ("What we'll do for you")
 //         - 2026 / 2027 / 2028 selection
-//         - "Start Preparing 🚀"
+//         - str.examStartPreparing
 //
 // REMOVED: Beginner / Intermediate / Advanced prep level (entire section removed)
 // ════════════════════════════════════════════════════════════
@@ -123,7 +123,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
     val str = LocalStrings.current
     var search   by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
-    val cats     = listOf("All", "BPSC", "Bihar State", "Central Govt")
+    val cats     = listOf("All", "BPSC", str.examBiharState, "Central Govt")
     val filtered = state.exams.filter { e ->
         (search.isEmpty() || e.name.contains(search, true) || e.fullName.contains(search, true)) &&
                 (category == "All" || e.category?.contains(category, true) == true)
@@ -146,7 +146,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
         ) {
             Text("💡", fontSize = 14.sp)
             Text(
-                "First exam you tap becomes your PRIMARY. Tap more to add secondary exams.",
+                str.examPrimaryTip,
                 style = MaterialTheme.typography.bodySmall,
                 color = BpscColors.Primary
             )
@@ -333,7 +333,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary, disabledContainerColor = BpscColors.Divider)
                 ) {
                     if (state.isSaving) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else Text("Start Preparing 🚀", style = MaterialTheme.typography.titleMedium)
+                    else Text(str.examStartPreparing, style = MaterialTheme.typography.titleMedium)
                 }
             }
             state.saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
@@ -361,7 +361,7 @@ private fun ExamTile(exam: ExamDto, isPrimary: Boolean, isSecondary: Boolean, on
                     Text(exam.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
                     if (isPrimary) {
                         Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                            Text("PRIMARY · tap to change", style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(str.examPrimaryTapChange, style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     if (isSecondary) Box(Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Success.copy(0.15f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text(str.examSetupSecondary, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold) }
