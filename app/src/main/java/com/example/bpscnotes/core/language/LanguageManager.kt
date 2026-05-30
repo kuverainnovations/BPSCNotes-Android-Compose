@@ -33,6 +33,8 @@ class LanguageManager @Inject constructor(
 
         /** Call this from Composables that can't use Hilt injection */
         fun setLanguageGlobal(lang: AppLanguage, context: Context) {
+        val previous = _globalLanguage.value
+        com.example.bpscnotes.core.analytics.Event.languageChanged(previous.name, lang.name)
             context.getSharedPreferences("bpsc_lang_prefs", Context.MODE_PRIVATE)
                 .edit().putString("app_language", lang.code).apply()
             _globalLanguage.value = lang

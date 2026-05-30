@@ -39,6 +39,7 @@ fun SubscriptionPaymentScreen(
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -65,7 +66,7 @@ fun SubscriptionPaymentScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         when {
             state.isSuccess -> SuccessScreen(
                 title   = str.paymentActivated,
@@ -115,12 +116,12 @@ fun SubscriptionPaymentScreen(
 
                     // Features card
                     Card(shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
                         elevation = CardDefaults.cardElevation(2.dp)) {
                         Column(modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(str.paymentWhatsIncluded, style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                                color = cs.onSurface, fontWeight = FontWeight.Bold)
                             val features = listOf(
                                 str.paymentBenefit1,
                                 str.paymentBenefit2,
@@ -136,7 +137,7 @@ fun SubscriptionPaymentScreen(
                                     Icon(Icons.Rounded.Check, null, tint = Color(0xFF2ECC71),
                                         modifier = Modifier.size(16.dp))
                                     Text(f, style = MaterialTheme.typography.bodyMedium,
-                                        color = BpscColors.TextPrimary)
+                                        color = cs.onSurface)
                                 }
                             }
                         }
@@ -144,7 +145,7 @@ fun SubscriptionPaymentScreen(
 
                     // Plan selector
                     Text(str.paymentChoosePlan, style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        color = cs.onSurface, fontWeight = FontWeight.Bold)
 
                     if (state.isLoadingPlans) {
                         Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
@@ -192,12 +193,12 @@ fun SubscriptionPaymentScreen(
                         Text("🔒", fontSize = 16.sp)
                         Text(str.paymentSecure,
                             style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.TextSecondary)
+                            color = cs.onSurfaceVariant)
                     }
                 }
 
                 // Pay button
-                Box(modifier = Modifier.fillMaxWidth().background(Color.White)
+                Box(modifier = Modifier.fillMaxWidth().background(cs.surface)
                     .padding(horizontal = 20.dp, vertical = 12.dp)) {
                     Button(
                         onClick  = { viewModel.createOrder() },
@@ -225,6 +226,8 @@ fun SubscriptionPaymentScreen(
 // ── Plan card ─────────────────────────────────────────────────
 @Composable
 private fun PlanCard(plan: SubscriptionPlanDto, isSelected: Boolean, onSelect: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val savings = plan.savings ?: 0
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
         shape = RoundedCornerShape(14.dp),
@@ -243,7 +246,7 @@ private fun PlanCard(plan: SubscriptionPlanDto, isSelected: Boolean, onSelect: (
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(plan.name ?: "", style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        color = cs.onSurface, fontWeight = FontWeight.Bold)
                     if (savings > 0) {
                         Text("Save $savings%", style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF2ECC71), fontWeight = FontWeight.Bold, fontSize = 9.sp,
@@ -252,7 +255,7 @@ private fun PlanCard(plan: SubscriptionPlanDto, isSelected: Boolean, onSelect: (
                     }
                 }
                 Text(plan.billingCycle ?: "", style = MaterialTheme.typography.bodySmall,
-                    color = BpscColors.TextSecondary)
+                    color = cs.onSurfaceVariant)
                 if ((plan.bonusCoins ?: 0) > 0) {
                     Text("🪙 +${plan.bonusCoins} bonus coins", style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
@@ -277,10 +280,11 @@ private fun CouponSection(
     couponCode: String, couponApplied: Boolean, couponError: String?,
     onCodeChange: (String) -> Unit, onApply: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(str.paymentCoupon, style = MaterialTheme.typography.labelLarge,
-            color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+            color = cs.onSurface, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = couponCode, onValueChange = onCodeChange,
@@ -289,7 +293,7 @@ private fun CouponSection(
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BpscColors.Primary,
-                    unfocusedBorderColor = BpscColors.Divider,
+                    unfocusedBorderColor = cs.outline,
                     disabledBorderColor = Color(0xFF2ECC71)
                 ),
                 enabled = !couponApplied,
@@ -320,17 +324,18 @@ private fun PriceBreakdown(
     baseAmount: Int, couponDiscount: Int, coinDiscount: Int, finalAmount: Int,
     coinsAvailable: Int, coinsToUse: Int, onCoinsToggle: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(str.paymentBreakdown, style = MaterialTheme.typography.titleSmall,
-                color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                color = cs.onSurface, fontWeight = FontWeight.Bold)
             PriceRow(str.paymentBasePrice, "₹$baseAmount")
             if (couponDiscount > 0) PriceRow(str.paymentCouponDiscount, "−₹$couponDiscount", Color(0xFF2ECC71))
             if (coinDiscount > 0)   PriceRow("Coin discount (${coinsToUse} 🪙)", "−₹$coinDiscount", Color(0xFFF57F17))
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             PriceRow(str.paymentTotal, "₹$finalAmount", BpscColors.Primary, bold = true)
 
             // Coins toggle
@@ -360,8 +365,10 @@ private fun PriceBreakdown(
 
 @Composable
 private fun PriceRow(label: String, value: String, color: Color = BpscColors.TextPrimary, bold: Boolean = false) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodyMedium, color = color,
             fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Normal)
     }

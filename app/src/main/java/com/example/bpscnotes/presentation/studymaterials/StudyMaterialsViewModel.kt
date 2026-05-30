@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.data.remote.api.StudyMaterialsApiService
+
 import android.app.Application
 import android.app.DownloadManager
 import android.os.Build

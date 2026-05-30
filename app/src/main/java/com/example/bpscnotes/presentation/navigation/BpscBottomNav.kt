@@ -1,6 +1,8 @@
 package com.example.bpscnotes.presentation.navigation
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,16 +27,18 @@ fun BpscBottomNav(
     val currentRoute = backStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .border(
                 width = 0.5.dp,
                 color = BpscColors.Divider,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             )
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+        windowInsets = WindowInsets(0, 0, 0, 0)   // consume insets ourselves via navigationBarsPadding
     ) {
         items.forEach { item ->
             val selected = currentRoute == item.route
@@ -47,10 +51,11 @@ fun BpscBottomNav(
                                 saveState = true
                             }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState    = true
                         }
                     }
                 },
+                alwaysShowLabel = true,
                 icon = {
                     BadgedBox(
                         badge = {

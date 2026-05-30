@@ -40,6 +40,7 @@ import com.example.bpscnotes.presentation.quiz.ReviewCard
 
 @Composable
 fun SubjectChip(subject: String) {
+    val str = LocalStrings.current
     Text(
         subject,
         modifier = Modifier

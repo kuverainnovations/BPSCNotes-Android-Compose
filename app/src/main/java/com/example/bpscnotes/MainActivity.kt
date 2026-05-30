@@ -21,10 +21,11 @@ import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
 import com.example.bpscnotes.presentation.payment.RazorpayPaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
+import com.example.bpscnotes.core.config.AppConfigRepository
+import kotlinx.coroutines.launch
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity(),
     @Inject lateinit var coinsApi: CoinsApiService
     @Inject lateinit var tokenStore: TokenStore
     @Inject lateinit var fcmTokenManager: FcmTokenManager
+    @Inject lateinit var appConfigRepo: AppConfigRepository
 
     // Callbacks registered by PaymentScreen before launching Razorpay checkout
     private var onPaymentSuccessCallback: ((String, String) -> Unit)? = null
@@ -73,6 +75,10 @@ class MainActivity : ComponentActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Fetch admin-controlled settings on startup
+        lifecycleScope.launch {
+            try { appConfigRepo.fetch() } catch (_: Exception) {}
+        }
 
         lifecycleScope.launch {
             try {

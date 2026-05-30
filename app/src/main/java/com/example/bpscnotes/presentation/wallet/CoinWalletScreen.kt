@@ -55,6 +55,8 @@ fun CoinWalletScreen(
     adManager:     AdManager,
     viewModel:     CoinWalletViewModel = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val context      = androidx.compose.ui.platform.LocalContext.current
     val activity     = context as? Activity
     val state        by viewModel.uiState.collectAsState()
@@ -62,7 +64,7 @@ fun CoinWalletScreen(
 
     // Block back button while ad loop is running — user must watch all ads
     BackHandler(enabled = adLoopActive) { /* swallow back press during ad loop */ }
-    val str = LocalStrings.current
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("coin_wallet") }
     val rewardedAdReady by adManager.rewardedReady.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -87,7 +89,7 @@ fun CoinWalletScreen(
     if (state.isLoading && state.balance == 0) {
         Box(Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface), Alignment.Center) {
+            .background(cs.background), Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.CoinGold)
         }
         return
@@ -95,7 +97,7 @@ fun CoinWalletScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
-        containerColor = BpscColors.Surface,
+        containerColor = cs.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { scaffoldPadding ->
         // FIX: Header and tabs pinned — only content area scrolls
@@ -111,7 +113,7 @@ fun CoinWalletScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BpscColors.Surface),
+                    .background(cs.background),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
 
@@ -234,7 +236,7 @@ fun CoinWalletScreen(
                                 Box(Modifier
                                     .fillMaxWidth()
                                     .padding(24.dp), Alignment.Center) {
-                                    Text(str.walletNoTasks, color = BpscColors.TextSecondary)
+                                    Text(str.walletNoTasks, color = cs.onSurfaceVariant)
                                 }
                             }
                         }
@@ -292,6 +294,7 @@ fun CoinWalletScreen(
 
 @Composable
 private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val animCoins by animateFloatAsState(targetValue = coins.toFloat(), animationSpec = tween(1400), label = "coinAnim")
 
@@ -370,12 +373,14 @@ private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
 
 @Composable
 private fun CoinTabRow(selectedTab: Int, tabs: List<String>, onSelect: (Int) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
+            .background(cs.surface)
             .padding(5.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -407,12 +412,14 @@ private fun CoinTabRow(selectedTab: Int, tabs: List<String>, onSelect: (Int) -> 
 
 @Composable
 private fun SectionHeader(title: String, subtitle: String?, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
@@ -428,13 +435,14 @@ private fun DailyCheckInCard(
     doneToday: Boolean,
     streak: Int = 0
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier  = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -449,7 +457,7 @@ private fun DailyCheckInCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(str.walletDailyStreak, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Text(str.walletDailyStreak, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
                 if (streak > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("🔥", fontSize = 14.sp)
@@ -560,6 +568,7 @@ private fun EarnTaskRow(
     isClaiming: Boolean,
     onClick: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier  = Modifier
@@ -639,7 +648,7 @@ private fun EarnTaskRow(
                         )
                     }
                 }
-                Text(task.subtitle.orEmpty(), style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary, maxLines = 1)
+                Text(task.subtitle.orEmpty(), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1)
                 // Coin reward pill
                 Row(
                     modifier = Modifier
@@ -717,6 +726,7 @@ private fun EarnTaskRow(
 
 @Composable
 private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Row(
         modifier = Modifier
@@ -736,7 +746,7 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
                     Text(str.walletEarned, style = MaterialTheme.typography.labelSmall, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                 }
                 Text("+$totalEarned", style = MaterialTheme.typography.titleLarge, color = Color(0xFF2E7D32), fontWeight = FontWeight.ExtraBold)
-                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
         }
         Card(
@@ -751,7 +761,7 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
                     Text(str.walletSpent, style = MaterialTheme.typography.labelSmall, color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
                 }
                 Text("-$totalSpent", style = MaterialTheme.typography.titleLarge, color = Color(0xFFC62828), fontWeight = FontWeight.ExtraBold)
-                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                Text(str.coins, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
         }
     }
@@ -763,6 +773,7 @@ private fun HistorySummaryRow(totalEarned: Int, totalSpent: Int) {
 
 @Composable
 private fun EmptyHistoryState() {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Column(
         modifier = Modifier
@@ -798,6 +809,8 @@ private fun EmptyHistoryState() {
 
 @Composable
 private fun TransactionRow(transaction: CoinTransactionDto) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val isEarned = transaction.type == "earned"
     val iconBg   = if (isEarned) Color(0xFFE8FDF4) else Color(0xFFFCE4EC)
     val iconTint = if (isEarned) Color(0xFF2E7D32) else Color(0xFFC62828)
@@ -820,9 +833,9 @@ private fun TransactionRow(transaction: CoinTransactionDto) {
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(transaction.title.orEmpty(), style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                color = cs.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(transaction.subtitle.orEmpty(), style = MaterialTheme.typography.labelSmall,
-                color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(formatDate(transaction.displayDate.orEmpty()), style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextHint, fontSize = 10.sp)
         }
@@ -837,10 +850,10 @@ private fun TransactionRow(transaction: CoinTransactionDto) {
                     fontSize   = 14.sp
                 )
             }
-            Text("coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
+            Text(str.walletCoins, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
         }
     }
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
 }
 
 // ─────────────────────────────────────────────────────────────

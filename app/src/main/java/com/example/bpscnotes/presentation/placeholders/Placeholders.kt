@@ -195,6 +195,7 @@ fun DownloadsScreen(
 ) {
     val state       by viewModel.state.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val context      = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -206,9 +207,9 @@ fun DownloadsScreen(
     }
 
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = cs.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(BpscColors.Surface)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(cs.background)) {
 
             // ── Header ─────────────────────────────────────────
             Box(modifier = Modifier.fillMaxWidth()
@@ -258,7 +259,7 @@ fun DownloadsScreen(
                         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(5) {
                                 Box(modifier = Modifier.fillMaxWidth().height(80.dp)
-                                    .clip(RoundedCornerShape(16.dp)).background(BpscColors.Divider))
+                                    .clip(RoundedCornerShape(16.dp)).background(cs.outline))
                             }
                         }
                     }
@@ -267,7 +268,7 @@ fun DownloadsScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text("⚠️", fontSize = 40.sp)
-                                Text(state.error!!, color = BpscColors.TextSecondary,
+                                Text(state.error!!, color = cs.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 32.dp))
                                 Button(onClick = viewModel::refresh,
@@ -283,10 +284,10 @@ fun DownloadsScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("📂", fontSize = 52.sp)
                                 Text(str.downloadsNone, style = MaterialTheme.typography.titleLarge,
-                                    color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                                    color = cs.onSurface, fontWeight = FontWeight.Bold)
                                 Text(str.downloadsNoneHint,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = BpscColors.TextSecondary, textAlign = TextAlign.Center,
+                                    color = cs.onSurfaceVariant, textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 32.dp))
                                 Button(
                                     onClick = { nav.navigate(Screen.StudyMaterials.route) },
@@ -371,6 +372,8 @@ fun DownloadsScreen(
 
 @Composable
 private fun DlStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(icon, fontSize = 14.sp)
         Text(value, style = MaterialTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
@@ -383,12 +386,14 @@ private fun DownloadedFileCard(
     item: DownloadedFileItem, isDeleting: Boolean,
     onOpen: () -> Unit, onDelete: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val typeEmoji = when (item.materialType) { "pyq" -> "📝"; "book" -> "📚"; "video" -> "🎬"; else -> "📄" }
     val typeColor = when (item.materialType) { "pyq" -> Color(0xFF9B59B6); "book" -> Color(0xFF1565C0); else -> Color(0xFFE74C3C) }
     val typeBg    = when (item.materialType) { "pyq" -> Color(0xFFF3E8FD); "book" -> Color(0xFFE8F0FD); else -> Color(0xFFFEE8E8) }
 
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -401,17 +406,17 @@ private fun DownloadedFileCard(
 
             // Info
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(item.title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary,
+                Text(item.title, style = MaterialTheme.typography.titleSmall, color = cs.onSurface,
                     fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(item.subject, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                Text(item.subject, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("💾 ${"%.1f".format(item.fileSizeMb)} MB",
                         style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                     if (!item.fileExists)
-                        Text("⚠️ File missing", style = MaterialTheme.typography.labelSmall,
+                        Text(str.placeholderFileMissing, style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFFE74C3C), fontSize = 10.sp)
                     else
-                        Text("✓ On device", style = MaterialTheme.typography.labelSmall,
+                        Text(str.placeholderOnDevice, style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Success, fontSize = 10.sp)
                 }
             }
@@ -419,7 +424,7 @@ private fun DownloadedFileCard(
             // Actions
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(modifier = Modifier.size(32.dp).clip(CircleShape)
-                    .background(if (item.fileExists) BpscColors.PrimaryLight else BpscColors.Divider)
+                    .background(if (item.fileExists) BpscColors.PrimaryLight else cs.outline)
                     .clickable(enabled = item.fileExists, onClick = onOpen),
                     contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.OpenInNew, null,
@@ -528,12 +533,13 @@ fun SubscriptionScreen(
     nav: NavHostController,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state     by viewModel.state.collectAsState()
 
-    Scaffold(containerColor = BpscColors.Surface,
+    Scaffold(containerColor = cs.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(BpscColors.Surface)) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(cs.background)) {
 
             // ── Header ─────────────────────────────────────────
             Box(modifier = Modifier.fillMaxWidth()
@@ -578,14 +584,14 @@ fun SubscriptionScreen(
                         AlertDialog(
                             onDismissRequest = { showEnrollDialog = false },
                             shape = RoundedCornerShape(20.dp),
-                            title = { Text("🚀 Get BPSCNotes Pro", fontWeight = FontWeight.ExtraBold) },
+                            title = { Text(str.placeholderGetPro, fontWeight = FontWeight.ExtraBold) },
                             text = {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(str.placeholdersUnlockAll)
                                     val p = state.plans.firstOrNull()
                                     if (p != null) {
-                                        Text("✅ All premium PDFs & notes", style = MaterialTheme.typography.bodyMedium)
-                                        Text("✅ Offline downloads", style = MaterialTheme.typography.bodyMedium)
+                                        Text(str.placeholderPremiumPdfs, style = MaterialTheme.typography.bodyMedium)
+                                        Text(str.placeholderOfflineDownloads, style = MaterialTheme.typography.bodyMedium)
                                         Text(str.placeholdersPrioritySupport, style = MaterialTheme.typography.bodyMedium)
                                         if (p.bonusCoins > 0) Text("✅ +${p.bonusCoins} bonus coins on signup", style = MaterialTheme.typography.bodyMedium)
                                         Spacer(Modifier.height(4.dp))
@@ -610,7 +616,7 @@ fun SubscriptionScreen(
                     Card(
                         modifier = Modifier.clickable { showEnrollDialog = true },  // ← CLICKABLE NOW
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f)),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f)),
                         border = BorderStroke(1.dp, Color.White.copy(0.3f))) {
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -669,7 +675,7 @@ fun SubscriptionScreen(
                                         verticalAlignment = Alignment.CenterVertically) {
                                         Text(str.placeholdersPremiumNotes,
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                                            color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                                         TextButton(onClick = { nav.navigate(Screen.StudyMaterials.route) }) {
                                             Text(str.placeholdersSeeAll2, color = BpscColors.Primary)
                                         }
@@ -687,7 +693,7 @@ fun SubscriptionScreen(
                                     Spacer(Modifier.height(8.dp))
                                     Text(str.placeholdersPremiumCourses,
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                                 }
                                 items(state.premiumCourses, key = { it.id }) { course ->
                                     PremiumCourseCard(course = course,
@@ -702,9 +708,9 @@ fun SubscriptionScreen(
                                             verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                             Text("⭐", fontSize = 52.sp)
                                             Text(str.placeholdersNoPremiumYet,
-                                                style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary)
+                                                style = MaterialTheme.typography.titleLarge, color = cs.onSurface)
                                             Text(str.placeholdersCheckBack,
-                                                style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                                                style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -719,6 +725,7 @@ fun SubscriptionScreen(
 
 @Composable
 private fun SubPill(text: String) {
+    val cs = MaterialTheme.colorScheme
     Text(text, style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 9.sp,
         modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.15f))
             .padding(horizontal = 6.dp, vertical = 2.dp))
@@ -726,9 +733,10 @@ private fun SubPill(text: String) {
 
 @Composable
 private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -745,7 +753,7 @@ private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit)
                     Text(material.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                 }
                 Text(material.title, style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
+                    color = cs.onSurface, fontWeight = FontWeight.SemiBold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text("⬇️ ${material.downloadCount} downloads · ⭐ ${material.rating}",
                     style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
@@ -757,9 +765,11 @@ private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit)
 
 @Composable
 private fun PremiumCourseCard(course: CourseDto, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -769,7 +779,7 @@ private fun PremiumCourseCard(course: CourseDto, onClick: () -> Unit) {
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(course.title, style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold,
+                    color = cs.onSurface, fontWeight = FontWeight.SemiBold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(course.instructor ?: "BPSCNotes Team",
                     style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
@@ -785,10 +795,12 @@ private fun PremiumCourseCard(course: CourseDto, onClick: () -> Unit) {
 
 @Composable
 private fun SubLoadingGrid() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(6) {
             Box(modifier = Modifier.fillMaxWidth().height(70.dp)
-                .clip(RoundedCornerShape(14.dp)).background(BpscColors.Divider))
+                .clip(RoundedCornerShape(14.dp)).background(cs.outline))
         }
     }
 }
@@ -796,6 +808,7 @@ private fun SubLoadingGrid() {
 // Kept for backward compat
 @Composable
 fun PlaceholderScreen(title: String) {
+    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("$title\n(Coming Soon)", style = MaterialTheme.typography.headlineSmall)
     }

@@ -41,6 +41,8 @@ fun QuizListScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("quiz_list") }
 
     LaunchedEffect(Unit) {
         // Only reload if list is empty (avoid re-fetching on back navigation)
@@ -49,7 +51,7 @@ fun QuizListScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
 
         // ── Header ─────────────────────────────────────────────
         Box(
@@ -136,7 +138,7 @@ fun QuizListScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("⚠️", fontSize = 40.sp)
-                        Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                        Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                         Button(onClick = { viewModel.loadLobby() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
@@ -145,8 +147,8 @@ fun QuizListScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📝", fontSize = 48.sp)
-                        Text(str.quizNoAvailable, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.quizNoAvailable, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                     }
                 }
             }
@@ -209,11 +211,12 @@ fun QuizListScreen(
 
 @Composable
 internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -225,7 +228,7 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (quiz.isAttempted) {
                         Text(str.dashboardDone, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                     }

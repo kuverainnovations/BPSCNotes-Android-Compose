@@ -31,6 +31,7 @@ fun QuizDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     var localError by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -46,15 +47,15 @@ fun QuizDetailScreen(
 
     when {
         state.isLoadingDetail -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = BpscColors.Primary)
             }
         }
         state.detailError != null -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 40.sp)
-                    Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { navController.popBackStack() }) { Text(str.goBack) }
                         Button(onClick = { viewModel.loadQuizDetail(quizId) }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
@@ -73,7 +74,7 @@ fun QuizDetailScreen(
             )
         }
         else -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = BpscColors.Primary)
             }
         }
@@ -89,6 +90,7 @@ private fun QuizIntroContent(
     onSetError: (String) -> Unit,
     viewModel: QuizViewModel,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
     val difficultyColor = when (quiz.difficulty.lowercase()) {
@@ -101,7 +103,7 @@ private fun QuizIntroContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BpscColors.Surface)
+                .background(cs.background)
                 .verticalScroll(rememberScrollState())
         ) {
             // ── Hero header ─────────────────────────────────────────
@@ -221,13 +223,13 @@ private fun QuizIntroContent(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(str.quizRules, style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        HorizontalDivider(color = BpscColors.Divider)
+                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(color = cs.outline)
                         listOf(
                             "📝  ${quiz.totalQuestions} questions to answer",
                             "⏱️  ${quiz.durationMins} minutes total time limit",
@@ -238,7 +240,7 @@ private fun QuizIntroContent(
                             "✅  " + str.quizSubmit
                         ).forEach { rule ->
                             Text(rule, style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.TextSecondary, lineHeight = 20.sp)
+                                color = cs.onSurfaceVariant, lineHeight = 20.sp)
                         }
                     }
                 }

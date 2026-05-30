@@ -51,6 +51,8 @@ data class CourseDto(
     val thumbnail_url: String?,
     @SerializedName("total_lessons")
     val totalLessons: Int,
+    @SerializedName("total_chapters")
+    val totalChapters: Int = 0,
     @SerializedName("total_hours")
     val totalHours: String = "0",
     val rating: String = "0",
@@ -316,6 +318,8 @@ data class CompleteLessonRequest(
 data class CompleteLessonResponse(
     val completedLessons: Int = 0,
     val totalLessons: Int = 0,
+    @SerializedName("total_chapters")
+    val totalChapters: Int = 0,
     val isCompleted: Boolean = false
 )
 data class Enrollment(
@@ -459,6 +463,13 @@ data class CompleteTargetResponse(
 // API SERVICE INTERFACES
 // ══════════════════════════════════════════════════════════════
 
+
+data class AppConfigWrapper(
+    @com.google.gson.annotations.SerializedName("config")
+    val config: Map<String, String>? = null
+)
+
+
 interface CoursesApiService {
     @GET("courses")
     suspend fun getCourses(
@@ -579,6 +590,10 @@ interface BannersApiService {
 }
 
 interface UserStatsApiService {
+    /** GET /app-config — admin-controlled settings (coin rates, limits, flags) */
+    @retrofit2.http.GET("app-config")
+    suspend fun getAppConfig(): com.example.bpscnotes.data.remote.dto.ApiResponse<AppConfigWrapper>
+
     @GET("users/stats")
     suspend fun getStats(): ApiResponse<UserStatsData>
 }

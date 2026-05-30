@@ -37,6 +37,7 @@ fun CreateTargetSheet(
     onDismiss: () -> Unit
 ) {
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
     val state       by viewModel.uiState.collectAsState()
     val isLoading    = state.isCreatingTarget
     var inputText   by remember { mutableStateOf("") }
@@ -65,7 +66,7 @@ fun CreateTargetSheet(
                 .fillMaxWidth()
                 .clickable(enabled = false, onClick = {}),
             shape    = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            colors   = CardDefaults.cardColors(containerColor = Color.White)
+            colors   = CardDefaults.cardColors(containerColor = cs.surface)
         ) {
 
             val sheetHeight = when {
@@ -92,7 +93,7 @@ fun CreateTargetSheet(
                     modifier = Modifier
                         .width(40.dp).height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(BpscColors.Divider)
+                        .background(cs.outline)
                         .align(Alignment.CenterHorizontally)
                 )
 
@@ -106,7 +107,7 @@ fun CreateTargetSheet(
                 Text(
                     "Add up to 5 study tasks for today (${5 - currentCount} remaining).",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(20.dp))
@@ -116,7 +117,7 @@ fun CreateTargetSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(BpscColors.Surface)
+                        .background(cs.background)
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -126,7 +127,7 @@ fun CreateTargetSheet(
                         modifier      = Modifier
                             .weight(1f)
                             .padding(vertical = 12.dp),
-                        textStyle     = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary),
+                        textStyle     = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface),
                         singleLine    = true,
                         decorationBox = { inner ->
                             if (inputText.isEmpty()) {

@@ -68,6 +68,7 @@ fun StudyFocusScreen(
     adManager: AdManager
 ) {
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val state      by viewModel.uiState.collectAsState()
     val tiersState by tiersViewModel.uiState.collectAsState()
     val activity = LocalContext.current as? Activity
@@ -80,7 +81,7 @@ fun StudyFocusScreen(
 //    var chatWithMember by remember { mutableStateOf<TierMemberDto?>(null) }
 
     // PIP: back press pops StudyFocusScreen from the root stack.
-    // This returns to Screen.Main (MainShell) which contains RoomsHub tab — 
+    // This returns to Screen.Main (MainShell) which contains RoomsHub tab —
     // exactly where the user came from. The PIP overlay in MainShell appears
     // automatically because the session is still ACTIVE.
     // NEVER navigate to RoomsHub directly — it exists as both a root route AND
@@ -219,6 +220,7 @@ private fun ActiveRoomScreen(
     onDismissAfk:   () -> Unit = {},
     tiersViewModel: TierRoomsViewModel
 ) {
+    val cs = MaterialTheme.colorScheme
     // Compute elapsed time directly from startedAt timestamp — same approach as PIP overlay.
     // This is immune to: ViewModel re-creation, startElapsedTimer() resets, re-composition,
     // and any other state sync issues. It's always: now - sessionStartTime.
@@ -406,7 +408,7 @@ private fun ActiveRoomScreen(
                 Card(
                     modifier = Modifier.weight(0.45f),
                     shape    = RoundedCornerShape(20.dp),
-                    colors   = CardDefaults.cardColors(containerColor = Color.White.copy(0.08f)),
+                    colors   = CardDefaults.cardColors(containerColor = cs.surface.copy(0.08f)),
                     border   = BorderStroke(1.dp, tierColor.copy(0.3f))
                 ) {
                     Column(
@@ -501,7 +503,7 @@ private fun ActiveRoomScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(timeStr, style = MaterialTheme.typography.headlineMedium,
                                 color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp)
-                            Text("active", style = MaterialTheme.typography.labelSmall,
+                            Text(str.focusActive, style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(0.55f))
                             Spacer(Modifier.height(2.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -670,9 +672,10 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape    = RoundedCornerShape(14.dp),
-        colors   = CardDefaults.cardColors(containerColor = Color.White.copy(0.06f)),
+        colors   = CardDefaults.cardColors(containerColor = cs.surface.copy(0.06f)),
         border   = BorderStroke(1.dp, Color.White.copy(0.07f))
     ) {
+    val cs = MaterialTheme.colorScheme
         Row(
             modifier              = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -721,11 +724,13 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
 
 @Composable
 private fun LiveMemberCard(member: TierMemberDto) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(0.06f)
+            containerColor = cs.surface.copy(0.06f)
         ),
         border = BorderStroke(
             1.dp,
@@ -793,7 +798,6 @@ private fun LiveMemberCard(member: TierMemberDto) {
 /*@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
-    val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var inputText  by remember { mutableStateOf("") }
     val messages   = remember {
@@ -899,6 +903,8 @@ private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
 
 /*@Composable
 private fun ChatBubble(message: ChatMessage) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isMe) Arrangement.End else Arrangement.Start) {
         if (!message.isMe) {
@@ -936,11 +942,12 @@ private fun SessionSummaryScreen(
     tierData:  MyTierResponseData?,
     onDismiss: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val animProg by animateFloatAsState(
         if (summary != null && summary.durationMinutes > 0)
             (summary.activeMinutes.toFloat() / summary.durationMinutes).coerceIn(0f, 1f) else 0f,
         tween(1200), label = "sum")
-    val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxSize()
         .background(Brush.verticalGradient(listOf(Color(0xFF030D2E), Color(0xFF051D56), BpscColors.Surface))),
         contentAlignment = Alignment.TopCenter) {
@@ -970,14 +977,14 @@ private fun SessionSummaryScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${summary?.activeMinutes ?: 0}m",
                         style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("active", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
+                    Text(str.focusActive, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
                 }
             }
             Spacer(Modifier.height(20.dp))
 
             // Stats grid
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     SumStat("⏱️", "${summary?.durationMinutes ?: 0}m", str.focusTotal)
                     SumStat("🎯", "${summary?.activeMinutes ?: 0}m", str.focusActive)
@@ -996,7 +1003,7 @@ private fun SessionSummaryScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("🎉", fontSize = 20.sp)
                         Text("Bonus +${summary?.bonusCoins} coins (30+ min session!)",
-                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1012,7 +1019,7 @@ private fun SessionSummaryScreen(
                             Text("Progress to ${next.name}",
                                 style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                             Text("${(tierData.nextTierProgress * 100).toInt()}% complete — keep going!",
-                                style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                     }
                 }
@@ -1032,9 +1039,11 @@ private fun SessionSummaryScreen(
 
 @Composable
 private fun SumStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 18.sp)
-        Text(value, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+        Text(value, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
         Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
     }
 }

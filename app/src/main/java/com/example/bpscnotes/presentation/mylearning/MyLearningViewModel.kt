@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -33,13 +35,27 @@ data class MyLearningUiState(
 @HiltViewModel
 class MyLearningViewModel @Inject constructor(
     private val coursesApi: CoursesApiService,
-    private val authApi:    AuthApiService
+    private val authApi:    AuthApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyLearningUiState())
     val uiState: StateFlow<MyLearningUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        // Auto-refresh when lesson is completed or course enrolled from any screen
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.LessonCompleted,
+                    is RefreshEvent.CourseProgressChanged,
+                    is RefreshEvent.CourseEnrolled -> load()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {

@@ -79,6 +79,7 @@ import androidx.hilt.navigation.compose.hiltViewModel          // ← use hiltVi
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 // ── NOTE: mockCAArticles and local `categories` removed.
@@ -89,10 +90,13 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 @Composable
 fun CurrentAffairsScreen(
     navController: NavHostController,
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     viewModel: CurrentAffairsViewModel = hiltViewModel()   // ← was missing before
 ) {
     val state        by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("current_affairs") }
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
 
     var selectedTab      by remember { mutableIntStateOf(0) }
@@ -128,7 +132,7 @@ fun CurrentAffairsScreen(
 
     val grouped = filtered.groupBy { it.date }.entries.sortedByDescending { it.key }
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Header ─────────────────────────────────────────
@@ -213,20 +217,20 @@ fun CurrentAffairsScreen(
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(CA_CATEGORIES) { cat ->
                     val sel = cat == selectedCategory
-                    Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp)).clickable { selectedCategory = cat }.padding(horizontal = 14.dp, vertical = 7.dp)) {
+                    Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { selectedCategory = cat }.padding(horizontal = 14.dp, vertical = 7.dp)) {
                         Text(cat, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                     }
                 }
             }
 
             // Stats row
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 CAStatChip("📰", "${filtered.size}", "Articles")
-                Box(Modifier.width(1.dp).height(24.dp).background(BpscColors.Divider))
+                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
                 CAStatChip("⭐", "${filtered.count { it.isImportant }}", str.caImportant)
-                Box(Modifier.width(1.dp).height(24.dp).background(BpscColors.Divider))
+                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
                 CAStatChip("❓", "${filtered.sumOf { it.mcqCount }}", "MCQs")
-                Box(Modifier.width(1.dp).height(24.dp).background(BpscColors.Divider))
+                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
                 CAStatChip("🔖", "${bookmarkedIds.size}", "Saved")
             }
 
@@ -246,8 +250,8 @@ fun CurrentAffairsScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
                             Text("⚠️", fontSize = 40.sp)
-                            Text(str.error, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                            Text(str.error, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                             Button(onClick = { viewModel.refresh() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                                 Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(str.retry)
                             }
@@ -260,8 +264,8 @@ fun CurrentAffairsScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (selectedTab == 3) "🔖" else "🔍", fontSize = 48.sp)
-                            Text(if (selectedTab == 3) str.caNoSaved else str.caNoArticles, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(if (selectedTab == 3) str.caBookmarkHint else str.caTryFilter, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                            Text(if (selectedTab == 3) str.caNoSaved else str.caNoArticles, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(if (selectedTab == 3) str.caBookmarkHint else str.caTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                         }
                     }
                 }
@@ -313,6 +317,8 @@ fun CurrentAffairsScreen(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun formatArticleDate(isoDate: String): String {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     return try {
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
         sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
@@ -327,11 +333,13 @@ private fun formatArticleDate(isoDate: String): String {
 
 @Composable
 private fun DateGroupHeader(date: String, count: Int) {
-    Row(modifier = Modifier.fillMaxWidth().background(BpscColors.Surface).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
+    Row(modifier = Modifier.fillMaxWidth().background(cs.background).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 10.dp, vertical = 5.dp)) {
             Text(date, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
         }
-        Box(modifier = Modifier.height(1.dp).weight(1f).background(BpscColors.Divider))
+        Box(modifier = Modifier.height(1.dp).weight(1f).background(cs.outline))
         Text("$count articles", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
     }
 }
@@ -341,6 +349,7 @@ private fun DateGroupHeader(date: String, count: Int) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
@@ -348,7 +357,7 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onReadMore() },  // FIX: whole card clickable
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -362,15 +371,15 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) { Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp)); Text("${article.readMinutes} min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp) }
             }
             Spacer(Modifier.height(10.dp))
-            Text(article.headline, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
+            Text(article.headline, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
             Spacer(Modifier.height(6.dp))
-            Text(article.summary, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(article.summary, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(str.caReadMore, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp).clickable { onReadMore() })
-            Spacer(Modifier.height(12.dp)); HorizontalDivider(color = BpscColors.Divider); Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp)); HorizontalDivider(color = cs.outline); Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("❓", fontSize = 11.sp); Text("${article.mcqCount} MCQs from this topic", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold, fontSize = 10.sp) }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(BpscColors.Surface).clickable(onClick = onShare), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, null, tint = BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
+                    Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(cs.background).clickable(onClick = onShare), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, null, tint = BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
                     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface).clickable(onClick = onBookmark), contentAlignment = Alignment.Center) { Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, tint = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
                 }
             }
@@ -389,6 +398,7 @@ private fun ArticleBottomSheet(
     viewModel: com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsViewModel,
     onBookmark: () -> Unit, onDismiss: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val mcqs by viewModel.mcqs.collectAsState()
@@ -397,7 +407,7 @@ private fun ArticleBottomSheet(
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), contentWindowInsets = { WindowInsets(0, 0, 0, 0) }) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = cs.surface, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), contentWindowInsets = { WindowInsets(0, 0, 0, 0) }) {
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
             Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0)), start = Offset(0f, 0f), end = Offset(400f, 200f))).padding(horizontal = 20.dp, vertical = 20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -416,7 +426,7 @@ private fun ArticleBottomSheet(
                 }
             }
             Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(article.fullContent, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 26.sp)
+                Text(article.fullContent, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, lineHeight = 26.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     article.tags.forEach { tag -> Text("#$tag", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 10.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 8.dp, vertical = 3.dp)) }
                 }
@@ -424,7 +434,7 @@ private fun ArticleBottomSheet(
                     Column {
                         Text(str.caMcqPractice, style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                         Text(when { mcqLoading -> str.caLoadingQuestions; mcqs.isNullOrEmpty() -> "No MCQs added yet"; else -> "${mcqs.size} questions from this article" },
-                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     }
                     if (mcqLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
@@ -438,7 +448,7 @@ private fun ArticleBottomSheet(
                     }
                 }
             }
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -447,7 +457,7 @@ private fun ArticleBottomSheet(
                     onClick   = onBookmark,
                     modifier  = Modifier.weight(1f).height(46.dp),
                     shape     = RoundedCornerShape(12.dp),
-                    border    = androidx.compose.foundation.BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else BpscColors.Divider),
+                    border    = androidx.compose.foundation.BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else cs.outline),
                     colors    = ButtonDefaults.outlinedButtonColors(contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)
                 ) {
                     Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
@@ -482,9 +492,10 @@ private fun ArticleBottomSheet(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun CAStatChip(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Text(icon, fontSize = 13.sp)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
         Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 
@@ -55,6 +56,8 @@ fun LessonViewerScreen(
 
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("lesson_viewer") }
 
     Scaffold(
         topBar       = {
@@ -118,6 +121,7 @@ fun LessonViewerScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LessonTopBar(title: String, isLoading: Boolean, onBack: () -> Unit) {
+    val str = LocalStrings.current
     TopAppBar(
         title = {
             Text(
@@ -148,6 +152,7 @@ private fun LessonBottomBar(
     isMarking: Boolean,
     onMarkComplete: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(
         modifier = Modifier
@@ -194,6 +199,7 @@ private fun LessonBottomBar(
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun PdfViewer(notesUrl: String?) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     if (notesUrl.isNullOrBlank()) {
         NoContentState(str.lessonNoPdf)
@@ -224,15 +230,15 @@ private fun PdfViewer(notesUrl: String?) {
     if (failed) {
         // FIX: Show proper error with retry + open-in-browser
         Column(
-            Modifier.fillMaxSize().background(BpscColors.Surface).padding(32.dp),
+            Modifier.fillMaxSize().background(cs.background).padding(32.dp),
             Arrangement.Center, Alignment.CenterHorizontally
         ) {
             Text("📄", fontSize = 48.sp)
             Spacer(Modifier.height(12.dp))
             Text(str.lessonCantLoadPdf, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                fontWeight = FontWeight.Bold, color = cs.onSurface)
             Text(str.lessonViewerTimeout,
-                style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(20.dp))
             Button(onClick = { failed = false; loading = true; retryKey++ },
@@ -253,7 +259,7 @@ private fun PdfViewer(notesUrl: String?) {
         return
     }
 
-    Box(Modifier.fillMaxSize().background(Color.White)) {
+    Box(Modifier.fillMaxSize().background(cs.surface)) {
         key(retryKey) {
             AndroidView(
                 factory = { ctx ->
@@ -293,12 +299,12 @@ private fun PdfViewer(notesUrl: String?) {
             )
         }
         if (loading) {
-            Box(Modifier.fillMaxSize().background(Color.White), Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.surface), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
                     Text(str.lessonLoadingPdf, style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.TextSecondary)
+                        color = cs.onSurfaceVariant)
                 }
             }
         }
@@ -398,9 +404,29 @@ private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) 
             }
             Text(str.lessonLiveClass, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(lesson.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
+            val context = androidx.compose.ui.platform.LocalContext.current
             if (!lesson.video_url.isNullOrBlank()) {
                 Button(
-                    onClick = { /* open join URL */ },
+                    onClick = {
+                        // Chrome Custom Tabs — in-app browser, user stays in BPSCNotes
+                        try {
+                            val uri = android.net.Uri.parse(lesson.video_url)
+                            val intent = CustomTabsIntent.Builder()
+                                .setShowTitle(true)
+                                .setUrlBarHidingEnabled(false)
+                                .setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                                .build()
+                            intent.launchUrl(context, uri)
+                        } catch (e: Exception) {
+                            // Fallback if Chrome not installed
+                            context.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(lesson.video_url))
+                            )
+                        }
+                        com.example.bpscnotes.core.analytics.Event.track("live_class_joined",
+                            mapOf("lesson_id" to lesson.id, "title" to lesson.title))
+                    },
                     shape   = RoundedCornerShape(14.dp),
                     colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
                 ) {
@@ -408,6 +434,10 @@ private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) 
                     Spacer(Modifier.width(6.dp))
                     Text(str.lessonJoinLive, fontWeight = FontWeight.Bold)
                 }
+                Spacer(Modifier.height(8.dp))
+                Text(str.lessonInAppBrowser,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(0.4f))
             } else {
                 Text(str.lessonLiveNotReady, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f), textAlign = TextAlign.Center)
             }

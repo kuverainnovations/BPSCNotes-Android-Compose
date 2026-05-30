@@ -43,6 +43,7 @@ fun OtpScreen(
     viewModel: OtpViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
     val otpValues       = remember { List(6) { mutableStateOf("") } }
     val focusRequesters = remember { List(6) { FocusRequester() } }
     val isLoading       by viewModel.isLoading.observeAsState(false)
@@ -92,7 +93,7 @@ fun OtpScreen(
     }
 
     Column(
-        modifier            = Modifier.fillMaxSize().background(BpscColors.Surface).statusBarsPadding().imePadding(),
+        modifier            = Modifier.fillMaxSize().background(cs.background).statusBarsPadding().imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -132,7 +133,7 @@ fun OtpScreen(
 
         Text("OTP sent to +91 $mobile",
             style = MaterialTheme.typography.bodyMedium,
-            color = BpscColors.TextSecondary)
+            color = cs.onSurfaceVariant)
 
         Spacer(modifier = Modifier.height(40.dp))
 
@@ -185,7 +186,7 @@ fun OtpScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(str.otpDidntReceive + " ",
                 style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextSecondary)
+                color = cs.onSurfaceVariant)
             if (canResend) {
                 Text(str.otpResend,
                     style      = MaterialTheme.typography.bodyMedium,
@@ -227,7 +228,7 @@ fun OtpScreen(
             }
         ) {
             Text(str.otpChangeNumber,
-                color = BpscColors.TextSecondary,
+                color = cs.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -241,12 +242,13 @@ private fun OtpBox(
     isError: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val cs = MaterialTheme.colorScheme
     val isFocused = remember { mutableStateOf(false) }
     val borderColor = when {
         isError            -> MaterialTheme.colorScheme.error
         isFocused.value    -> BpscColors.Primary
         value.isNotEmpty() -> BpscColors.Primary.copy(alpha = 0.5f)
-        else               -> BpscColors.Divider
+        else               -> cs.outline
     }
     BasicTextField(
         value          = value,

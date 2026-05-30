@@ -232,7 +232,7 @@ internal fun QuizReviewScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("💡", fontSize = 13.sp)
                                 Text(
-                                    question.explanation!!,
+                                    question.explanation ?: "",
                                     style      = MaterialTheme.typography.bodyMedium,
                                     color      = BpscColors.TextSecondary,
                                     lineHeight = 20.sp

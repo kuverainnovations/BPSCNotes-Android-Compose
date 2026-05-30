@@ -7,6 +7,8 @@ import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
 import com.example.bpscnotes.data.remote.api.CourseDetailResponse
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.google.gson.Gson
@@ -37,12 +39,28 @@ data class CourseDetailUiState(
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
     private val api: CoursesApiService
+,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CourseDetailUiState())
     val uiState: StateFlow<CourseDetailUiState> = _uiState.asStateFlow()
 
     private var activeCourseId: String = ""
+
+    init {
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CourseProgressChanged ->
+                        if (event.courseId == activeCourseId) load(activeCourseId)
+                    is RefreshEvent.LessonCompleted ->
+                        if (activeCourseId.isNotEmpty()) load(activeCourseId)
+                    else -> {}
+                }
+            }
+        }
+    }
 
     companion object {
         /**

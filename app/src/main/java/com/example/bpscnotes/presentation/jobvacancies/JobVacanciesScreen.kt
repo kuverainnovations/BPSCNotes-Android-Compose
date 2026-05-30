@@ -107,6 +107,8 @@ fun JobVacanciesScreen(
 ) {
     val vmState by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("job_vacancies") }
 
     var searchQuery      by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
@@ -150,14 +152,14 @@ fun JobVacanciesScreen(
         Box(Modifier.fillMaxSize(), Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("⚠️", fontSize = 40.sp)
-                Text(vmState.error!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+                Text(vmState.error!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
             }
         }
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── HERO HEADER ───────────────────────────────────
@@ -247,7 +249,7 @@ fun JobVacanciesScreen(
                     Box(
                         Modifier.clip(RoundedCornerShape(20.dp))
                             .background(if (sel) BpscColors.Primary else Color.White)
-                            .border(1.dp, if (sel) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp))
+                            .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
                             .clickable { selectedCategory = null }
                             .padding(horizontal = 14.dp, vertical = 7.dp)
                     ) {
@@ -264,7 +266,7 @@ fun JobVacanciesScreen(
                             .background(if (sel) cat?.color ?: BpscColors.Primary else Color.White)
                             .border(
                                 1.dp,
-                                if (sel) cat?.color ?: BpscColors.Primary else BpscColors.Divider,
+                                if (sel) cat?.color ?: BpscColors.Primary else cs.outline,
                                 RoundedCornerShape(20.dp)
                             )
                             .clickable {
@@ -295,8 +297,8 @@ fun JobVacanciesScreen(
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("🔍", fontSize = 48.sp)
-                        Text(str.jobsNoJobs, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text(str.jobsTryFilter, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.jobsNoJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(str.jobsTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                         if (vmState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BpscColors.Primary)
                     }
                 }
@@ -308,7 +310,7 @@ fun JobVacanciesScreen(
                     // Featured
                     val featured = filtered.filter { it.isFeatured }
                     if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {
-                        item { Text(str.jobsFeatured, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
+                        item { Text(str.jobsFeatured, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
                         items(featured, key = { it.id }) { job ->
                             JobCard(job = job, isSaved = savedJobs.contains(job.id),
                                 onSave = {
@@ -317,7 +319,7 @@ fun JobVacanciesScreen(
                                 onClick  = { selectedJob = job })
                         }
                         item { Spacer(Modifier.height(4.dp)) }
-                        item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
+                        item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
                     }
                     val rest = if (selectedCategory == null && searchQuery.isEmpty()) filtered.filter { !it.isFeatured } else filtered
                     itemsIndexed(rest, key = { _, it -> it.id }) { index, job ->
@@ -363,6 +365,7 @@ private fun JobCard(
     onSave:  () -> Unit,
     onClick: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val cat      = (job.category ?: "").toJobCategory()
     val endMs    = job.applyEndDate.parseToMillis()
@@ -374,7 +377,7 @@ private fun JobCard(
     Card(
         modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(if (job.isFeatured) 4.dp else 1.dp)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -393,9 +396,9 @@ private fun JobCard(
                         else if (isClosing) SmallBadge("⚡ Closing", Color(0xFFE67E22),   Color(0xFFFFF0EA))
                         if (isPassed)     SmallBadge("Closed",    BpscColors.TextHint,    BpscColors.Surface)
                     }
-                    Text(job.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, lineHeight = 20.sp)
+                    Text(job.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 20.sp)
                     if (!job.department.isNullOrBlank())
-                        Text(job.department.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text(job.department.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
                     .background(if (isSaved) Color(0xFFFFF8E1) else BpscColors.Surface)
@@ -405,7 +408,7 @@ private fun JobCard(
                 }
             }
 
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
 
             // Info chips row — FIXED: shows all key fields
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -444,6 +447,7 @@ private fun JobDetailSheet(
     onSave:   () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context    = LocalContext.current
@@ -503,7 +507,7 @@ private fun JobDetailSheet(
                 // Description — FIXED: now wired to DTO field
                 if (!job.description.isNullOrBlank()) {
                     SectionCard(title = str.jobsAboutJob) {
-                        Text(job.description.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, lineHeight = 24.sp)
+                        Text(job.description.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 24.sp)
                     }
                 }
 
@@ -534,7 +538,7 @@ private fun JobDetailSheet(
                 // Exam tags
                 if (!job.officialLink.isNullOrBlank()) {
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.Surface).padding(12.dp),
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cs.background).padding(12.dp),
                         Arrangement.spacedBy(8.dp), Alignment.CenterVertically
                     ) {
                         Icon(Icons.Rounded.Link, null, tint = BpscColors.Primary, modifier = Modifier.size(16.dp))
@@ -545,13 +549,13 @@ private fun JobDetailSheet(
             }
 
             // ── Bottom actions — FIXED: Apply button now works ──
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick  = onSave,
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape    = RoundedCornerShape(12.dp),
-                    border   = BorderStroke(1.dp, if (isSaved) BpscColors.CoinGold else BpscColors.Divider),
+                    border   = BorderStroke(1.dp, if (isSaved) BpscColors.CoinGold else cs.outline),
                     colors   = ButtonDefaults.outlinedButtonColors(contentColor = if (isSaved) BpscColors.CoinGold else BpscColors.TextSecondary)
                 ) {
                     Icon(if (isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
@@ -566,7 +570,7 @@ private fun JobDetailSheet(
                     shape    = RoundedCornerShape(12.dp),
                     colors   = ButtonDefaults.buttonColors(
                         containerColor         = if (isPassed) BpscColors.TextHint else BpscColors.Primary,
-                        disabledContainerColor = BpscColors.Divider
+                        disabledContainerColor = cs.outline
                     )
                 ) {
                     Icon(Icons.Rounded.OpenInNew, null, modifier = Modifier.size(16.dp))
@@ -592,6 +596,7 @@ private fun JobAlertSheet(
     categories: List<JobCategory?>,
     onDismiss:  () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val selected = remember { mutableStateListOf<String>() }
     ModalBottomSheet(
@@ -605,12 +610,12 @@ private fun JobAlertSheet(
         ) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Column {
-                    Text(str.jobsAlerts, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text(str.jobsAlertsSubtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.jobsAlerts, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    Text(str.jobsAlertsSubtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 // Alert icon removed — will be dynamic when job alert API is ready
             }
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             categories.forEach { cat ->
                 val isOn = selected.contains(cat?.label)
                 Row(
@@ -642,7 +647,7 @@ private fun JobAlertSheet(
                         Text(
                             text = it,
                             style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
@@ -682,25 +687,28 @@ private fun JobAlertSheet(
 
 @Composable
 private fun SmallBadge(text: String, fg: Color, bg: Color) {
+    val cs = MaterialTheme.colorScheme
     Text(text, style = MaterialTheme.typography.labelSmall, color = fg, fontWeight = FontWeight.Bold, fontSize = 9.sp,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
 }
 
 @Composable
 private fun InfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, modifier: Modifier = Modifier) {
-    Row(modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.Surface).padding(horizontal = 8.dp, vertical = 5.dp),
+    val cs = MaterialTheme.colorScheme
+    Row(modifier.clip(RoundedCornerShape(8.dp)).background(cs.background).padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = BpscColors.TextSecondary, modifier = Modifier.size(12.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
 private fun StatBox(icon: String, value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BpscColors.Surface).padding(10.dp),
+    val cs = MaterialTheme.colorScheme
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(cs.background).padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(icon, fontSize = 16.sp)
-        Text(value, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+        Text(value, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
             fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis, lineHeight = 14.sp)
         Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
     }
@@ -713,6 +721,8 @@ private fun SectionCard(
     accentBg:    Color = Color.White,
     content:     @Composable ColumnScope.() -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(14.dp), CardDefaults.cardColors(containerColor = accentBg), CardDefaults.cardElevation(if (accentBg == Color.White) 1.dp else 0.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.ExtraBold)
@@ -723,17 +733,21 @@ private fun SectionCard(
 
 @Composable
 private fun DetailRow(icon: String, label: String, value: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
         Text(icon, fontSize = 14.sp, modifier = Modifier.padding(top = 1.dp))
         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            Text(value, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, lineHeight = 18.sp)
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, lineHeight = 18.sp)
         }
     }
 }
 
 @Composable
 private fun TimelineView(steps: List<Triple<String, String, String>>) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
         steps.forEachIndexed { index, (icon, label, date) ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -744,8 +758,8 @@ private fun TimelineView(steps: List<Triple<String, String, String>>) {
                     if (index < steps.size - 1) Box(Modifier.width(2.dp).height(24.dp).background(BpscColors.PrimaryLight))
                 }
                 Column(Modifier.padding(top = 5.dp, bottom = if (index < steps.size - 1) 10.dp else 0.dp)) {
-                    Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(date,  style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(date,  style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

@@ -40,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
 
@@ -110,10 +111,13 @@ private fun openMaterial(
 @Composable
 fun StudyMaterialsScreen(
     navController: NavHostController,
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     viewModel:     StudyMaterialsViewModel = hiltViewModel()
 ) {
-    val state       by viewModel.state.collectAsState()
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val state       by viewModel.state.collectAsState()
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("study_materials") }
 
     // ── Storage permission (Android 9 and below only) ──────────
     val storagePermissionLauncher = rememberLauncherForActivityResult(
@@ -161,9 +165,9 @@ fun StudyMaterialsScreen(
     }
 
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = cs.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { scaffoldPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding).background(BpscColors.Surface)) {
+        Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding).background(cs.background)) {
 
             // ── HEADER ──────────────────────────────────────────
             StudyMaterialsHeader(
@@ -215,7 +219,7 @@ fun StudyMaterialsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(cs.surface)
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
@@ -257,7 +261,7 @@ fun StudyMaterialsScreen(
                     }
                 }
             }
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
 
             // ── Tab content ───────────────────────────────────────
             if (selectedTab == 0) {
@@ -357,6 +361,7 @@ fun StudyMaterialsScreen(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(
         modifier = Modifier.fillMaxWidth()
@@ -396,21 +401,22 @@ private fun SearchAndStats(
     stats: StatsData?, bookmarkedCount: Int,
     showBookmarksOnly: Boolean, onToggleBookmarks: () -> Unit, onUpload: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val focusManager = LocalFocusManager.current
 
-    Column(modifier = Modifier.fillMaxWidth().background(Color.White)
+    Column(modifier = Modifier.fillMaxWidth().background(cs.surface)
         .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
         // Search bar
         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .background(BpscColors.Surface).border(1.dp, BpscColors.Divider, RoundedCornerShape(14.dp))
+            .background(cs.background).border(1.dp, cs.outline, RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Rounded.Search, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
             BasicTextField(
                 value = query, onValueChange = onQueryChange, modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
@@ -451,9 +457,11 @@ private fun SearchAndStats(
 
 @Composable
 private fun LibSmallStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Text(icon, fontSize = 11.sp)
-        Text(value, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextPrimary,
+        Text(value, style = MaterialTheme.typography.labelSmall, color = cs.onSurface,
             fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
         Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 8.sp)
     }
@@ -478,13 +486,15 @@ private fun CompactFilterBar(
     onSubjectSelect: (String) -> Unit,
     onSortSelect:    (String) -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
+
     val str = LocalStrings.current
     var showSubjectSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(cs.surface)
             .padding(bottom = 6.dp)
     ) {
         // Row 1: Type filter chips
@@ -506,7 +516,7 @@ private fun CompactFilterBar(
             }
         }
 
-        HorizontalDivider(color = BpscColors.Divider, thickness = 0.5.dp)
+        HorizontalDivider(color = cs.outline, thickness = 0.5.dp)
 
         // Row 2: Sort tabs + Subject picker — all in one line
         Row(
@@ -538,7 +548,7 @@ private fun CompactFilterBar(
             Row(
                 modifier          = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .border(1.dp, BpscColors.Divider, RoundedCornerShape(20.dp))
+                    .border(1.dp, cs.outline, RoundedCornerShape(20.dp))
                     .clickable { showSubjectSheet = true }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -609,11 +619,13 @@ private fun CompactFilterBar(
 
 @Composable
 private fun TypeChip(label: String, emoji: String, selected: Boolean, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(
         modifier              = Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(if (selected) BpscColors.Primary else BpscColors.Surface)
-            .border(1.dp, if (selected) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp))
+            .border(1.dp, if (selected) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment     = Alignment.CenterVertically,
@@ -652,6 +664,8 @@ private fun TypeChip(label: String, emoji: String, selected: Boolean, onClick: (
 
 @Composable
 private fun SubjectFilterRow(subjects: List<String>, selected: String, onSelect: (String) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(subjects) { sub ->
@@ -664,6 +678,7 @@ private fun SubjectFilterRow(subjects: List<String>, selected: String, onSelect:
 
 @Composable
 private fun SortRow(current: String, onSelect: (String) -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val options = listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest, "rating" to str.materialsTopRated)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -676,7 +691,7 @@ private fun SortRow(current: String, onSelect: (String) -> Unit) {
                 fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.clip(RoundedCornerShape(20.dp))
                     .background(if (sel) BpscColors.Primary else Color.White)
-                    .border(1.dp, if (sel) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp))
+                    .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
                     .clickable { onSelect(key) }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             )
@@ -687,9 +702,11 @@ private fun SortRow(current: String, onSelect: (String) -> Unit) {
 @Composable
 private fun FilterChip(label: String, emoji: String?, selected: Boolean,
                        color: Color, bg: Color, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.clip(RoundedCornerShape(20.dp))
         .background(if (selected) color else Color.White)
-        .border(1.dp, if (selected) color else BpscColors.Divider, RoundedCornerShape(20.dp))
+        .border(1.dp, if (selected) color else cs.outline, RoundedCornerShape(20.dp))
         .clickable(onClick = onClick)
         .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -709,7 +726,7 @@ private fun MaterialsList(
     onView:     (String) -> Unit,
     onBookmark: (String) -> Unit,
     onDownload: (StudyMaterialDto) -> Unit,
-    onPurchase: (StudyMaterialDto) -> Unit = {},
+    onPurchase: (StudyMaterialDto) -> Unit = {     },
     onLoadMore: () -> Unit
 ) {
     val str = LocalStrings.current
@@ -762,10 +779,12 @@ private fun MaterialsList(
 
 @Composable
 private fun LibSectionHeader(title: String, subtitle: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
@@ -784,12 +803,14 @@ private fun LibraryItemCard(
     onPurchase:   () -> Unit = {},
     onView:       () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+
     val str = LocalStrings.current
     val color = typeColor(item.type)
     val bg    = typeBg(item.type)
 
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onView),
-        shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top,
@@ -811,10 +832,10 @@ private fun LibraryItemCard(
                         if (!item.isPremium) FreeBadge()
                     }
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
                         maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
                     Text(item.author ?: item.uploaderName ?: "BPSCNotes Team",
-                        style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 // FIX: Increased touch target from 28dp → 44dp (min recommended: 48dp)
                 // Small touch targets inside a Card.clickable() cause the outer click to fire instead.
@@ -860,7 +881,7 @@ private fun LibraryItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold, modifier = Modifier.size(12.dp))
                     Text("${item.rating}", style = MaterialTheme.typography.labelSmall,
-                        color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
+                        color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -938,12 +959,13 @@ private fun MaterialDetailSheet(
     onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onDismiss:    () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val color = typeColor(material.type)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState,
-        containerColor = Color.White, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
+        containerColor = cs.surface, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
             // Coloured header
             Box(modifier = Modifier.fillMaxWidth()
@@ -974,10 +996,10 @@ private fun MaterialDetailSheet(
                 .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                 if (!material.description.isNullOrEmpty()) {
-                    Text("About", style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(str.materialAbout, style = MaterialTheme.typography.titleMedium,
+                        color = cs.onSurface, fontWeight = FontWeight.Bold)
                     Text(material.description, style = MaterialTheme.typography.bodyLarge,
-                        color = BpscColors.TextSecondary, lineHeight = 24.sp)
+                        color = cs.onSurfaceVariant, lineHeight = 24.sp)
                 }
 
                 if (material.tags.isNotEmpty()) {
@@ -994,7 +1016,7 @@ private fun MaterialDetailSheet(
                 // Preview area / open PDF button
                 val downloadUrl = material.resolvedUrl
                 Box(modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
-                    .background(BpscColors.Surface).border(1.dp, BpscColors.Divider, RoundedCornerShape(16.dp))
+                    .background(cs.background).border(1.dp, cs.outline, RoundedCornerShape(16.dp))
                     .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable {
                         // FIX: use runtime isPurchased (includes purchases made this session)
                         onOpenPdf(downloadUrl, material.title, material.freePages,
@@ -1004,7 +1026,7 @@ private fun MaterialDetailSheet(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(material.type.emoji, fontSize = 44.sp)
                         Text(if (!downloadUrl.isNullOrBlank()) str.materialsTapOpen else str.materialsNoPreview,
-                            style = MaterialTheme.typography.titleMedium, color = BpscColors.TextSecondary)
+                            style = MaterialTheme.typography.titleMedium, color = cs.onSurfaceVariant)
                         Text(str.materialsOpenPdf,
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                     }
@@ -1019,17 +1041,17 @@ private fun MaterialDetailSheet(
                             Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
                             Text(str.materialsUnlockPro2, style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.TextSecondary)
+                                color = cs.onSurfaceVariant)
                         }
                     }
                 }
             }
 
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Save button removed — download option already serves this purpose
-                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl!!, material.title, material.freePages,
+                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages,
                     isPurchased || material.isFree) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
@@ -1062,6 +1084,7 @@ private fun UploadSheet(
     onDismiss: () -> Unit,
     state: StudyMaterialsUiState
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = LocalContext.current
     var title       by remember { mutableStateOf("") }
@@ -1104,16 +1127,16 @@ private fun UploadSheet(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White,
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp)
             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
             Text(str.materialsUploadTitle, style = MaterialTheme.typography.headlineSmall,
-                color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             Text(str.materialsShareHint,
-                style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
-            HorizontalDivider(color = BpscColors.Divider)
+                style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+            HorizontalDivider(color = cs.outline)
 
             // Error banner
             uploadError?.let { err ->
@@ -1158,7 +1181,7 @@ private fun UploadSheet(
 
             // Type selector
             Text(str.materialsContentType, style = MaterialTheme.typography.titleMedium,
-                color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                color = cs.onSurface, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(MaterialType.values()) { type ->
                     val sel = selType == type
@@ -1193,9 +1216,9 @@ private fun UploadSheet(
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column {
                             Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                                fontWeight = FontWeight.Bold, color = cs.onSurface)
                             Text(str.materialsChargeCoins,
-                                style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Switch(checked = isPremium, onCheckedChange = { isPremium = it },
                             colors = SwitchDefaults.colors(checkedThumbColor = BpscColors.CoinGold,
@@ -1207,7 +1230,7 @@ private fun UploadSheet(
                                 OutlinedTextField(
                                     value = price,
                                     onValueChange = { price = it.filter { c -> c.isDigit() } },
-                                    label = { Text("🪙 Price (coins)") },
+                                    label = { Text(str.materialPriceCoins) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp), singleLine = true,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -1239,7 +1262,7 @@ private fun UploadSheet(
             // File picker
             Box(modifier = Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(14.dp))
                 .background(if (fileUri != null) BpscColors.Success.copy(0.08f) else BpscColors.Surface)
-                .border(1.5.dp, if (fileUri != null) BpscColors.Success else BpscColors.Divider, RoundedCornerShape(14.dp))
+                .border(1.5.dp, if (fileUri != null) BpscColors.Success else cs.outline, RoundedCornerShape(14.dp))
                 .clickable { filePicker.launch("*/*") }, contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Rounded.AttachFile, null,
@@ -1255,9 +1278,9 @@ private fun UploadSheet(
             if (isUploading) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     LinearProgressIndicator(progress = uploadProgress, modifier = Modifier.fillMaxWidth(),
-                        color = BpscColors.Primary, trackColor = BpscColors.Divider)
+                        color = BpscColors.Primary, trackColor = cs.outline)
                     Text("${(uploadProgress * 100).toInt()}% uploaded…",
-                        style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
             }
 
@@ -1295,25 +1318,27 @@ private fun UploadSheet(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun EmptyState(showBookmarksOnly: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(if (showBookmarksOnly) "🔖" else "🔍", fontSize = 48.sp)
             Text(if (showBookmarksOnly) str.materialsNoSaved else str.materialsNoResources,
-                style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
             Text(if (showBookmarksOnly) str.materialsBookmarkHint else str.caTryFilter,
-                style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Text(str.retry)
@@ -1324,10 +1349,12 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun LoadingGrid() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(6) {
             Box(modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(16.dp))
-                .background(BpscColors.Divider))
+                .background(cs.outline))
         }
     }
 }
@@ -1337,47 +1364,62 @@ private fun LoadingGrid() {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun TypeBadge(type: MaterialType) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val color = typeColor(type); val bg = typeBg(type)
     Text(type.label, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(bg).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 @Composable private fun TypeBadgeWhite(label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.85f),
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
             .background(Color.White.copy(0.2f)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 @Composable private fun FreeBadge() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 @Composable private fun FreeBadgeWhite() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 @Composable private fun ProBadge() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text("PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFFFF8E1)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 @Composable private fun NewBadge() {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Text(str.jobsNew, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 @Composable private fun SheetStatWhite(icon: String, value: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 12.sp)
         Text(value, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.85f), fontWeight = FontWeight.SemiBold)
     }
 }
 @Composable private fun LibInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 10.sp)
+        Text(text, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 10.sp)
     }
 }
 
@@ -1410,6 +1452,7 @@ fun MyUploadsTab(
     onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onRefresh: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     when {
         isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -1420,7 +1463,7 @@ fun MyUploadsTab(
                 Text("📤", fontSize = 56.sp)
                 Text(str.materialsNoUploads, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(str.materialsUploadHint,
-                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
+                    style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) { Text(str.retry) }
             }
@@ -1431,14 +1474,14 @@ fun MyUploadsTab(
         ) {
             item {
                 Text("${uploads.size} uploaded material${if (uploads.size != 1) "s" else ""}",
-                    style = MaterialTheme.typography.labelLarge, color = BpscColors.TextSecondary,
+                    style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             items(uploads, key = { it.id }) { item ->
                 Card(
                     modifier  = Modifier.fillMaxWidth(),
                     shape     = RoundedCornerShape(14.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), Arrangement.spacedBy(12.dp), Alignment.CenterVertically) {
@@ -1464,7 +1507,7 @@ fun MyUploadsTab(
                         }
                         // Open button — owner always gets full access (no lock)
                         if (!item.resolvedUrl.isNullOrBlank()) {
-                            IconButton(onClick = { onOpenPdf(item.resolvedUrl!!, item.title, item.freePages, true) }) {
+                            IconButton(onClick = { onOpenPdf(item.resolvedUrl ?: "", item.title, item.freePages, true) }) {
                                 Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary)
                             }
                         }
@@ -1486,6 +1529,7 @@ fun DownloadsTab(
     onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onRefresh:    () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     when {
         isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -1498,9 +1542,9 @@ fun DownloadsTab(
             ) {
                 Text("📂", fontSize = 56.sp)
                 Text(str.materialsNoDownloads, style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                    fontWeight = FontWeight.Bold, color = cs.onSurface)
                 Text(str.materialsDownloadHint,
-                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
+                    style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                 OutlinedButton(onClick = onRefresh, shape = RoundedCornerShape(12.dp)) {
                     Text(str.retry)
@@ -1513,7 +1557,7 @@ fun DownloadsTab(
         ) {
             item {
                 Text("${downloads.size} downloaded file${if (downloads.size != 1) "s" else ""}",
-                    style = MaterialTheme.typography.labelLarge, color = BpscColors.TextSecondary,
+                    style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             items(downloads, key = { it.id }) { item ->
@@ -1523,7 +1567,7 @@ fun DownloadsTab(
                 Card(
                     modifier  = Modifier.fillMaxWidth(),
                     shape     = RoundedCornerShape(16.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Row(
@@ -1545,7 +1589,7 @@ fun DownloadsTab(
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(item.title, style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary,
+                                fontWeight = FontWeight.Bold, color = cs.onSurface,
                                 maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(item.subject, style = MaterialTheme.typography.labelSmall,
@@ -1580,7 +1624,7 @@ fun DownloadsTab(
                                 colors   = ButtonDefaults.buttonColors(
                                     containerColor = if (hasFullAccess) BpscColors.Primary else Color(0xFFF59E0B))
                             ) {
-                                Text(if (hasFullAccess) "Open" else "Preview",
+                                Text(if (hasFullAccess) str.materialOpen else str.materialPreview,
                                     style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -1602,17 +1646,19 @@ fun PurchaseConfirmDialog(
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         shape            = RoundedCornerShape(20.dp),
         containerColor   = Color.White,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("🔓 Unlock Full Access", fontWeight = FontWeight.ExtraBold,
+                Text(str.materialUnlockAccess, fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleLarge)
                 Text(item.title, style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary, maxLines = 2)
+                    color = cs.onSurfaceVariant, maxLines = 2)
             }
         },
         text = {
@@ -1623,15 +1669,15 @@ fun PurchaseConfirmDialog(
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("✅"); Text("Full PDF — all ${item.pageCount ?: 0} pages",
-                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("✅"); Text(str.materialsDownloadDevice,
-                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("✅"); Text(str.materialsLifetimeAccess,
-                            style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                     }
                 }
@@ -1641,7 +1687,7 @@ fun PurchaseConfirmDialog(
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Text("Price", style = MaterialTheme.typography.titleMedium,
+                    Text(str.materialPrice, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1676,7 +1722,7 @@ fun PurchaseConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(str.cancel, color = BpscColors.TextSecondary)
+                Text(str.cancel, color = cs.onSurfaceVariant)
             }
         }
     )

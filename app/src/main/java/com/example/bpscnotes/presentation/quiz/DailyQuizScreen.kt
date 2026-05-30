@@ -38,6 +38,8 @@ fun DailyQuizScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("daily_quiz") }
 
     // If a specific quiz was navigated to directly (from dashboard), start it immediately
     LaunchedEffect(date) {
@@ -75,10 +77,10 @@ fun DailyQuizScreen(
 
         // ── Loading quiz detail ───────────────────────────────
         state.isLoadingDetail -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                 }
             }
         }
@@ -86,10 +88,10 @@ fun DailyQuizScreen(
 
         // ── Detail error ──────────────────────────────────────
         state.detailError != null -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 40.sp)
-                    Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    Text(state.detailError ?: "An error occurred", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                         Text(str.back)
                     }
@@ -120,8 +122,9 @@ private fun QuizLobbyScreen(
     onStartQuiz: (String) -> Unit,
     onRetryList: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header with REAL user stats from ViewModel
@@ -192,7 +195,7 @@ private fun QuizLobbyScreen(
                         val accuracy = state.userProfile?.accuracy?.toDoubleOrNull() ?: 0.0
                         val formatted = String.format("%.2f", accuracy)
 
-                        LobbyStatChip("🎯", if (accuracy != null) "$formatted%" else "--", "Accuracy")
+                        LobbyStatChip("🎯", if (accuracy != null) "$formatted%" else "--", str.quizDailyAccuracy)
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🔥", if (streak != null) "$streak" else "--", "Day Streak")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
@@ -214,7 +217,7 @@ private fun QuizLobbyScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("⚠️", fontSize = 40.sp)
-                            Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                            Text(state.listError ?: "Failed to load quizzes", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                             Button(onClick = onRetryList, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.tryAgain) }
                         }
                     }
@@ -223,8 +226,8 @@ private fun QuizLobbyScreen(
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("📝", fontSize = 48.sp); Spacer(Modifier.height(8.dp))
-                            Text(str.dashboardNoQuizzes, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                            Text(str.dashboardNoQuizzes, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                         }
                     }
                 }
@@ -257,11 +260,12 @@ private fun QuizLobbyScreen(
 
 @Composable
 private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
         Row(
@@ -278,7 +282,7 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (quiz.isAttempted) {
                         Text("✓", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -325,6 +329,7 @@ internal fun QuizSessionScreen(
     viewModel: QuizViewModel,
     onExit: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state              by viewModel.uiState.collectAsState()
     val questions           = session.questions
@@ -387,7 +392,7 @@ internal fun QuizSessionScreen(
     val progress     = (currentIndex + 1).toFloat() / questions.size
     val animProgress by animateFloatAsState(progress, tween(500), label = "qprog")
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Header ───────────────────────────────────────
@@ -436,9 +441,9 @@ internal fun QuizSessionScreen(
                 }
 
                 // Question card
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(current.question, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
+                        Text(current.question, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
                         AnimatedVisibility(visible = showHint) {
                             Column {
                                 Spacer(Modifier.height(12.dp))
@@ -461,7 +466,7 @@ internal fun QuizSessionScreen(
                     }
                     val bg      = when (optionState) { "selected"->"bg"; "correct"->"correct"; "wrong"->"wrong"; else->"default" }
                     val bgColor = when (bg) { "bg"->BpscColors.PrimaryLight; "correct"->Color(0xFFE8FDF4); "wrong"->Color(0xFFFEE8E8); else->Color.White }
-                    val border  = when (bg) { "bg"->BpscColors.Primary; "correct"->BpscColors.Success; "wrong"->Color(0xFFE74C3C); else->BpscColors.Divider }
+                    val border  = when (bg) { "bg"->BpscColors.Primary; "correct"->BpscColors.Success; "wrong"->Color(0xFFE74C3C); else->cs.outline }
                     val txtClr  = when (bg) { "bg"->BpscColors.Primary; "correct"->BpscColors.Success; "wrong"->Color(0xFFE74C3C); else->BpscColors.TextPrimary }
 
                     Row(
@@ -492,7 +497,7 @@ internal fun QuizSessionScreen(
             }
 
             // ── Bottom bar ────────────────────────────────────
-            Box(modifier = Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 if (answerState == AnswerState.None) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
@@ -511,7 +516,7 @@ internal fun QuizSessionScreen(
                             },
                             modifier = Modifier.weight(1f).height(48.dp),
                             shape    = RoundedCornerShape(12.dp),
-                            border   = BorderStroke(1.dp, BpscColors.Divider),
+                            border   = BorderStroke(1.dp, cs.outline),
                             colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
                         ) { Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.quizSkip, style = MaterialTheme.typography.titleMedium) }
                     }
@@ -557,6 +562,7 @@ internal fun QuizSummaryScreen(
     onExit: () -> Unit,
     navController: NavHostController
 ) {
+    val cs = MaterialTheme.colorScheme
     var showReviewAll by remember { mutableStateOf(false) }
     val str = LocalStrings.current
     if (showReviewAll) {
@@ -592,13 +598,13 @@ internal fun QuizSummaryScreen(
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${accuracy.toInt()}%", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("Score", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                    Text(str.quizDailyScore, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                 }
             }
 
             Spacer(Modifier.height(24.dp))
 
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     SummaryStatItem("✅", "${result.correctCount}", str.quizCorrect,  BpscColors.Success)
                     SummaryStatItem("❌", "${result.wrongCount}",   str.quizWrong,    Color(0xFFE74C3C))
@@ -609,17 +615,17 @@ internal fun QuizSummaryScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Accuracy", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizDailyAccuracy, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         Text("${accuracy.toInt()}%", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                     }
-                    Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(BpscColors.Surface)) {
+                    Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(cs.background)) {
                         Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF64B5F6))), RoundedCornerShape(5.dp)))
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         Text(if (result.isPassed) str.quizPassed2 else str.quizNotPassed, style = MaterialTheme.typography.bodyMedium, color = if (result.isPassed) BpscColors.Success else Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -655,6 +661,8 @@ internal fun QuizSummaryScreen(
 
 @Composable
 private fun SummaryStatItem(icon: String, value: String, label: String, color: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 20.sp)
         Text(value, style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.ExtraBold)
@@ -671,8 +679,9 @@ internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
     onBack: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0)))).statusBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
@@ -719,7 +728,7 @@ internal fun QuizAnswerReviewScreen(
                             )
                         }
 
-                        Text(detail.question.question, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
+                        Text(detail.question.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
 
                         detail.question.options.forEachIndexed { i, option ->
                             val isCorrectOpt = i == detail.correctIndex
@@ -739,10 +748,10 @@ internal fun QuizAnswerReviewScreen(
                         }
 
                         if (detail.explanation.isNotEmpty()) {
-                            HorizontalDivider(color = BpscColors.Divider)
+                            HorizontalDivider(color = cs.outline)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("💡", fontSize = 13.sp)
-                                Text(detail.explanation, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp)
+                                Text(detail.explanation, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp)
                             }
                         }
                     }

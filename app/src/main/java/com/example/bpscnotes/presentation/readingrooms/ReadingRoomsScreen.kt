@@ -295,6 +295,7 @@ fun ReadingRoomsScreen(
     navController: NavHostController,
     viewModel: ReadingRoomsViewModel = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
     var activeRoom by remember { mutableStateOf<StudyRoom?>(null) }
 
     if (activeRoom != null) {
@@ -320,6 +321,7 @@ private fun RoomLobbyScreen(
     viewModel: ReadingRoomsViewModel,
     onJoinRoom: (StudyRoom) -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
 
     val vmState by viewModel.uiState.collectAsState()
@@ -371,14 +373,14 @@ private fun RoomLobbyScreen(
 
     if (vmState.error != null && allRooms.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(vmState.error!!)
+            Text(vmState.error ?: "Unknown error")
         }
         return
     }
 
     Box(modifier = Modifier
         .fillMaxSize()
-        .background(BpscColors.Surface)) {
+        .background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Header ───────────────────────────────────────
@@ -475,7 +477,7 @@ private fun RoomLobbyScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White)
+                                    .background(cs.surface)
                                     .clickable { showCreateSheet = true }
                                     .padding(horizontal = 10.dp, vertical = 8.dp)
                             ) {
@@ -490,7 +492,7 @@ private fun RoomLobbyScreen(
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
-                                        "Create",
+                                        str.roomCreate,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = BpscColors.Primary,
                                         fontWeight = FontWeight.Bold
@@ -618,7 +620,7 @@ private fun RoomLobbyScreen(
                         Text(
                             str.roomsFeatured,
                             style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
@@ -650,13 +652,13 @@ private fun RoomLobbyScreen(
                         Text(
                             str.roomsAllRooms,
                             style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
                             "${filtered.size} rooms",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                     }
                 }
@@ -683,6 +685,7 @@ private fun RoomLobbyScreen(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun FeaturedRoomCard(room: StudyRoom, onJoin: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -784,12 +787,13 @@ private fun FeaturedRoomCard(room: StudyRoom, onJoin: () -> Unit) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val isFull = room.activeUsers >= room.maxUsers
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -818,7 +822,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                         Text(
                             room.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -850,7 +854,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                         Text(
                             room.adminName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary,
+                            color = cs.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -863,7 +867,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = room.subject.color,
-                        disabledContainerColor = BpscColors.Divider
+                        disabledContainerColor = cs.outline
                     ),
                     modifier = Modifier.height(36.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp)
@@ -927,7 +931,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                         Text(
                             "${room.activeUsers}/${room.maxUsers} online",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                         Text("·", color = BpscColors.TextHint)
                         Icon(
@@ -939,7 +943,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                         Text(
                             "${room.streak}d streak",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                     }
                     // Capacity bar
@@ -948,7 +952,7 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                             .fillMaxWidth()
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(BpscColors.Surface)
+                            .background(cs.background)
                     ) {
                         Box(
                             modifier = Modifier
@@ -1005,14 +1009,14 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
                             modifier = Modifier
                                 .size(26.dp)
                                 .clip(CircleShape)
-                                .background(BpscColors.Surface)
+                                .background(cs.background)
                                 .border(1.5.dp, Color.White, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 "+${room.members.size - 5}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.TextSecondary,
+                                color = cs.onSurfaceVariant,
                                 fontSize = 7.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1029,8 +1033,9 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun ActiveRoomScreen(room: StudyRoom, onExit: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     var activeTab by remember { mutableIntStateOf(0) }
-   val str=LocalStrings.current
     val tabs = listOf(str.roomTabChat, str.roomTabMembers, str.roomTabLeaderboard, str.roomTabPomodoro)
 
     // Pomodoro state
@@ -1057,7 +1062,7 @@ private fun ActiveRoomScreen(room: StudyRoom, onExit: () -> Unit) {
 
     Column(modifier = Modifier
         .fillMaxSize()
-        .background(BpscColors.Surface)) {
+        .background(cs.background)) {
 
         // ── Room header ───────────────────────────────────────
         Box(
@@ -1242,6 +1247,7 @@ private fun ActiveRoomScreen(room: StudyRoom, onExit: () -> Unit) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun ChatTab(room: StudyRoom) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val messages = remember { mutableStateListOf(*room.messages.toTypedArray()) }
     var inputText by remember { mutableStateOf("") }
@@ -1360,13 +1366,13 @@ private fun ChatTab(room: StudyRoom) {
                                             bottomEnd = 14.dp
                                         )
                                     )
-                                    .background(Color.White)
+                                    .background(cs.surface)
                                     .padding(horizontal = 14.dp, vertical = 10.dp)
                             ) {
                                 Text(
                                     msg.message,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = BpscColors.TextPrimary,
+                                    color = cs.onSurface,
                                     lineHeight = 20.sp
                                 )
                             }
@@ -1387,7 +1393,7 @@ private fun ChatTab(room: StudyRoom) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(cs.surface)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1396,14 +1402,14 @@ private fun ChatTab(room: StudyRoom) {
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(BpscColors.Surface)
+                    .background(cs.background)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 androidx.compose.foundation.text.BasicTextField(
                     value = inputText, onValueChange = { inputText = it },
                     modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface),
                     decorationBox = { inner ->
                         if (inputText.isEmpty()) Text(
                             str.chatMessageHint,
@@ -1428,7 +1434,7 @@ private fun ChatTab(room: StudyRoom) {
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(if (inputText.isNotBlank()) BpscColors.Primary else BpscColors.Divider)
+                    .background(if (inputText.isNotBlank()) BpscColors.Primary else cs.outline)
                     .clickable {
                         if (inputText.isNotBlank()) {
                             messages.add(
@@ -1463,6 +1469,7 @@ private fun ChatTab(room: StudyRoom) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun MembersTab(room: StudyRoom) {
+    val cs = MaterialTheme.colorScheme
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1471,7 +1478,7 @@ private fun MembersTab(room: StudyRoom) {
             Text(
                 "${room.members.size} Members",
                 style = MaterialTheme.typography.titleMedium,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -1479,7 +1486,7 @@ private fun MembersTab(room: StudyRoom) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(1.dp)
             ) {
                 Row(
@@ -1511,7 +1518,7 @@ private fun MembersTab(room: StudyRoom) {
                             Text(
                                 member.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             if (member.isActive) {
@@ -1526,7 +1533,7 @@ private fun MembersTab(room: StudyRoom) {
                         Text(
                             "${member.studyMinutes} min studied today",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                     }
                     // Study time bar
@@ -1546,7 +1553,7 @@ private fun MembersTab(room: StudyRoom) {
                                 .width(60.dp)
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(BpscColors.Surface)
+                                .background(cs.background)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1567,6 +1574,7 @@ private fun MembersTab(room: StudyRoom) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun LeaderboardTab(room: StudyRoom) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sorted = room.members.sortedByDescending { it.studyMinutes }
 
@@ -1582,7 +1590,7 @@ private fun LeaderboardTab(room: StudyRoom) {
                 Text(
                     str.roomsLeaderboard,
                     style = MaterialTheme.typography.titleMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
@@ -1653,7 +1661,7 @@ private fun LeaderboardTab(room: StudyRoom) {
                             Text(
                                 member.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.SemiBold
                             )
                             if (isMe) Text(
@@ -1682,6 +1690,8 @@ private fun LeaderboardTab(room: StudyRoom) {
 
 @Composable
 private fun RoomPodiumItem(member: RoomMember, pos: Int, height: Dp) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val medals = listOf(Color(0xFFFFD700), Color(0xFFC0C0C0), Color(0xFFCD7F32))
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1704,7 +1714,7 @@ private fun RoomPodiumItem(member: RoomMember, pos: Int, height: Dp) {
         Text(
             member.name.split(" ").first(),
             style = MaterialTheme.typography.bodyMedium,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.Bold
         )
         Text(
@@ -1733,8 +1743,9 @@ private fun PomodoroTab(
     pomodoroMinutes: Int, accentColor: Color,
     onToggle: () -> Unit, onReset: () -> Unit,
 ) {
-    val animProg by animateFloatAsState(progress, tween(500), label = "pomo")
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val animProg by animateFloatAsState(progress, tween(500), label = "pomo")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1747,7 +1758,7 @@ private fun PomodoroTab(
         Text(
             if (isRunning) str.roomsFocusSession else "⏸ Paused",
             style = MaterialTheme.typography.titleLarge,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.Bold
         )
 
@@ -1779,13 +1790,13 @@ private fun PomodoroTab(
                 Text(
                     "%02d:%02d".format(mins, secs),
                     style = MaterialTheme.typography.displayMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
                     "of $pomodoroMinutes min",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
             }
         }
@@ -1797,14 +1808,14 @@ private fun PomodoroTab(
                     modifier = Modifier
                         .size(12.dp)
                         .clip(CircleShape)
-                        .background(if (i < sessionsDone % 4) accentColor else BpscColors.Divider)
+                        .background(if (i < sessionsDone % 4) accentColor else cs.outline)
                 )
             }
         }
         Text(
             "$sessionsDone sessions completed today",
             style = MaterialTheme.typography.bodyMedium,
-            color = BpscColors.TextSecondary
+            color = cs.onSurfaceVariant
         )
 
         // Controls
@@ -1813,12 +1824,12 @@ private fun PomodoroTab(
                 onClick = onReset,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.height(52.dp),
-                border = BorderStroke(1.dp, BpscColors.Divider),
+                border = BorderStroke(1.dp, cs.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
             ) {
                 Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Reset", style = MaterialTheme.typography.titleMedium)
+                Text(str.roomsReset, style = MaterialTheme.typography.titleMedium)
             }
             Button(
                 onClick = onToggle,
@@ -1855,7 +1866,7 @@ private fun PomodoroTab(
                 Text(
                     "📖 Pomodoro Tips",
                     style = MaterialTheme.typography.titleMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 listOf(
@@ -1869,7 +1880,7 @@ private fun PomodoroTab(
                         Text(
                             tip,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextSecondary,
+                            color = cs.onSurfaceVariant,
                             lineHeight = 20.sp
                         )
                     }
@@ -1885,6 +1896,7 @@ private fun PomodoroTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateRoomSheet(onDismiss: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var roomName by remember { mutableStateOf("") }
     var selectedSub by remember { mutableStateOf(RoomSubject.Polity) }
@@ -1894,7 +1906,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
@@ -1907,10 +1919,10 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             Text(
                 str.roomsCreate,
                 style = MaterialTheme.typography.headlineSmall,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.ExtraBold
             )
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
 
             // Room name
             OutlinedTextField(
@@ -1934,9 +1946,9 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
 
             // Subject chips
             Text(
-                "Subject",
+                str.roomSubject,
                 style = MaterialTheme.typography.titleMedium,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.Bold
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1971,7 +1983,7 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
                 Text(
                     str.roomsMaxMembers,
                     style = MaterialTheme.typography.titleMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
@@ -2000,15 +2012,15 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
             ) {
                 Column {
                     Text(
-                        "Private Room",
+                        str.roomPrivate,
                         style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         str.roomsRequiresCode,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.TextSecondary
+                        color = cs.onSurfaceVariant
                     )
                 }
                 Switch(
@@ -2043,13 +2055,14 @@ private fun CreateRoomSheet(onDismiss: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var code by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
@@ -2060,15 +2073,15 @@ private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Join Private Room",
+                str.roomJoinPrivate,
                 style = MaterialTheme.typography.headlineSmall,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
                 str.roomsEnterCode,
                 style = MaterialTheme.typography.bodyLarge,
-                color = BpscColors.TextSecondary
+                color = cs.onSurfaceVariant
             )
 
             OutlinedTextField(

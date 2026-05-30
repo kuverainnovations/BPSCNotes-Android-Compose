@@ -199,10 +199,12 @@ fun MockTestsScreen(
     adManager:     com.example.bpscnotes.core.ads.AdManager? = null,
     viewModel:     MockTestsViewModel = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
     val context  = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("mock_tests") }
     // FIX: Only show mock tests — exclude daily quizzes which appear in the daily quiz section
     val allTests = remember(state.allTests) {
         state.allTests
@@ -248,7 +250,7 @@ fun MockTestsScreen(
                 Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
                     Text(str.quizLoadingQ, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
             }
         }
@@ -383,7 +385,7 @@ fun MockTestsScreen(
             TestLeaderboardScreen(
                 entries           = lbEntries,
                 isLoading         = state.isLoadingLeaderboard,
-                quizTitle         = selectedTest?.title ?: "Leaderboard",
+                quizTitle         = selectedTest?.title ?: str.mockLeaderboard,
                 errorMessage      = state.leaderboardError,
                 onBack            = { screenState = MockTestState.Analysis }
             )
@@ -410,6 +412,7 @@ private fun MockTestLobbyScreen(
     onCustomTest: () -> Unit,
     viewModel: MockTestsViewModel,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
 
     val state by viewModel.uiState.collectAsState()
@@ -423,7 +426,7 @@ private fun MockTestLobbyScreen(
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
     val tabs = listOf(str.filterAll, str.quizFullMock, "Mini Tests", str.quizPrevYear/*, str.mockCustom*/)
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
@@ -466,7 +469,7 @@ private fun MockTestLobbyScreen(
                          ) {
                              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                  Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                 Text("Create Custom", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                 Text(str.mockCreateCustom, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                              }
                          }*/
                     }
@@ -552,13 +555,13 @@ private fun MockTestLobbyScreen(
                                     if (selectedType != null) str.quizNoTestsCategory
                                     else str.quizNoTestsYet,
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = BpscColors.TextPrimary,
+                                    color = cs.onSurface,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     str.quizTestsComingSoon,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = BpscColors.TextSecondary
+                                    color = cs.onSurfaceVariant
                                 )
                             }
                         }
@@ -568,7 +571,7 @@ private fun MockTestLobbyScreen(
                 val featured = filtered.filter { it.isFeatured }
                 if (featured.isNotEmpty() && selectedType == null) {
                     item {
-                        Text(str.quizFeatured, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        Text(str.quizFeatured, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                     }
                     items(featured) { test ->
                         MockTestCard(test = test, isFeatured = true, onStart = { onStartTest(test) })
@@ -587,7 +590,7 @@ private fun MockTestLobbyScreen(
                             else                      -> "Tests"
                         },
                         style = MaterialTheme.typography.titleLarge,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
@@ -601,6 +604,8 @@ private fun MockTestLobbyScreen(
 
 @Composable
 private fun LobbyChip(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.width(60.dp)) {
         Text(icon, fontSize = 13.sp)
         Text(value, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -610,6 +615,7 @@ private fun LobbyChip(icon: String, value: String, label: String) {
 
 @Composable
 private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val typeColor = when (test.type) {
         MockTestType.Full         -> Pair(Color(0xFF1565C0), Color(0xFFE8F0FD))
@@ -627,7 +633,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(if (isFeatured) 4.dp else 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -650,10 +656,10 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
 
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(test.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(test.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(Modifier.height(2.dp))
-                    Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         // Type badge
@@ -678,7 +684,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                 }
             }
 
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             val context = androidx.compose.ui.platform.LocalContext.current
 
             // Stats + Start button
@@ -730,10 +736,12 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
 
 @Composable
 private fun MiniStat(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(12.dp))
         Column {
-            Text(value, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            Text(value, style = MaterialTheme.typography.labelSmall, color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp)
             Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
         }
     }
@@ -748,8 +756,9 @@ private fun TestInstructionsScreen(
     onStart: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
             Box(
@@ -781,11 +790,11 @@ private fun TestInstructionsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(3.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(str.quizTestOverview, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizTestOverview, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -804,11 +813,11 @@ private fun TestInstructionsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Instructions", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.mockInstructions, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         listOf(
                             Triple("🟢", "Attempted",            "Questions you have answered"),
                             Triple("🔵", "Marked for Review",    "Questions you want to revisit"),
@@ -822,8 +831,8 @@ private fun TestInstructionsScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(emoji, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
                                 Column {
-                                    Text(title, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                    Text(desc, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    Text(title, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
+                                    Text(desc, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                 }
                             }
                         }
@@ -832,7 +841,7 @@ private fun TestInstructionsScreen(
             }
 
             // Start button
-            Box(modifier = Modifier.fillMaxWidth().background(Color.White).padding(20.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(20.dp)) {
                 Button(
                     onClick  = onStart,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -850,16 +859,18 @@ private fun TestInstructionsScreen(
 
 @Composable
 private fun InfoTile(icon: String, label: String, value: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(BpscColors.Surface).padding(12.dp),
+            .background(cs.background).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(icon, fontSize = 18.sp)
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 10.sp)
-            Text(value, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 10.sp)
+            Text(value, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -877,6 +888,7 @@ private fun ActiveTestScreen(
     onSubmit: (Float) -> Unit,
     onExit: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var currentIndex     by remember { mutableIntStateOf(0) }
     var timeLeft         by remember { mutableIntStateOf(test.durationMinutes * 60) }
@@ -924,7 +936,7 @@ private fun ActiveTestScreen(
 
     if (current == null) return
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Test header ──────────────────────────────────
@@ -967,7 +979,7 @@ private fun ActiveTestScreen(
                             Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(0.15f)).clickable { showNavigator = true }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.GridView, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             }
-                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White).clickable { showSubmitDialog = true }.padding(horizontal = 10.dp, vertical = 7.dp)) {
+                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.surface).clickable { showSubmitDialog = true }.padding(horizontal = 10.dp, vertical = 7.dp)) {
                                 Text(str.submit, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                             }
                         }
@@ -1041,13 +1053,13 @@ private fun ActiveTestScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Text(
                         current.question,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.SemiBold,
                         lineHeight = 24.sp,
                         modifier = Modifier.padding(18.dp)
@@ -1061,7 +1073,7 @@ private fun ActiveTestScreen(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(if (isSelected) BpscColors.PrimaryLight else Color.White)
-                            .border(1.5.dp, if (isSelected) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(14.dp))
+                            .border(1.5.dp, if (isSelected) BpscColors.Primary else cs.outline, RoundedCornerShape(14.dp))
                             .clickable {
                                 if (userAnswers[current.id] == index) userAnswers.remove(current.id)
                                 else userAnswers[current.id] = index
@@ -1086,14 +1098,14 @@ private fun ActiveTestScreen(
             }
 
             // ── Navigation ───────────────────────────────────
-            Box(modifier = Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 10.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick  = { if (currentIndex > 0) currentIndex-- },
                         enabled  = currentIndex > 0,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape    = RoundedCornerShape(12.dp),
-                        border   = BorderStroke(1.dp, BpscColors.Divider),
+                        border   = BorderStroke(1.dp, cs.outline),
                         colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, modifier = Modifier.size(16.dp))
@@ -1121,10 +1133,10 @@ private fun ActiveTestScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable(enabled = false) {},
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = cs.surface)
                 ) {
                     Column(modifier = Modifier.padding(20.dp).navigationBarsPadding()) {
-                        Text(str.quizNavTitle, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizNavTitle, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
                         // Legend
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1199,6 +1211,7 @@ private fun ActiveTestScreen(
 
 @Composable
 private fun StatusChip(icon: String, value: String, label: String) {
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(icon, fontSize = 9.sp)
@@ -1210,6 +1223,7 @@ private fun StatusChip(icon: String, value: String, label: String) {
 
 @Composable
 private fun SubjectBadge(subject: String) {
+    val str = LocalStrings.current
     val colors = mapOf("Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)),
         "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)),
         "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)))
@@ -1220,6 +1234,7 @@ private fun SubjectBadge(subject: String) {
 
 @Composable
 private fun DiffBadge(difficulty: String) {
+    val str = LocalStrings.current
     val color = when (difficulty) { "Easy" -> Color(0xFF2ECC71); "Hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12) }
     Text(difficulty, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(0.1f)).padding(horizontal = 7.dp, vertical = 2.dp))
@@ -1239,6 +1254,8 @@ private fun TestAnalysisScreen(
     onRetry: () -> Unit,
     onExit: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val resultAnswers = submitResult?.answers ?: emptyList()
 
     val correct = resultAnswers.count { it.isCorrect }
@@ -1253,7 +1270,6 @@ private fun TestAnalysisScreen(
     val coinsEarned  = submitResult?.coinsEarned ?: 0
 
     val animProg   by animateFloatAsState(percentage / 100f, tween(1200), label = "ap")
-    val str = LocalStrings.current
     // Subject-wise breakdown
     val subjects   = questions.map { it.subject }.distinct()
     val subjectStats = subjects.map { sub ->
@@ -1297,18 +1313,18 @@ private fun TestAnalysisScreen(
                 modifier = Modifier.padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f))) {
+                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f))) {
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("🏆", fontSize = 24.sp)
                         Text("#$rank", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         Text(str.quizYourRank, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                     }
                 }
-                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.15f))) {
+                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f))) {
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("📈", fontSize = 24.sp)
                         Text("${percentile}%", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Percentile", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                        Text(str.mockPercentile, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                     }
                 }
             }
@@ -1356,7 +1372,7 @@ private fun TestAnalysisScreen(
             Spacer(Modifier.height(12.dp))
 
             // Stats card
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     AnalysisStat("✅", "$correct",        str.quizCorrect,   BpscColors.Success)
                     AnalysisStat("❌", "$wrong",          str.quizWrong,     Color(0xFFE74C3C))
@@ -1368,9 +1384,9 @@ private fun TestAnalysisScreen(
             Spacer(Modifier.height(12.dp))
 
             // Subject breakdown
-            /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(str.quizSubjectAnalysis, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.quizSubjectAnalysis, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         subjectStats.forEach { (subject, correct, total) ->
                             val pct = if (total > 0) correct.toFloat() / total else 0f
                             val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
@@ -1379,10 +1395,10 @@ private fun TestAnalysisScreen(
                             val color = subColors[subject] ?: BpscColors.Primary
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(subject, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    Text(subject, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
                                     Text("$correct/$total", style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
                                 }
-                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
+                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(cs.background)) {
                                     Box(modifier = Modifier.fillMaxWidth(animSubProg).fillMaxHeight().background(color, RoundedCornerShape(4.dp)))
                                 }
                             }
@@ -1420,6 +1436,8 @@ private fun TestAnalysisScreen(
 
 @Composable
 private fun AnalysisStat(icon: String, value: String, label: String, color: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 18.sp)
         Text(value, style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.ExtraBold)
@@ -1434,12 +1452,13 @@ private fun AnalysisStat(icon: String, value: String, label: String, color: Colo
 private fun TestLeaderboardScreen(
     entries: List<LeaderboardEntry>,
     isLoading: Boolean = false,
-    quizTitle: String = "Leaderboard",
+    quizTitle: String = "",  // caller supplies; str not available in default params
     errorMessage: String? = null,
     onBack: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
         // Header
         Box(
             modifier = Modifier.fillMaxWidth()
@@ -1451,7 +1470,7 @@ private fun TestLeaderboardScreen(
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 Column {
-                    Text("Leaderboard", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.mockLeaderboard, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${entries.size} participants", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }
@@ -1503,11 +1522,11 @@ private fun TestLeaderboardScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(entry.name, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                                Text(entry.name, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
                                 if (entry.isCurrentUser) Text(str.focusYou, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
                                     modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 6.dp, vertical = 2.dp))
                             }
-                            Text("Time: ${entry.timeTaken}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text("Time: ${entry.timeTaken}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         }
                         Text("${entry.score}", style = MaterialTheme.typography.titleLarge, color = if (entry.isCurrentUser) BpscColors.Primary else BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                     }
@@ -1519,6 +1538,8 @@ private fun TestLeaderboardScreen(
 
 @Composable
 private fun PodiumItem(entry: LeaderboardEntry, position: Int, height: Dp) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val medalColors = listOf(Color(0xFFFFD700), Color(0xFFC0C0C0), Color(0xFFCD7F32))
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(listOf("🥇","🥈","🥉")[position - 1], fontSize = 28.sp)
@@ -1537,6 +1558,7 @@ private fun CustomTestSheet(
     onDismiss: () -> Unit,
     onStart: (MockTest) -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val allSubjects    = listOf("Polity", "History", "Geography", "Economy", "Bihar GK", "Science")
     val selectedSubs   = remember { mutableStateListOf<String>() }
@@ -1553,17 +1575,17 @@ private fun CustomTestSheet(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(str.quizCreateCustom, style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+            Text(str.quizCreateCustom, style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
 
             // Subject selection
-            Text(str.quizSelectSubjects, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+            Text(str.quizSelectSubjects, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(allSubjects) { sub ->
                     val sel = selectedSubs.contains(sub)
                     Box(
                         modifier = Modifier.clip(RoundedCornerShape(20.dp))
                             .background(if (sel) BpscColors.Primary else BpscColors.Surface)
-                            .border(1.dp, if (sel) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp))
+                            .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
                             .clickable { if (sel) selectedSubs.remove(sub) else selectedSubs.add(sub) }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
@@ -1575,7 +1597,7 @@ private fun CustomTestSheet(
             // Question count slider
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(str.quizQuestions, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(str.quizQuestions, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
                     Text("$questionCount", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                 }
                 Slider(value = questionCount.toFloat(), onValueChange = { questionCount = it.toInt() },
@@ -1586,7 +1608,7 @@ private fun CustomTestSheet(
             // Duration slider
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(str.quizDuration, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(str.quizDuration, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
                     Text("$durationMins min", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                 }
                 Slider(value = durationMins.toFloat(), onValueChange = { durationMins = it.toInt() },
@@ -1597,8 +1619,8 @@ private fun CustomTestSheet(
             // Negative marking toggle
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(str.quizNegativeMarking, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    Text("-0.33 per wrong answer", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.quizNegativeMarking, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                    Text(str.mockNegativeMarking, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 Switch(
                     checked = negativeMarking, onCheckedChange = { negativeMarking = it },

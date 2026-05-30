@@ -43,9 +43,10 @@ fun AchievementsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val categories = state.grouped.keys.toList()
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
@@ -90,7 +91,7 @@ fun AchievementsScreen(
                 state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
                 state.error != null -> Box(Modifier.fillMaxSize().padding(24.dp), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp); Text(state.error!!, textAlign = TextAlign.Center, color = BpscColors.TextSecondary)
+                        Text("⚠️", fontSize = 40.sp); Text(state.error!!, textAlign = TextAlign.Center, color = cs.onSurfaceVariant)
                         Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(BpscColors.Primary)) { Text(str.retry) }
                     }
                 }
@@ -101,7 +102,7 @@ fun AchievementsScreen(
                         item(key = "header_$cat") {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(meta.first, fontSize = 16.sp)
-                                Text(cat.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                                Text(cat.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                                 Text("${items.count { it.isEarned }}/${items.size}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                             }
                         }
@@ -121,6 +122,7 @@ fun AchievementsScreen(
 
 @Composable
 private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val earned     = items.filter { it.isEarned }
     val inProgress = items.filter { !it.isEarned }
@@ -143,7 +145,7 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
                         ) { Text(ach.emoji, fontSize = 28.sp) }
                         Text(
                             ach.title, style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold,
+                            color = cs.onSurface, fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center, maxLines = 2, fontSize = 9.sp,
                             lineHeight = 12.sp, overflow = TextOverflow.Ellipsis
                         )
@@ -162,7 +164,7 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
                 str.achievementsInProgress,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = BpscColors.TextPrimary
+                color = cs.onSurface
             )
             inProgress.forEach { ach ->
                 val pct = if ((ach.goalTarget ?: 0) > 0)
@@ -172,7 +174,7 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape    = RoundedCornerShape(14.dp),
-                    colors   = CardDefaults.cardColors(containerColor = Color.White),
+                    colors   = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Row(Modifier.fillMaxWidth().padding(14.dp),
@@ -185,14 +187,14 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                                 Text(ach.title, style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
+                                    fontWeight = FontWeight.Bold, color = cs.onSurface)
                                 Text("${(pct * 100).toInt()}%",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = accentColor, fontWeight = FontWeight.ExtraBold)
                             }
                             ach.description?.let { desc ->
                                 Text(desc, style = MaterialTheme.typography.bodySmall,
-                                    color = BpscColors.TextSecondary, maxLines = 1)
+                                    color = cs.onSurfaceVariant, maxLines = 1)
                             }
                             LinearProgressIndicator(
                                 progress   = { animPct },

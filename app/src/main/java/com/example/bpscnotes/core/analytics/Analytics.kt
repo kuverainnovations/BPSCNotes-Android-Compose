@@ -252,4 +252,45 @@ object Event {
     fun onboardingStarted()                       = Analytics.track("onboarding_started")
     fun onboardingCompleted(exam: String)         = Analytics.track("onboarding_completed", mapOf("exam" to exam))
     fun onboardingStepCompleted(step: Int)        = Analytics.track("onboarding_step", mapOf("step" to step))
+
+
+    fun streakMilestone(days: Int) =
+        Analytics.track("streak_milestone", mapOf("days" to days))
+    // ── Achievements & Tiers ──────────────────────────────────────
+    fun achievementUnlocked(id: String, label: String) =
+        Analytics.track("achievement_unlocked", mapOf("id" to id, "label" to label))
+    fun tierChanged(from: String, to: String, direction: String) =
+        Analytics.track("tier_changed", mapOf("from" to from, "to" to to, "direction" to direction))
+    // ── Ads ──────────────────────────────────────────────────────
+    fun adWatched(type: String, coinsEarned: Int = 0) =
+        Analytics.track("ad_watched", mapOf("type" to type, "coins_earned" to coinsEarned))
+    fun adFailed(type: String, reason: String) =
+        Analytics.track("ad_failed", mapOf("type" to type, "reason" to reason))
+    // ── Settings ─────────────────────────────────────────────────
+    fun settingsChanged(key: String, value: String) =
+        Analytics.track("settings_changed", mapOf("key" to key, "value" to value))
+    fun languageChanged(from: String, to: String) =
+        Analytics.track("language_changed", mapOf("from" to from, "to" to to))
+    // ── Notifications ─────────────────────────────────────────────
+    fun notificationTapped(type: String) =
+        Analytics.track("notification_tapped", mapOf("type" to type))
+    // ── Live Classes ──────────────────────────────────────────────
+    fun liveClassJoined(classId: String, title: String) =
+        Analytics.track("live_class_joined", mapOf("class_id" to classId, "title" to title))
+    fun liveClassRegistered(classId: String, title: String) =
+        Analytics.track("live_class_registered", mapOf("class_id" to classId, "title" to title))
+    // ── Flashcards ────────────────────────────────────────────────
+    fun flashcardSessionStarted(deckSize: Int) =
+        Analytics.track("flashcard_session_started", mapOf("deck_size" to deckSize))
+    fun flashcardSessionCompleted(reviewed: Int, correct: Int) =
+        Analytics.track("flashcard_session_completed", mapOf("reviewed" to reviewed, "correct" to correct))
+    // ── Daily Targets ─────────────────────────────────────────────
+    fun dailyTargetCompleted(title: String) =
+        Analytics.track("daily_target_completed", mapOf("title" to title))
+    fun allTargetsCompleted(streak: Int) =
+        Analytics.track("all_targets_completed", mapOf("streak" to streak))
+    // ── Generic ───────────────────────────────────────────────────
+    fun track(event: String, props: Map<String, Any?> = emptyMap()) =
+        Analytics.track(event, props)
+
 }

@@ -48,6 +48,8 @@ fun RegisterScreen(
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("register") }
     var name     by remember { mutableStateOf("") }
     var email    by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
@@ -69,7 +71,7 @@ fun RegisterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface)
+            .background(cs.background)
             .imePadding()
     ) {
         // Header
@@ -142,7 +144,7 @@ fun RegisterScreen(
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = BpscColors.Primary,
-                    unfocusedBorderColor = BpscColors.Divider
+                    unfocusedBorderColor = cs.outline
                 )
             )
 
@@ -152,7 +154,7 @@ fun RegisterScreen(
                 onValueChange = { email = it },
                 modifier      = Modifier.fillMaxWidth(),
                 label         = { Text("${str.editEmail} (Optional)") },
-                placeholder   = { Text("e.g. rahul@gmail.com") },
+                placeholder   = { Text(str.registerEmailHint) },
                 shape         = RoundedCornerShape(14.dp),
                 singleLine    = true,
                 keyboardOptions = KeyboardOptions(
@@ -161,7 +163,7 @@ fun RegisterScreen(
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = BpscColors.Primary,
-                    unfocusedBorderColor = BpscColors.Divider
+                    unfocusedBorderColor = cs.outline
                 )
             )
 
@@ -182,7 +184,7 @@ fun RegisterScreen(
                     trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(showDistrictMenu) },
                     colors        = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = BpscColors.Primary,
-                        unfocusedBorderColor = BpscColors.Divider
+                        unfocusedBorderColor = cs.outline
                     )
                 )
                 ExposedDropdownMenu(

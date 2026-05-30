@@ -29,6 +29,8 @@ fun TopicQuizScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("topic_quiz") }
 
     // Kick off quiz load when screen appears
     LaunchedEffect(subject, topicTitle) {
@@ -60,10 +62,10 @@ fun TopicQuizScreen(
 
         // ── Loading ────────────────────────────────────────────
         state.isLoadingDetail || state.isLoadingList -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                 }
             }
         }
@@ -72,7 +74,7 @@ fun TopicQuizScreen(
         state.startError != null || state.detailError != null || state.listError != null -> {
             val msg = state.startError ?: state.detailError ?: state.listError ?: str.error
             val isNoQuiz = msg.contains("No quiz") || msg.contains("No MCQ")
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -127,8 +129,9 @@ private fun TopicQuizIntroScreen(
     navController: NavHostController,
     onStart: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             Box(
@@ -148,15 +151,15 @@ private fun TopicQuizIntroScreen(
             }
 
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(str.topicQuizDetails, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.topicQuizDetails, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             TopicStat("📝", "10", "Questions")
                             TopicStat("⏱️", "30s", str.topicQuizPerQuestion)
                             TopicStat("🪙", "+10", "Max Coins")
                         }
-                        HorizontalDivider(color = BpscColors.Divider)
+                        HorizontalDivider(color = cs.outline)
                         listOf(
                             "✅  " + str.topicQuizCoin,
                             "⏭️  " + str.topicQuizSkip,
@@ -164,7 +167,7 @@ private fun TopicQuizIntroScreen(
                             "⏰  " + str.topicQuizTimer,
                             "📊  " + str.topicQuizReview
                         ).forEach { rule ->
-                            Text(rule, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp)
+                            Text(rule, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp)
                         }
                     }
                 }
@@ -188,9 +191,10 @@ private fun TopicQuizIntroScreen(
 
 @Composable
 private fun TopicStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 22.sp)
-        Text(value, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(value, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }

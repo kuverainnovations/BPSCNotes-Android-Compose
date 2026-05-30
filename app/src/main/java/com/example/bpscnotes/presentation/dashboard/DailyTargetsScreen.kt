@@ -48,6 +48,8 @@ enum class Difficulty(val label: String, val color: Color) {
     Hard  ("Hard",   Color(0xFFE74C3C));
     @Composable fun localLabel(): String {
         val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("daily_targets") }
         return when(this) { Easy -> str.targetEasy; Medium -> str.targetMedium; Hard -> str.targetHard }
     }
 }
@@ -83,6 +85,7 @@ fun DailyTargetsScreen(
     navController: NavHostController,
     viewModel: DashboardViewModel = hiltViewModel()   // same VM as Dashboard — targets already loaded
 ) {
+    val cs = MaterialTheme.colorScheme
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
 
@@ -109,7 +112,7 @@ fun DailyTargetsScreen(
     //val tabs    = listOf("List", "Cards", "Timeline")
     val filters = listOf(str.targetAllFilter) + allTargets.map { it.target.subject }.distinct()
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Header ─────────────────────────────────────────
@@ -185,7 +188,7 @@ fun DailyTargetsScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("🪙", fontSize = 20.sp)
                                     Text("+${total - completed}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
-                                    Text("coins", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 9.sp)
+                                    Text(str.targetCoins, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 9.sp)
                                 }
                             }
                         }
@@ -221,8 +224,8 @@ fun DailyTargetsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("🎯", fontSize = 56.sp)
-                        Text(str.targetNoTargets, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                        Text(str.targetNoTargets, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text("", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                         Button(onClick = { showAddSheet = true }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                             Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.targetCreate)
                         }
@@ -298,6 +301,7 @@ private fun ListTabContent(
     onStartQuiz: (String) -> Unit,
     onViewNotes: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val filtered = if (selectedFilter == str.targetAllFilter) items else items.filter { it.target.subject == selectedFilter }
     val carried  = filtered.filter { it.target.isCarriedForward }
@@ -307,7 +311,7 @@ private fun ListTabContent(
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filters) { filter ->
                 val sel = filter == selectedFilter
-                Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(20.dp)).clickable { onFilterChange(filter) }.padding(horizontal = 14.dp, vertical = 7.dp)) {
+                Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { onFilterChange(filter) }.padding(horizontal = 14.dp, vertical = 7.dp)) {
                     Text(filter, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                 }
             }
@@ -330,17 +334,20 @@ private fun ListTabContent(
 
 @Composable
 private fun SectionLabel(icon: String, title: String, subtitle: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(icon, fontSize = 16.sp)
         Column {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onStartQuiz: () -> Unit, onViewNotes: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var expanded by remember { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(if (expanded) 4.dp else 2.dp)) {
@@ -375,7 +382,7 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
             AnimatedVisibility(visible = expanded) {
                 Column {
                     Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = BpscColors.Divider)
+                    HorizontalDivider(color = cs.outline)
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ActionButton(Icons.Rounded.Quiz,     str.quizStart, BpscColors.PrimaryLight,  BpscColors.Primary,     Modifier.weight(1f), onStartQuiz)
@@ -398,6 +405,7 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
 
 @Composable
 private fun ActionButton(icon: ImageVector, label: String, bg: Color, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Column(modifier = modifier.clip(RoundedCornerShape(10.dp)).background(bg).clickable(onClick = onClick).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
@@ -406,6 +414,7 @@ private fun ActionButton(icon: ImageVector, label: String, bg: Color, tint: Colo
 
 @Composable
 private fun SubjectTag(subject: String) {
+    val cs = MaterialTheme.colorScheme
     val colors = mapOf("Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
     val (fg, bg) = colors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
     Text(subject, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 9.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -413,6 +422,8 @@ private fun SubjectTag(subject: String) {
 
 @Composable
 private fun DifficultyBadge(difficulty: Difficulty) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text(difficulty.label, style = MaterialTheme.typography.labelSmall, color = difficulty.color, fontSize = 9.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(difficulty.color.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 
@@ -422,6 +433,7 @@ private fun DifficultyBadge(difficulty: Difficulty) {
 
 @Composable
 private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) -> Unit, onStartQuiz: (String) -> Unit, onViewNotes: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var currentIndex by remember { mutableIntStateOf(0) }
     val scope        = rememberCoroutineScope()
@@ -432,11 +444,11 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items.forEachIndexed { i, item ->
                 val done = item.target.isCompleted
-                Box(modifier = Modifier.size(if (i == currentIndex) 10.dp else 8.dp).clip(CircleShape).background(when { i == currentIndex -> BpscColors.Primary; done -> BpscColors.Success; else -> BpscColors.Divider }))
+                Box(modifier = Modifier.size(if (i == currentIndex) 10.dp else 8.dp).clip(CircleShape).background(when { i == currentIndex -> BpscColors.Primary; done -> BpscColors.Success; else -> cs.outline }))
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("${currentIndex + 1} of $total", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text("${currentIndex + 1} of $total", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
 
         if (current != null) {
@@ -463,7 +475,7 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                         )
                     },
                 shape  = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
@@ -471,12 +483,12 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                         SubjectTag(current.target.subject);
                         //DifficultyBadge(current.difficulty)
                         Spacer(Modifier.weight(1f))
-                        if (current.target.isCarriedForward) Text("📅 Carried Forward", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), fontSize = 10.sp)
+                        if (current.target.isCarriedForward) Text(str.targetCarriedForward, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), fontSize = 10.sp)
                     }
                     Spacer(Modifier.height(20.dp))
-                    Text(current.target.title, style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+                    Text(current.target.title, style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
                     Spacer(Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.Surface).padding(12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cs.background).padding(12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                         CardStat("⏱️", "${current.target.estimatedMinutes} min",   "Est. Time")
                         CardStat("📝", "${current.target.totalQuestions}Q",         "Questions")
                         CardStat("🕐", java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(java.util.Date()), "Current Time")
@@ -505,8 +517,8 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
         } else {
             Column(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("🎉", fontSize = 60.sp)
-                Text("${str.targetCompleted}! 🎉", style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                Text(str.targetAllDone, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("${str.targetCompleted}! 🎉", style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                Text(str.targetAllDone, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
     }
@@ -514,10 +526,11 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
 
 @Composable
 private fun CardStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(icon, fontSize = 14.sp)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontSize = 9.sp)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 9.sp)
     }
 }
 
@@ -532,6 +545,7 @@ private fun TimelineTabContent(
     onStartQuiz: (String) -> Unit,
     onViewNotes: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
         TimeSlot.values().forEach { slot ->
             val slotItems = items.filter { it.timeSlot == slot }
@@ -539,7 +553,7 @@ private fun TimelineTabContent(
             item {
                 Row(modifier = Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) { Text(slot.icon, fontSize = 18.sp) }
-                    Column { Text(slot.label, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold); Text(slot.range, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary) }
+                    Column { Text(slot.label, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold); Text(slot.range, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant) }
                     Spacer(Modifier.weight(1f))
                     val doneCount = slotItems.count { it.target.isCompleted }
                     Text("$doneCount/${slotItems.size}", style = MaterialTheme.typography.bodyMedium, color = if (doneCount == slotItems.size) BpscColors.Success else BpscColors.TextSecondary, fontWeight = FontWeight.Bold)

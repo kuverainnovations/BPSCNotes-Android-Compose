@@ -1,6 +1,12 @@
 package com.example.bpscnotes.presentation.navigation.MainShell
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -43,6 +49,7 @@ fun MainShell(
     sessionViewModel:  StudySessionViewModel,
     tiersViewModel:    TierRoomsViewModel,
     adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
+    val str = LocalStrings.current
     val bottomNavController = rememberNavController()
 
     // Listen for tab switch requests from other screens (e.g. CoinWallet → "go to RoomsHub")
@@ -69,7 +76,6 @@ fun MainShell(
     // The effect handles Android version checks, rationale dialog, and permanent denial.
     NotificationPermissionEffect()
 
-    val str   = LocalStrings.current
     // Notification badge count — read from shared prefs (set by DashboardViewModel after fetch)
     val context = androidx.compose.ui.platform.LocalContext.current
     val notifCount by androidx.compose.runtime.produceState(initialValue = 0, key1 = Unit) {
@@ -97,7 +103,38 @@ fun MainShell(
             sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.AFK
     val showPip = sessionIsActive && !isOnStudyFocus
 
+    // ── Double-back-press to exit ───────────────────────────────
+    val snackbarHostState = remember { SnackbarHostState() }
+    val backPressedOnce   = remember { androidx.compose.runtime.mutableStateOf(false) }
+    val scope             = androidx.compose.runtime.rememberCoroutineScope()
+
+    BackHandler {
+        val currentBottomRoute = bottomNavController.currentDestination?.route
+        if (currentBottomRoute != null && currentBottomRoute != Screen.Dashboard.route) {
+            bottomNavController.navigate(Screen.Dashboard.route) {
+                popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+                restoreState    = true
+            }
+            return@BackHandler
+        }
+        if (backPressedOnce.value) {
+            (context as? Activity)?.moveTaskToBack(true)
+        } else {
+            backPressedOnce.value = true
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message  = "Press back again to exit",
+                    duration = SnackbarDuration.Short
+                )
+                kotlinx.coroutines.delay(2000)
+                backPressedOnce.value = false
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             BpscBottomNav(
                 navController = bottomNavController,
@@ -105,7 +142,13 @@ fun MainShell(
             )
         }
     ) { innerPadding ->
-        Box(Modifier.consumeWindowInsets(innerPadding)) {
+        // Each screen handles its own statusBarsPadding on its header.
+        // MainShell only provides the bottom padding for the nav bar.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
+        ) {
             NavHost(
                 navController    = bottomNavController,
                 startDestination = Screen.Dashboard.route,

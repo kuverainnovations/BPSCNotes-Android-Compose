@@ -94,6 +94,8 @@ fun MarketplaceScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("marketplace") }
     val snackbarHost = remember { SnackbarHostState() }
 
     LaunchedEffect(state.purchaseSuccess) {
@@ -105,7 +107,7 @@ fun MarketplaceScreen(
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHost) },
-        containerColor = BpscColors.Surface,
+        containerColor = cs.background,
         contentWindowInsets = WindowInsets(0)
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
@@ -161,10 +163,10 @@ fun MarketplaceScreen(
             }
 
             // ── Search + Sort ─────────────────────────────────────
-            Column(Modifier.fillMaxWidth().background(Color.White).padding(16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.fillMaxWidth().background(cs.surface).padding(16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Search bar
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BpscColors.Surface).padding(12.dp, 0.dp),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.background).padding(12.dp, 0.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Rounded.Search, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
@@ -173,7 +175,7 @@ fun MarketplaceScreen(
                         value         = searchText,
                         onValueChange = { searchText = it; viewModel.setSearch(it) },
                         modifier      = Modifier.weight(1f).padding(vertical = 12.dp),
-                        textStyle     = MaterialTheme.typography.bodyMedium.copy(color = BpscColors.TextPrimary),
+                        textStyle     = MaterialTheme.typography.bodyMedium.copy(color = cs.onSurface),
                         singleLine    = true,
                         decorationBox = { inner ->
                             if (searchText.isEmpty()) Text(str.marketSearchHint, color = BpscColors.TextHint)
@@ -211,7 +213,7 @@ fun MarketplaceScreen(
                 state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("⚠️", fontSize = 40.sp)
-                        Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                        Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                         Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                             Text(str.retry)
                         }
@@ -220,8 +222,8 @@ fun MarketplaceScreen(
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("📚", fontSize = 48.sp)
-                        Text(str.marketNoNotes, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
-                        Text(str.marketBeFirst, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
+                        Text(str.marketNoNotes, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                        Text(str.marketBeFirst, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                         Button(onClick = { /* upload */ }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                             Icon(Icons.Rounded.Upload, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
@@ -238,7 +240,7 @@ fun MarketplaceScreen(
                     val featured = state.items.filter { it.isFeatured }
                     if (featured.isNotEmpty()) {
                         item {
-                            Text(str.marketFeatured, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
+                            Text(str.marketFeatured, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
                         }
                         item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -251,7 +253,7 @@ fun MarketplaceScreen(
                     item {
                         Text(
                             if (state.selectedSubject.isEmpty()) "All Notes (${state.items.size})" else "${state.selectedSubject} Notes",
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = cs.onSurface
                         )
                     }
 
@@ -274,6 +276,7 @@ fun MarketplaceScreen(
 
 @Composable
 private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val subjectColor = when (item.subject) {
         "Polity"    -> Color(0xFF9B59B6)
@@ -315,13 +318,13 @@ private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBu
                 Text(item.subject, style = MaterialTheme.typography.labelSmall, color = subjectColor, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(subjectColor.copy(0.1f)).padding(horizontal = 7.dp, vertical = 2.dp))
 
-                Text(item.title, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+                Text(item.title, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (item.rating > 0f) {
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(12.dp))
-                            Text("%.1f".format(item.rating), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
+                            Text("%.1f".format(item.rating), style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
                         }
                     }
                     if (item.totalPages > 0) Text("${item.totalPages}p", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
@@ -347,7 +350,7 @@ private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBu
                             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
-                            Text("Owned", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                            Text(str.marketOwned, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         Button(
@@ -373,6 +376,7 @@ private fun MarketplaceItemCard(item: MarketplaceItem, purchasing: Boolean, onBu
 
 @Composable
 private fun FeaturedItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val accent = when (item.subject) {
         "Polity" -> Color(0xFF9B59B6); "History" -> Color(0xFFE74C3C); "Economy" -> Color(0xFFE67E22)
@@ -391,7 +395,7 @@ private fun FeaturedItemCard(item: MarketplaceItem, purchasing: Boolean, onBuy: 
                     Text(str.marketFeatured, style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, color = BpscColors.TextPrimary)
+            Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, color = cs.onSurface)
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text(item.displayPrice, style = MaterialTheme.typography.titleSmall, color = if (item.isFree) BpscColors.Success else BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                 if (!item.isPurchased) {

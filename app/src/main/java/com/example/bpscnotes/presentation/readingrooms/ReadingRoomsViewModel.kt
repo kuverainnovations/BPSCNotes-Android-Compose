@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.readingrooms
 
+import com.example.bpscnotes.data.remote.api.StudyRoomsApiService
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

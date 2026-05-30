@@ -156,9 +156,10 @@ private fun ProfileHeader(
     onShareClick: () -> Unit
 ) {
     val str = LocalStrings.current
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("profile") }
     val (rankTitle, _, _) = rankTier(coins)
 
-    Box(modifier = Modifier.fillMaxWidth().height(260.dp)
+    Box(modifier = Modifier.fillMaxWidth().height(280.dp)
         .background(Brush.linearGradient(
             listOf(Color(0xFF0A2472), Color(0xFF0D47A1), Color(0xFF1565C0)),
             Offset(0f, 0f), Offset(400f, 500f)
@@ -237,6 +238,8 @@ private fun ProfileHeader(
 
 @Composable
 private fun Pill(text: String, textColor: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier = Modifier.clip(RoundedCornerShape(20.dp))
         .background(Color.White.copy(0.12f))
         .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(20.dp))
@@ -249,8 +252,8 @@ private fun Pill(text: String, textColor: Color) {
 // ── STATS ROW ──────────────────────────────────────────────────
 @Composable
 private fun ProfileStatsRow(rank: Int, studyHours: String, accuracy: Int, quizzes: Int, isDark: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val cs  = MaterialTheme.colorScheme
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
@@ -282,8 +285,8 @@ private fun RankProgressCard(
     rank: Int, rankTitle: String, tierMin: Int,
     coins: Int, tierMax: Int, isDark: Boolean
 ) {
+    val cs = MaterialTheme.colorScheme
     val str          = LocalStrings.current
-    val cs           = MaterialTheme.colorScheme
     val progress     = ((coins - tierMin).toFloat() / (tierMax - tierMin)).coerceIn(0f, 1f)
     val animProgress by animateFloatAsState(progress, tween(1200), label = "rankProg")
     val ptsToNext    = (tierMax - coins).coerceAtLeast(0)
@@ -354,7 +357,7 @@ private fun RankProgressCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = cs.onSurfaceVariant, fontSize = 9.sp)
                         else
-                            Text("Max tier! 🎉", style = MaterialTheme.typography.labelSmall,
+                            Text(str.profileMaxTier, style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF2E7D32), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -366,9 +369,9 @@ private fun RankProgressCard(
 // ── WEEKLY STREAK ──────────────────────────────────────────────
 @Composable
 private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int, isDark: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val cs  = MaterialTheme.colorScheme
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 2.dp)) {
@@ -435,8 +438,8 @@ private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int, isDark: 
 // ── HEATMAP — 1 month (4 weeks × 7 days) with large clear cells ──
 @Composable
 private fun StudyHeatmapCard(studyDays: List<Int>, isDark: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str       = LocalStrings.current
-    val cs        = MaterialTheme.colorScheme
     // 28 days = 4 weeks
     val totalDays = 28
     val days = if (studyDays.size >= totalDays)
@@ -461,7 +464,7 @@ private fun StudyHeatmapCard(studyDays: List<Int>, isDark: Boolean) {
                     Text(str.profileHeatmap, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold, color = cs.onBackground)
                 }
-                Text("Last 28 days", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                Text(str.profileLast28, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
 
             // Tap tooltip
@@ -469,7 +472,7 @@ private fun StudyHeatmapCard(studyDays: List<Int>, isDark: Boolean) {
                 val mins    = days.getOrElse(selectedIdx) { 0 }
                 val daysAgo = totalDays - 1 - selectedIdx
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                    .background(if (mins > 0) BpscColors.Primary.copy(0.08f) else BpscColors.Divider.copy(0.4f))
+                    .background(if (mins > 0) BpscColors.Primary.copy(0.08f) else cs.outline.copy(0.4f))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -576,8 +579,8 @@ private fun SubjectProgressCard(
     navController: NavHostController,
     isDark: Boolean
 ) {
+    val cs = MaterialTheme.colorScheme
     val str      = LocalStrings.current
-    val cs       = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
     val visible  = if (expanded) subjects else subjects.take(3)
 
@@ -638,8 +641,8 @@ private fun SubjectProgressCard(
 // ── BADGES CARD — tap badge to see details ─────────────────────
 @Composable
 private fun BadgesCard(badges: List<BadgeItem>, isDark: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str             = LocalStrings.current
-    val cs              = MaterialTheme.colorScheme
     var selectedBadge   by remember { mutableStateOf<BadgeItem?>(null) }
 
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -715,7 +718,7 @@ private fun BadgesCard(badges: List<BadgeItem>, isDark: Boolean) {
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("✅", fontSize = 14.sp)
                             Column {
-                                Text("Badge Earned!", style = MaterialTheme.typography.labelMedium,
+                                Text(str.profileBadgeEarned, style = MaterialTheme.typography.labelMedium,
                                     color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                                 if (!badge.earnedDate.isNullOrBlank())
                                     Text(badge.earnedDate, style = MaterialTheme.typography.labelSmall,
@@ -729,7 +732,7 @@ private fun BadgesCard(badges: List<BadgeItem>, isDark: Boolean) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("🔒", fontSize = 14.sp)
-                            Text("Not yet earned", style = MaterialTheme.typography.labelMedium,
+                            Text(str.profileNotEarned, style = MaterialTheme.typography.labelMedium,
                                 color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -740,7 +743,7 @@ private fun BadgesCard(badges: List<BadgeItem>, isDark: Boolean) {
             },
             confirmButton = {
                 TextButton(onClick = { selectedBadge = null }) {
-                    Text("Close", color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(str.closeLabel, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
         )

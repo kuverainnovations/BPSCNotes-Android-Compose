@@ -45,11 +45,11 @@ fun CaMcqQuizScreen(
     adManager:     AdManager? = null,
     viewModel:     CurrentAffairsViewModel = hiltViewModel()
 ) {
+    val str = LocalStrings.current
     val context    = LocalContext.current
     val activity   = context as? Activity
     val mcqs       by viewModel.mcqs.collectAsState()
     val mcqLoading by viewModel.mcqLoading.collectAsState()
-    val str        = LocalStrings.current
 
     LaunchedEffect(affairId) { viewModel.loadMcqs(affairId) }
 
@@ -288,10 +288,10 @@ private fun ResultScreen(
     onRetry: () -> Unit,
     onBack:  () -> Unit,
 ) {
+    val str = LocalStrings.current
     val correct  = mcqs.count { answers[it.id] == it.correct }
     val pct      = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
     val animPct  by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
-    val str      = LocalStrings.current
 
     // Back press on result → triggers onBack (which shows ad)
     BackHandler { onBack() }

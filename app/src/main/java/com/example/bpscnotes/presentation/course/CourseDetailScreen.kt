@@ -49,6 +49,8 @@ fun CourseDetailScreen(
 
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("course_detail") }
     var expandedChapter by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.enrollSuccess) {
@@ -105,10 +107,10 @@ fun CourseDetailScreen(
             // FIX 4: Preserve scroll position when returning from LessonViewer
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             // HeroHeader is pinned — only the content below it scrolls
-            Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+            Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
                 // Content column with top padding matching hero header height
                 LazyColumn(
-                    modifier       = Modifier.fillMaxSize().background(BpscColors.Surface),
+                    modifier       = Modifier.fillMaxSize().background(cs.background),
                     contentPadding = PaddingValues(top = 340.dp, bottom = 110.dp),
                     state          = listState
                 ) {
@@ -156,7 +158,7 @@ fun CourseDetailScreen(
                     if (chapters.isEmpty()) {
                         item {
                             Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
-                                Text(str.coursesNoCurriculum, color = BpscColors.TextSecondary)
+                                Text(str.coursesNoCurriculum, color = cs.onSurfaceVariant)
                             }
                         }
                     } else {
@@ -244,6 +246,7 @@ private fun RatingBottomSheet(
     onDismiss:    () -> Unit,
     onSubmit:     (Int, String) -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedStars by remember { mutableIntStateOf(0) }
     var comment       by remember { mutableStateOf("") }
@@ -270,9 +273,9 @@ private fun RatingBottomSheet(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(str.coursesRate, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
+                    fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
                 Text(str.coursesRateSubtitle,
-                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             }
 
             // Stars
@@ -314,12 +317,12 @@ private fun RatingBottomSheet(
                 }
             }
 
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
 
             // Comment
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("${str.coursesRate} (Optional)", style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold, color = BpscColors.TextPrimary)
+                    fontWeight = FontWeight.SemiBold, color = cs.onSurface)
                 OutlinedTextField(
                     value         = comment,
                     onValueChange = { if (it.length <= 500) comment = it },
@@ -332,11 +335,11 @@ private fun RatingBottomSheet(
                     minLines  = 4, maxLines = 6,
                     colors    = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor      = BpscColors.Primary,
-                        unfocusedBorderColor    = BpscColors.Divider,
+                        unfocusedBorderColor    = cs.outline,
                         focusedContainerColor   = Color.White,
                         unfocusedContainerColor = BpscColors.Surface
                     ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = BpscColors.TextPrimary)
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = cs.onSurface)
                 )
                 Row(Modifier.fillMaxWidth(), Arrangement.End) {
                     Text("${comment.length}/500", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
@@ -438,6 +441,7 @@ private fun RateCourseBanner(accent: Color, onTap: () -> Unit) {
 
 @Composable
 private fun ReviewSubmittedBanner() {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Row(
         modifier = Modifier
@@ -472,6 +476,7 @@ private fun ReviewsSection(
     ratingDistribution: RatingDistribution?,
     accent:             Color
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     // FIX: treat null as empty — API returns null when no reviews exist, not as a loading indicator
     val reviewList = reviews ?: emptyList()
@@ -484,10 +489,10 @@ private fun ReviewsSection(
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(
                 str.coursesReviews,
-                style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold
             )
             if (reviewCount > 0) {
-                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             }
         }
 
@@ -502,7 +507,7 @@ private fun ReviewsSection(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White)
+                    .background(cs.surface)
                     .padding(vertical = 36.dp),
                 Alignment.Center
             ) {
@@ -512,9 +517,9 @@ private fun ReviewsSection(
                 ) {
                     Text("💬", fontSize = 36.sp)
                     Text(str.coursesNoReviews, style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                        color = cs.onSurface, fontWeight = FontWeight.SemiBold)
                     Text(str.coursesBeFirst,
-                        style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
+                        style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                 }
             }
@@ -569,12 +574,13 @@ private fun ReviewsSection(
 
 @Composable
 private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistribution: RatingDistribution?) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(2.dp)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), Arrangement.spacedBy(16.dp), Alignment.CenterVertically) {
             Column(Modifier.width(72.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("%.1f".format(rating), style = MaterialTheme.typography.displaySmall,
-                    color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
                     repeat(5) { i ->
                         val filled = i < rating
@@ -582,23 +588,23 @@ private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistributio
                         Icon(
                             when { filled -> Icons.Rounded.Star; half -> Icons.Rounded.StarHalf; else -> Icons.Rounded.StarOutline },
                             null,
-                            tint     = if (filled || half) Color(0xFFFFD700) else BpscColors.Divider,
+                            tint     = if (filled || half) Color(0xFFFFD700) else cs.outline,
                             modifier = Modifier.size(14.dp)
                         )
                     }
                 }
                 Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.labelSmall,
-                    color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 listOf(5, 4, 3, 2, 1).forEach { star ->
                     val pct  = ratingDistribution?.pct(star) ?: 0f
                     val anim by animateFloatAsState(pct, tween(700, delayMillis = (5 - star) * 70), label = "b$star")
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("$star", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary,
+                        Text("$star", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant,
                             modifier = Modifier.width(10.dp), textAlign = TextAlign.Center)
                         Icon(Icons.Rounded.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(10.dp))
-                        Box(Modifier.weight(1f).height(7.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
+                        Box(Modifier.weight(1f).height(7.dp).clip(RoundedCornerShape(4.dp)).background(cs.background)) {
                             Box(
                                 Modifier.fillMaxWidth(anim).fillMaxHeight().background(
                                     Brush.linearGradient(listOf(Color(0xFFFFD700), Color(0xFFFFA000))),
@@ -622,6 +628,7 @@ private fun RatingSummaryCard(rating: Float, reviewCount: Int, ratingDistributio
 
 @Composable
 private fun ReviewCard(review: CourseReview) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val avatarColors = listOf(
         Color(0xFF9B59B6), Color(0xFF1565C0), Color(0xFF2ECC71),
@@ -642,7 +649,7 @@ private fun ReviewCard(review: CourseReview) {
                             review.reviewerName?.let {
                                 Text(
                                     it,
-                                    style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge, color = cs.onSurface,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
@@ -665,13 +672,13 @@ private fun ReviewCard(review: CourseReview) {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     repeat(5) { i ->
                         Icon(Icons.Rounded.Star, null,
-                            tint     = if (i < review.rating.toInt()) Color(0xFFFFD700) else BpscColors.Divider,
+                            tint     = if (i < review.rating.toInt()) Color(0xFFFFD700) else cs.outline,
                             modifier = Modifier.size(13.dp))
                     }
                 }
             }
             if (!review.comment.isNullOrBlank()) {
-                Text(review.comment, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 22.sp)
+                Text(review.comment, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 22.sp)
             }
         }
     }
@@ -790,8 +797,10 @@ private fun HeroHeader(
 
 @Composable
 private fun WhatYouLearnSection(items: List<String>, accent: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("📚 What You'll Learn", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+        Text(str.courseWhatYouLearn, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
         Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(2.dp)) {
             Column(Modifier.padding(16.dp)) {
                 items.chunked(2).forEach { pair ->
@@ -799,7 +808,7 @@ private fun WhatYouLearnSection(items: List<String>, accent: Color) {
                         pair.forEach { item ->
                             Row(Modifier.weight(1f), Arrangement.spacedBy(6.dp), Alignment.Top) {
                                 Icon(Icons.Rounded.CheckCircle, null, tint = accent, modifier = Modifier.size(15.dp).padding(top = 2.dp))
-                                Text(item, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, lineHeight = 18.sp)
+                                Text(item, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, lineHeight = 18.sp)
                             }
                         }
                         if (pair.size < 2) Spacer(Modifier.weight(1f))
@@ -816,6 +825,7 @@ private fun WhatYouLearnSection(items: List<String>, accent: Color) {
 
 @Composable
 private fun CertificateBanner(isComplete: Boolean = false, courseName: String = "") {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -846,7 +856,7 @@ private fun CertificateBanner(isComplete: Boolean = false, courseName: String = 
                             }
                             context.startActivity(android.content.Intent.createChooser(intent, str.courseShareCert))
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.surface),
                         shape  = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -867,6 +877,7 @@ private fun ChapterCard(
     chapter: Chapter, accent: Color, expanded: Boolean,
     onToggle: () -> Unit, onLessonTap: (Lesson) -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val lessons = chapter.lessons ?: emptyList()
     val done    = lessons.count { it.is_completed == true }
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -881,19 +892,19 @@ private fun ChapterCard(
                         tint = if (allComplete) BpscColors.Success else accent, modifier = Modifier.size(18.dp))
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(chapter.title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,
+                    Text(chapter.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("$done/${lessons.size} completed", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text("$done/${lessons.size} completed", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null,
                     tint = BpscColors.TextHint, modifier = Modifier.size(20.dp))
             }
             if (expanded) {
-                HorizontalDivider(color = BpscColors.Divider)
+                HorizontalDivider(color = cs.outline)
                 lessons.forEachIndexed { i, lesson ->
                     LessonRow(lesson, accent) { if (!lesson.is_locked) onLessonTap(lesson) }
                     if (i < lessons.size - 1)
-                        HorizontalDivider(Modifier.padding(horizontal = 14.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(Modifier.padding(horizontal = 14.dp), color = cs.outline, thickness = 0.5.dp)
                 }
                 Spacer(Modifier.height(4.dp))
             }
@@ -903,6 +914,8 @@ private fun ChapterCard(
 
 @Composable
 private fun LessonRow(lesson: Lesson, accent: Color, onTap: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(
         Modifier.fillMaxWidth()
             .alpha(if (lesson.is_locked) 0.5f else 1f)
@@ -939,9 +952,10 @@ private fun LessonRow(lesson: Lesson, accent: Color, onTap: () -> Unit) {
 
 @Composable
 private fun InstructorSection(course: CourseDto, accent: Color) {
+    val cs = MaterialTheme.colorScheme
     val str= LocalStrings.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("👨‍🏫 About the Instructor", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+        Text(str.courseAboutInstructor, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
         Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(2.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -950,8 +964,8 @@ private fun InstructorSection(course: CourseDto, accent: Color) {
                         Text(initials, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.ExtraBold)
                     }
                     Column {
-                        Text(course.instructor ?: "", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                        Text(str.courseBpscExpert, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text(course.instructor ?: "", style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                        Text(str.courseBpscExpert, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -961,7 +975,7 @@ private fun InstructorSection(course: CourseDto, accent: Color) {
                     InstructorStat(Icons.Rounded.Star, "${course.rating} rating")
                 }
                 if (!course.instructorBio.isNullOrBlank())
-                    Text(course.instructorBio, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, lineHeight = 22.sp)
+                    Text(course.instructorBio, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 22.sp)
             }
         }
     }
@@ -1068,20 +1082,26 @@ private fun BottomCta(
 
 @Composable
 private fun SectionHeader(title: String, subtitle: String, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun Badge(text: String, textColor: Color, bgColor: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Text(text, style = MaterialTheme.typography.labelSmall, color = textColor, fontWeight = FontWeight.Bold,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
 @Composable
 private fun InfoPill(icon: ImageVector, text: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.2f)).padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(12.dp))
@@ -1091,19 +1111,22 @@ private fun InfoPill(icon: ImageVector, text: String) {
 
 @Composable
 private fun InstructorStat(icon: ImageVector, text: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(13.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Text(str.retry)
             }

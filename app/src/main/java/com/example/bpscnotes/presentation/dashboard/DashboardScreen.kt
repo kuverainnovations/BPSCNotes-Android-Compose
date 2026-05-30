@@ -10,6 +10,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -51,8 +53,10 @@ import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.DashboardBannerStrip
 import com.example.bpscnotes.core.language.LanguageManager
 import com.example.bpscnotes.core.language.LanguageSwitchButton
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.data.remote.api.BannerDto
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.data.remote.api.DailyTargetDto
@@ -74,10 +78,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
-    adManager:     AdManager,
+    adManager: AdManager? = null,
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     bookmarkViewModel: BookmarkViewModel   = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state    by dashboardViewModel.uiState.collectAsState()
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
@@ -104,6 +109,9 @@ fun DashboardScreen(
     val pullRefreshState = rememberPullToRefreshState()
 
     /*LaunchedEffect(Unit) {
+        com.example.bpscnotes.core.analytics.Event.screenView("dashboard")
+    }
+    LaunchedEffect(Unit) {
         dashboardViewModel.refresh()
     }*/
 
@@ -138,7 +146,7 @@ fun DashboardScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BpscColors.Surface)
+                    .background(cs.background)
             ) {
                 // ── STICKY HEADER — never scrolls ──────────────────────────
                 DashboardHeader(
@@ -209,6 +217,13 @@ fun DashboardScreen(
                             isLoading = state.isLoading,
                             navController = navController
                         )
+
+                        // Ad banner between recommended and schedule
+                        if (adManager != null) {
+                            BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        }
 
                         MyScheduleSection(
                             liveClasses        = state.liveClasses,
@@ -324,6 +339,7 @@ private fun BannerSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    val cs = MaterialTheme.colorScheme
     // Skeleton while loading
     if (isLoading && banners.isEmpty()) {
         LazyRow(
@@ -437,7 +453,7 @@ private fun BannerSection(
                         .clip(RoundedCornerShape(3.dp))
                         .background(
                             if (i == pagerState.currentPage) BpscColors.Primary
-                            else BpscColors.Divider
+                            else cs.outline
                         ))
                 }
             }
@@ -509,6 +525,7 @@ private fun DailyQuizSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -563,7 +580,7 @@ private fun DailyQuizSection(
                                     }
                                 },
                             shape     = RoundedCornerShape(18.dp),
-                            colors    = CardDefaults.cardColors(containerColor = Color.White),
+                            colors    = CardDefaults.cardColors(containerColor = cs.surface),
                             elevation = CardDefaults.cardElevation(2.dp)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
@@ -593,8 +610,8 @@ private fun DailyQuizSection(
                                 Text(quiz.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                                 Spacer(Modifier.height(8.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
-                                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                     if (quiz.coinsReward > 0) Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
                                 }
                             }
@@ -679,7 +696,7 @@ private fun DashboardHeader(
 
         Column(modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
+           // .statusBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(top = 44.dp)) {
             // Top bar
@@ -829,6 +846,8 @@ private fun DashboardHeader(
 
 @Composable
 private fun HeaderStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.width(66.dp)) {
         Text(icon, fontSize = 15.sp)
         Text(value, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
@@ -838,6 +857,8 @@ private fun HeaderStat(icon: String, value: String, label: String) {
 
 @Composable
 private fun HeaderStatDivider() {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Box(modifier = Modifier
         .width(0.5.dp)
         .height(36.dp)
@@ -862,6 +883,7 @@ private fun TodayTargetCard(
     onCreateTarget: () -> Unit,
     onClick: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val completed  = targets.count { it.isCompleted }
     val total      = targets.size
@@ -875,7 +897,7 @@ private fun TodayTargetCard(
             .shadow(12.dp, RoundedCornerShape(24.dp))
             .clickable(onClick = onClick),
         shape     = RoundedCornerShape(24.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -895,11 +917,11 @@ private fun TodayTargetCard(
                         Icon(Icons.Rounded.TrackChanges, null, tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                     Column {
-                        Text(str.dashboardTodayFocus, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                        Text(str.dashboardTodayFocus, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                         when {
-                            isLoading && targets.isEmpty() -> Text(str.loading, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                            total == 0                     -> Text(str.dashboardNoTargets2, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                            else                           -> Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                            isLoading && targets.isEmpty() -> Text(str.loading, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                            total == 0                     -> Text(str.dashboardNoTargets2, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                            else                           -> Text("$completed/$total Topics", style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
@@ -945,7 +967,7 @@ private fun TodayTargetCard(
                     }
                 }
                 targets.isEmpty() -> {
-                    Text(str.dashboardNoTargets, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.dashboardNoTargets, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 else -> {
                     targets.take(3).forEach { t ->
@@ -994,15 +1016,16 @@ private fun WeeklyConsistencyCard(
     streak: Int,
     isLoading: Boolean
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+        .padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(str.dashboardWeeklyConsistency, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                    Text(str.dashboardWeeklySubtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                    Text(str.dashboardWeeklyConsistency, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    Text(str.dashboardWeeklySubtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 Row(modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
@@ -1031,7 +1054,7 @@ private fun WeeklyConsistencyCard(
                         .height(100.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("📊", fontSize = 32.sp)
-                            Text(str.dashboardNoActivity, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text(str.dashboardNoActivity, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                             Text(str.dashboardStartStudying, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
@@ -1250,6 +1273,7 @@ private fun RecommendedSection(
     isLoading: Boolean,
     navController: NavHostController
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(modifier = Modifier
@@ -1283,13 +1307,15 @@ private fun RecommendedSection(
 
 @Composable
 private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     val subjectColors = mapOf("Bihar GK" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)))
     val (accent, bg) = subjectColors[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
     val rawCompleted = course.enrollment?.completed_lessons?.toFloat() ?: 0f
     val progress = if (course.totalLessons > 0) (rawCompleted / course.totalLessons).coerceIn(0f, 1f) else 0f
     Card(modifier = Modifier
         .width(168.dp)
-        .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
+        .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
         Column {
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -1304,9 +1330,9 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                     .padding(horizontal = 7.dp, vertical = 3.dp)) { Text("PRO", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.ExtraBold) }
             }
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                 Spacer(Modifier.height(4.dp))
-                Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(8.dp))
                 // Uniform height: always reserve progress bar space (Fix #11)
                 LinearProgressIndicator(
@@ -1338,6 +1364,7 @@ private fun MyScheduleSection(
     navController:      NavHostController,
     viewModel:          DashboardViewModel
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -1356,7 +1383,7 @@ private fun MyScheduleSection(
                 Text(
                     str.dashboardNoClasses,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
             }
             return
@@ -1388,7 +1415,10 @@ private fun MyScheduleSection(
                     "ended" -> { viewModel.setScheduleToast(str.dashboardClassEnded) }
                     else -> {
                         // Scheduled → register
-                        if (!isRegistered) viewModel.registerLiveClass(item.id)
+                        if (!isRegistered) {
+                            viewModel.registerLiveClass(item.id)
+                            com.example.bpscnotes.core.analytics.Event.liveClassRegistered(item.id, item.title)
+                        }
                         else viewModel.setScheduleToast(str.dashboardAlreadyRegistered)
                     }
                 }
@@ -1400,7 +1430,7 @@ private fun MyScheduleSection(
                     .padding(bottom = 10.dp)
                     .clickable(onClick = onCardClick),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -1445,7 +1475,7 @@ private fun MyScheduleSection(
                             Text(
                                 "${item.instructor}: ${item.title}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -1453,7 +1483,7 @@ private fun MyScheduleSection(
                             Text(
                                 formatDateTime(item.scheduledAt), // 👇 helper
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.TextSecondary
+                                color = cs.onSurfaceVariant
                             )
                         }
 
@@ -1467,7 +1497,7 @@ private fun MyScheduleSection(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+                                Box(Modifier.size(6.dp).clip(CircleShape).background(cs.surface))
                                 Text("LIVE", style = MaterialTheme.typography.labelSmall,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                             }
@@ -1477,7 +1507,7 @@ private fun MyScheduleSection(
                                 color = BpscColors.TextHint,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(BpscColors.Surface)
+                                    .background(cs.background)
                                     .padding(horizontal = 9.dp, vertical = 5.dp)
                             )
                             isRegistered -> Row(
@@ -1490,7 +1520,7 @@ private fun MyScheduleSection(
                             ) {
                                 Icon(Icons.Rounded.CheckCircle, null,
                                     tint = BpscColors.Success, modifier = Modifier.size(12.dp))
-                                Text("Registered", style = MaterialTheme.typography.labelSmall,
+                                Text(str.dashRegistered, style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold)
                             }
                             else -> Box(
@@ -1499,7 +1529,7 @@ private fun MyScheduleSection(
                                     .background(BpscColors.Primary.copy(0.1f))
                                     .padding(horizontal = 9.dp, vertical = 5.dp)
                             ) {
-                                Text("Register", style = MaterialTheme.typography.labelSmall,
+                                Text(str.dashRegister, style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -1522,6 +1552,8 @@ fun formatDateTime(iso: String): String {
 }
 @Composable
 private fun AchievementsSection(achievements: List<AchievementItem>) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     if (achievements.isEmpty()) return
     var selectedAchievement by remember { mutableStateOf<AchievementItem?>(null) }
 
@@ -1538,7 +1570,7 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
                 ) {
                     Box(
                         modifier = Modifier.size(68.dp).clip(CircleShape)
-                            .background(if (a.earned) Color(a.colorHex).copy(0.12f) else BpscColors.Divider)
+                            .background(if (a.earned) Color(a.colorHex).copy(0.12f) else cs.outline)
                             .border(2.dp, if (a.earned) Color(a.colorHex) else BpscColors.TextHint.copy(0.3f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1554,7 +1586,7 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
                     Spacer(Modifier.height(4.dp))
                     LinearProgressIndicator(progress = { progressRatio },
                         modifier = Modifier.width(60.dp).height(4.dp).clip(RoundedCornerShape(10.dp)),
-                        color = Color(a.colorHex), trackColor = BpscColors.Divider)
+                        color = Color(a.colorHex), trackColor = cs.outline)
                 }
             }
         }
@@ -1566,18 +1598,18 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
         AlertDialog(
             onDismissRequest = { selectedAchievement = null },
             shape = RoundedCornerShape(24.dp),
-            containerColor = Color.White,
+            containerColor = cs.surface,
             title = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()) {
                     Box(modifier = Modifier.size(80.dp).clip(CircleShape)
-                        .background(if (a.earned) Color(a.colorHex).copy(0.12f) else BpscColors.Divider)
+                        .background(if (a.earned) Color(a.colorHex).copy(0.12f) else cs.outline)
                         .border(2.dp, if (a.earned) Color(a.colorHex) else BpscColors.TextHint.copy(0.3f), CircleShape),
                         contentAlignment = Alignment.Center) {
                         Text(a.emoji, fontSize = 36.sp, modifier = Modifier.alpha(if (a.earned) 1f else 0.4f))
                     }
                     Spacer(Modifier.height(10.dp))
-                    Text(a.label, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = BpscColors.TextPrimary)
+                    Text(a.label, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = cs.onSurface)
                 }
             },
             text = {
@@ -1599,13 +1631,13 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
                     // Progress
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                            Text("Progress", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text(str.dashProgress, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                             Text("${a.progress} / ${a.max}", style = MaterialTheme.typography.bodyMedium,
                                 color = Color(a.colorHex), fontWeight = FontWeight.Bold)
                         }
                         LinearProgressIndicator(progress = { progressRatio },
                             modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
-                            color = Color(a.colorHex), trackColor = BpscColors.Divider)
+                            color = Color(a.colorHex), trackColor = cs.outline)
                         Text("${(progressRatio * 100).toInt()}% complete",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     }
@@ -1614,7 +1646,7 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
             },
             confirmButton = {
                 TextButton(onClick = { selectedAchievement = null }) {
-                    Text("Close", color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(str.closeLabel, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -1626,24 +1658,26 @@ private fun AchievementsSection(achievements: List<AchievementItem>) {
 // ─────────────────────────────────────────────────────────────────────────────
 /*@Composable
 fun CreateTargetSheet(onDismiss: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     var inputText by remember { mutableStateOf("") }
     val addedItems = remember { mutableStateListOf<String>() }
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.5f)).clickable(onClick = onDismiss), contentAlignment = Alignment.BottomCenter) {
-        Card(modifier = Modifier.fillMaxWidth().clickable(enabled = false, onClick = {}), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Card(modifier = Modifier.fillMaxWidth().clickable(enabled = false, onClick = {}), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
             Column(modifier = Modifier.padding(24.dp).navigationBarsPadding()) {
-                Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Divider).align(Alignment.CenterHorizontally))
+                Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(cs.outline).align(Alignment.CenterHorizontally))
                 Spacer(Modifier.height(20.dp))
                 Text(str.dashboardCreateCustomTarget, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(str.dashboardBuildPlan, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text(str.dashboardBuildPlan, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 Spacer(Modifier.height(20.dp))
-                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BpscColors.Surface).padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    BasicTextField(value = inputText, onValueChange = { inputText = it }, modifier = Modifier.weight(1f).padding(vertical = 12.dp), textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary), decorationBox = { inner -> if (inputText.isEmpty()) Text(str.dashboardWhatNext, color = BpscColors.TextHint); inner() }, singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.background).padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    BasicTextField(value = inputText, onValueChange = { inputText = it }, modifier = Modifier.weight(1f).padding(vertical = 12.dp), textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface), decorationBox = { inner -> if (inputText.isEmpty()) Text(str.dashboardWhatNext, color = BpscColors.TextHint); inner() }, singleLine = true)
                     IconButton(onClick = { if (inputText.isNotBlank() && addedItems.size < 5) { addedItems.add(inputText.trim()); inputText = "" } }, modifier = Modifier.size(36.dp).clip(CircleShape).background(BpscColors.Primary)) {
                         Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("${addedItems.size} / 5 targets added", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text("${addedItems.size} / 5 targets added", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 if (addedItems.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     addedItems.forEachIndexed { i, item ->
@@ -1668,15 +1702,18 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHostController) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val menuItems = listOf(
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
         Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
+        Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
+        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.RoomsHub.route),  // TODO: dedicated leaderboard screen
         Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
-        Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,          Screen.ActiveRecall.route),
+        Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )
@@ -1732,9 +1769,9 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     .padding(vertical = 4.dp)) {
                     // Grouped menu items with section headers
                     val groups = listOf(
-                        "Study" to menuItems.take(4),
-                        "Explore" to menuItems.drop(4).take(3),
-                        "Account" to menuItems.drop(7),
+                        "Study" to menuItems.take(5),
+                        "Explore" to menuItems.drop(5).take(3),
+                        "Account" to menuItems.drop(8),
                     )
                     groups.forEachIndexed { gIdx, (groupLabel, groupItems) ->
                         if (gIdx > 0) Spacer(Modifier.height(4.dp))
@@ -1759,12 +1796,12 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                                     .background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
                                     Icon(icon, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
                                 }
-                                Text(label, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary,
+                                Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface,
                                     fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Divider, modifier = Modifier.size(15.dp))
+                                Icon(Icons.Rounded.KeyboardArrowRight, null, tint = cs.outline, modifier = Modifier.size(15.dp))
                             }
                         }
-                        if (gIdx < groups.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        if (gIdx < groups.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = cs.outline, thickness = 0.5.dp)
                     }
                     Spacer(Modifier.height(8.dp))
                 }
@@ -1793,7 +1830,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                         .width(3.dp)
                         .fillMaxHeight()
                         .padding(vertical = 8.dp)
-                        .background(BpscColors.Divider, RoundedCornerShape(2.dp))) {
+                        .background(cs.outline, RoundedCornerShape(2.dp))) {
                         Box(modifier = Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.6f)
@@ -1807,7 +1844,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                HorizontalDivider(color = BpscColors.Divider); Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = cs.outline); Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                     Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
@@ -1828,26 +1865,29 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SectionHeader(title: String, subtitle: String? = null) {
+    val cs = MaterialTheme.colorScheme
     Column {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun EmptyState(emoji: String, message: String, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
     Row(modifier = modifier
         .fillMaxWidth()
         .clip(RoundedCornerShape(14.dp))
         .background(BpscColors.PrimaryLight)
         .padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(emoji, fontSize = 20.sp)
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun LargeQuickCard(title: String, subtitle: String, icon: ImageVector, gradient: List<Color>, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Card(modifier = modifier
         .height(118.dp)
         .clickable(onClick = onClick), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(3.dp)) {
@@ -1874,9 +1914,10 @@ private fun LargeQuickCard(title: String, subtitle: String, icon: ImageVector, g
 
 @Composable
 private fun SmallQuickCard(title: String, icon: ImageVector, iconBg: Color, iconTint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Card(modifier = modifier
         .height(92.dp)
-        .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+        .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -1884,7 +1925,7 @@ private fun SmallQuickCard(title: String, icon: ImageVector, iconBg: Color, icon
                 .size(36.dp)
                 .clip(RoundedCornerShape(11.dp))
                 .background(iconBg), contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconTint, modifier = Modifier.size(19.dp)) }
-            Text(title, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, lineHeight = 14.sp)
+            Text(title, style = MaterialTheme.typography.labelSmall, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 14.sp)
         }
     }
 }

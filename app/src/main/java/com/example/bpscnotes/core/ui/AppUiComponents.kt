@@ -1,5 +1,6 @@
 package com.example.bpscnotes.core.ui
 
+import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ fun AppLoader(
     message: String = "",
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
+    val cs = MaterialTheme.colorScheme
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -52,13 +54,14 @@ fun AppLoader(
 // ─────────────────────────────────────────────────────────────
 @Composable
 fun AppFullScreenLoader(message: String = "Loading…") {
+    val cs = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(0.35f)),
         contentAlignment = Alignment.Center
     ) {
         Card(
             shape     = RoundedCornerShape(20.dp),
-            colors    = CardDefaults.cardColors(containerColor = Color.White),
+            colors    = CardDefaults.cardColors(containerColor = cs.surface),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
@@ -71,7 +74,7 @@ fun AppFullScreenLoader(message: String = "Loading…") {
                     strokeWidth = 3.dp,
                     modifier    = Modifier.size(36.dp)
                 )
-                Text(message, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
             }
         }
     }
@@ -89,6 +92,8 @@ fun AppEmptyState(
     onAction:    (() -> Unit)? = null,
     modifier:    Modifier = Modifier.fillMaxSize()
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,6 +142,8 @@ fun AppQuitDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     AlertDialog(
         onDismissRequest = onDismiss,
         shape            = RoundedCornerShape(20.dp),
@@ -144,11 +151,11 @@ fun AppQuitDialog(
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("⚠️", fontSize = 26.sp)
-                Text(title, fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
+                Text(title, fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
             }
         },
         text = {
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         },
         confirmButton = {
             Button(
@@ -178,6 +185,8 @@ fun AppErrorState(
     onRetry:  (() -> Unit)? = null,
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -186,14 +195,14 @@ fun AppErrorState(
         ) {
             Text("⚠️", fontSize = 44.sp)
             Text(
-                "Something went wrong",
+                str.uiSomethingWrong,
                 style      = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color      = BpscColors.TextPrimary,
                 textAlign  = TextAlign.Center
             )
             Text(message, style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             if (onRetry != null) {
                 Button(
                     onClick = onRetry,
@@ -202,7 +211,7 @@ fun AppErrorState(
                 ) {
                     Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Try Again", fontWeight = FontWeight.SemiBold)
+                    Text(str.uiTryAgain, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

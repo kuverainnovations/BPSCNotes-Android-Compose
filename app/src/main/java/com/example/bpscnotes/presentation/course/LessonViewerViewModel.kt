@@ -4,6 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.Lesson
 import com.google.gson.Gson
@@ -22,7 +25,8 @@ data class LessonViewerUiState(
 
 @HiltViewModel
 class LessonViewerViewModel @Inject constructor(
-    private val api: CoursesApiService
+    private val api: CoursesApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LessonViewerUiState())
@@ -85,6 +89,11 @@ class LessonViewerViewModel @Inject constructor(
                     )
                 }
                 Log.d(TAG, "Lesson $lessonId marked complete (${watched}s watched)")
+                // Notify all listening ViewModels (CourseDetail, MyLearning, Dashboard)
+                bus.emit(RefreshEvent.CourseProgressChanged(courseId))
+                bus.emit(RefreshEvent.LessonCompleted)
+                // Analytics
+                Event.lessonCompleted(courseId, lessonId, lesson.title, watched)
             } catch (e: Exception) {
                 Log.e(TAG, "markComplete: ${e.message}", e)
                 _uiState.update { it.copy(isMarking = false, error = "Failed to mark complete") }

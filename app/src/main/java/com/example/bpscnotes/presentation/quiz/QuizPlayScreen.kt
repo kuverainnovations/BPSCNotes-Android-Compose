@@ -45,10 +45,12 @@ fun QuizPlayScreen(
     adManager:     AdManager,
     viewModel:     QuizViewModel = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
     val context  = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? Activity
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("quiz_play") }
 
     LaunchedEffect(quizId) {
         if (state.activeSession == null && !state.isStartingQuiz) {
@@ -83,21 +85,21 @@ fun QuizPlayScreen(
         state.isStartingQuiz -> {
             Box(Modifier
                 .fillMaxSize()
-                .background(BpscColors.Surface), Alignment.Center) {
+                .background(cs.background), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(40.dp))
-                    Text(str.loading, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(str.loading, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
         state.startError != null -> {
             Box(Modifier
                 .fillMaxSize()
-                .background(BpscColors.Surface), Alignment.Center) {
+                .background(cs.background), Alignment.Center) {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 48.sp)
                     Text(str.error, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(state.startError!!, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    Text(state.startError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
@@ -109,7 +111,7 @@ fun QuizPlayScreen(
         }
         else -> Box(Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+            .background(cs.background), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
     }
 }
 
@@ -125,6 +127,7 @@ private fun QuizPlayerContent(
     viewModel: QuizViewModel,
     onExit:    () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var currentIndex  by remember { mutableIntStateOf(0) }
     val questions      = session.questions
@@ -219,7 +222,7 @@ private fun QuizPlayerContent(
 
     Box(Modifier
         .fillMaxSize()
-        .background(BpscColors.Surface)) {
+        .background(cs.background)) {
         Column(Modifier.fillMaxSize()) {
 
             // FIX: Intercept back press — ask user to confirm exit (don't silently quit quiz)
@@ -265,7 +268,7 @@ private fun QuizPlayerContent(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SubjectChip(current.subject)
                     if (current.isImageQuestion) {
-                        Text("🖼️ Image Q", style = MaterialTheme.typography.labelSmall,
+                        Text(str.quizImageQ, style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF7B1FA2), fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
@@ -321,11 +324,12 @@ private fun QuizPlayerContent(
 // ═════════════════════════════════════════════════════════════════
 @Composable
 private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(20.dp),
-        colors   = CardDefaults.cardColors(containerColor = Color.White),
+        colors   = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -336,7 +340,7 @@ private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(BpscColors.Surface)
+                        .background(cs.background)
                         .height(220.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -398,6 +402,7 @@ private fun ImageOptionsGrid(
     selectedLetter: String?,
     onSelect:       (String) -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     // 2×2 grid layout
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -443,8 +448,9 @@ private fun ImageOptionCard(
     modifier:   Modifier,
     onClick:    () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val borderWidth = if (isSelected) 2.5.dp else 1.dp
-    val borderColor = if (isSelected) BpscColors.Primary else BpscColors.Divider
+    val borderColor = if (isSelected) BpscColors.Primary else cs.outline
     val bgColor     = if (isSelected) BpscColors.PrimaryLight else Color.White
 
     Column(
@@ -485,7 +491,7 @@ private fun ImageOptionCard(
                     .height(130.dp)
                     .padding(horizontal = 8.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(BpscColors.Surface),
+                    .background(cs.background),
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
@@ -525,13 +531,14 @@ private fun TextOptionsList(
     selectedLetter: String?,
     onSelect:       (String) -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         question.options.forEachIndexed { i, option ->
             if (option.isBlank()) return@forEachIndexed
             val letter      = optionLetters[i]
             val isSelected  = selectedLetter == letter
             val bgColor     = if (isSelected) BpscColors.PrimaryLight else Color.White
-            val borderColor = if (isSelected) BpscColors.Primary else BpscColors.Divider
+            val borderColor = if (isSelected) BpscColors.Primary else cs.outline
             val textColor   = if (isSelected) BpscColors.Primary else BpscColors.TextPrimary
 
             Row(
@@ -586,6 +593,7 @@ private fun QuizHeader(
     progress: Float, isImageQuiz: Boolean,
     onExit: () -> Unit, onReview: () -> Unit
 ) {
+    val str = LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -652,7 +660,7 @@ private fun QuizHeader(
             }
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text("$answeredCount / $totalCount answered", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
-                if (isImageQuiz) Text("🖼️ Image Quiz", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
+                if (isImageQuiz) Text(str.quizImageQ, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
             }
         }
     }
@@ -669,11 +677,12 @@ private fun QuizBottomBar(
     onHint: () -> Unit, onNext: () -> Unit,
     onSubmit: () -> Unit, onPrev: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Column(
         Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(cs.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -688,7 +697,7 @@ private fun QuizBottomBar(
                     .weight(1f)
                     .height(50.dp),
                 shape    = RoundedCornerShape(12.dp),
-                border   = BorderStroke(1.dp, if (showHint) BpscColors.CoinGold else BpscColors.Divider),
+                border   = BorderStroke(1.dp, if (showHint) BpscColors.CoinGold else cs.outline),
                 colors   = ButtonDefaults.outlinedButtonColors(contentColor = if (showHint) BpscColors.CoinGold else BpscColors.TextSecondary)
             ) {
                 Text("💡", fontSize = 14.sp)
@@ -734,10 +743,11 @@ private fun QuizResultScreen(
     session: QuizSession, result: QuizResult,
     onRetake: () -> Unit, onExit: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     var showDetailReview by remember { mutableStateOf(false) }
     val accuracy          = result.accuracy
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
-    val str = LocalStrings.current
 
     if (showDetailReview) {
         QuizAnswerReviewScreen(answerDetails = result.answerDetails, onBack = { showDetailReview = false })
@@ -807,14 +817,14 @@ private fun QuizResultScreen(
                 .padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("Accuracy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.quizAccuracy, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text("${accuracy.toInt()}%", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                     }
                     Box(Modifier
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(RoundedCornerShape(5.dp))
-                        .background(BpscColors.Surface)) {
+                        .background(cs.background)) {
                         Box(Modifier
                             .fillMaxWidth(progress)
                             .fillMaxHeight()
@@ -828,7 +838,7 @@ private fun QuizResultScreen(
                             ))
                     }
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         Text("Pass: ${session.passingScore}%", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                     }
                 }
@@ -872,6 +882,8 @@ private fun QuizResultScreen(
 
 @Composable
 private fun ResultStat(icon: String, value: String, label: String, color: Color) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 20.sp)
         Text(value, style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.ExtraBold)
@@ -884,6 +896,7 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
 // ═════════════════════════════════════════════════════════════════
 @Composable
 fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth(),
@@ -929,7 +942,7 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
             }
 
             Text(detail.question.question, style = MaterialTheme.typography.bodyLarge,
-                color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
+                color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
 
             // Options with color coding — handles image options too
             if (detail.question.isImageOptions) {
@@ -967,7 +980,7 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
                                                 .fillMaxWidth()
                                                 .height(90.dp), contentScale = ContentScale.Fit)
                                         }
-                                        if (isCorrect) Text("✓ Correct", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                                        if (isCorrect) Text(str.quizCorrectAnswer, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -1025,10 +1038,10 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
             }
 
             if (detail.explanation.isNotEmpty()) {
-                HorizontalDivider(color = BpscColors.Divider)
+                HorizontalDivider(color = cs.outline)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("💡", fontSize = 13.sp)
-                    Text(detail.explanation, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp)
+                    Text(detail.explanation, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp)
                 }
             }
         }
@@ -1048,8 +1061,9 @@ internal fun QuestionNavigatorSheet(
     onSelectQuestion: (Int) -> Unit,
     onBack:           () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Column(Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Column(Modifier.fillMaxSize().background(cs.background)) {
         // Header
         Box(
             Modifier.fillMaxWidth()
@@ -1072,7 +1086,7 @@ internal fun QuestionNavigatorSheet(
             }
         }
         // Legend
-        Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 10.dp),
+        Row(Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             NavLegendItem(Color(0xFF1565C0), "Current")
             NavLegendItem(BpscColors.Success, "Answered")
@@ -1092,7 +1106,7 @@ internal fun QuestionNavigatorSheet(
                         Box(
                             Modifier.weight(1f).aspectRatio(1f).clip(CircleShape)
                                 .background(bg)
-                                .border(if (!isCurrent && !answered) 1.dp else 0.dp, BpscColors.Divider, CircleShape)
+                                .border(if (!isCurrent && !answered) 1.dp else 0.dp, cs.outline, CircleShape)
                                 .clickable { onSelectQuestion(idx) },
                             Alignment.Center
                         ) { Text("${idx + 1}", style = MaterialTheme.typography.titleSmall, color = fg, fontWeight = FontWeight.ExtraBold) }

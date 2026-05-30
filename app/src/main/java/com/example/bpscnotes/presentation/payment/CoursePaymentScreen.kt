@@ -34,6 +34,7 @@ fun CoursePaymentScreen(
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -95,20 +96,20 @@ fun CoursePaymentScreen(
                 // Course detail card
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                     Column(modifier = Modifier.padding(24.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("📚", fontSize = 48.sp)
                         Text(courseTitle, style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold,
+                            color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        HorizontalDivider(color = BpscColors.Divider)
+                        HorizontalDivider(color = cs.outline)
 
                         Row(modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(str.coursePrice, style = MaterialTheme.typography.bodyLarge,
-                                color = BpscColors.TextSecondary)
+                                color = cs.onSurfaceVariant)
                             Text("₹$price", style = MaterialTheme.typography.titleLarge,
                                 color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                         }
@@ -128,7 +129,7 @@ fun CoursePaymentScreen(
                         // Benefits
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(str.courseLifetime, str.courseOffline, str.courseCertificate).forEach {
-                                Text(it, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
+                                Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                             }
                         }
 
@@ -138,7 +139,7 @@ fun CoursePaymentScreen(
                             verticalAlignment = Alignment.CenterVertically) {
                             Text("🔒", fontSize = 14.sp)
                             Text(str.courseSecure,
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                                style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                         }
 
                         Button(

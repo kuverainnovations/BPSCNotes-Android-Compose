@@ -1,8 +1,19 @@
 package com.example.bpscnotes.presentation.dashboard
 
+import com.example.bpscnotes.data.remote.api.AuthApiService
+import com.example.bpscnotes.data.remote.api.BannersApiService
+import com.example.bpscnotes.data.remote.api.CoursesApiService
+import com.example.bpscnotes.data.remote.api.DailyTargetsApiService
+import com.example.bpscnotes.data.remote.api.LiveClassesApiService
+import com.example.bpscnotes.data.remote.api.QuizzesApiService
+import com.example.bpscnotes.data.remote.api.UserStatsApiService
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
+import com.example.bpscnotes.core.config.AppConfigRepository
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.*
 import com.example.bpscnotes.data.remote.dto.UserDto
@@ -55,13 +66,28 @@ class DashboardViewModel @Inject constructor(
     private val targetsApi: DailyTargetsApiService,
     private val liveClassesApi: LiveClassesApiService,   // ← NEW
     private val tokenStore: TokenStore
+,
+    private val bus: RefreshEventBus,
+    private val appConfig: AppConfigRepository
 ) : ViewModel() {
 
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    init { loadDashboard() }
+    init {
+        loadDashboard()
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.QuizCompleted,
+                    is RefreshEvent.LessonCompleted,
+                    is RefreshEvent.CoinsChanged -> loadDashboard()
+                    else -> {}
+                }
+            }
+        }
+    }
 
 
     // ── Full dashboard load ───────────────────────────────────
@@ -71,10 +97,11 @@ class DashboardViewModel @Inject constructor(
             try {
                 val userJob    = async { safeGet("user")    { authApi.getMe().data?.user } }
                 val userPrimaryExam = tokenStore.getUserPrimaryExam()
+                val courseLimit = appConfig.config.value.dailyQuizLimit.coerceAtLeast(5)
                 val coursesJob = async { safeGet("courses") {
                     val params = if (!userPrimaryExam.isNullOrBlank())
-                        coursesApi.getCourses(limit = 8, exam = userPrimaryExam).data?.courses
-                    else coursesApi.getCourses(limit = 8).data?.courses
+                        coursesApi.getCourses(limit = courseLimit, exam = userPrimaryExam).data?.courses
+                    else coursesApi.getCourses(limit = courseLimit).data?.courses
                     params
                 } }
                 val quizzesJob = async { safeGet("quizzes") { quizzesApi.getQuizzes(type = "daily", limit = 3).data?.quizzes } }

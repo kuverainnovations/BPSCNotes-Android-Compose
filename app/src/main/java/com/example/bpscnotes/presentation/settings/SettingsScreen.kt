@@ -40,12 +40,13 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     profileViewModel:  ProfileViewModel  = hiltViewModel()
 ) {
+    val cs = MaterialTheme.colorScheme
 
     val settingsState by settingsViewModel.state.collectAsState()
     val profileState  by profileViewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("settings") }
     val user = profileState.user
-    val cs   = MaterialTheme.colorScheme
 
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -81,7 +82,7 @@ fun SettingsScreen(
             text  = {
                 Text(
                     str.settingsDeleteConfirmBody,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -104,7 +105,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(BpscColors.Surface)
+                .background(cs.background)
         ) {
             SettingsHeader(onBack = { navController.popBackStack() })
 
@@ -112,7 +113,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 80.dp),
+                    .padding(bottom = 16.dp).navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Spacer(Modifier.height(4.dp))
@@ -131,7 +132,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -144,7 +145,7 @@ fun SettingsScreen(
                             checked  = settingsState.darkMode,
                             onChange = settingsViewModel::setDarkMode
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         // Language picker
                         LanguagePickerRow()
                     }
@@ -155,7 +156,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -168,7 +169,7 @@ fun SettingsScreen(
                             checked  = settingsState.studyReminder,
                             onChange = settingsViewModel::setStudyReminder
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsToggleRow(
                             icon     = Icons.Rounded.PlayCircle,
                             iconBg   = Color(0xFFF3E5F5),
@@ -186,7 +187,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -199,7 +200,7 @@ fun SettingsScreen(
                             checked  = settingsState.sound,
                             onChange = settingsViewModel::setSound
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsToggleRow(
                             icon     = Icons.Rounded.Vibration,
                             iconBg   = Color(0xFFFFF0EA),
@@ -217,7 +218,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -232,7 +233,7 @@ fun SettingsScreen(
                             else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
                             onClick      = { navController.navigate(Screen.Downloads.route) }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         // Clear Cache — real size + actual deletion
                         SettingsActionRow(
                             icon         = Icons.Rounded.CleaningServices,
@@ -244,7 +245,7 @@ fun SettingsScreen(
                             else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
                             onClick      = { settingsViewModel.clearCache() }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon     = Icons.Rounded.WifiOff,
                             iconBg   = Color(0xFFE8F5E9),
@@ -261,7 +262,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -270,27 +271,27 @@ fun SettingsScreen(
                             title = str.settingsVersion, subtitle = str.settingsVersionSubtitle,
                             trailingLabel = str.version, showArrow = false, onClick = {}
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Star, iconBg = Color(0xFFFFF8E1), iconTint = Color(0xFFFF8F00),
                             title = str.settingsRate, subtitle = str.settingsRateSubtitle, onClick = {}
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Share, iconBg = Color(0xFFE8F5E9), iconTint = Color(0xFF2E7D32),
                             title = str.settingsShare, subtitle = str.settingsShareSubtitle, onClick = {}
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
                             title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle, onClick = {}
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Gavel, iconBg = Color(0xFFF5F5F5), iconTint = Color(0xFF616161),
                             title = str.settingsTerms, subtitle = str.settingsTermsSubtitle, onClick = {}
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.HeadsetMic, iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
                             title = str.settingsSupport, subtitle = str.settingsSupportSubtitle, onClick = {}
@@ -303,7 +304,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
@@ -326,10 +327,10 @@ fun SettingsScreen(
                                 Text(if (settingsState.isLoggingOut) str.loading else str.settingsLogout,
                                     style = MaterialTheme.typography.bodyLarge, color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold)
                                 Text(str.settingsLogoutSubtitle,
-                                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                             }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         // DELETE ACCOUNT — shows confirm dialog first
                         Row(
                             modifier = Modifier.fillMaxWidth()
@@ -349,7 +350,7 @@ fun SettingsScreen(
                                 Text(if (settingsState.isDeletingAccount) str.loading else str.settingsDeleteAccount,
                                     style = MaterialTheme.typography.bodyLarge, color = Color(0xFFC62828), fontWeight = FontWeight.SemiBold)
                                 Text(str.settingsDeleteSubtitle,
-                                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                             }
                             Icon(Icons.Rounded.KeyboardArrowRight, null, tint = Color(0xFFC62828), modifier = Modifier.size(18.dp))
                         }
@@ -364,6 +365,7 @@ fun SettingsScreen(
 // ── Header ────────────────────────────────────────────────────
 @Composable
 private fun SettingsHeader(onBack: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Box(modifier = Modifier.fillMaxWidth()
         .background(Brush.linearGradient(
@@ -385,8 +387,8 @@ private fun SettingsHeader(onBack: () -> Unit) {
 // ── Account Card ──────────────────────────────────────────────
 @Composable
 private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val cs  = MaterialTheme.colorScheme
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
@@ -423,6 +425,7 @@ private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -
 // ── Section label ─────────────────────────────────────────────
 @Composable
 private fun SettingsSectionLabel(title: String) {
+    val cs = MaterialTheme.colorScheme
     Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp))
 }
@@ -434,7 +437,7 @@ private fun SettingsToggleRow(
     title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
             contentAlignment = Alignment.Center) {
@@ -461,7 +464,7 @@ private fun SettingsActionRow(
     isDanger: Boolean = false, onClick: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+        Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),

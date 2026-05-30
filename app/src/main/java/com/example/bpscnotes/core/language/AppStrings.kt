@@ -382,6 +382,109 @@ data class MiscStrings4(
     val mcqQuitTitle: String,
 )
 
+data class MiscStrings5(
+    // ActiveRecall
+    val recallReviseAgain: String,
+    val recallAnswer: String,
+    val recallExample: String,
+    val recallMastered: String,
+    // Placeholders
+    val placeholderFileMissing: String,
+    val placeholderOnDevice: String,
+    val placeholderGetPro: String,
+    val placeholderPremiumPdfs: String,
+    val placeholderOfflineDownloads: String,
+    // Dashboard
+    val dashRegistered: String,
+    val dashRegister: String,
+    val dashProgress: String,
+    // Mock Tests
+    val mockCreateCustom: String,
+    val mockInstructions: String,
+    val mockPercentile: String,
+    val mockNegativeMarking: String,
+    // Profile
+    val profileMaxTier: String,
+    val profileLast28: String,
+    val profileBadgeEarned: String,
+    val profileNotEarned: String,
+    // Study Materials
+    val materialAbout: String,
+    val materialPriceCoins: String,
+    val materialUnlockAccess: String,
+    val materialPrice: String,
+    // Quiz
+    val quizImageQ: String,
+    val quizAccuracy: String,
+    val quizCorrectAnswer: String,
+    val quizScore: String,
+    // MyLearning
+    val myLearningNotesTitle: String,
+    val myLearningUpiHint: String,
+    // Ads
+    val adLoading: String,
+    val adSponsored: String,
+    val adGreatSession: String,
+    // Study Focus
+    val focusActive: String,
+    // Daily Targets
+    val targetCoins: String,
+    val targetCarriedForward: String,
+    // Course Detail
+    val courseWhatYouLearn: String,
+    val courseAboutInstructor: String,
+    // Permissions
+    val permOpenSettings: String,
+    // Register
+    val registerEmailHint: String,
+    // Exam Setup
+    val examBack: String,
+    // Marketplace
+    val marketOwned: String,
+    // Reading Rooms
+    val roomsReset: String,
+    // Coin Wallet
+    val walletCoins: String,
+    // Lesson
+    val lessonInAppBrowser: String,
+    // App UI
+    val uiTryAgain: String,
+    // Daily Quiz
+    val quizDailyScore: String,
+    val quizDailyAccuracy: String,
+    // Close generic
+    val closeLabel: String,
+)
+
+data class MiscStrings6(
+    // Permissions
+    val permStayUpdated: String,
+    val permStreakWarn: String,
+    val permStudentsNote: String,
+    val permEnableBtn: String,
+    // Ads
+    val adNoLimit: String,
+    val adAdvertisement: String,
+    val adSkip: String,
+    // Study materials
+    val materialOpen: String,
+    val materialPreview: String,
+    val materialUnlockPro: String,
+    // Rooms
+    val roomCreate: String,
+    val roomSubject: String,
+    // App UI
+    val uiSomethingWrong: String,
+    // Additional static strings
+    val permMaybeLater: String,
+    val permBlocked: String,
+    val mlShareNotes: String,
+    val mlContentType: String,
+    val mlAttachFile: String,
+    val roomPrivate: String,
+    val roomJoinPrivate: String,
+)
+
 // ── Facade — 12 fields, all call sites keep using str.xxx unchanged ───────────
 data class AppStrings(
     val _c: CommonStrings, val _n: NavAuthStrings, val _pe: ProfileEditStrings,
@@ -389,6 +492,8 @@ data class AppStrings(
     val _ct: ContentStrings, val _ct2: ContentStrings2, val _jr: JobRoomStrings, val _fp: FocusProfileStrings,
     val _st: SettingsStrings, val _st2: SettingsStrings2, val _pay: PaymentStrings,
     val _m: MiscStrings, val _m3: MiscStrings3, val _m2: MiscStrings2, val _m4: MiscStrings4,
+    val _m5: MiscStrings5,
+    val _m6: MiscStrings6,
 ) {
     val ok get() = _c.ok; val yes get() = _c.yes; val no get() = _c.no
     val cancel get() = _c.cancel; val save get() = _c.save; val close get() = _c.close
@@ -463,7 +568,6 @@ data class AppStrings(
     val quizTitle get() = _qz.quizTitle; val quizDaily get() = _qz.quizDaily
     val quizTopic get() = _qz.quizTopic; val quizMock get() = _qz.quizMock
     val quizStart get() = _qz.quizStart; val quizQuestions get() = _qz.quizQuestions; val quizTimeLimit get() = _qz.quizTimeLimit
-    val quizSubmit get() = _qz.quizSubmit; val quizResult get() = _qz.quizResult; val quizScore get() = _qz.quizScore
     val quizCorrect get() = _qz.quizCorrect; val quizWrong get() = _qz.quizWrong
     val quizPassed get() = _qz.quizPassed; val quizFailed get() = _qz.quizFailed
     val quizCoinsEarned get() = _qz.quizCoinsEarned; val quizReview get() = _qz.quizReview
@@ -522,12 +626,10 @@ data class AppStrings(
     val focusYou get() = _fp.focusYou; val focusThisSession get() = _fp.focusThisSession; val focusTotal get() = _fp.focusTotal
     val focusBackToRooms get() = _fp.focusBackToRooms; val focusTapMessage get() = _fp.focusTapMessage
     val focusFirstHere get() = _fp.focusFirstHere; val focusOthersJoin get() = _fp.focusOthersJoin
-    val focusSaving get() = _fp.focusSaving; val focusActive get() = _fp.focusActive
     val profileTitle get() = _fp.profileTitle; val profileEdit get() = _fp.profileEdit; val profileStreak get() = _fp.profileStreak
     val profileCoins get() = _fp.profileCoins; val profileAchievements get() = _fp.profileAchievements; val profileBadges get() = _fp.profileBadges
     val profileStudyTime get() = _fp.profileStudyTime; val profileShare get() = _fp.profileShare; val profileRank get() = _fp.profileRank
     val profileSubjectProgress get() = _fp.profileSubjectProgress; val profileWeeklyStreak get() = _fp.profileWeeklyStreak
-    val profileHeatmap get() = _fp.profileHeatmap; val profileLast28 get() = _fp.profileLast28
     val profileLess get() = _fp.profileLess; val profileMore get() = _fp.profileMore
     val profileDayStreak get() = _fp.profileDayStreak; val profileShowLess get() = _fp.profileShowLess; val profileStudy get() = _fp.profileStudy
 
@@ -716,7 +818,6 @@ data class AppStrings(
     val profileEarnReferral get() = _fp.profileEarnReferral
     val profileNoTransactions get() = _fp.profileNoTransactions; val profileMyCourses get() = _fp.profileMyCourses
     val recallKeepGoing get() = _fp.recallKeepGoing; val recallSwipeRate get() = _fp.recallSwipeRate
-    val recallGotIt get() = _fp.recallGotIt; val recallMastered get() = _fp.recallMastered
     val recallTapReveal get() = _fp.recallTapReveal; val recallRevealAnswer get() = _fp.recallRevealAnswer
     val recallGotItBtn get() = _fp.recallGotItBtn; val recallSessionComplete get() = _fp.recallSessionComplete
     val recallBackToSubjects get() = _fp.recallBackToSubjects
@@ -768,7 +869,6 @@ data class AppStrings(
     val courseCertDownload        get() = _m4.courseCertDownload
     val courseCertShare           get() = _m4.courseCertShare
     val courseCertNotAvailable    get() = _m4.courseCertNotAvailable
-    val permOpenSettings          get() = _m4.permOpenSettings
     val permNotNow                get() = _m4.permNotNow
     val recallRelatedMcq          get() = _m4.recallRelatedMcq
     val examLoadFailed            get() = _m4.examLoadFailed
@@ -793,6 +893,82 @@ data class AppStrings(
     val mockQuitTitle             get() = _m4.mockQuitTitle
     val mockQuitBody              get() = _m4.mockQuitBody
     val mcqQuitTitle              get() = _m4.mcqQuitTitle
+
+    // ── MiscStrings5 getters ──────────────────────────────────
+    val recallReviseAgain       get() = _m5.recallReviseAgain
+    val recallAnswer            get() = _m5.recallAnswer
+    val recallExample           get() = _m5.recallExample
+    val recallMastered          get() = _m5.recallMastered
+    val placeholderFileMissing  get() = _m5.placeholderFileMissing
+    val placeholderOnDevice     get() = _m5.placeholderOnDevice
+    val placeholderGetPro       get() = _m5.placeholderGetPro
+    val placeholderPremiumPdfs  get() = _m5.placeholderPremiumPdfs
+    val placeholderOfflineDownloads get() = _m5.placeholderOfflineDownloads
+    val dashRegistered          get() = _m5.dashRegistered
+    val dashRegister            get() = _m5.dashRegister
+    val dashProgress            get() = _m5.dashProgress
+    val mockCreateCustom        get() = _m5.mockCreateCustom
+    val mockInstructions        get() = _m5.mockInstructions
+    val mockPercentile          get() = _m5.mockPercentile
+    val mockNegativeMarking     get() = _m5.mockNegativeMarking
+    val profileMaxTier          get() = _m5.profileMaxTier
+    val profileLast28           get() = _m5.profileLast28
+    val profileBadgeEarned      get() = _m5.profileBadgeEarned
+    val profileNotEarned        get() = _m5.profileNotEarned
+    val materialAbout           get() = _m5.materialAbout
+    val materialPriceCoins      get() = _m5.materialPriceCoins
+    val materialUnlockAccess    get() = _m5.materialUnlockAccess
+    val materialPrice           get() = _m5.materialPrice
+    val quizImageQ              get() = _m5.quizImageQ
+    val quizAccuracy            get() = _m5.quizAccuracy
+    val quizCorrectAnswer       get() = _m5.quizCorrectAnswer
+    val quizScore               get() = _m5.quizScore
+    val myLearningNotesTitle    get() = _m5.myLearningNotesTitle
+    val myLearningUpiHint       get() = _m5.myLearningUpiHint
+    val adLoading               get() = _m5.adLoading
+    val adSponsored             get() = _m5.adSponsored
+    val adGreatSession          get() = _m5.adGreatSession
+    val focusActive             get() = _m5.focusActive
+    val targetCoins             get() = _m5.targetCoins
+    val targetCarriedForward    get() = _m5.targetCarriedForward
+    val courseWhatYouLearn      get() = _m5.courseWhatYouLearn
+    val courseAboutInstructor   get() = _m5.courseAboutInstructor
+    val permOpenSettings        get() = _m5.permOpenSettings
+    val registerEmailHint       get() = _m5.registerEmailHint
+    val examBack                get() = _m5.examBack
+    val marketOwned             get() = _m5.marketOwned
+    val roomsReset              get() = _m5.roomsReset
+    val walletCoins             get() = _m5.walletCoins
+    val lessonInAppBrowser      get() = _m5.lessonInAppBrowser
+    val uiTryAgain              get() = _m5.uiTryAgain
+    val quizDailyScore          get() = _m5.quizDailyScore
+    val quizDailyAccuracy       get() = _m5.quizDailyAccuracy
+    val closeLabel              get() = _m5.closeLabel
+    // ── Auto-restored getters ──────────────────────
+    val quizSubmit                   get() = _qz.quizSubmit
+    val quizResult                   get() = _qz.quizResult
+    val focusSaving                  get() = _fp.focusSaving
+    val profileHeatmap               get() = _fp.profileHeatmap
+    val recallGotIt                  get() = _fp.recallGotIt
+    val permStayUpdated              get() = _m6.permStayUpdated
+    val permStreakWarn               get() = _m6.permStreakWarn
+    val permStudentsNote             get() = _m6.permStudentsNote
+    val permEnableBtn                get() = _m6.permEnableBtn
+    val adNoLimit                    get() = _m6.adNoLimit
+    val adAdvertisement              get() = _m6.adAdvertisement
+    val adSkip                       get() = _m6.adSkip
+    val materialOpen                 get() = _m6.materialOpen
+    val materialPreview              get() = _m6.materialPreview
+    val materialUnlockPro            get() = _m6.materialUnlockPro
+    val roomSubject                  get() = _m6.roomSubject
+    val uiSomethingWrong             get() = _m6.uiSomethingWrong
+    val permMaybeLater               get() = _m6.permMaybeLater
+    val permBlocked                  get() = _m6.permBlocked
+    val mlShareNotes                 get() = _m6.mlShareNotes
+    val mlContentType                get() = _m6.mlContentType
+    val mlAttachFile                 get() = _m6.mlAttachFile
+    val roomPrivate                  get() = _m6.roomPrivate
+    val roomJoinPrivate              get() = _m6.roomJoinPrivate
 }
 
 // ── Helper to build AppStrings from grouped sub-objects ───────────────────────
@@ -801,9 +977,9 @@ private fun mkAppStrings(
     db: DashboardStrings, co: CourseStrings, qz: QuizStrings,
     ct: ContentStrings, ct2: ContentStrings2, jr: JobRoomStrings, fp: FocusProfileStrings,
     st: SettingsStrings, st2: SettingsStrings2, pay: PaymentStrings,
-    m: MiscStrings, m3: MiscStrings3, m2: MiscStrings2, m4: MiscStrings4,
+    m: MiscStrings, m3: MiscStrings3, m2: MiscStrings2, m4: MiscStrings4, m5: MiscStrings5, m6: MiscStrings6,
 ) = AppStrings(_c=c,_n=n,_pe=pe,_db=db,_co=co,_qz=qz,_ct=ct,_ct2=ct2,_jr=jr,_fp=fp,
-    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4)
+    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4,_m5=m5,_m6=m6)
 
 // ── ENGLISH ───────────────────────────────────────────────────────────────────
 val EnglishStrings: AppStrings = mkAppStrings(
@@ -1265,6 +1441,80 @@ val EnglishStrings: AppStrings = mkAppStrings(
         mockQuitTitle="Quit Mock Test?",
         mockQuitBody="Your answers will be lost. Are you sure you want to quit?",
         mcqQuitTitle="Quit MCQ Quiz?",
+    ),
+    m5 = MiscStrings5(
+        recallReviseAgain="← Revise Again",
+        recallAnswer="Answer",
+        recallExample="Example",
+        recallMastered="Mastered",
+        placeholderFileMissing="⚠️ File missing",
+        placeholderOnDevice="✓ On device",
+        placeholderGetPro="🚀 Get BPSCNotes Pro",
+        placeholderPremiumPdfs="✅ All premium PDFs & notes",
+        placeholderOfflineDownloads="✅ Offline downloads",
+        dashRegistered="Registered",
+        dashRegister="Register",
+        dashProgress="Progress",
+        mockCreateCustom="Create Custom",
+        mockInstructions="Instructions",
+        mockPercentile="Percentile",
+        mockNegativeMarking="-0.33 per wrong answer",
+        profileMaxTier="Max tier! 🎉",
+        profileLast28="Last 28 days",
+        profileBadgeEarned="Badge Earned!",
+        profileNotEarned="Not yet earned",
+        materialAbout="About",
+        materialPriceCoins="🪙 Price (coins)",
+        materialUnlockAccess="🔓 Unlock Full Access",
+        materialPrice="Price",
+        quizImageQ="🖼️ Image Quiz",
+        quizAccuracy="Accuracy",
+        quizCorrectAnswer="✓ Correct",
+        quizScore="Score",
+        myLearningNotesTitle="Notes Title",
+        myLearningUpiHint="yourname@upi",
+        adLoading="Loading ad…",
+        adSponsored="Sponsored",
+        adGreatSession="🎯 Great session!",
+        focusActive="active",
+        targetCoins="coins",
+        targetCarriedForward="📅 Carried Forward",
+        courseWhatYouLearn="📚 What You'll Learn",
+        courseAboutInstructor="👨‍🏫 About the Instructor",
+        permOpenSettings="Open App Settings",
+        registerEmailHint="e.g. rahul@gmail.com",
+        examBack="← Back",
+        marketOwned="Owned",
+        roomsReset="Reset",
+        walletCoins="coins",
+        lessonInAppBrowser="Opens in secure in-app browser",
+        uiTryAgain="Try Again",
+        quizDailyScore="Score",
+        quizDailyAccuracy="Accuracy",
+        closeLabel="Close",
+    ),
+
+    m6 = MiscStrings6(
+        permStayUpdated="Stay Updated with Notifications",
+        permStreakWarn="🔥 Streak protection warnings",
+        permStudentsNote="Students who enable notifications are 3× more consistent.",
+        permEnableBtn="Enable Notifications",
+        adNoLimit="No limit — watch as many as you want!",
+        adAdvertisement="Advertisement",
+        adSkip="Skip",
+        materialOpen="Open",
+        materialPreview="Preview",
+        materialUnlockPro="🚀 Unlock with BPSCNotes Pro",
+        roomCreate="Create",
+        roomSubject="Subject",
+        uiSomethingWrong="Something went wrong",
+        permMaybeLater="Maybe later",
+        permBlocked="Notifications Blocked",
+        mlShareNotes="Share notes with 10,000+ BPSC aspirants",
+        mlContentType="Content Type",
+        mlAttachFile="Tap to attach file (PDF / DOC)",
+        roomPrivate="Private Room",
+        roomJoinPrivate="Join Private Room",
     ),
 )
 
@@ -1737,5 +1987,78 @@ val HindiStrings: AppStrings = mkAppStrings(
         mockQuitTitle="मॉक टेस्ट छोड़ें?",
         mockQuitBody="आपके उत्तर खो जाएंगे। क्या आप वाकई छोड़ना चाहते हैं?",
         mcqQuitTitle="MCQ क्विज़ छोड़ें?",
+    ),
+    m5 = MiscStrings5(
+        recallReviseAgain="← फिर से संशोधन करें",
+        recallAnswer="उत्तर",
+        recallExample="उदाहरण",
+        recallMastered="माहिर हो गए",
+        placeholderFileMissing="⚠️ फ़ाइल गायब है",
+        placeholderOnDevice="✓ डिवाइस पर है",
+        placeholderGetPro="🚀 BPSCNotes Pro लें",
+        placeholderPremiumPdfs="✅ सभी प्रीमियम PDF और नोट्स",
+        placeholderOfflineDownloads="✅ ऑफलाइन डाउनलोड",
+        dashRegistered="पंजीकृत",
+        dashRegister="पंजीकरण करें",
+        dashProgress="प्रगति",
+        mockCreateCustom="कस्टम बनाएं",
+        mockInstructions="निर्देश",
+        mockPercentile="पर्सेंटाइल",
+        mockNegativeMarking="प्रत्येक गलत उत्तर पर -0.33",
+        profileMaxTier="अधिकतम टियर! 🎉",
+        profileLast28="पिछले 28 दिन",
+        profileBadgeEarned="बैज अर्जित!",
+        profileNotEarned="अभी तक अर्जित नहीं",
+        materialAbout="परिचय",
+        materialPriceCoins="🪙 मूल्य (सिक्के)",
+        materialUnlockAccess="🔓 पूर्ण पहुँच अनलॉक करें",
+        materialPrice="मूल्य",
+        quizImageQ="🖼️ चित्र प्रश्न",
+        quizAccuracy="सटीकता",
+        quizCorrectAnswer="✓ सही उत्तर",
+        quizScore="स्कोर",
+        myLearningNotesTitle="नोट्स शीर्षक",
+        myLearningUpiHint="yourname@upi",
+        adLoading="विज्ञापन लोड हो रहा है…",
+        adSponsored="प्रायोजित",
+        adGreatSession="🎯 बेहतरीन सत्र!",
+        focusActive="सक्रिय",
+        targetCoins="सिक्के",
+        targetCarriedForward="📅 आगे बढ़ाया गया",
+        courseWhatYouLearn="📚 आप क्या सीखेंगे",
+        courseAboutInstructor="👨‍🏫 प्रशिक्षक के बारे में",
+        permOpenSettings="ऐप सेटिंग खोलें",
+        registerEmailHint="जैसे rahul@gmail.com",
+        examBack="← वापस",
+        marketOwned="खरीदा हुआ",
+        roomsReset="रीसेट",
+        walletCoins="सिक्के",
+        lessonInAppBrowser="सुरक्षित इन-ऐप ब्राउज़र में खुलता है",
+        uiTryAgain="पुनः प्रयास करें",
+        quizDailyScore="स्कोर",
+        quizDailyAccuracy="सटीकता",
+        closeLabel="बंद करें",
+    ),
+    m6 = MiscStrings6(
+        permStayUpdated="सूचनाओं के साथ अपडेट रहें",
+        permStreakWarn="🔥 स्ट्रीक सुरक्षा चेतावनियाँ",
+        permStudentsNote="सूचनाएं चालू करने वाले छात्र 3× अधिक नियमित होते हैं।",
+        permEnableBtn="सूचनाएं सक्षम करें",
+        adNoLimit="कोई सीमा नहीं — जितना चाहें देखें!",
+        adAdvertisement="विज्ञापन",
+        adSkip="छोड़ें",
+        materialOpen="खोलें",
+        materialPreview="पूर्वावलोकन",
+        materialUnlockPro="🚀 BPSCNotes Pro से अनलॉक करें",
+        roomCreate="बनाएं",
+        roomSubject="विषय",
+        uiSomethingWrong="कुछ गलत हो गया",
+        permMaybeLater="अभी नहीं",
+        permBlocked="सूचनाएं अवरुद्ध हैं",
+        mlShareNotes="10,000+ BPSC छात्रों के साथ नोट्स साझा करें",
+        mlContentType="सामग्री प्रकार",
+        mlAttachFile="फ़ाइल संलग्न करें (PDF / DOC)",
+        roomPrivate="प्राइवेट रूम",
+        roomJoinPrivate="प्राइवेट रूम जॉइन करें",
     ),
 )

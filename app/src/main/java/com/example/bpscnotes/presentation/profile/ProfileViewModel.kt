@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CoinsApiService
@@ -43,12 +45,26 @@ class ProfileViewModel @Inject constructor(
     private val statsApi:   UserStatsApiService,
     private val coinsApi:   CoinsApiService,
     private val tokenStore: TokenStore
+,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged,
+                    is RefreshEvent.ProfileUpdated,
+                    is RefreshEvent.LessonCompleted -> load()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {

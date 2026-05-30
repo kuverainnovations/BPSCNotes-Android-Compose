@@ -47,6 +47,8 @@ fun RoomsHubScreen(
     val state by tiersViewModel.uiState.collectAsState()
     val tiersState = state  // alias used in DemotionWarningBanner block
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("rooms_hub") }
     val sessionState by sessionViewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -63,7 +65,7 @@ fun RoomsHubScreen(
             title = { Text(str.roomsClaimPromotion, fontWeight = FontWeight.ExtraBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(str.roomsMetRequirements, color = BpscColors.TextSecondary)
+                    Text(str.roomsMetRequirements, color = cs.onSurfaceVariant)
                     if (claimResultMessage.isNotEmpty()) {
                         Text(
                             claimResultMessage,
@@ -216,7 +218,7 @@ fun RoomsHubScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             //  .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                            .background(BpscColors.Surface)
+                            .background(cs.background)
                             .padding(top = 8.dp)
                     ) {
 
@@ -241,7 +243,7 @@ fun RoomsHubScreen(
                         Text(
                             str.roomsChoose,
                             style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
                         )
@@ -261,7 +263,7 @@ fun RoomsHubScreen(
                                         .height(80.dp)
                                         .padding(horizontal = 16.dp, vertical = 5.dp)
                                         .clip(RoundedCornerShape(18.dp))
-                                        .background(BpscColors.Divider)
+                                        .background(cs.outline)
                                 )
                             }
                         } else {
@@ -356,6 +358,7 @@ fun RoomsHubScreen(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val myTier    = state.myTierData?.currentTier
     val tierColor = try {
@@ -437,7 +440,7 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                 Card(
                     modifier  = Modifier.fillMaxWidth(),
                     shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = Color.White.copy(0.12f)),
+                    colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.12f)),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -526,6 +529,8 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
 
 @Composable
 private fun StatPill(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(icon, fontSize = 12.sp)
         Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
@@ -547,6 +552,7 @@ private fun RoomCard(
     isStarting:   Boolean,
     onClick:      () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val bgColor = when {
         isClaimReady -> BpscColors.Success.copy(0.05f)
@@ -559,7 +565,7 @@ private fun RoomCard(
         isClaimReady -> BpscColors.Success
         isMyRoom     -> tierColor.copy(alpha = 0.45f)
         isLocked     -> Color(0xFFE2E2E2)
-        else         -> BpscColors.Divider
+        else         -> cs.outline
     }
 
     Card(
@@ -689,6 +695,7 @@ private fun LockedRoomSheet(
     progressItems: List<TierProgressItemDto>,
     onDismiss:     () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val tierColor = try { Color(android.graphics.Color.parseColor(tier.colorHex)) } catch (e: Exception) { BpscColors.Primary }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -711,7 +718,7 @@ private fun LockedRoomSheet(
             Box(Modifier
                 .size(40.dp, 4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(BpscColors.Divider))
+                .background(cs.outline))
 
             // Tier badge
             Box(
@@ -724,16 +731,16 @@ private fun LockedRoomSheet(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("${tier.name} is Locked", style = MaterialTheme.typography.headlineSmall,
-                    color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 Text(str.roomsChooseHint,
-                    style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             }
 
             // Requirements list
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(str.roomsRequirements, style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        color = cs.onSurface, fontWeight = FontWeight.Bold)
                     progressItems.forEach { item ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
@@ -761,7 +768,7 @@ private fun LockedRoomSheet(
                         tier.perks.take(3).forEach { perk ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("•", color = tierColor)
-                                Text(perk, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                                Text(perk, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                             }
                         }
                     }
@@ -785,6 +792,7 @@ private fun LockedRoomSheet(
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val infiniteTransition = rememberInfiniteTransition(label = "glow")
     val glowAlpha by infiniteTransition.animateFloat(0.3f, 0.7f,
@@ -804,7 +812,7 @@ private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
                 Text("${str.roomsReadyForNext} $nextTierEmoji $nextTierName!", style = MaterialTheme.typography.titleMedium,
                     color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
                 Text(str.roomsPromotedMidnight,
-                    style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
         }
     }
@@ -815,18 +823,19 @@ private fun PromotionReadyBanner(nextTierName: String, nextTierEmoji: String) {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
+    val cs = MaterialTheme.colorScheme
     val next = tierData.nextTier ?: return
     Card(
         modifier  = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
-                style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
+                style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             tierData.progressItems.forEach { item ->
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -835,8 +844,8 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
                             else Box(Modifier
                                 .size(13.dp)
                                 .clip(CircleShape)
-                                .border(1.5.dp, BpscColors.Divider, CircleShape))
-                            Text(item.label, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextPrimary)
+                                .border(1.5.dp, cs.outline, CircleShape))
+                            Text(item.label, style = MaterialTheme.typography.bodySmall, color = cs.onSurface)
                         }
                         Text("${item.current.toInt()}/${item.required.toInt()} ${item.unit}",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
@@ -848,7 +857,7 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
                         .fillMaxWidth()
                         .height(5.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(BpscColors.Divider)) {
+                        .background(cs.outline)) {
                         Box(Modifier
                             .fillMaxWidth(pct)
                             .fillMaxHeight()
@@ -868,6 +877,7 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
 // ════════════════════════════════════════════════════════════
 @Composable
 private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -879,14 +889,15 @@ private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit)
 
 @Composable
 private fun QuickActionCard(icon: String, title: String, subtitle: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     Card(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = color.copy(0.06f)),
         border = BorderStroke(1.dp, color.copy(0.15f)), elevation = CardDefaults.cardElevation(0.dp)) {
         Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 22.sp)
             Column {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+                Text(title, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
         }
     }

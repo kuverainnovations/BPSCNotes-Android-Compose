@@ -5,6 +5,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -75,10 +76,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     // ── Toggle setters — each persists immediately ────────────
-    fun setDarkMode(v: Boolean)      { _state.update { it.copy(darkMode = v) };      tokenStore.setBoolPref("dark_mode", v) }
-    fun setStudyReminder(v: Boolean) { _state.update { it.copy(studyReminder = v) }; tokenStore.setBoolPref("study_reminder", v) }
+    fun setDarkMode(v: Boolean)      { _state.update { it.copy(darkMode = v) };      tokenStore.setBoolPref("dark_mode", v);      Event.settingsChanged("dark_mode", v.toString()) }
+    fun setStudyReminder(v: Boolean) { _state.update { it.copy(studyReminder = v) }; tokenStore.setBoolPref("study_reminder", v); Event.settingsChanged("study_reminder", v.toString()) }
     fun setAutoPlay(v: Boolean)      { _state.update { it.copy(autoPlay = v) };      tokenStore.setBoolPref("auto_play", v) }
-    fun setSound(v: Boolean)         { _state.update { it.copy(sound = v) };         tokenStore.setBoolPref("sound", v) }
+    fun setSound(v: Boolean)         { _state.update { it.copy(sound = v) };         tokenStore.setBoolPref("sound", v);         Event.settingsChanged("sound", v.toString()) }
     fun setHaptics(v: Boolean)       { _state.update { it.copy(haptics = v) };       tokenStore.setBoolPref("haptics", v) }
 
     // ── Real storage sizes ────────────────────────────────────

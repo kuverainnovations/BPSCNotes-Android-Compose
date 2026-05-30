@@ -1,5 +1,6 @@
 package com.example.bpscnotes.core.ads
 
+import com.example.bpscnotes.core.language.LocalStrings
 import android.app.Activity
 import android.view.LayoutInflater
 import android.widget.TextView
@@ -37,6 +38,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
 // ─────────────────────────────────────────────────────────────
 @Composable
 fun BannerAdView(adUnitId: String) {
+    val str = LocalStrings.current
     AndroidView(
         modifier = Modifier
             .fillMaxWidth()
@@ -67,6 +69,7 @@ fun WatchAdForCoinsCard(
     modifier:          Modifier = Modifier,
     watchedCount:      Int     = 0,    // passed from parent so it survives navigation
 ) {
+    val str = LocalStrings.current
     val totalEarnable = coinsPerAd * watchedCount
 
     Card(
@@ -97,7 +100,7 @@ fun WatchAdForCoinsCard(
                             fontWeight = FontWeight.ExtraBold,
                         )
                         Text(
-                            "No limit — watch as many as you want!",
+                            str.adNoLimit,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(0.75f),
                         )
@@ -165,7 +168,7 @@ fun WatchAdForCoinsCard(
                             strokeWidth = 2.dp,
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Loading ad…", color = Color(0xFF7B1FA2), fontWeight = FontWeight.Bold)
+                        Text(str.adLoading, color = Color(0xFF7B1FA2), fontWeight = FontWeight.Bold)
                     } else {
                         Icon(
                             Icons.Rounded.PlayCircle, null,
@@ -192,7 +195,7 @@ fun WatchAdForCoinsCard(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 3. NATIVE JOB AD — looks like a job card with "Sponsored" label
+// 3. NATIVE JOB AD — looks like a job card with str.adSponsored label
 //    Used in JobVacanciesScreen between real job listings.
 // ─────────────────────────────────────────────────────────────
 @Composable
@@ -203,10 +206,12 @@ fun NativeSponsoredJobCard(
     ctaLabel:       String = "Register Free →",
     onCtaClick:     () -> Unit
 ) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     Card(
         modifier  = Modifier.fillMaxWidth().padding(bottom = 12.dp),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -226,7 +231,7 @@ fun NativeSponsoredJobCard(
                     ) { Text("🎓", fontSize = 20.sp) }
                     Column {
                         Text(sponsorName, style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary,
+                            fontWeight = FontWeight.Bold, color = cs.onSurface,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -238,7 +243,7 @@ fun NativeSponsoredJobCard(
                                     .background(Color(0xFFF3E5F5))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Text("Sponsored", style = MaterialTheme.typography.labelSmall,
+                                Text(str.adSponsored, style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF7B1FA2), fontWeight = FontWeight.SemiBold,
                                     fontSize = 9.sp)
                             }
@@ -251,9 +256,9 @@ fun NativeSponsoredJobCard(
             }
 
             Text(headline, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary, lineHeight = 22.sp)
+                fontWeight = FontWeight.ExtraBold, color = cs.onSurface, lineHeight = 22.sp)
             Text(body, style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                color = cs.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
 
             Button(
                 onClick  = onCtaClick,
@@ -275,6 +280,7 @@ fun NativeSponsoredJobCard(
 // ─────────────────────────────────────────────────────────────
 @Composable
 fun DashboardBannerStrip(adUnitId: String, isProUser: Boolean) {
+    val str = LocalStrings.current
     if (isProUser) return  // Pro users see no ads
     Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Box(
@@ -282,7 +288,7 @@ fun DashboardBannerStrip(adUnitId: String, isProUser: Boolean) {
             contentAlignment = Alignment.TopEnd
         ) {
             Text(
-                "Advertisement",
+                str.adAdvertisement,
                 style    = MaterialTheme.typography.labelSmall,
                 color    = BpscColors.TextHint,
                 fontSize = 8.sp,
@@ -306,6 +312,7 @@ fun PostSessionAdPrompt(
     onWatchAd:       () -> Unit,
     onSkip:          () -> Unit
 ) {
+    val str = LocalStrings.current
     var dismissed by remember { mutableStateOf(false) }
     if (dismissed) return
     // Only show if session was meaningful (>= 5 min) and ad is available
@@ -324,7 +331,7 @@ fun PostSessionAdPrompt(
                 .padding(20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("🎯 Great session!", style = MaterialTheme.typography.titleLarge,
+                Text(str.adGreatSession, style = MaterialTheme.typography.titleLarge,
                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                 Text(
                     "You studied ${if (studyMinutes >= 60) "${studyMinutes/60}h ${studyMinutes%60}m" else "${studyMinutes}m"} and earned $coinsEarned coins.\nWatch a 30-second ad to earn ${AdManager.REWARDED_COINS} bonus coins!",

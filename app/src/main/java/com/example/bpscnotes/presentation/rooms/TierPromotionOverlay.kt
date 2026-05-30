@@ -37,6 +37,7 @@ fun TierPromotionOverlay(
     newTier: RoomTierDto,
     onDismiss: () -> Unit
 ) {
+    val str = LocalStrings.current
     val tierColor = try {
         Color(android.graphics.Color.parseColor(newTier.colorHex))
     } catch (e: Exception) { BpscColors.CoinGold }
@@ -53,7 +54,6 @@ fun TierPromotionOverlay(
         animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
         label = "confetti_progress"
     )
-    val str = LocalStrings.current
 
     Box(
         modifier  = Modifier.fillMaxSize().background(Color.Black.copy(0.88f)).alpha(alpha),

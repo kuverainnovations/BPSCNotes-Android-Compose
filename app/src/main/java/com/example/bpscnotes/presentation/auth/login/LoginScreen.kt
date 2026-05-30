@@ -65,6 +65,8 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 fun LoginScreen(navController: NavHostController) {
     val viewModel: LoginViewModel = hiltViewModel()
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("login") }
     var mobile by remember { mutableStateOf("") }
     var agreed by remember { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -85,7 +87,7 @@ fun LoginScreen(navController: NavHostController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface)
+            .background(cs.background)
             .imePadding()
     ) {
         // Top branded section
@@ -137,19 +139,19 @@ fun LoginScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp)
                 .offset(y = (-28).dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(BpscColors.CardBg)
+                .background(cs.surface)
                 .padding(24.dp)
         ) {
             Text(
                 str.loginEnterMobile,
                 style = MaterialTheme.typography.titleLarge,
-                color = BpscColors.TextPrimary
+                color = cs.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 str.loginSubtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextSecondary
+                color = cs.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -178,14 +180,14 @@ fun LoginScreen(navController: NavHostController) {
                         Text(
                             "🇮🇳 +91",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.TextPrimary
+                            color = cs.onSurface
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Divider(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(24.dp),
-                            color = BpscColors.Divider
+                            color = cs.outline
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
@@ -201,7 +203,7 @@ fun LoginScreen(navController: NavHostController) {
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor      = BpscColors.Primary,
-                    unfocusedBorderColor    = BpscColors.Divider,
+                    unfocusedBorderColor    = cs.outline,
                     focusedTextColor        = BpscColors.TextPrimary,
                     unfocusedTextColor      = BpscColors.TextPrimary,
                     cursorColor             = BpscColors.Primary,
@@ -236,7 +238,7 @@ fun LoginScreen(navController: NavHostController) {
                 Text(
                     str.loginIAgree,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
                 val context = androidx.compose.ui.platform.LocalContext.current
                 Text(
@@ -291,7 +293,7 @@ fun LoginScreen(navController: NavHostController) {
         Text(
             text = "New to BPSCNotes? Your account is created automatically.",
             style = MaterialTheme.typography.bodyMedium,
-            color = BpscColors.TextSecondary,
+            color = cs.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()

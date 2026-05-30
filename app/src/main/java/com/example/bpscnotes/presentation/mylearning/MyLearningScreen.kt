@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
@@ -211,12 +212,15 @@ val storeSubjects = listOf(
 @Composable
 fun MyLearningScreen(
     navController: NavHostController,
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     startTab: Int = 0,
     viewModel: MyLearningViewModel = hiltViewModel(),
     fromScreen: String=""
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val state by viewModel.uiState.collectAsState()
+    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("my_learning") }
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
 
     // Switch to My Courses tab (index 1) when enrollment succeeds
@@ -244,7 +248,7 @@ fun MyLearningScreen(
     if (state.isLoading && storeItems.isEmpty()) {
         Box(Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            .background(cs.background), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = BpscColors.Primary)
         }
         return
@@ -253,7 +257,7 @@ fun MyLearningScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BpscColors.Surface)
+            .background(cs.background)
     ) {
 
 
@@ -386,6 +390,7 @@ private fun StoreTab(
     savedCourseIds: Set<String>,
     viewModel:      MyLearningViewModel
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedSubject by remember { mutableStateOf(str.filterAll) }
     var searchQuery by remember { mutableStateOf("") }
@@ -415,8 +420,8 @@ private fun StoreTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color.White)
-                .border(1.dp, BpscColors.Divider, RoundedCornerShape(14.dp))
+                .background(cs.surface)
+                .border(1.dp, cs.outline, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -430,7 +435,7 @@ private fun StoreTab(
             androidx.compose.foundation.text.BasicTextField(
                 value = searchQuery, onValueChange = { searchQuery = it },
                 modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = BpscColors.TextPrimary),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
@@ -465,7 +470,7 @@ private fun StoreTab(
                         .background(if (sel) BpscColors.Primary else Color.White)
                         .border(
                             1.dp,
-                            if (sel) BpscColors.Primary else BpscColors.Divider,
+                            if (sel) BpscColors.Primary else cs.outline,
                             RoundedCornerShape(20.dp)
                         )
                         .clickable { selectedSubject = sub }
@@ -541,6 +546,7 @@ private fun StoreTab(
 // ─────────────────────────────────────────────────────────────
 /*@Composable
 private fun MyCoursesTab(navController: NavHostController, courses: List<LearningCourse>) {
+    val str = LocalStrings.current
     var subTab by remember { mutableIntStateOf(0) }
 
     Column(
@@ -548,11 +554,12 @@ private fun MyCoursesTab(navController: NavHostController, courses: List<Learnin
             .fillMaxSize()
             .navigationBarsPadding()
     ) {
+    val cs = MaterialTheme.colorScheme
         // Sub-tab bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(cs.surface)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -565,7 +572,7 @@ private fun MyCoursesTab(navController: NavHostController, courses: List<Learnin
                         .background(if (sel) BpscColors.Primary else BpscColors.Surface)
                         .border(
                             1.dp,
-                            if (sel) BpscColors.Primary else BpscColors.Divider,
+                            if (sel) BpscColors.Primary else cs.outline,
                             RoundedCornerShape(12.dp)
                         )
                         .clickable { subTab = index }
@@ -626,6 +633,7 @@ private fun EnrolledCoursesContent(
     savedCourseIds: Set<String>          = emptySet(),
     onToggleSave:   (String) -> Unit     = {}
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedFilter by remember { mutableIntStateOf(0) }
     val wishlist = remember { mutableStateListOf<String>() }
@@ -654,7 +662,7 @@ private fun EnrolledCoursesContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(cs.surface)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -665,7 +673,7 @@ private fun EnrolledCoursesContent(
                     Text(
                         str.courseOverallProgress,
                         style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -680,7 +688,7 @@ private fun EnrolledCoursesContent(
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(BpscColors.Surface)
+                        .background(cs.background)
                     // .statusBarsPadding()
 
                 ) {
@@ -723,7 +731,7 @@ private fun EnrolledCoursesContent(
                         .background(if (sel) BpscColors.Primary else Color.White)
                         .border(
                             1.dp,
-                            if (sel) BpscColors.Primary else BpscColors.Divider,
+                            if (sel) BpscColors.Primary else cs.outline,
                             RoundedCornerShape(20.dp)
                         )
                         .clickable { selectedFilter = index }
@@ -760,13 +768,13 @@ private fun EnrolledCoursesContent(
                     Text(
                         str.courseNoCoursesYet,
                         style = MaterialTheme.typography.titleLarge,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         str.courseExploreStore,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = BpscColors.TextSecondary
+                        color = cs.onSurfaceVariant
                     )
                 }
             }
@@ -814,12 +822,13 @@ private fun LibraryDetailSheet(
     item: LibraryItem, isBookmarked: Boolean, isDownloaded: Boolean,
     onBookmark: () -> Unit, onDownload: () -> Unit, onDismiss: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(modifier = Modifier
@@ -913,13 +922,13 @@ private fun LibraryDetailSheet(
                 Text(
                     "About",
                     style = MaterialTheme.typography.titleMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     item.description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = BpscColors.TextSecondary,
+                    color = cs.onSurfaceVariant,
                     lineHeight = 24.sp
                 )
                 if (item.tags.isNotEmpty()) {
@@ -946,8 +955,8 @@ private fun LibraryDetailSheet(
                         .fillMaxWidth()
                         .height(180.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(BpscColors.Surface)
-                        .border(1.dp, BpscColors.Divider, RoundedCornerShape(16.dp)),
+                        .background(cs.background)
+                        .border(1.dp, cs.outline, RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -958,7 +967,7 @@ private fun LibraryDetailSheet(
                         Text(
                             "Preview",
                             style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                         Text(
                             str.courseTapRead,
@@ -986,15 +995,15 @@ private fun LibraryDetailSheet(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Unlock with BPSCNotes Pro",
+                                str.materialUnlockPro,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.TextSecondary
+                                color = cs.onSurfaceVariant
                             )
                         }
                     }
                 }
             }
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1009,7 +1018,7 @@ private fun LibraryDetailSheet(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (isBookmarked) BpscColors.CoinGold else BpscColors.Divider
+                        if (isBookmarked) BpscColors.CoinGold else cs.outline
                     ),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)
                 ) {
@@ -1058,12 +1067,14 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
     var subject by remember { mutableStateOf("") }
     var selType by remember { mutableStateOf(LibraryContentType.PDF) }
     var description by remember { mutableStateOf("") }
+    val cs = MaterialTheme.colorScheme
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White,
+        containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1074,19 +1085,19 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
             Text(
                 str.materialsUploadTitle,
                 style = MaterialTheme.typography.headlineSmall,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Share notes with 10,000+ BPSC aspirants",
+                str.mlShareNotes,
                 style = MaterialTheme.typography.bodyLarge,
-                color = BpscColors.TextSecondary
+                color = cs.onSurfaceVariant
             )
-            HorizontalDivider(color = BpscColors.Divider)
+            HorizontalDivider(color = cs.outline)
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Notes Title") },
+                label = { Text(str.myLearningNotesTitle) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -1100,9 +1111,9 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
                 singleLine = true
             )
             Text(
-                "Content Type",
+                str.mlContentType,
                 style = MaterialTheme.typography.titleMedium,
-                color = BpscColors.TextPrimary,
+                color = cs.onSurface,
                 fontWeight = FontWeight.Bold
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1143,8 +1154,8 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .height(72.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(BpscColors.Surface)
-                    .border(1.5.dp, BpscColors.Divider, RoundedCornerShape(14.dp))
+                    .background(cs.background)
+                    .border(1.5.dp, cs.outline, RoundedCornerShape(14.dp))
                     .clickable { },
                 contentAlignment = Alignment.Center
             ) {
@@ -1159,9 +1170,9 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
-                        "Tap to attach file (PDF / DOC)",
+                        str.mlAttachFile,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = BpscColors.TextSecondary
+                        color = cs.onSurfaceVariant
                     )
                 }
             }
@@ -1204,6 +1215,7 @@ private fun StoreCourseCard(
     onWishlist: () -> Unit,
     onClick: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
         BpscColors.Primary,
@@ -1217,7 +1229,7 @@ private fun StoreCourseCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
         Column(
@@ -1293,7 +1305,7 @@ private fun StoreCourseCard(
                     Text(
                         course.title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -1302,7 +1314,7 @@ private fun StoreCourseCard(
                     Text(
                         course.instructor,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.TextSecondary
+                        color = cs.onSurfaceVariant
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1312,7 +1324,7 @@ private fun StoreCourseCard(
                             Icon(
                                 Icons.Rounded.Star,
                                 null,
-                                tint = if (i < course.rating.toInt()) BpscColors.CoinGold else BpscColors.Divider,
+                                tint = if (i < course.rating.toInt()) BpscColors.CoinGold else cs.outline,
                                 modifier = Modifier.size(12.dp)
                             )
                         }
@@ -1331,7 +1343,7 @@ private fun StoreCourseCard(
                         Text(
                             "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} students",
                             style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.TextSecondary
+                            color = cs.onSurfaceVariant
                         )
                     }
                 }
@@ -1432,6 +1444,7 @@ private fun CourseDetailSheet(
     onEnroll: (courseId: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showPayment by remember { mutableStateOf(false) }
@@ -1452,7 +1465,7 @@ private fun CourseDetailSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(modifier = Modifier
@@ -1540,13 +1553,13 @@ private fun CourseDetailSheet(
                     Text(
                         str.courseAbout,
                         style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.TextPrimary,
+                        color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         course.description,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = BpscColors.TextSecondary,
+                        color = cs.onSurfaceVariant,
                         lineHeight = 24.sp
                     )
                     if (course.trialLessonTitle.isNotEmpty()) {
@@ -1583,7 +1596,7 @@ private fun CourseDetailSheet(
                                 Text(
                                     course.trialLessonTitle,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = BpscColors.TextPrimary,
+                                    color = cs.onSurface,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -1605,7 +1618,7 @@ private fun CourseDetailSheet(
                             Text(
                                 str.courseSyllabus,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
@@ -1638,7 +1651,7 @@ private fun CourseDetailSheet(
                                 Text(
                                     item,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = BpscColors.TextPrimary
+                                    color = cs.onSurface
                                 )
                             }
                         }
@@ -1648,14 +1661,14 @@ private fun CourseDetailSheet(
                         Text(
                             str.courseStudentReviews,
                             style = MaterialTheme.typography.titleMedium,
-                            color = BpscColors.TextPrimary,
+                            color = cs.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         course.reviews.forEach { review ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = BpscColors.Surface),
+                                colors = CardDefaults.cardColors(containerColor = cs.background),
                                 elevation = CardDefaults.cardElevation(0.dp)
                             ) {
                                 Column(
@@ -1670,7 +1683,7 @@ private fun CourseDetailSheet(
                                         Text(
                                             review.name,
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = BpscColors.TextPrimary,
+                                            color = cs.onSurface,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Row {
@@ -1678,7 +1691,7 @@ private fun CourseDetailSheet(
                                                 Icon(
                                                     Icons.Rounded.Star,
                                                     null,
-                                                    tint = if (i < review.rating.toInt()) BpscColors.CoinGold else BpscColors.Divider,
+                                                    tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
                                                     modifier = Modifier.size(12.dp)
                                                 )
                                             }
@@ -1687,7 +1700,7 @@ private fun CourseDetailSheet(
                                     Text(
                                         review.comment,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = BpscColors.TextSecondary
+                                        color = cs.onSurfaceVariant
                                     )
                                     Text(
                                         review.date,
@@ -1699,7 +1712,7 @@ private fun CourseDetailSheet(
                         }
                     }
                 }
-                HorizontalDivider(color = BpscColors.Divider)
+                HorizontalDivider(color = cs.outline)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1714,7 +1727,7 @@ private fun CourseDetailSheet(
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (isWishlisted) BpscColors.CoinGold else BpscColors.Divider
+                            if (isWishlisted) BpscColors.CoinGold else cs.outline
                         ),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextSecondary)
                     ) {
@@ -1806,7 +1819,7 @@ private fun CourseDetailSheet(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = BpscColors.Surface),
+                        colors = CardDefaults.cardColors(containerColor = cs.background),
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(
@@ -1816,7 +1829,7 @@ private fun CourseDetailSheet(
                             Text(
                                 str.coursePriceSummary,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             PriceRow(str.coursePrice, "₹${course.price}", false)
@@ -1830,7 +1843,7 @@ private fun CourseDetailSheet(
                                 "- ₹$couponDiscount",
                                 true
                             )
-                            HorizontalDivider(color = BpscColors.Divider)
+                            HorizontalDivider(color = cs.outline)
                             PriceRow(str.courseTotalPayable, "₹$finalPrice", false, isTotal = true)
                         }
                     }
@@ -1839,7 +1852,7 @@ private fun CourseDetailSheet(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = cs.surface),
                             elevation = CardDefaults.cardElevation(2.dp)
                         ) {
                             Column(
@@ -1854,12 +1867,12 @@ private fun CourseDetailSheet(
                                         Text(
                                             str.courseUseCoins,
                                             style = MaterialTheme.typography.titleMedium,
-                                            color = BpscColors.TextPrimary,
+                                            color = cs.onSurface,
                                             fontWeight = FontWeight.Bold
                                         ); Text(
                                         "1 coin = ₹0.10 · Max 50% via coins",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = BpscColors.TextSecondary
+                                        color = cs.onSurfaceVariant
                                     )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
@@ -1888,7 +1901,7 @@ private fun CourseDetailSheet(
                                 Text(
                                     "You have $userCoins coins available",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = BpscColors.TextSecondary
+                                    color = cs.onSurfaceVariant
                                 )
                             }
                         }
@@ -1897,7 +1910,7 @@ private fun CourseDetailSheet(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
                         Column(
@@ -1907,7 +1920,7 @@ private fun CourseDetailSheet(
                             Text(
                                 str.courseCouponCode,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             Row(
@@ -1975,7 +1988,7 @@ private fun CourseDetailSheet(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
                         Column(
@@ -1985,7 +1998,7 @@ private fun CourseDetailSheet(
                             Text(
                                 "Pay via UPI",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = BpscColors.TextPrimary,
+                                color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1998,10 +2011,10 @@ private fun CourseDetailSheet(
                                     Column(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(BpscColors.Surface)
+                                            .background(cs.background)
                                             .border(
                                                 1.dp,
-                                                BpscColors.Divider,
+                                                cs.outline,
                                                 RoundedCornerShape(10.dp)
                                             )
                                             .clickable { }
@@ -2017,7 +2030,7 @@ private fun CourseDetailSheet(
                                         Text(
                                             app,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = BpscColors.TextSecondary,
+                                            color = cs.onSurfaceVariant,
                                             fontSize = 9.sp
                                         )
                                     }
@@ -2026,12 +2039,12 @@ private fun CourseDetailSheet(
                             Text(
                                 "Or enter UPI ID manually:",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.TextSecondary
+                                color = cs.onSurfaceVariant
                             )
                             OutlinedTextField(
                                 value = "",
                                 onValueChange = {},
-                                placeholder = { Text("yourname@upi") },
+                                placeholder = { Text(str.myLearningUpiHint) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
@@ -2040,7 +2053,7 @@ private fun CourseDetailSheet(
                         }
                     }
                 }
-                HorizontalDivider(color = BpscColors.Divider)
+                HorizontalDivider(color = cs.outline)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2089,8 +2102,8 @@ private fun CourseDetailSheet(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun CertificateCard(course: LearningCourse) {
+    val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    val str     = LocalStrings.current
     val (accent, _) = subjectColorMap()[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
     // Capture str values before non-composable lambdas
@@ -2207,6 +2220,7 @@ private fun ContinueCard(course: LearningCourse, onContinue: () -> Unit) {
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2277,7 +2291,7 @@ private fun ContinueCard(course: LearningCourse, onContinue: () -> Unit) {
                         .fillMaxWidth()
                         .height(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.surface)
                 ) {
                     Icon(
                         Icons.Rounded.PlayArrow,
@@ -2306,6 +2320,7 @@ private fun CourseProgressCard(
     onToggleWishlist: () -> Unit,
     onClick: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     val progress =
         if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
     val animProg by animateFloatAsState(progress, tween(1000), label = "pp")
@@ -2318,7 +2333,7 @@ private fun CourseProgressCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
@@ -2360,7 +2375,7 @@ private fun CourseProgressCard(
                 Text(
                     course.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = BpscColors.TextPrimary,
+                    color = cs.onSurface,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -2368,7 +2383,7 @@ private fun CourseProgressCard(
                 Text(
                     course.instructor,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextSecondary
+                    color = cs.onSurfaceVariant
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2377,7 +2392,7 @@ private fun CourseProgressCard(
                     Text(
                         "${course.completedLessons}/${course.totalLessons} lessons",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.TextSecondary
+                        color = cs.onSurfaceVariant
                     )
                     Text(
                         "${(progress * 100).toInt()}%",
@@ -2429,16 +2444,17 @@ private fun StoreSectionHeader(title: String, subtitle: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(
             title,
             style = MaterialTheme.typography.titleLarge,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.ExtraBold
         )
         Text(
             subtitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = BpscColors.TextSecondary
+            color = cs.onSurfaceVariant
         )
     }
 }
@@ -2450,11 +2466,12 @@ private fun CourseInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextSecondary,
+            color = cs.onSurfaceVariant,
             fontSize = 10.sp
         )
     }
@@ -2468,11 +2485,12 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 11.sp)
         Text(
             value,
             style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 11.sp
         )
@@ -2487,19 +2505,22 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
 
 @Composable
 private fun DetailStat(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(BpscColors.Surface)
+            .background(cs.background)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 16.sp)
         Text(
             value,
             style = MaterialTheme.typography.titleMedium,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.sp
         )
@@ -2518,6 +2539,7 @@ private fun SheetStatWhite(icon: String, value: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 12.sp)
         Text(
             value,
@@ -2551,11 +2573,12 @@ private fun LearningStatItem(icon: String, value: String, label: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 13.sp)
         Text(
             value,
             style = MaterialTheme.typography.titleMedium,
-            color = BpscColors.TextPrimary,
+            color = cs.onSurface,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.sp
         )

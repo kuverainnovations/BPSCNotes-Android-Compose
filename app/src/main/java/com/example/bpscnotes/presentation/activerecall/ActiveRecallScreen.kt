@@ -25,6 +25,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
@@ -63,9 +64,11 @@ enum class CardRating { Mastered, Weak, Skipped }
 @Composable
 fun ActiveRecallScreen(
     navController: NavHostController,
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     viewModel: ActiveRecallViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
     val state        by viewModel.uiState.collectAsState()
     val masteredIds  = state.masteredIds
     val weakIds      = state.weakIds
@@ -74,20 +77,20 @@ fun ActiveRecallScreen(
 
     when {
         state.isLoading && state.allCards.isEmpty() -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.recallLoading, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                    Text(str.recallLoading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                 }
             }
         }
 
         state.error != null && state.allCards.isEmpty() -> {
-            Box(Modifier.fillMaxSize().background(BpscColors.Surface), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
                     Text("⚠️", fontSize = 48.sp)
-                    Text(str.recallFailed, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, textAlign = TextAlign.Center)
+                    Text(str.recallFailed, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                    Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
                     Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                         Text(str.tryAgain)
                     }
@@ -368,6 +371,7 @@ private fun FlashcardSessionScreen(
     onRate: (CoinsApiService.FlashcardDto, CardRating) -> Unit,
     onExit: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
 
     // How many cards have been completed (rated/skipped) total this session
@@ -453,7 +457,7 @@ private fun FlashcardSessionScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
@@ -504,7 +508,7 @@ private fun FlashcardSessionScreen(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                    Text("← Revise Again", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                    Text(str.recallReviseAgain, style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
                 }
                 Text(str.recallSwipeRate, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -542,7 +546,7 @@ private fun FlashcardSessionScreen(
                     }
                     if (offsetX.value < -60f) {
                         Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF59E0B)).padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text("🔄 REVISE AGAIN", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                            Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
                     }
 
@@ -556,13 +560,13 @@ private fun FlashcardSessionScreen(
             }
 
             // Bottom actions
-            Row(modifier = Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (!isFlipped) {
                     OutlinedButton(
                         onClick = { rateAndNext(CardRating.Skipped) },
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, BpscColors.Divider),
+                        border = BorderStroke(1.dp, cs.outline),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary),
                     ) {
                         Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp))
@@ -586,7 +590,7 @@ private fun FlashcardSessionScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                     ) {
-                        Text("🔄 Revise Again", style = MaterialTheme.typography.titleMedium)
+                        Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium)
                     }
                     Button(
                         onClick = { rateAndNext(CardRating.Mastered) },
@@ -616,13 +620,14 @@ private fun FlashcardLobbyScreen(
     onStartSubject: (String) -> Unit,
     onRetryWeak: () -> Unit,
 ) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val totalCards    = allCards.size
     val masteredCount = masteredIds.size
     val weakCount     = weakIds.size
     val progress      = if (totalCards > 0) masteredCount.toFloat() / totalCards else 0f
 
-    Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)), Offset(0f, 0f), Offset(400f, 400f))).statusBarsPadding()) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
@@ -651,7 +656,7 @@ private fun FlashcardLobbyScreen(
                             Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)), RoundedCornerShape(4.dp)))
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatPill("✅", "$masteredCount", "Mastered", Color(0xFF2ECC71))
+                            StatPill("✅", "$masteredCount", str.recallMastered, Color(0xFF2ECC71))
                             StatPill("🔄", "$weakCount", "Needs Work", Color(0xFFE74C3C))
                             StatPill("📚", "${totalCards - masteredCount - weakCount}", "Unseen", Color.White.copy(0.6f))
                         }
@@ -667,7 +672,7 @@ private fun FlashcardLobbyScreen(
                                 Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFE74C3C).copy(0.1f)), contentAlignment = Alignment.Center) { Text("🔄", fontSize = 22.sp) }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(str.recallRetryWeak, style = MaterialTheme.typography.titleMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
-                                    Text("$weakCount cards need more practice", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    Text("$weakCount cards need more practice", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                 }
                                 Icon(Icons.Rounded.ArrowForward, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(18.dp))
                             }
@@ -680,15 +685,15 @@ private fun FlashcardLobbyScreen(
                         Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("📚", fontSize = 48.sp)
-                                Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                                Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
+                                Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                                Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                             }
                         }
                     }
                     return@LazyColumn
                 }
 
-                item { Text(str.recallChooseSubject, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold) }
+                item { Text(str.recallChooseSubject, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
 
                 items(subjects, key = { it }) { subject ->
                     val subjectCards = if (subject == str.filterAll) allCards else allCards.filter { it.subject == subject }
@@ -707,20 +712,20 @@ private fun FlashcardLobbyScreen(
                     val (accent, bg) = subjectColors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
                     val emoji = when (subject) { str.filterAll->"📚"; "Polity"->"⚖️"; "History"->"🏛️"; "Geography"->"🗺️"; "Economy"->"💰"; "Bihar GK"->"🏔️"; "Science"->"🔬"; else->"📖" }
 
-                    Card(modifier = Modifier.fillMaxWidth().clickable { onStartSubject(subject) }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().clickable { onStartSubject(subject) }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(2.dp)) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(bg), contentAlignment = Alignment.Center) { Text(emoji, fontSize = 22.sp) }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(subject, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                                    Text("${subjectCards.size} cards · $subMastered mastered", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    Text(subject, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                                    Text("${subjectCards.size} cards · $subMastered mastered", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                 }
                                 Box(modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 14.dp, vertical = 8.dp)) {
                                     Text(str.start, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(BpscColors.Surface)) {
+                                Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.background)) {
                                     Box(modifier = Modifier.fillMaxWidth(subProgress).fillMaxHeight().background(accent, RoundedCornerShape(3.dp)))
                                 }
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -738,6 +743,7 @@ private fun FlashcardLobbyScreen(
 
 @Composable
 private fun StatPill(icon: String, value: String, label: String, color: Color) {
+    val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(0.12f)).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(icon, fontSize = 11.sp)
         Text(value, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.ExtraBold)
@@ -751,9 +757,10 @@ private fun StatPill(icon: String, value: String, label: String, color: Color) {
 
 @Composable
 private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
+    val cs = MaterialTheme.colorScheme
     val isImageCard = card.cardType == "image" && !card.imageUrl.isNullOrBlank()
 
-    Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
+    Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(Brush.horizontalGradient(listOf(Color(0xFF0A2472), Color(0xFF1E88E5)))))
 
@@ -765,7 +772,7 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
                     }
                     AsyncImage(model = card.imageUrl, contentDescription = "Question image", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp).clip(RoundedCornerShape(16.dp)))
                     if (card.question.isNotBlank()) {
-                        Text(card.question, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))
+                        Text(card.question, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))
                     }
                     if (card.hint.isNotBlank()) {
                         Row(modifier = Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E1)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -781,7 +788,7 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("❓", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
-                        Text(card.question, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, lineHeight = 28.sp)
+                        Text(card.question, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, lineHeight = 28.sp)
                     }
                     if (card.hint.isNotBlank()) {
                         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF8E1)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -800,40 +807,41 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
 
 @Composable
 private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating) -> Unit) {
+    val cs = MaterialTheme.colorScheme
     var mcqSelected by remember { mutableIntStateOf(-1) }
     var mcqAnswered by remember { mutableStateOf(false) }
     val hasBackImage = !card.backImageUrl.isNullOrBlank()
     val str=LocalStrings.current
 
-    Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
+    Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(Brush.horizontalGradient(listOf(Color(0xFF2ECC71), Color(0xFF1ABC9C)))))
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     FlashSubjectChip(card.subject)
                     Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("✅", fontSize = 10.sp); Text("Answer", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                        Text("✅", fontSize = 10.sp); Text(str.recallAnswer, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Answer", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
+                    Text(str.recallAnswer, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                     if (hasBackImage) {
                         AsyncImage(model = card.backImageUrl, contentDescription = "Answer image", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF5F5F5)))
-                        if (card.answer.isNotBlank()) { Text(card.answer, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 22.sp) }
+                        if (card.answer.isNotBlank()) { Text(card.answer, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 22.sp) }
                     } else {
-                        Text(card.answer, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 24.sp)
+                        Text(card.answer, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, lineHeight = 24.sp)
                     }
                 }
                 if (card.example.isNotBlank()) {
                     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📌", fontSize = 14.sp)
-                        Column { Text("Example", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold); Spacer(Modifier.height(2.dp)); Text(card.example, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary, lineHeight = 20.sp) }
+                        Column { Text(str.recallExample, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold); Spacer(Modifier.height(2.dp)); Text(card.example, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp) }
                     }
                 }
                 card.relatedMcq?.let { mcq ->
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(str.recallRelatedMcq, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text(mcq.question, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 22.sp)
+                        Text(str.recallRelatedMcq, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(mcq.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, lineHeight = 22.sp)
                         mcq.options.forEachIndexed { index, option ->
                             val isCorrect  = index == mcq.correctIndex
                             val isSelected = index == mcqSelected
@@ -859,6 +867,7 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
 
 @Composable
 private fun FlashcardSummaryScreen(cards: List<CoinsApiService.FlashcardDto>, sessionRatings: Map<String, CardRating>, streak: Int, onRetryWeak: () -> Unit, onExit: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val masteredCount = sessionRatings.values.count { it == CardRating.Mastered }
     val weakCount     = sessionRatings.values.count { it == CardRating.Weak }
@@ -883,14 +892,14 @@ private fun FlashcardSummaryScreen(cards: List<CoinsApiService.FlashcardDto>, se
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("$accuracy%", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("Mastered", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                    Text(str.recallMastered, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                 }
             }
             Spacer(Modifier.height(20.dp))
 
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SummaryItem("✅", "$masteredCount", "Mastered", BpscColors.Success)
+                    SummaryItem("✅", "$masteredCount", str.recallMastered, BpscColors.Success)
                     SummaryItem("🔄", "$weakCount", "Weak", Color(0xFFE74C3C))
                     SummaryItem("⏭️", "$skippedCount", "Skipped", BpscColors.TextSecondary)
                     SummaryItem("🔥", "$streak", "Best Streak", BpscColors.CoinGold)

@@ -112,7 +112,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
         // ── Real screens ─────────────────────────────────────────
         composable(Screen.DailyTargets.route)   { DailyTargetsScreen(navController) }
-        composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController) }
+        composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController, adManager = adManager) }
 
         // ── Payment screens ──────────────────────────────────────
         composable(Screen.Payment.route) {
@@ -233,8 +233,8 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             QuizPlayScreen(quizId = quizId, navController = navController, adManager = adManager)
         }
 
-        composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController) }
-        composable(Screen.MockTests.route)     { MockTestsScreen(navController) }
+        composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
+        composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
         composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
         // ── Tier Room System (Phase 1) ──────────────────────────
         composable(Screen.RoomsHub.route) { backStackEntry ->
@@ -271,7 +271,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
         }
 
 
-        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController) }
+        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
 
         // PDF Viewer — custom in-app renderer with page locking
         composable(
