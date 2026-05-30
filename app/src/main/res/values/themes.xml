@@ -2,7 +2,14 @@
 <resources>
 
     <style name="Theme.BPSCNotes" parent="Theme.AppCompat.NoActionBar">
+        <!-- Match the app's light-mode background — prevents white flash from the
+             default AppCompat windowBackground during navigation transitions,
+             app minimize animation, and cold-start frame before Compose renders. -->
+        <item name="android:windowBackground">#F2F4F8</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/black</item>
+        <!-- Remove the default activity open/close animation to eliminate flash -->
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
+
 </resources>

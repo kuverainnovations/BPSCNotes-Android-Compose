@@ -139,11 +139,11 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon     = Icons.Rounded.DarkMode,
                             iconBg   = Color(0xFF1A237E).copy(0.12f),
-                            iconTint = Color(0xFF3949AB),
+                            iconTint = Color(0xFF3949AB).copy(0.4f),
                             title    = str.settingsDarkMode,
-                            subtitle = str.settingsDarkModeSubtitle,
-                            checked  = settingsState.darkMode,
-                            onChange = settingsViewModel::setDarkMode
+                            subtitle = "🚧 Coming soon — not implemented yet",
+                            checked  = false,
+                            onChange = { /* not yet implemented */ }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         // Language picker
@@ -437,7 +437,7 @@ private fun SettingsToggleRow(
     title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
             contentAlignment = Alignment.Center) {
@@ -464,7 +464,7 @@ private fun SettingsActionRow(
     isDanger: Boolean = false, onClick: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-        Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+    Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),

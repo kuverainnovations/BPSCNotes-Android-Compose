@@ -1,8 +1,11 @@
 package com.example.bpscnotes
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -106,6 +109,22 @@ class MainActivity : ComponentActivity(),
             isAppearanceLightStatusBars = false
         }
 
+        // ── Fix: prevent black screen on back press / minimize ────────────
+        // 1. Give the window a non-transparent background so it's never naked black.
+        window.setBackgroundDrawable(
+            ColorDrawable(Color.parseColor("#F2F4F8"))
+        )
+        // 2. Safety-net: if Compose's BackHandler misses a rapid second tap
+        //    (race condition during recomposition), catch it here and
+        //    minimise the app instead of popping the NavHost into a black screen.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Only fires when NO Compose BackHandler is enabled above us.
+                // The BackHandler in MainShell has priority; this is the last resort.
+                moveTaskToBack(true)
+            }
+        })
+
         // Handle notification deep-link
         val initialScreen = intent?.getStringExtra("screen")
         val notifType     = intent?.getStringExtra("type") ?: ""
@@ -117,7 +136,7 @@ class MainActivity : ComponentActivity(),
             // Collect from static companion — shared by ALL LanguageManager instances
             // This ensures drawer/settings changes apply instantly without restart
             val currentLanguage by com.example.bpscnotes.core.language.LanguageManager.language.collectAsState()
-                BPSCNotesTheme(darkMode = settingsState.darkMode, language = currentLanguage) {
+            BPSCNotesTheme(darkMode = settingsState.darkMode, language = currentLanguage) {
                 val navController = rememberNavController()
                 BpscNavHost(
                     navController = navController,

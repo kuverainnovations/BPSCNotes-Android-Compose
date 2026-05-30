@@ -44,8 +44,7 @@ class ProfileViewModel @Inject constructor(
     private val authApi:    AuthApiService,
     private val statsApi:   UserStatsApiService,
     private val coinsApi:   CoinsApiService,
-    private val tokenStore: TokenStore
-,
+    private val tokenStore: TokenStore,
     private val bus: RefreshEventBus
 ) : ViewModel() {
 
@@ -60,6 +59,7 @@ class ProfileViewModel @Inject constructor(
                     is RefreshEvent.CoinsChanged,
                     is RefreshEvent.ProfileUpdated,
                     is RefreshEvent.LessonCompleted -> load()
+                    is RefreshEvent.ProfileUpdated  -> load()
                     else -> {}
                 }
             }
@@ -208,6 +208,7 @@ class ProfileViewModel @Inject constructor(
                 )
                 val updatedUser = res.data?.user
                 tokenStore.saveUserName(updatedUser?.name ?: name)
+                bus.emit(RefreshEvent.ProfileUpdated) // notify ProfileScreen to reload
                 _uiState.update {
                     it.copy(
                         user           = updatedUser ?: it.user?.copy(name = name, email = email),

@@ -86,7 +86,7 @@ fun DashboardScreen(
     val str = LocalStrings.current
     val state    by dashboardViewModel.uiState.collectAsState()
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
-
+val context = LocalContext.current
     // FIX: Refresh coins + user data when dashboard becomes visible
     // This keeps side nav coins and profile coins always up-to-date
     androidx.compose.runtime.DisposableEffect(lifecycle) {
@@ -149,11 +149,16 @@ fun DashboardScreen(
                     .background(cs.background)
             ) {
                 // ── STICKY HEADER — never scrolls ──────────────────────────
+                val notifCount by androidx.compose.runtime.produceState(initialValue = 0) {
+                    val prefs = context.getSharedPreferences("bpsc_prefs", android.content.Context.MODE_PRIVATE)
+                    value = prefs.getInt("unread_notifications", 0)
+                }
                 DashboardHeader(
                     user = state.user,
                     stats = state.stats,
                     greeting = dashboardViewModel.getGreeting(),
                     targets = state.dailyTargets,
+                    notifCount = notifCount,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     navController = navController
                 )
@@ -632,6 +637,7 @@ private fun DashboardHeader(
     stats: UserStatsData?,
     greeting: String,
     targets: List<DailyTargetDto>,
+    notifCount: Int = 0,
     onMenuClick: () -> Unit,
     navController: NavHostController
 ) {
@@ -744,13 +750,24 @@ private fun DashboardHeader(
                         Text("🪙", fontSize = 13.sp)
                         Text("$coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                     }
-                    Box(modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(0.12f))
-                        .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                        .clickable { navController.navigate(Screen.NotificationSettings.route) }, contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    BadgedBox(badge = {
+                        if (notifCount > 0) Badge(containerColor = Color(0xFFEF5350)) {
+                            Text(
+                                if (notifCount > 99) "99+" else "$notifCount",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = Color.White
+                            )
+                        }
+                    }) {
+                        Box(modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
+                            .clickable { navController.navigate(Screen.NotificationSettings.route) }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }
@@ -1718,7 +1735,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )
     val scrollState = rememberScrollState()
-    ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp), drawerContainerColor = Color.White, windowInsets = WindowInsets(0,0,0,0), modifier = Modifier
+    ModalDrawerSheet(drawerShape = RoundedCornerShape(0.dp), drawerContainerColor = Color.White, windowInsets = WindowInsets(0,0,0,0), modifier = Modifier
         .width(300.dp)
         .fillMaxHeight()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1734,7 +1751,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     )
                 )
                 .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 30.dp)) {
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 28.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier
                         .size(50.dp)

@@ -1,6 +1,9 @@
 package com.example.bpscnotes.presentation.navigation.NavGraph
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +60,24 @@ import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
 @Composable
 fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
+    val context = LocalContext.current
+
+    // ── Root-level safety net ──────────────────────────────────────────────
+    // Registered FIRST = LOWEST priority. Only fires when every inner
+    // BackHandler (MainShell, NavHost internal) is inactive — i.e. during
+    // the brief window of a rapid double-tap while MainShell is transitioning.
+    //   • Something to pop  → pop it (normal navigation, no black screen)
+    //   • Nothing to pop    → minimise the app (move to background)
+    // ── Root safety-net BackHandler ──────────────────────────────────────
+    // Lowest priority (registered first = last called in LIFO order).
+    // Fires ONLY when MainShell's BackHandler and NavHost's internal handler
+    // are both inactive (rapid double-tap during navigation transition).
+    // NEVER pop the NavController here — just minimize. Popping would empty
+    // the back stack and leave NavHost with nothing to render (white screen).
+    BackHandler(enabled = true) {
+        (context as? Activity)?.moveTaskToBack(true)
+    }
+
     NavHost(
         navController    = navController,
         startDestination = Screen.Splash.route
@@ -167,19 +188,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 viewModel = viewModel
             )
         }
-       /* composable(
-            Screen.TopicQuiz.route,
-            arguments = listOf(
-                navArgument("subject")    { type = NavType.StringType },
-                navArgument("topicTitle") { type = NavType.StringType }
-            )
-        ) {
-            TopicQuizScreen(
-                navController = navController,
-                subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
-                topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
-            )
-        }*/
+        /* composable(
+             Screen.TopicQuiz.route,
+             arguments = listOf(
+                 navArgument("subject")    { type = NavType.StringType },
+                 navArgument("topicTitle") { type = NavType.StringType }
+             )
+         ) {
+             TopicQuizScreen(
+                 navController = navController,
+                 subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
+                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
+             )
+         }*/
 
         composable(
             Screen.TopicQuiz.route,

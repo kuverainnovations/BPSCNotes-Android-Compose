@@ -154,7 +154,7 @@ fun EditProfileScreen(
                     Spacer(Modifier.height(10.dp))
                     EditField(value = bio, label = str.editBio,
                         icon = Icons.Rounded.Info, singleLine = false,
-                        minLines = 3, onValueChange = { bio = it })
+                        minLines = 4, maxLines = 6, onValueChange = { bio = it })
                 }
 
                 // ── Mobile (read-only) ─────────────────────────
@@ -234,7 +234,8 @@ private fun EditField(
     onValueChange: (String) -> Unit,
     singleLine: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
-    minLines: Int = 1
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE
 ) {
     OutlinedTextField(
         value         = value,

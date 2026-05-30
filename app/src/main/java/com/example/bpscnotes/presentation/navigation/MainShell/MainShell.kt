@@ -1,6 +1,8 @@
 package com.example.bpscnotes.presentation.navigation.MainShell
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.SnackbarDuration
@@ -108,8 +110,12 @@ fun MainShell(
     val backPressedOnce   = remember { androidx.compose.runtime.mutableStateOf(false) }
     val scope             = androidx.compose.runtime.rememberCoroutineScope()
 
-    BackHandler {
+    val activity = context as? Activity
+
+    BackHandler(enabled = true) {
         val currentBottomRoute = bottomNavController.currentDestination?.route
+
+        // Non-Dashboard tab → go home first
         if (currentBottomRoute != null && currentBottomRoute != Screen.Dashboard.route) {
             bottomNavController.navigate(Screen.Dashboard.route) {
                 popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
@@ -118,8 +124,12 @@ fun MainShell(
             }
             return@BackHandler
         }
+
+        // Already on Dashboard: double-press to exit
         if (backPressedOnce.value) {
-            (context as? Activity)?.moveTaskToBack(true)
+            backPressedOnce.value = false      // reset before leaving
+            activity?.moveTaskToBack(true)
+
         } else {
             backPressedOnce.value = true
             scope.launch {

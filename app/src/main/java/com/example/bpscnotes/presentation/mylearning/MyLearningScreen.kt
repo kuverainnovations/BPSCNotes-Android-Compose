@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -101,6 +102,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.data.remote.api.MaterialType
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -201,7 +203,6 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
 
 val storeSubjects = listOf(
     "All",
-    "All",
     "Polity",
     "History",
     "Geography",
@@ -295,7 +296,7 @@ fun MyLearningScreen(
                         .clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(
                             str.navMyLearning,
                             style = MaterialTheme.typography.titleLarge,
@@ -312,14 +313,14 @@ fun MyLearningScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.White.copy(0.15f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("🪙", fontSize = 14.sp)
+                        Text("🪙", fontSize = 13.sp)
                         Text(
-                            "$userCoins ${str.coins}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            "$userCoins",
+                            style = MaterialTheme.typography.labelLarge,
                             color = BpscColors.CoinGold,
                             fontWeight = FontWeight.ExtraBold
                         )
@@ -1063,11 +1064,11 @@ private fun LibraryDetailSheet(
 @Composable
 private fun UploadNotesSheet(onDismiss: () -> Unit) {
     val str = LocalStrings.current
+    val cs =MaterialTheme.colorScheme
     var title by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var selType by remember { mutableStateOf(LibraryContentType.PDF) }
     var description by remember { mutableStateOf("") }
-    val cs = MaterialTheme.colorScheme
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -2515,7 +2516,6 @@ private fun DetailStat(icon: String, value: String, label: String) {
             .background(cs.background)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 16.sp)
         Text(
             value,
