@@ -68,15 +68,16 @@ fun SplashScreen(navController: NavHostController) {
             Screen.Main.route
         }*/
 
-        // First-ever launch — show language selection before anything else
+        // Navigation decision tree:
+        // 1. First-ever launch → Language selection
+        // 2. Logged in (token exists) → Main directly (skip ExamSetup on reinstall)
+        // 3. Not logged in + onboarded → Login
+        // 4. Not logged in + never onboarded → Onboarding
         val destination = when {
-            LanguageManager.isFirstLaunch(context) -> Screen.LanguageSelection.route
-            token.isNullOrEmpty() -> {
-                if (tokenStore.isOnboarded()) Screen.Login.route
-                else Screen.Onboarding.route
-            }
-            !tokenStore.isExamSetupDone() -> Screen.ExamSetup.route
-            else -> Screen.Main.route
+            LanguageManager.isFirstLaunch(context)  -> Screen.LanguageSelection.route
+            !token.isNullOrEmpty()                  -> Screen.Main.route   // already authenticated
+            tokenStore.isOnboarded()                -> Screen.Login.route
+            else                                    -> Screen.Onboarding.route
         }
         navController.navigate(destination) {
             popUpTo(Screen.Splash.route) { inclusive = true }

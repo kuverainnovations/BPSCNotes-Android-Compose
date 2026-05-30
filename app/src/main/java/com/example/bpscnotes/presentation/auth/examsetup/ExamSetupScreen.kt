@@ -185,7 +185,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
             state.examsError != null -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("⚠️", fontSize = 40.sp)
-                    Text("Failed to load exams", style = MaterialTheme.typography.titleMedium)
+                    Text(str.examLoadFailed, style = MaterialTheme.typography.titleMedium)
                     Button(onClick = vm::loadExams) { Text(str.retry) }
                 }
             }

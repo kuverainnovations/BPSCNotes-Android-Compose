@@ -1005,7 +1005,7 @@ private fun MaterialDetailSheet(
                         Text(material.type.emoji, fontSize = 44.sp)
                         Text(if (!downloadUrl.isNullOrBlank()) str.materialsTapOpen else str.materialsNoPreview,
                             style = MaterialTheme.typography.titleMedium, color = BpscColors.TextSecondary)
-                        Text("Open full document in PDF viewer",
+                        Text(str.materialsOpenPdf,
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                     }
                 }
@@ -1018,7 +1018,7 @@ private fun MaterialDetailSheet(
                         Column(Modifier.weight(1f)) {
                             Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
-                            Text("Unlock with BPSCNotes Pro", style = MaterialTheme.typography.bodyMedium,
+                            Text(str.materialsUnlockPro2, style = MaterialTheme.typography.bodyMedium,
                                 color = BpscColors.TextSecondary)
                         }
                     }
@@ -1111,7 +1111,7 @@ private fun UploadSheet(
 
             Text(str.materialsUploadTitle, style = MaterialTheme.typography.headlineSmall,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-            Text("Share notes with 10,000+ BPSC aspirants",
+            Text(str.materialsShareHint,
                 style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
             HorizontalDivider(color = BpscColors.Divider)
 
@@ -1125,7 +1125,7 @@ private fun UploadSheet(
             }
 
             OutlinedTextField(value = title, onValueChange = { title = it },
-                label = { Text("Notes Title *") }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(str.materialsNotesTitle) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
             // FIX: Subject dropdown populated from backend /subjects API
@@ -1153,11 +1153,11 @@ private fun UploadSheet(
             }
 
             OutlinedTextField(value = author, onValueChange = { author = it },
-                label = { Text("Author (your name)") }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(str.materialsAuthorName) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
             // Type selector
-            Text("Content Type", style = MaterialTheme.typography.titleMedium,
+            Text(str.materialsContentType, style = MaterialTheme.typography.titleMedium,
                 color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(MaterialType.values()) { type ->
@@ -1181,9 +1181,9 @@ private fun UploadSheet(
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
             OutlinedTextField(value = tagsInput, onValueChange = { tagsInput = it },
-                label = { Text("Tags (comma separated)") }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(str.materialsTags) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true,
-                placeholder = { Text("Constitution, Parliament, DPSP") })
+                placeholder = { Text(str.materialsTagHint) })
 
             // ── Marketplace / Premium Settings ─────────────────
             Card(shape = RoundedCornerShape(14.dp),
@@ -1626,11 +1626,11 @@ fun PurchaseConfirmDialog(
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅"); Text("Download to device",
+                            Text("✅"); Text(str.materialsDownloadDevice,
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅"); Text("Lifetime access, no expiry",
+                            Text("✅"); Text(str.materialsLifetimeAccess,
                             style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
                         }
                     }

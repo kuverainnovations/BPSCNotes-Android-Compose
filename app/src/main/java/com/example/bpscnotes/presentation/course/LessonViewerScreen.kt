@@ -231,7 +231,7 @@ private fun PdfViewer(notesUrl: String?) {
             Spacer(Modifier.height(12.dp))
             Text(str.lessonCantLoadPdf, style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, color = BpscColors.TextPrimary)
-            Text("The viewer timed out or the link is unavailable.",
+            Text(str.lessonViewerTimeout,
                 style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(20.dp))

@@ -416,21 +416,21 @@ private fun RoomLobbyScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                           /* Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(0.15f))
-                                    .clickable { navController.popBackStack() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.ArrowBack,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }*/
+                            /* Box(
+                                 modifier = Modifier
+                                     .size(36.dp)
+                                     .clip(CircleShape)
+                                     .background(Color.White.copy(0.15f))
+                                     .clickable { navController.popBackStack() },
+                                 contentAlignment = Alignment.Center
+                             ) {
+                                 Icon(
+                                     Icons.Rounded.ArrowBack,
+                                     null,
+                                     tint = Color.White,
+                                     modifier = Modifier.size(18.dp)
+                                 )
+                             }*/
                             Column {
                                 Text(
                                     str.materialsTitle,
@@ -1030,7 +1030,8 @@ private fun RoomListCard(room: StudyRoom, onJoin: () -> Unit) {
 @Composable
 private fun ActiveRoomScreen(room: StudyRoom, onExit: () -> Unit) {
     var activeTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Chat", "Members", "Leaderboard", "Pomodoro")
+   val str=LocalStrings.current
+    val tabs = listOf(str.roomTabChat, str.roomTabMembers, str.roomTabLeaderboard, str.roomTabPomodoro)
 
     // Pomodoro state
     var pomodoroSeconds by remember { mutableIntStateOf(room.pomodoroMinutes * 60) }
@@ -2072,7 +2073,7 @@ private fun JoinByCodeSheet(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
 
             OutlinedTextField(
                 value = code, onValueChange = { code = it.uppercase(); isError = false },
-                label = { Text("Room Code (e.g. BPSC2026)") },
+                label = { Text(str.roomCodeHint) },
                 isError = isError,
                 supportingText = if (isError) {
                     { Text("${str.error}. ${str.tryAgain}.") }

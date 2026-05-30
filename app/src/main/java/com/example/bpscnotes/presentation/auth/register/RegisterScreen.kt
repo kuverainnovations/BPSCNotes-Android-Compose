@@ -133,7 +133,7 @@ fun RegisterScreen(
                 onValueChange = { name = it },
                 modifier      = Modifier.fillMaxWidth(),
                 label         = { Text(str.editFullName) },
-                placeholder   = { Text("e.g. Rahul Kumar") },
+                placeholder   = { Text(str.registerNameHint) },
                 shape         = RoundedCornerShape(14.dp),
                 singleLine    = true,
                 keyboardOptions = KeyboardOptions(

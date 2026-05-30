@@ -803,6 +803,7 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
     var mcqSelected by remember { mutableIntStateOf(-1) }
     var mcqAnswered by remember { mutableStateOf(false) }
     val hasBackImage = !card.backImageUrl.isNullOrBlank()
+    val str=LocalStrings.current
 
     Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -831,7 +832,7 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
                 }
                 card.relatedMcq?.let { mcq ->
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Related MCQ", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.recallRelatedMcq, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Text(mcq.question, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, lineHeight = 22.sp)
                         mcq.options.forEachIndexed { index, option ->
                             val isCorrect  = index == mcq.correctIndex

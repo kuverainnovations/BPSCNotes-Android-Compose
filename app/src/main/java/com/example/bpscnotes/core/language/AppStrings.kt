@@ -351,6 +351,35 @@ data class MiscStrings4(
     val quizReviewExplanation: String,
     val dashboardActiveRecall: String,
     val mockSampleQ1: String, val mockSampleA: String, val mockSampleQ2: String,
+    // ── NEW: previously hardcoded strings ─────────────────────────────────
+    // StudyMaterials
+    val materialsOpenPdf: String, val materialsUnlockPro2: String,
+    val materialsShareHint: String, val materialsNotesTitle: String,
+    val materialsAuthorName: String, val materialsContentType: String,
+    val materialsTags: String, val materialsTagHint: String,
+    val materialsDownloadDevice: String, val materialsLifetimeAccess: String,
+    // Targets
+    val targetSwipeNavigate: String, val targetAllDone: String,
+    // Certificates
+    val courseCertOfCompletion: String, val courseCertDownload: String,
+    val courseCertShare: String, val courseCertNotAvailable: String,
+    // Permissions
+    val permOpenSettings: String, val permNotNow: String,
+    // Misc
+    val recallRelatedMcq: String, val examLoadFailed: String,
+    val registerNameHint: String, val courseBpscExpert: String,
+    val lessonViewerTimeout: String, val notifSettingsHint: String,
+    val placeholdersSeeAll2: String,
+    val placeholdersPremiumNotes: String, val placeholdersPremiumCourses: String,
+    // Reading rooms
+    val roomCodeHint: String, val roomCreate: String,
+    val roomTabChat: String, val roomTabMembers: String,
+    val roomTabLeaderboard: String, val roomTabPomodoro: String,
+    // Mock tests
+    val mockAttempts: String, val mockUnlock: String, val mockCustom: String,
+    val mockSubjectWise: String, val mockLeaderboard: String,
+    val mockQuitTitle: String, val mockQuitBody: String,
+    val mcqQuitTitle: String,
 )
 
 // ── Facade — 12 fields, all call sites keep using str.xxx unchanged ───────────
@@ -718,7 +747,52 @@ data class AppStrings(
     // ── MiscStrings4 extras ───────────────────────────────────────
     val quizReviewExplanation get() = _m4.quizReviewExplanation
     val dashboardActiveRecall get() = _m4.dashboardActiveRecall
+    val mockSampleQ1  get() = _m4.mockSampleQ1
+    val mockSampleA   get() = _m4.mockSampleA
+    val mockSampleQ2  get() = _m4.mockSampleQ2
 
+    // ── New strings (previously hardcoded) ─────────────────────────────
+    val materialsOpenPdf          get() = _m4.materialsOpenPdf
+    val materialsUnlockPro2       get() = _m4.materialsUnlockPro2
+    val materialsShareHint        get() = _m4.materialsShareHint
+    val materialsNotesTitle       get() = _m4.materialsNotesTitle
+    val materialsAuthorName       get() = _m4.materialsAuthorName
+    val materialsContentType      get() = _m4.materialsContentType
+    val materialsTags             get() = _m4.materialsTags
+    val materialsTagHint          get() = _m4.materialsTagHint
+    val materialsDownloadDevice   get() = _m4.materialsDownloadDevice
+    val materialsLifetimeAccess   get() = _m4.materialsLifetimeAccess
+    val targetSwipeNavigate       get() = _m4.targetSwipeNavigate
+    val targetAllDone             get() = _m4.targetAllDone
+    val courseCertOfCompletion    get() = _m4.courseCertOfCompletion
+    val courseCertDownload        get() = _m4.courseCertDownload
+    val courseCertShare           get() = _m4.courseCertShare
+    val courseCertNotAvailable    get() = _m4.courseCertNotAvailable
+    val permOpenSettings          get() = _m4.permOpenSettings
+    val permNotNow                get() = _m4.permNotNow
+    val recallRelatedMcq          get() = _m4.recallRelatedMcq
+    val examLoadFailed            get() = _m4.examLoadFailed
+    val registerNameHint          get() = _m4.registerNameHint
+    val courseBpscExpert          get() = _m4.courseBpscExpert
+    val lessonViewerTimeout       get() = _m4.lessonViewerTimeout
+    val notifSettingsHint         get() = _m4.notifSettingsHint
+    val placeholdersSeeAll2       get() = _m4.placeholdersSeeAll2
+    val placeholdersPremiumNotes  get() = _m4.placeholdersPremiumNotes
+    val placeholdersPremiumCourses get() = _m4.placeholdersPremiumCourses
+    val roomCodeHint              get() = _m4.roomCodeHint
+    val roomCreate                get() = _m4.roomCreate
+    val roomTabChat               get() = _m4.roomTabChat
+    val roomTabMembers            get() = _m4.roomTabMembers
+    val roomTabLeaderboard        get() = _m4.roomTabLeaderboard
+    val roomTabPomodoro           get() = _m4.roomTabPomodoro
+    val mockAttempts              get() = _m4.mockAttempts
+    val mockUnlock                get() = _m4.mockUnlock
+    val mockCustom                get() = _m4.mockCustom
+    val mockSubjectWise           get() = _m4.mockSubjectWise
+    val mockLeaderboard           get() = _m4.mockLeaderboard
+    val mockQuitTitle             get() = _m4.mockQuitTitle
+    val mockQuitBody              get() = _m4.mockQuitBody
+    val mcqQuitTitle              get() = _m4.mcqQuitTitle
 }
 
 // ── Helper to build AppStrings from grouped sub-objects ───────────────────────
@@ -1154,6 +1228,43 @@ val EnglishStrings: AppStrings = mkAppStrings(
         dashboardActiveRecall="Active Recall",
         mockSampleQ1="Which Article abolishes untouchability?",
         mockSampleA="Article 17", mockSampleQ2="The Dandi March was led in which year?",
+        materialsOpenPdf="Open full document in PDF viewer",
+        materialsUnlockPro2="Unlock with BPSCNotes Pro",
+        materialsShareHint="Share notes with 10,000+ BPSC aspirants",
+        materialsNotesTitle="Notes Title *",
+        materialsAuthorName="Author (your name)",
+        materialsContentType="Content Type",
+        materialsTags="Tags (comma separated)",
+        materialsTagHint="e.g. Constitution, Parliament",
+        materialsDownloadDevice="Download to device",
+        materialsLifetimeAccess="Lifetime access, no expiry",
+        targetSwipeNavigate="Swipe to navigate",
+        targetAllDone="You've completed today's targets.\nYour streak is safe!",
+        courseCertOfCompletion="Certificate of Completion",
+        courseCertDownload="Download",
+        courseCertShare="Share",
+        courseCertNotAvailable="Certificate not available yet",
+        permOpenSettings="Open App Settings",
+        permNotNow="Not now",
+        recallRelatedMcq="Related MCQ",
+        examLoadFailed="Failed to load exams",
+        registerNameHint="e.g. Rahul Kumar",
+        courseBpscExpert="BPSC Subject Expert",
+        lessonViewerTimeout="The viewer timed out or the link is unavailable.",
+        notifSettingsHint="We'll notify you about quizzes,\ndaily targets and important updates",
+        placeholdersSeeAll2="See all",
+        placeholdersPremiumNotes="📄 Premium Notes & Papers",
+        placeholdersPremiumCourses="🎓 Premium Courses",
+        roomCodeHint="Room Code (e.g. BPSC2026)",
+        roomCreate="Create",
+        roomTabChat="Chat", roomTabMembers="Members",
+        roomTabLeaderboard="Leaderboard", roomTabPomodoro="Pomodoro",
+        mockAttempts="Attempts", mockUnlock="Unlock",
+        mockCustom="Custom", mockSubjectWise="Subject",
+        mockLeaderboard="Leaderboard",
+        mockQuitTitle="Quit Mock Test?",
+        mockQuitBody="Your answers will be lost. Are you sure you want to quit?",
+        mcqQuitTitle="Quit MCQ Quiz?",
     ),
 )
 
@@ -1589,5 +1700,42 @@ val HindiStrings: AppStrings = mkAppStrings(
         dashboardActiveRecall="सक्रिय स्मरण",
         mockSampleQ1="कौन सा अनुच्छेद अस्पृश्यता समाप्त करता है?",
         mockSampleA="अनुच्छेद 17", mockSampleQ2="दांडी मार्च किस वर्ष नेतृत्व किया गया था?",
+        materialsOpenPdf="PDF व्यूअर में पूरा दस्तावेज़ खोलें",
+        materialsUnlockPro2="BPSCNotes Pro से अनलॉक करें",
+        materialsShareHint="10,000+ BPSC अभ्यर्थियों के साथ नोट्स शेयर करें",
+        materialsNotesTitle="नोट्स का शीर्षक *",
+        materialsAuthorName="लेखक (आपका नाम)",
+        materialsContentType="सामग्री का प्रकार",
+        materialsTags="टैग (कॉमा से अलग करें)",
+        materialsTagHint="जैसे संविधान, संसद",
+        materialsDownloadDevice="डिवाइस पर डाउनलोड करें",
+        materialsLifetimeAccess="आजीवन पहुँच, कोई समाप्ति नहीं",
+        targetSwipeNavigate="नेविगेट करने के लिए स्वाइप करें",
+        targetAllDone="आपने आज के सभी लक्ष्य पूरे कर लिए।\nआपका स्ट्रीक सुरक्षित है!",
+        courseCertOfCompletion="पूर्णता का प्रमाणपत्र",
+        courseCertDownload="डाउनलोड",
+        courseCertShare="शेयर",
+        courseCertNotAvailable="प्रमाणपत्र अभी उपलब्ध नहीं है",
+        permOpenSettings="ऐप सेटिंग खोलें",
+        permNotNow="अभी नहीं",
+        recallRelatedMcq="संबंधित MCQ",
+        examLoadFailed="परीक्षाएँ लोड करने में विफल",
+        registerNameHint="जैसे राहुल कुमार",
+        courseBpscExpert="BPSC विषय विशेषज्ञ",
+        lessonViewerTimeout="व्यूअर टाइमआउट हो गया या लिंक उपलब्ध नहीं है।",
+        notifSettingsHint="हम आपको क्विज़, दैनिक लक्ष्यों और महत्वपूर्ण अपडेट के बारे में सूचित करेंगे",
+        placeholdersSeeAll2="सभी देखें",
+        placeholdersPremiumNotes="📄 प्रीमियम नोट्स और पेपर",
+        placeholdersPremiumCourses="🎓 प्रीमियम कोर्स",
+        roomCodeHint="रूम कोड (जैसे BPSC2026)",
+        roomCreate="बनाएं",
+        roomTabChat="चैट", roomTabMembers="सदस्य",
+        roomTabLeaderboard="लीडरबोर्ड", roomTabPomodoro="पोमोडोरो",
+        mockAttempts="प्रयास", mockUnlock="अनलॉक",
+        mockCustom="कस्टम", mockSubjectWise="विषय",
+        mockLeaderboard="लीडरबोर्ड",
+        mockQuitTitle="मॉक टेस्ट छोड़ें?",
+        mockQuitBody="आपके उत्तर खो जाएंगे। क्या आप वाकई छोड़ना चाहते हैं?",
+        mcqQuitTitle="MCQ क्विज़ छोड़ें?",
     ),
 )

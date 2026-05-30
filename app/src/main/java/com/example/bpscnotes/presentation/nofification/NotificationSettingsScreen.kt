@@ -214,7 +214,7 @@ fun NotificationSettingsScreen(
                         Text("🔔", fontSize = 52.sp)
                         Text(str.notifNone, style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("We'll notify you about quizzes,\ndaily targets and important updates",
+                        Text(str.notifSettingsHint,
                             style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary,
                             textAlign = TextAlign.Center)
                     }

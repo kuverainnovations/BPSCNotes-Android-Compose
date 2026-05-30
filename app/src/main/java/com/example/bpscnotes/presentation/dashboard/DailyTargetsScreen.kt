@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 
 data class TargetItem(
     val target: DailyTargetDto,
-   // val difficulty: Difficulty,   // derived from target.difficulty string
+    // val difficulty: Difficulty,   // derived from target.difficulty string
     val timeSlot: TimeSlot,       // derived from target.timeSlot string
 )
 
@@ -360,7 +360,7 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         SubjectTag(item.target.subject)
-                       // DifficultyBadge(item.difficulty)
+                        // DifficultyBadge(item.difficulty)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
                             Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
@@ -493,7 +493,7 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                     Spacer(Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp)); Text("Skip", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint) }
-                        Text("Swipe to navigate", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
+                        Text(str.targetSwipeNavigate, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("Done", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Success); Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp)) }
                     }
                 }
@@ -506,7 +506,7 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
             Column(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("🎉", fontSize = 60.sp)
                 Text("${str.targetCompleted}! 🎉", style = MaterialTheme.typography.headlineSmall, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                Text("You've completed today's targets.\nYour streak is safe!", style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text(str.targetAllDone, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
     }

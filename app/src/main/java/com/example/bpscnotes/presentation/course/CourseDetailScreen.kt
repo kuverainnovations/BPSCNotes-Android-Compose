@@ -939,6 +939,7 @@ private fun LessonRow(lesson: Lesson, accent: Color, onTap: () -> Unit) {
 
 @Composable
 private fun InstructorSection(course: CourseDto, accent: Color) {
+    val str= LocalStrings.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("👨‍🏫 About the Instructor", style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
         Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), CardDefaults.cardColors(Color.White), CardDefaults.cardElevation(2.dp)) {
@@ -950,7 +951,7 @@ private fun InstructorSection(course: CourseDto, accent: Color) {
                     }
                     Column {
                         Text(course.instructor ?: "", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                        Text("BPSC Subject Expert", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                        Text(str.courseBpscExpert, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

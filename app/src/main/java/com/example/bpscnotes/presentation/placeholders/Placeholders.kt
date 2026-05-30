@@ -667,11 +667,11 @@ fun SubscriptionScreen(
                                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically) {
-                                        Text("📄 Premium Notes & Papers",
+                                        Text(str.placeholdersPremiumNotes,
                                             style = MaterialTheme.typography.titleMedium,
                                             color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                                         TextButton(onClick = { nav.navigate(Screen.StudyMaterials.route) }) {
-                                            Text("See all", color = BpscColors.Primary)
+                                            Text(str.placeholdersSeeAll2, color = BpscColors.Primary)
                                         }
                                     }
                                 }
@@ -685,7 +685,7 @@ fun SubscriptionScreen(
                             if (state.premiumCourses.isNotEmpty()) {
                                 item {
                                     Spacer(Modifier.height(8.dp))
-                                    Text("🎓 Premium Courses",
+                                    Text(str.placeholdersPremiumCourses,
                                         style = MaterialTheme.typography.titleMedium,
                                         color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
                                 }
