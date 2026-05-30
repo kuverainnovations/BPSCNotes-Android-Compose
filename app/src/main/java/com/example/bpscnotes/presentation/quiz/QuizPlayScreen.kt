@@ -28,6 +28,8 @@ import com.example.bpscnotes.core.ads.AdManager
 import android.app.Activity
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
+import com.example.bpscnotes.core.ui.AppQuitDialog
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.t.BpscColors
 import kotlinx.coroutines.delay
@@ -226,20 +228,13 @@ private fun QuizPlayerContent(
                 showExitConfirm = true
             }
             if (showExitConfirm) {
-                AlertDialog(
-                    onDismissRequest = { showExitConfirm = false },
-                    shape = RoundedCornerShape(16.dp),
-                    title = { Text(str.quizQuitTitle, fontWeight = FontWeight.Bold) },
-                    text  = { Text(str.quizQuitBody) },
-                    confirmButton = {
-                        Button(onClick = { showExitConfirm = false; onExit() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C))) {
-                            Text(str.quizQuit)
-                        }
-                    },
-                    dismissButton = {
-                        OutlinedButton(onClick = { showExitConfirm = false }) { Text(str.coursesContinue) }
-                    }
+                AppQuitDialog(
+                    title     = str.quizQuitTitle,
+                    body      = str.quizQuitBody,
+                    quitLabel = str.quizQuit,
+                    keepLabel = str.coursesContinue,
+                    onConfirm = { showExitConfirm = false; onExit() },
+                    onDismiss = { showExitConfirm = false }
                 )
             }
 

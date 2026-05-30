@@ -10,7 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.AlertDialog
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
@@ -20,6 +23,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
@@ -190,9 +194,13 @@ private fun QuizQuestionDto.toMockQuestion(): MockQuestion = MockQuestion(
 
 
 @Composable
-fun MockTestsScreen(navController: NavHostController,
-                    viewModel: MockTestsViewModel = hiltViewModel()
+fun MockTestsScreen(
+    navController: NavHostController,
+    adManager:     com.example.bpscnotes.core.ads.AdManager? = null,
+    viewModel:     MockTestsViewModel = hiltViewModel()
 ) {
+    val context  = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
     // FIX: Only show mock tests — exclude daily quizzes which appear in the daily quiz section
@@ -261,16 +269,24 @@ fun MockTestsScreen(navController: NavHostController,
     }
 
     when (screenState) {
-        MockTestState.Lobby -> MockTestLobbyScreen(
-            navController   = navController,
-            onStartTest     = { test ->
-                selectedTest = test
-                userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
-                screenState  = MockTestState.Instructions
-            },
-            onCustomTest    = { showCustomSheet = true },
-            viewModel       = viewModel
-        )
+        MockTestState.Lobby -> {
+            // Show ad when user navigates back from mock test section
+            androidx.activity.compose.BackHandler {
+                if (adManager != null && activity != null)
+                    adManager.showInterstitialIfReady(activity) { navController.popBackStack() }
+                else navController.popBackStack()
+            }
+            MockTestLobbyScreen(
+                navController   = navController,
+                onStartTest     = { test ->
+                    selectedTest = test
+                    userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
+                    screenState  = MockTestState.Instructions
+                },
+                onCustomTest    = { showCustomSheet = true },
+                viewModel       = viewModel
+            )
+        }
         MockTestState.Instructions -> selectedTest?.let { test ->
             TestInstructionsScreen(
                 test    = test,
@@ -290,12 +306,7 @@ fun MockTestsScreen(navController: NavHostController,
                 }
                 questions.isEmpty() && !state.isLoadingQuestions -> {
                     // Questions not yet loaded — show waiting state
-                    Box(Modifier.fillMaxSize(), Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            CircularProgressIndicator(color = BpscColors.Primary)
-                            Text(str.quizPreparingQ, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
+                    com.example.bpscnotes.core.ui.AppLoader(message = str.quizPreparingQ)
                 }
                 questions.isNotEmpty() -> {
                     val testStartTime = remember { System.currentTimeMillis() }
@@ -308,17 +319,34 @@ fun MockTestsScreen(navController: NavHostController,
                         onSubmit      = { score ->
                             finalScore = score
                             val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
-                            // Submit to API asynchronously
                             viewModel.submitTest(test.id, userAnswers, elapsed)
-                            screenState = MockTestState.Analysis
+                            // Show ad after completing test, then go to Analysis
+                            if (adManager != null && activity != null)
+                                adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Analysis }
+                            else
+                                screenState = MockTestState.Analysis
                         },
-                        onExit = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
+                        onExit = {
+                            viewModel.clearQuestions()
+                            if (adManager != null && activity != null)
+                                adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
+                            else
+                                screenState = MockTestState.Lobby
+                        }
                     )
                 }
             }
         }
         MockTestState.Analysis -> selectedTest?.let { test ->
             val questions = state.activeQuestions.map { it.toMockQuestion() }
+            // Back press from Analysis → show ad → go to Lobby
+            BackHandler {
+                viewModel.clearQuestions()
+                if (adManager != null && activity != null)
+                    adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
+                else
+                    screenState = MockTestState.Lobby
+            }
             TestAnalysisScreen(
                 test              = test,
                 questions         = questions,
@@ -333,7 +361,12 @@ fun MockTestsScreen(navController: NavHostController,
                     userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
                     screenState = MockTestState.Active
                 },
-                onExit            = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
+                onExit            = {
+                    viewModel.clearQuestions()
+                    if (adManager != null && activity != null)
+                        adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
+                    else screenState = MockTestState.Lobby
+                }
             )
         }
         MockTestState.Leaderboard -> {
@@ -388,7 +421,7 @@ private fun MockTestLobbyScreen(
             .map { it.toMockTest() }
     }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
-    val tabs = listOf(str.filterAll, str.quizFullMock, "Mini Tests", str.quizPrevYear/*, "Custom"*/)
+    val tabs = listOf(str.filterAll, str.quizFullMock, "Mini Tests", str.quizPrevYear/*, str.mockCustom*/)
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -433,7 +466,7 @@ private fun MockTestLobbyScreen(
                          ) {
                              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                  Icon(Icons.Rounded.Tune, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                 Text("Custom", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                 Text("Create Custom", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                              }
                          }*/
                     }
@@ -845,10 +878,26 @@ private fun ActiveTestScreen(
     onExit: () -> Unit,
 ) {
     val str = LocalStrings.current
-    var currentIndex    by remember { mutableIntStateOf(0) }
-    var timeLeft        by remember { mutableIntStateOf(test.durationMinutes * 60) }
-    var showNavigator   by remember { mutableStateOf(false) }
+    var currentIndex     by remember { mutableIntStateOf(0) }
+    var timeLeft         by remember { mutableIntStateOf(test.durationMinutes * 60) }
+    var showNavigator    by remember { mutableStateOf(false) }
     var showSubmitDialog by remember { mutableStateOf(false) }
+    var showQuitDialog   by remember { mutableStateOf(false) }
+
+    // Intercept system back — show quit dialog
+    BackHandler { showQuitDialog = true }
+
+    // Quit confirmation dialog
+    if (showQuitDialog) {
+        com.example.bpscnotes.core.ui.AppQuitDialog(
+            title     = "Quit Mock Test?",
+            body      = "Your answers will be lost. Are you sure you want to quit?",
+            quitLabel = str.quizQuit,
+            keepLabel = str.quizKeepGoing,
+            onConfirm = { showQuitDialog = false; onExit() },
+            onDismiss = { showQuitDialog = false }
+        )
+    }
     val scope           = rememberCoroutineScope()
     val current         = questions.getOrNull(currentIndex)
 
@@ -891,7 +940,8 @@ private fun ActiveTestScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Exit
-                        Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable(onClick = onExit), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                            .clickable { showQuitDialog = true }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         }
 

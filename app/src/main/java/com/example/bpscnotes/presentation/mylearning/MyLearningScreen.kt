@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Bookmark
@@ -137,6 +138,7 @@ data class LearningCourse(
     val studiedMinutes: Int, val lastStudied: String, val status: CourseStatus,
     val isPaid: Boolean, val hasCertificate: Boolean = false,
     val certificateDate: String? = null, val rating: Float = 0f,
+    val certificateUrl: String? = null,   // URL to view/download certificate
 )
 
 data class LibraryItem(
@@ -190,7 +192,10 @@ private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
             else ->
                 CourseStatus.NotStarted
         },
-    isPaid = isPaid
+    isPaid           = isPaid,
+    hasCertificate   = hasCertificate,
+    certificateDate  = enrollment?.completed_at,
+    certificateUrl   = null,   // backend returns certificate_url when available
 )
 
 val storeSubjects = listOf(
@@ -2084,79 +2089,98 @@ private fun CourseDetailSheet(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun CertificateCard(course: LearningCourse) {
-    val (accent, _) = subjectColorMap()[course.subject] ?: Pair(
-        BpscColors.Primary,
-        BpscColors.PrimaryLight
-    )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val str     = LocalStrings.current
+    val (accent, _) = subjectColorMap()[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+
+    // Capture str values before non-composable lambdas
+    val certTitle    = str.courseCertTitle    // "Certificate of Completion" — existing key
+    val downloadLabel = str.materialsDownload  // "Download" — existing key
+    val shareLabel    = str.courseShareCertBtn // "Share 🎓" — existing key
+    val notAvailable  = "Certificate not yet available"
+
+    // Open certificate URL in browser
+    fun downloadCertificate() {
+        val url = course.certificateUrl
+        if (url.isNullOrBlank()) {
+            android.widget.Toast.makeText(context, notAvailable, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+        context.startActivity(intent)
+    }
+
+    // Share certificate link
+    fun shareCertificate() {
+        val url       = course.certificateUrl
+        val shareText = if (!url.isNullOrBlank())
+            "I completed ${course.title} on BPSCNotes! 🏆\n$url"
+        else
+            "I completed ${course.title} on BPSCNotes! 🏆"
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, "Share Certificate"))
+    }
+
     Card(
-        modifier = Modifier.width(200.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier  = Modifier.width(220.dp),
+        shape     = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(accent, accent.copy(alpha = 0.7f)),
-                        Offset(0f, 0f),
-                        Offset(200f, 140f)
-                    )
-                )
+            modifier = Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(accent, accent.copy(0.75f)), Offset(0f, 0f), Offset(220f, 160f)))
         ) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .background(Color(0xFFFFD700)))
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Text("🏆", fontSize = 16.sp); Text(
-                    "Certificate",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFFFD700),
-                    fontWeight = FontWeight.ExtraBold
-                )
+            Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFFFD700)))
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("🏆", fontSize = 16.sp)
+                    Text(certTitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFD700), fontWeight = FontWeight.ExtraBold)
                 }
-                Text(
-                    course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
-                )
-                Text(
-                    "Completed · ${course.certificateDate}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(0.8f)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(0.2f))
-                        .padding(horizontal = 8.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.Download,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    ); Spacer(Modifier.width(4.dp)); Text(
-                    "Download",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(course.title,
+                    style = MaterialTheme.typography.titleSmall, color = Color.White,
+                    fontWeight = FontWeight.ExtraBold, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                if (!course.certificateDate.isNullOrBlank()) {
+                    Text("${str.coursesCompleted} · ${course.certificateDate}",
+                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
+                }
+                // Download + Share row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(0.25f))
+                            .clickable { downloadCertificate() }
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Rounded.Download, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text(downloadLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Row(
+                        modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(0.15f))
+                            .clickable { shareCertificate() }
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text(shareLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

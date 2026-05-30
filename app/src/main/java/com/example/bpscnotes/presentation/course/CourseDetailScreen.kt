@@ -104,95 +104,109 @@ fun CourseDetailScreen(
 
             // FIX 4: Preserve scroll position when returning from LessonViewer
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-            LazyColumn(
-                modifier       = Modifier.fillMaxSize().background(BpscColors.Surface),
-                contentPadding = PaddingValues(bottom = 110.dp),
-                state          = listState
-            ) {
+            // HeroHeader is pinned — only the content below it scrolls
+            Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
+                // Content column with top padding matching hero header height
+                LazyColumn(
+                    modifier       = Modifier.fillMaxSize().background(BpscColors.Surface),
+                    contentPadding = PaddingValues(top = 340.dp, bottom = 110.dp),
+                    state          = listState
+                ) {
 
-                item {
-                    HeroHeader(
-                        course, accent, totalLessons, completedLessons, animProg, isEnrolled
-                    ) { nav.popBackStack() }
-                }
-
-                if (state.error != null) {
-                    item {
-                        Text(
-                            state.error!!, color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3F3)).padding(12.dp)
-                        )
-                    }
-                }
-
-                if (course.whatYouLearn.isNotEmpty()) {
-                    item { WhatYouLearnSection(course.whatYouLearn, accent) }
-                }
-
-                // Certificate banner — shown always; state changes based on completion
-                item {
-                    CertificateBanner(
-                        isComplete  = allDone,
-                        courseName  = course.title
-                    )
-                }
-
-                item {
-                    SectionHeader(
-                        title    = str.coursesContent,
-                        subtitle = "${chapters.size} chapters · $totalLessons lessons",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
-                    )
-                }
-
-                if (chapters.isEmpty()) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
-                            Text(str.coursesNoCurriculum, color = BpscColors.TextSecondary)
+                    if (state.error != null) {
+                        item {
+                            Text(
+                                state.error!!, color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3F3)).padding(12.dp)
+                            )
                         }
                     }
-                } else {
-                    items(chapters, key = { it.id }) { chapter ->
-                        ChapterCard(
-                            chapter     = chapter,
-                            accent      = accent,
-                            expanded    = expandedChapter == chapter.id,
-                            onToggle    = { expandedChapter = if (expandedChapter == chapter.id) null else chapter.id },
-                            // FIX 3: Use LessonViewer route (same as lesson tap) not NotesReader
-                            onLessonTap = { lesson ->
-                                nav.navigate(Screen.LessonViewer.createRoute(courseId, lesson.id))
+
+                    // Remove this item block — HeroHeader now pinned above, inserted below
+
+                    if (state.error != null) {
+                        item {
+                            Text(
+                                state.error!!, color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3F3)).padding(12.dp)
+                            )
+                        }
+                    }
+
+                    if (course.whatYouLearn.isNotEmpty()) {
+                        item { WhatYouLearnSection(course.whatYouLearn, accent) }
+                    }
+
+                    // Certificate banner — shown always; state changes based on completion
+                    item {
+                        CertificateBanner(
+                            isComplete  = allDone,
+                            courseName  = course.title
+                        )
+                    }
+
+                    item {
+                        SectionHeader(
+                            title    = str.coursesContent,
+                            subtitle = "${chapters.size} chapters · $totalLessons lessons",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                        )
+                    }
+
+                    if (chapters.isEmpty()) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(32.dp), Alignment.Center) {
+                                Text(str.coursesNoCurriculum, color = BpscColors.TextSecondary)
                             }
+                        }
+                    } else {
+                        items(chapters, key = { it.id }) { chapter ->
+                            ChapterCard(
+                                chapter     = chapter,
+                                accent      = accent,
+                                expanded    = expandedChapter == chapter.id,
+                                onToggle    = { expandedChapter = if (expandedChapter == chapter.id) null else chapter.id },
+                                // FIX 3: Use LessonViewer route (same as lesson tap) not NotesReader
+                                onLessonTap = { lesson ->
+                                    nav.navigate(Screen.LessonViewer.createRoute(courseId, lesson.id))
+                                }
+                            )
+                        }
+                    }
+
+                    if (course.instructor != null) {
+                        item { InstructorSection(course, accent) }
+                    }
+
+                    // Rate banner: only when all done AND not yet submitted (persistent)
+                    if (canReview) {
+                        item { RateCourseBanner(accent) { viewModel.showRatingSheet() } }
+                    }
+
+                    // Success strip: shown after submission
+                    if (course.hasReviewed || state.isRatingSubmitted) {
+                        item { ReviewSubmittedBanner() }
+                    }
+
+                    // Reviews: 100% from API
+                    item {
+                        ReviewsSection(
+                            reviews            = course.reviews,
+                            rating             = course.rating.toFloatOrNull() ?: 0f,
+                            reviewCount        = course.review_count,
+                            ratingDistribution = course.ratingDistribution,
+                            accent             = accent
                         )
                     }
                 }
 
-                if (course.instructor != null) {
-                    item { InstructorSection(course, accent) }
-                }
+                // ── Pinned HeroHeader overlaid on top ──────────────
+                HeroHeader(
+                    course, accent, totalLessons, completedLessons, animProg, isEnrolled
+                ) { nav.popBackStack() }
+            } // end pinned-header Box
 
-                // Rate banner: only when all done AND not yet submitted (persistent)
-                if (canReview) {
-                    item { RateCourseBanner(accent) { viewModel.showRatingSheet() } }
-                }
-
-                // Success strip: shown after submission
-                if (course.hasReviewed || state.isRatingSubmitted) {
-                    item { ReviewSubmittedBanner() }
-                }
-
-                // Reviews: 100% from API
-                item {
-                    ReviewsSection(
-                        reviews            = course.reviews,
-                        rating             = course.rating.toFloatOrNull() ?: 0f,
-                        reviewCount        = course.review_count,
-                        ratingDistribution = course.ratingDistribution,
-                        accent             = accent
-                    )
-                }
-            }
-
-            // FIX 4: Bottom bar — str.coursesCompleted state when all lessons done
+            // Bottom bar
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BottomCta(
                     course      = course,
