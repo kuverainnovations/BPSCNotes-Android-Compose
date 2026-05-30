@@ -125,16 +125,19 @@ private fun QuizScreen(
                     Text("Q ${currentIndex + 1} / ${mcqs.size}",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White, fontWeight = FontWeight.Bold)
-                    // difficulty badge
-                    val diffColor = when (q.difficulty) {
-                        "easy" -> Color(0xFF2ECC71); "hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12)
+                    // difficulty badge (optional field)
+                    val diff = runCatching { q.difficulty }.getOrNull().orEmpty()
+                    if (diff.isNotBlank()) {
+                        val diffColor = when (diff) {
+                            "easy" -> Color(0xFF2ECC71); "hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12)
+                        }
+                        Text(diff.replaceFirstChar { it.uppercaseChar() },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = diffColor, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                .background(diffColor.copy(0.2f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp))
                     }
-                    Text(q.difficulty.replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = diffColor, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(diffColor.copy(0.2f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp))
                 }
                 // Progress bar
                 Box(modifier = Modifier.fillMaxWidth().height(5.dp)
@@ -162,62 +165,68 @@ private fun QuizScreen(
                     modifier = Modifier.padding(18.dp))
             }
 
-            // Options
-            listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD)
-                .forEach { (letter, text) ->
-                    val isSelected = answered == letter
-                    val isCorrect  = answered != null && letter == q.correct
-                    val isWrong    = isSelected && letter != q.correct
+            // Options — build dynamic list from optionA-D, skip empty
+            val optionPairs = listOf(
+                "a" to q.optionA,
+                "b" to q.optionB,
+                "c" to q.optionC,
+                "d" to q.optionD,
+            ).filter { (_, text) -> text.isNotBlank() }
 
-                    val bgColor = when {
-                        isCorrect -> Color(0xFFE8FDF4)
-                        isWrong   -> Color(0xFFFEE8E8)
-                        isSelected -> BpscColors.PrimaryLight
-                        else       -> Color.White
-                    }
-                    val borderColor = when {
-                        isCorrect -> Color(0xFF2ECC71)
-                        isWrong   -> Color(0xFFE74C3C)
-                        isSelected -> BpscColors.Primary
-                        else       -> BpscColors.Divider
-                    }
+            optionPairs.forEach { (letter, text) ->
+                val isSelected = answered == letter
+                val isCorrect  = answered != null && letter == q.correct
+                val isWrong    = isSelected && letter != q.correct
 
-                    Row(modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(bgColor)
-                        .border(1.5.dp, borderColor, RoundedCornerShape(14.dp))
-                        .clickable(enabled = answered == null) { onAnswer(q.id, letter) }
-                        .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-
-                        Box(modifier = Modifier.size(30.dp).clip(CircleShape)
-                            .background(when {
-                                isCorrect -> Color(0xFF2ECC71)
-                                isWrong   -> Color(0xFFE74C3C)
-                                isSelected -> BpscColors.Primary
-                                else       -> BpscColors.Surface
-                            }), contentAlignment = Alignment.Center) {
-                            Text(letter.uppercase(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (isSelected || isCorrect || isWrong) Color.White else BpscColors.TextHint,
-                                fontWeight = FontWeight.ExtraBold)
-                        }
-
-                        Text(text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = when {
-                                isCorrect -> Color(0xFF1A7A4A)
-                                isWrong   -> Color(0xFFB71C1C)
-                                isSelected -> BpscColors.Primary
-                                else       -> BpscColors.TextPrimary
-                            },
-                            modifier = Modifier.weight(1f))
-
-                        if (isCorrect) Icon(Icons.Rounded.Check, null,
-                            tint = Color(0xFF2ECC71), modifier = Modifier.size(18.dp))
-                    }
+                val bgColor = when {
+                    isCorrect -> Color(0xFFE8FDF4)
+                    isWrong   -> Color(0xFFFEE8E8)
+                    isSelected -> BpscColors.PrimaryLight
+                    else       -> Color.White
                 }
+                val borderColor = when {
+                    isCorrect -> Color(0xFF2ECC71)
+                    isWrong   -> Color(0xFFE74C3C)
+                    isSelected -> BpscColors.Primary
+                    else       -> BpscColors.Divider
+                }
+
+                Row(modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(bgColor)
+                    .border(1.5.dp, borderColor, RoundedCornerShape(14.dp))
+                    .clickable(enabled = answered == null) { onAnswer(q.id, letter) }
+                    .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                    Box(modifier = Modifier.size(30.dp).clip(CircleShape)
+                        .background(when {
+                            isCorrect -> Color(0xFF2ECC71)
+                            isWrong   -> Color(0xFFE74C3C)
+                            isSelected -> BpscColors.Primary
+                            else       -> BpscColors.Surface
+                        }), contentAlignment = Alignment.Center) {
+                        Text(letter.uppercase(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isSelected || isCorrect || isWrong) Color.White else BpscColors.TextHint,
+                            fontWeight = FontWeight.ExtraBold)
+                    }
+
+                    Text(text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = when {
+                            isCorrect -> Color(0xFF1A7A4A)
+                            isWrong   -> Color(0xFFB71C1C)
+                            isSelected -> BpscColors.Primary
+                            else       -> BpscColors.TextPrimary
+                        },
+                        modifier = Modifier.weight(1f))
+
+                    if (isCorrect) Icon(Icons.Rounded.Check, null,
+                        tint = Color(0xFF2ECC71), modifier = Modifier.size(18.dp))
+                }
+            }
 
             // Explanation
             if (answered != null && !q.explanation.isNullOrBlank()) {

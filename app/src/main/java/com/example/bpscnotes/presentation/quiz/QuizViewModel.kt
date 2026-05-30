@@ -209,7 +209,7 @@ class QuizViewModel @Inject constructor(
                     QuizSessionQuestion(
                         id               = q.id,
                         question         = q.questionText,
-                        options          = listOf(q.optionA, q.optionB, q.optionC, q.optionD),
+                        options          = q.optionTexts,  // dynamic: filters empty options
                         subject          = q.subject ?: quiz.subject,
                         difficulty       = q.difficulty,
                         explanation      = q.explanation,

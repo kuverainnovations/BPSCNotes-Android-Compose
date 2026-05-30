@@ -30,7 +30,7 @@ data class AtRiskUiState(
 )
 
 data class TierRoomsUiState(
-    // All 4 tiers (Silver/Gold/Premium/Diamond)
+    // All 4 tiers (Starter/Serious/Consistent/Achiever)
     val allTiers: List<RoomTierDto>                 = emptyList(),
     val isLoadingTiers: Boolean                     = true,
     val tiersError: String?                         = null,
@@ -55,8 +55,8 @@ data class TierRoomsUiState(
     val membersError: String?                       = null,
 
     // Which tier the user is currently browsing (may differ from their own tier)
-    // Default "silver" so leaderboard loads immediately without waiting for getMyTier
-    val selectedTierKey: String                     = "silver",
+    // Default "starter" so leaderboard loads immediately without waiting for getMyTier
+    val selectedTierKey: String                     = "starter",
     // Real-time WebSocket state
     val isSocketConnected: Boolean                  = false,
     val pendingPromotion: PromotionEvent?            = null,
@@ -100,7 +100,7 @@ class TierRoomsViewModel @Inject constructor(
                 _uiState.update { it.copy(isSocketConnected = connected) }
                 if (connected) {
                     // Join user's tier room. myTierData may not be loaded yet on first connect,
-                    // so fall back to selectedTierKey (default "silver").
+                    // so fall back to selectedTierKey (default "starter").
                     // loadMyTier() calls joinTierRoom again once real tier is known.
                     val tierKey = _uiState.value.myTierData?.currentTier?.tierKey
                         ?: _uiState.value.selectedTierKey
@@ -229,10 +229,10 @@ class TierRoomsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoadingTiers = true, isLoadingMyTier = true) }
 
             // Load tiers + my tier in parallel
-            // Also pre-load leaderboard for default "silver" tier so it's ready immediately
+            // Also pre-load leaderboard for default "starter" tier so it's ready immediately
             val tiersJob       = async { loadTiers() }
             val myTierJob      = async { loadMyTier() }
-            val leaderboardJob = async { loadLeaderboard("silver") }
+            val leaderboardJob = async { loadLeaderboard("starter") }
 
             tiersJob.await()
             myTierJob.await()
@@ -286,7 +286,7 @@ class TierRoomsViewModel @Inject constructor(
                 val data     = response.data ?: throw Exception("Empty tier response")
 
                 // Safety: fallback if tierKey is null from API
-                val tierKey = data.currentTier.tierKey ?: "silver"
+                val tierKey = data.currentTier.tierKey ?: "starter"
 
                 _uiState.update { s ->
                     s.copy(
@@ -382,9 +382,9 @@ class TierRoomsViewModel @Inject constructor(
                 val res  = api.claimPromotion()
                 val data = res.data ?: return@launch
                 if (data.success) {
-                    // Refresh tier data — user is now in Gold/Premium/Diamond
+                    // Refresh tier data — user is now in Serious/Consistent/Achiever
                     loadAll()
-                    onSuccess(data.newTierEmoji ?: "🥇", data.newTierName ?: "Gold Room")
+                    onSuccess(data.newTierEmoji ?: "🥇", data.newTierName ?: "Serious")
                 } else {
                     onFail(data.missing.joinToString("\n") { "• $it" }.ifEmpty { data.message })
                 }

@@ -139,7 +139,7 @@ fun StudyFocusScreen(
     }
 
     // Chat sheet — fully dynamic, real-time via WebSocket
-    val tierKey = tiersState.myTierData?.currentTier?.tierKey ?: "silver"
+    val tierKey = tiersState.myTierData?.currentTier?.tierKey ?: "starter"
 
 
     /*chatWithMember?.let { member ->
@@ -243,7 +243,7 @@ private fun ActiveRoomScreen(
 
     var showRoomChat by remember { mutableStateOf(false) }
     val tierKey =
-        tiersState.myTierData?.currentTier?.tierKey ?: "silver"
+        tiersState.myTierData?.currentTier?.tierKey ?: "starter"
 
 
 
@@ -332,7 +332,7 @@ private fun ActiveRoomScreen(
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${state.tierEmoji ?: "🥈"} ${state.tierName ?: "Silver Room"}",
+                    Text("${state.tierEmoji ?: "🥈"} ${state.tierName ?: "Starter Room"}",
                         style = MaterialTheme.typography.titleMedium, color = Color.White,
                         fontWeight = FontWeight.ExtraBold)
                     if (liveMembers.isNotEmpty()) {

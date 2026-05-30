@@ -851,8 +851,8 @@ data class CoinTransactionsResponseData(
 
 data class AdRewardRequest(val source: String = "wallet")
 data class AdConfigDto(
-    @com.google.gson.annotations.SerializedName("coins_per_ad") val coinsPerAd: Int = 10,
-    @com.google.gson.annotations.SerializedName("min_ads_per_session") val minAdsPerSession: Int = 2
+    @com.google.gson.annotations.SerializedName("coinsPerAd") val coinsPerAd: Int = 10,
+    @com.google.gson.annotations.SerializedName("minAdsPerSession") val minAdsPerSession: Int = 2
 )
 
 interface CoinsApiService {

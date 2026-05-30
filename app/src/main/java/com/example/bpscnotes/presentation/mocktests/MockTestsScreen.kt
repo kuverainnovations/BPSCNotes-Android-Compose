@@ -172,7 +172,7 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
 private fun QuizQuestionDto.toMockQuestion(): MockQuestion = MockQuestion(
     id       = id,
     question = questionText,
-    options  = listOf(optionA, optionB, optionC, optionD),
+    options  = optionTexts,  // dynamic 2-4 options
 
     // Backend hides correct answers during active quiz
     correctIndex = when (correctOption?.lowercase()?.trim()) {
@@ -1265,80 +1265,80 @@ private fun TestAnalysisScreen(
 
             Spacer(Modifier.height(16.dp))
 
-                // Coins earned banner (show even if 0 so user knows why no coins)
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    shape    = RoundedCornerShape(20.dp),
-                    colors   = CardDefaults.cardColors(
-                        containerColor = if (coinsEarned > 0) Color(0xFFFFF8E1) else Color.White.copy(0.12f)
-                    )
+            // Coins earned banner (show even if 0 so user knows why no coins)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                shape    = RoundedCornerShape(20.dp),
+                colors   = CardDefaults.cardColors(
+                    containerColor = if (coinsEarned > 0) Color(0xFFFFF8E1) else Color.White.copy(0.12f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("🪙", fontSize = 28.sp)
-                            Column {
-                                Text(
-                                    if (coinsEarned > 0) str.quizCoinsEarned2 else str.quizNoCoins,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    if (coinsEarned > 0) str.quizAddedWallet else str.quizAlreadyEarned,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
-                                )
-                            }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🪙", fontSize = 28.sp)
+                        Column {
+                            Text(
+                                if (coinsEarned > 0) str.quizCoinsEarned2 else str.quizNoCoins,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (coinsEarned > 0) Color(0xFF5D4037) else Color.White.copy(0.7f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                if (coinsEarned > 0) str.quizAddedWallet else str.quizAlreadyEarned,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (coinsEarned > 0) Color(0xFF8D6E63) else Color.White.copy(0.5f)
+                            )
                         }
-                        Text(
-                            if (coinsEarned > 0) "+$coinsEarned" else "0",
-                            style     = MaterialTheme.typography.headlineSmall,
-                            color     = if (coinsEarned > 0) Color(0xFFF57F17) else Color.White.copy(0.4f),
-                            fontWeight = FontWeight.ExtraBold
-                        )
                     }
+                    Text(
+                        if (coinsEarned > 0) "+$coinsEarned" else "0",
+                        style     = MaterialTheme.typography.headlineSmall,
+                        color     = if (coinsEarned > 0) Color(0xFFF57F17) else Color.White.copy(0.4f),
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
+            }
 
-                Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
-                // Stats card
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        AnalysisStat("✅", "$correct",        str.quizCorrect,   BpscColors.Success)
-                        AnalysisStat("❌", "$wrong",          str.quizWrong,     Color(0xFFE74C3C))
-                        AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
-                        AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
-                    }
+            // Stats card
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    AnalysisStat("✅", "$correct",        str.quizCorrect,   BpscColors.Success)
+                    AnalysisStat("❌", "$wrong",          str.quizWrong,     Color(0xFFE74C3C))
+                    AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
+                    AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
                 }
+            }
 
             Spacer(Modifier.height(12.dp))
 
             // Subject breakdown
-        /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(str.quizSubjectAnalysis, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                    subjectStats.forEach { (subject, correct, total) ->
-                        val pct = if (total > 0) correct.toFloat() / total else 0f
-                        val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
-                        val subColors = mapOf("Polity" to Color(0xFF9B59B6), "History" to Color(0xFFE74C3C), "Geography" to Color(0xFF1ABC9C),
-                            "Economy" to Color(0xFFE67E22), "Bihar GK" to Color(0xFFF39C12), "Science" to Color(0xFF2ECC71))
-                        val color = subColors[subject] ?: BpscColors.Primary
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(subject, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                Text("$correct/$total", style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
-                            }
-                            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
-                                Box(modifier = Modifier.fillMaxWidth(animSubProg).fillMaxHeight().background(color, RoundedCornerShape(4.dp)))
+            /*    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(str.quizSubjectAnalysis, style = MaterialTheme.typography.titleLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        subjectStats.forEach { (subject, correct, total) ->
+                            val pct = if (total > 0) correct.toFloat() / total else 0f
+                            val animSubProg by animateFloatAsState(pct, tween(1000), label = "sub$subject")
+                            val subColors = mapOf("Polity" to Color(0xFF9B59B6), "History" to Color(0xFFE74C3C), "Geography" to Color(0xFF1ABC9C),
+                                "Economy" to Color(0xFFE67E22), "Bihar GK" to Color(0xFFF39C12), "Science" to Color(0xFF2ECC71))
+                            val color = subColors[subject] ?: BpscColors.Primary
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(subject, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    Text("$correct/$total", style = MaterialTheme.typography.bodyLarge, color = color, fontWeight = FontWeight.Bold)
+                                }
+                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(BpscColors.Surface)) {
+                                    Box(modifier = Modifier.fillMaxWidth(animSubProg).fillMaxHeight().background(color, RoundedCornerShape(4.dp)))
+                                }
                             }
                         }
                     }
-                }
-            }*/
+                }*/
 
             Spacer(Modifier.height(16.dp))
 
