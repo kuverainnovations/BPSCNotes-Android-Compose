@@ -215,11 +215,11 @@ class ProfileViewModel @Inject constructor(
         val rank     = user?.rank
         val quizzes  = stats?.quizzesAttempted ?: user?.quizzesAttempted ?: 0
         return listOf(
-            BadgeItem("🔥", "7-Day Streak",   streak >= 7,              Color(0xFFFFF8E1)),
-            BadgeItem("⚡", "Speed Reader",   accuracy >= 80.0,         Color(0xFFE3F2FD)),
-            BadgeItem("🎯", "Sharpshooter",  accuracy >= 90.0,         Color(0xFFE8F5E9)),
-            BadgeItem("👑", "Top Ranker",    rank != null && rank <= 10,Color(0xFFF3E5F5)),
-            BadgeItem("📚", "Quiz Master",   quizzes >= 50,            Color(0xFFFFF3E0)),
+            BadgeItem("🔥", "7-Day Streak",  "Study for 7 consecutive days",  streak >= 7,               Color(0xFFFFF8E1)),
+            BadgeItem("⚡", "Speed Reader",  "Achieve 80%+ quiz accuracy",    accuracy >= 80.0,          Color(0xFFE3F2FD)),
+            BadgeItem("🎯", "Sharpshooter", "Achieve 90%+ quiz accuracy",    accuracy >= 90.0,          Color(0xFFE8F5E9)),
+            BadgeItem("👑", "Top Ranker",   "Reach top 10 on the leaderboard", rank != null && rank <= 10, Color(0xFFF3E5F5)),
+            BadgeItem("📚", "Quiz Master",  "Complete 50+ quizzes",          quizzes >= 50,             Color(0xFFFFF3E0)),
         )
     }
 

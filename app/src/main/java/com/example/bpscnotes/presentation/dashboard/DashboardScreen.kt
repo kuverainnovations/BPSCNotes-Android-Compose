@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.dashboard
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -343,60 +344,101 @@ private fun BannerSection(
     }
     if (banners.isEmpty()) return
 
-    LazyRow(
-        contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(banners, key = { it.id }) { banner ->
+    // Better banner: full-width auto-scrolling pager with dots
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState { banners.size }
+
+    // Auto-scroll
+    LaunchedEffect(pagerState) {
+        while (true) {
+            kotlinx.coroutines.delay(3500)
+            val next = (pagerState.currentPage + 1) % banners.size
+            pagerState.animateScrollToPage(next)
+        }
+    }
+
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            pageSpacing = 12.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) { page ->
+            val banner = banners[page]
+            val colors = parseGradientSafe(banner.bgGradient ?: "")
             Card(
                 modifier  = Modifier
-                    .width(300.dp)
-                    .height(100.dp)
+                    .fillMaxWidth()
+                    .height(120.dp)
                     .clickable { navigateBanner(banner, navController) },
                 shape     = RoundedCornerShape(20.dp),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                val colors = parseGradientSafe(banner.bgGradient?:"") // "from-red-500 to-pink-600"
-
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
+                    modifier = Modifier.fillMaxSize()
                         .background(
                             Brush.linearGradient(
-                                colors = colors.ifEmpty {
-                                    listOf(
-                                        Color(0xFF0D47A1),
-                                        Color(0xFF1976D2)
-                                    )
-                                },
-                                start = Offset(0f, 0f),
-                                end = Offset(400f, 200f)
+                                colors = colors.ifEmpty { listOf(Color(0xFF0D47A1), Color(0xFF1976D2)) },
+                                start = Offset(0f, 0f), end = Offset(500f, 250f)
                             )
-                        )
-                        .padding(16.dp)
+                        ).padding(18.dp)
                 ) {
                     Canvas(Modifier.matchParentSize()) {
-                        drawCircle(Color.White.copy(0.07f), 80.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
+                        drawCircle(Color.White.copy(0.06f), 100.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
+                        drawCircle(Color.White.copy(0.04f), 60.dp.toPx(), Offset(size.width * 0.6f, size.height + 10.dp.toPx()))
                     }
-                    Column {
-                        Text(
-                            banner.title,
-                            style = MaterialTheme.typography.titleMedium,
+                    // Image if available
+                    if (!banner.imageUrl.isNullOrBlank()) {
+                        // Dim overlay for text readability
+                        Box(Modifier.fillMaxSize().background(Color.Black.copy(0.25f)))
+                    }
+                    Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                        Text(banner.title, style = MaterialTheme.typography.titleMedium,
                             color = Color.White, fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis
-                        )
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                         banner.subtitle?.let {
-                            Spacer(Modifier.height(4.dp))
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(5.dp))
+                            Text(it, style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(0.85f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    Box(modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(0.15f))
-                        .padding(6.dp)) {
-                        Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    // CTA pill
+                    Row(
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(0.2f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(if (!banner.actionLink.isNullOrBlank()) "Open →" else "View →", style = MaterialTheme.typography.labelSmall,
+                            color = Color.White, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(12.dp))
                     }
+                }
+            }
+        }
+
+        // Dot indicators
+        if (banners.size > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(banners.size) { i ->
+                    val width by animateDpAsState(
+                        if (i == pagerState.currentPage) 20.dp else 6.dp,
+                        label = "dot$i"
+                    )
+                    Box(modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .height(6.dp)
+                        .width(width)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            if (i == pagerState.currentPage) BpscColors.Primary
+                            else BpscColors.Divider
+                        ))
                 }
             }
         }
@@ -668,7 +710,11 @@ private fun DashboardHeader(
                     .background(Color.White.copy(0.1f))
                     .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp))
                     .padding(horizontal = 14.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("🔥", fontSize = 16.sp)
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(com.kuvera.bpscnotes.R.drawable.ic_bpsc_logo),
+                        contentDescription = "BPSCNotes",
+                        modifier = Modifier.size(22.dp).clip(RoundedCornerShape(6.dp))
+                    )
                     Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1239,7 +1285,8 @@ private fun RecommendedSection(
 private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
     val subjectColors = mapOf("Bihar GK" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)))
     val (accent, bg) = subjectColors[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-    val progress = if (course.totalLessons > 0) course.enrollment?.completed_lessons?.toFloat() ?: 0f else 0f
+    val rawCompleted = course.enrollment?.completed_lessons?.toFloat() ?: 0f
+    val progress = if (course.totalLessons > 0) (rawCompleted / course.totalLessons).coerceIn(0f, 1f) else 0f
     Card(modifier = Modifier
         .width(168.dp)
         .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
@@ -1261,12 +1308,14 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(8.dp))
+                // Uniform height: always reserve progress bar space (Fix #11)
+                LinearProgressIndicator(
+                    progress = { if (progress > 0f) progress else 0f },
+                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                    color = accent, trackColor = if (progress > 0f) bg else Color.Transparent
+                )
+                Spacer(Modifier.height(4.dp))
                 if (progress > 0f) {
-                    LinearProgressIndicator(progress = { progress }, modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp)), color = accent, trackColor = bg)
-                    Spacer(Modifier.height(4.dp))
                     Text("${(progress * 100).toInt()}% complete", style = MaterialTheme.typography.labelSmall, color = accent)
                 } else {
                     Text(if (course.isPaid) "₹${course.price}" else "Free", style = MaterialTheme.typography.titleMedium, color = if (course.isPaid) BpscColors.Accent else BpscColors.Success, fontWeight = FontWeight.Bold)
@@ -1472,87 +1521,103 @@ fun formatDateTime(iso: String): String {
     }
 }
 @Composable
-private fun AchievementsSection(
-    achievements: List<AchievementItem>
-) {
+private fun AchievementsSection(achievements: List<AchievementItem>) {
     if (achievements.isEmpty()) return
+    var selectedAchievement by remember { mutableStateOf<AchievementItem?>(null) }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         SectionHeader("Achievements")
         Spacer(Modifier.height(14.dp))
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        LazyRow(contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             items(achievements) { a ->
-
-                val progressRatio =
-                    (a.progress.toFloat() / a.max).coerceIn(0f, 1f)
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                    // 🔵 Circle badge
+                val progressRatio = (a.progress.toFloat() / a.max).coerceIn(0f, 1f)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { selectedAchievement = a }
+                ) {
                     Box(
-                        modifier = Modifier
-                            .size(68.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (a.earned)
-                                    Color(a.colorHex).copy(0.12f)
-                                else BpscColors.Divider
-                            )
-                            .border(
-                                2.dp,
-                                if (a.earned)
-                                    Color(a.colorHex)
-                                else BpscColors.TextHint.copy(0.3f),
-                                CircleShape
-                            ),
+                        modifier = Modifier.size(68.dp).clip(CircleShape)
+                            .background(if (a.earned) Color(a.colorHex).copy(0.12f) else BpscColors.Divider)
+                            .border(2.dp, if (a.earned) Color(a.colorHex) else BpscColors.TextHint.copy(0.3f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            a.emoji,
-                            fontSize = 28.sp,
-                            modifier = Modifier.alpha(if (a.earned) 1f else 0.4f)
-                        )
+                        Text(a.emoji, fontSize = 28.sp, modifier = Modifier.alpha(if (a.earned) 1f else 0.4f))
                     }
-
                     Spacer(Modifier.height(6.dp))
-
-                    // 📝 Label
-                    Text(
-                        a.label,
-                        style = MaterialTheme.typography.labelSmall,
+                    Text(a.label, style = MaterialTheme.typography.labelSmall,
                         color = if (a.earned) BpscColors.TextPrimary else BpscColors.TextHint,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 14.sp,
-                        minLines = 2,
-                        maxLines = 2
-                    )
-
+                        textAlign = TextAlign.Center, lineHeight = 14.sp, minLines = 2, maxLines = 2)
                     Spacer(Modifier.height(4.dp))
-
-                    // 📊 Progress text
-                    Text(
-                        "${a.progress}/${a.max}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(a.colorHex),
-                        fontWeight = FontWeight.SemiBold
-                    )
-
+                    Text("${a.progress}/${a.max}", style = MaterialTheme.typography.labelSmall,
+                        color = Color(a.colorHex), fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(4.dp))
-
-                    // 📈 Progress bar
-                    LinearProgressIndicator(
-                        progress = progressRatio,
-                        modifier = Modifier
-                            .width(60.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(10.dp)),
-                        color = Color(a.colorHex),
-                        trackColor = BpscColors.Divider
-                    )
+                    LinearProgressIndicator(progress = { progressRatio },
+                        modifier = Modifier.width(60.dp).height(4.dp).clip(RoundedCornerShape(10.dp)),
+                        color = Color(a.colorHex), trackColor = BpscColors.Divider)
                 }
             }
         }
+    }
+
+    // Achievement detail dialog (Fix #12)
+    selectedAchievement?.let { a ->
+        val progressRatio = (a.progress.toFloat() / a.max).coerceIn(0f, 1f)
+        AlertDialog(
+            onDismissRequest = { selectedAchievement = null },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White,
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.size(80.dp).clip(CircleShape)
+                        .background(if (a.earned) Color(a.colorHex).copy(0.12f) else BpscColors.Divider)
+                        .border(2.dp, if (a.earned) Color(a.colorHex) else BpscColors.TextHint.copy(0.3f), CircleShape),
+                        contentAlignment = Alignment.Center) {
+                        Text(a.emoji, fontSize = 36.sp, modifier = Modifier.alpha(if (a.earned) 1f else 0.4f))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(a.label, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, color = BpscColors.TextPrimary)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Status pill
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(if (a.earned) Color(0xFF2E7D32).copy(0.08f) else BpscColors.PrimaryLight)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (a.earned) "🏆" else "🔒", fontSize = 16.sp)
+                        Text(
+                            if (a.earned) "Achievement Unlocked!" else "Keep going!",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (a.earned) Color(0xFF2E7D32) else BpscColors.Primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // Progress
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                            Text("Progress", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                            Text("${a.progress} / ${a.max}", style = MaterialTheme.typography.bodyMedium,
+                                color = Color(a.colorHex), fontWeight = FontWeight.Bold)
+                        }
+                        LinearProgressIndicator(progress = { progressRatio },
+                            modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
+                            color = Color(a.colorHex), trackColor = BpscColors.Divider)
+                        Text("${(progressRatio * 100).toInt()}% complete",
+                            style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    }
+                    // description field does not exist on AchievementItem — removed
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedAchievement = null }) {
+                    Text("Close", color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
 
@@ -1665,19 +1730,41 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(vertical = 4.dp)) {
-                    menuItems.forEach { (icon, label, route) ->
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onClose(); navController.navigate(route) }
-                            .padding(horizontal = 20.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Box(modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) { Icon(icon, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp)) }
-                            Text(label, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, modifier = Modifier.weight(1f))
-                            Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp))
+                    // Grouped menu items with section headers
+                    val groups = listOf(
+                        "Study" to menuItems.take(4),
+                        "Explore" to menuItems.drop(4).take(3),
+                        "Account" to menuItems.drop(7),
+                    )
+                    groups.forEachIndexed { gIdx, (groupLabel, groupItems) ->
+                        if (gIdx > 0) Spacer(Modifier.height(4.dp))
+                        Text(
+                            groupLabel.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.TextHint,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+                        )
+                        groupItems.forEach { (icon, label, route) ->
+                            Row(modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onClose(); navController.navigate(route) }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
+                                    Icon(icon, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
+                                }
+                                Text(label, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary,
+                                    fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Divider, modifier = Modifier.size(15.dp))
+                            }
                         }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = BpscColors.Divider, thickness = 0.5.dp)
+                        if (gIdx < groups.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = BpscColors.Divider, thickness = 0.5.dp)
                     }
                     Spacer(Modifier.height(8.dp))
                 }
@@ -1731,7 +1818,6 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
                     Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(Modifier.height(80.dp))
             }
         }
     }

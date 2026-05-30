@@ -45,6 +45,7 @@ fun SettingsScreen(
     val profileState  by profileViewModel.uiState.collectAsState()
     val str = LocalStrings.current
     val user = profileState.user
+    val cs   = MaterialTheme.colorScheme
 
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -97,7 +98,7 @@ fun SettingsScreen(
         )
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = BpscColors.Surface,
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             modifier = Modifier
@@ -181,7 +182,7 @@ fun SettingsScreen(
                 }
 
                 // ── Sound & Haptics ───────────────────────────────
-                SettingsSectionLabel(str.settingsSound.split(" ")[0] + " & Haptics")
+                SettingsSectionLabel(str.settingsSound + " & Haptics")
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -228,7 +229,7 @@ fun SettingsScreen(
                             title        = str.materialsDownloaded + " " + str.settingsTitle,
                             subtitle     = str.settingsManageOffline,
                             trailingLabel = if (settingsState.isComputingStorage) "…"
-                                           else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
+                            else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
                             onClick      = { navController.navigate(Screen.Downloads.route) }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
@@ -240,7 +241,7 @@ fun SettingsScreen(
                             title        = str.settingsClearCache,
                             subtitle     = if (settingsState.isClearingCache) str.settingsClearing else str.settingsClearCacheSubtitle,
                             trailingLabel = if (settingsState.isComputingStorage || settingsState.isClearingCache) "…"
-                                           else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
+                            else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
                             onClick      = { settingsViewModel.clearCache() }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = BpscColors.Divider, thickness = 0.5.dp)
@@ -298,7 +299,7 @@ fun SettingsScreen(
                 }
 
                 // ── Account Actions ───────────────────────────────
-                SettingsSectionLabel(str.settingsAccount + " " + str.settingsAccount)
+                SettingsSectionLabel("⚠️  " + str.settingsAccount + " Actions")
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -385,8 +386,9 @@ private fun SettingsHeader(onBack: () -> Unit) {
 @Composable
 private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -> Unit) {
     val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -399,8 +401,8 @@ private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(name ?: str.loading, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.ExtraBold)
-                Text(email ?: "", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                Text(name ?: str.loading, style = MaterialTheme.typography.titleMedium, color = cs.onBackground, fontWeight = FontWeight.ExtraBold)
+                Text(email ?: "", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
                 Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFF8E1))
                     .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -421,7 +423,7 @@ private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -
 // ── Section label ─────────────────────────────────────────────
 @Composable
 private fun SettingsSectionLabel(title: String) {
-    Text(title, style = MaterialTheme.typography.titleSmall, color = BpscColors.TextSecondary,
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp))
 }
 
@@ -431,6 +433,7 @@ private fun SettingsToggleRow(
     icon: ImageVector, iconBg: Color, iconTint: Color,
     title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
@@ -438,8 +441,8 @@ private fun SettingsToggleRow(
             Icon(icon, null, tint = iconTint, modifier = Modifier.size(20.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = cs.onBackground, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
@@ -457,6 +460,7 @@ private fun SettingsActionRow(
     trailingLabel: String = "", showArrow: Boolean = true,
     isDanger: Boolean = false, onClick: () -> Unit
 ) {
+    val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -468,11 +472,11 @@ private fun SettingsActionRow(
             Text(title, style = MaterialTheme.typography.bodyLarge,
                 color = if (isDanger) Color(0xFFC62828) else BpscColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
         if (trailingLabel.isNotEmpty())
             Text(trailingLabel, style = MaterialTheme.typography.bodyMedium,
-                color = BpscColors.TextHint, fontWeight = FontWeight.SemiBold)
+                color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
         else if (showArrow)
             Icon(Icons.Rounded.KeyboardArrowRight, null,
                 tint = if (isDanger) Color(0xFFC62828) else BpscColors.TextHint,

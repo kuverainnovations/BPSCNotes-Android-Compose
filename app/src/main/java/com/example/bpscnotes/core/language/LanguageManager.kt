@@ -17,7 +17,7 @@ enum class AppLanguage(val code: String, val displayName: String, val nativeName
 class LanguageManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val prefs = context.getSharedPreferences("bpsc_prefs", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("bpsc_lang_prefs", Context.MODE_PRIVATE)
     private val KEY   = "app_language"
 
     init {
@@ -33,13 +33,13 @@ class LanguageManager @Inject constructor(
 
         /** Call this from Composables that can't use Hilt injection */
         fun setLanguageGlobal(lang: AppLanguage, context: Context) {
-            context.getSharedPreferences("bpsc_prefs", Context.MODE_PRIVATE)
+            context.getSharedPreferences("bpsc_lang_prefs", Context.MODE_PRIVATE)
                 .edit().putString("app_language", lang.code).apply()
             _globalLanguage.value = lang
         }
 
         fun isFirstLaunch(context: Context): Boolean =
-            !context.getSharedPreferences("bpsc_prefs", Context.MODE_PRIVATE).contains("app_language")
+            !context.getSharedPreferences("bpsc_lang_prefs", Context.MODE_PRIVATE).contains("app_language")
     }
 
     // Instance API — same as before, backed by the shared flow

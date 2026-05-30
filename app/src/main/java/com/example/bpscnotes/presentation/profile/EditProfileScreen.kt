@@ -21,37 +21,30 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.ui.t.LocalDarkMode
 
-// ════════════════════════════════════════════════════════════
-// EditProfileScreen — fully dynamic
-// Loads current data from ProfileViewModel, calls PATCH /users/profile
-// ════════════════════════════════════════════════════════════
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     navController: NavHostController,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
-    val str = LocalStrings.current
-    val user  = state.user
+    val state   by viewModel.uiState.collectAsState()
+    val str     = LocalStrings.current
+    val user    = state.user
+    val isDark  = LocalDarkMode.current
+    val cs      = MaterialTheme.colorScheme
 
-    // Pre-populate fields from live user data
-    var name        by remember(user?.name)        { mutableStateOf(user?.name ?: "") }
-    var email       by remember(user?.email)       { mutableStateOf(user?.email ?: "") }
-    var bio         by remember(user?.bio)         { mutableStateOf(user?.bio ?: "") }
-    var district    by remember(user?.district)    { mutableStateOf(user?.district ?: "") }
-    var targetYear  by remember(user?.targetYear)  { mutableStateOf(user?.targetYear?.toString() ?: "") }
-    var prepLevel   by remember(user?.prepLevel)   { mutableStateOf(user?.prepLevel ?: "") }
+    var name     by remember(user?.name)     { mutableStateOf(user?.name ?: "") }
+    var email    by remember(user?.email)    { mutableStateOf(user?.email ?: "") }
+    var bio      by remember(user?.bio)      { mutableStateOf(user?.bio ?: "") }
+    var district by remember(user?.district) { mutableStateOf(user?.district ?: "") }
 
     val snackbarHost = remember { SnackbarHostState() }
-    val prepLevels   = listOf(str.prepBeginner, str.prepIntermediate, str.prepAdvanced)
-    val targetYears  = (2025..2030).map { it.toString() }
 
-    // Navigate back on success
+    // Navigate back on success (optimistic — no delay)
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
-            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Short)
             viewModel.clearMessages()
             navController.popBackStack()
         }
@@ -63,45 +56,57 @@ fun EditProfileScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost    = { SnackbarHost(snackbarHost) },
-        containerColor  = BpscColors.Surface,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(BpscColors.Surface)) {
+    val doSave = {
+        viewModel.updateProfile(
+            name      = name,
+            email     = email.ifEmpty { null },
+            bio       = bio.ifEmpty { null },
+            district  = district.ifEmpty { null },
+            targetYear = null,
+            prepLevel = null
+        )
+    }
 
-            // ── Header ─────────────────────────────────────────
+    Scaffold(
+        snackbarHost       = { SnackbarHost(snackbarHost) },
+        containerColor     = cs.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding).background(cs.background)) {
+
+            // ── Gradient header ──────────────────────────────
             Box(modifier = Modifier.fillMaxWidth()
                 .background(Brush.linearGradient(
                     listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                    Offset(0f, 0f), Offset(500f, 300f)))
-               // .statusBarsPadding()
-                    ) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                    .padding(top = 46.dp, bottom = 16.dp),
+                    Offset(0f, 0f), Offset(500f, 300f)))) {
+                Row(modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 20.dp).padding(top = 46.dp, bottom = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape)
-                        .background(Color.White.copy(0.12f)).clickable { navController.popBackStack() },
+
+                    // Back
+                    Box(modifier = Modifier.size(38.dp).clip(CircleShape)
+                        .background(Color.White.copy(0.12f))
+                        .clickable { navController.popBackStack() },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
+
                     Text(str.profileEdit, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape)
-                        .background(Color.White.copy(0.12f))
-                        .clickable(enabled = !state.isSaving) {
-                            viewModel.updateProfile(
-                                name       = name,
-                                email      = email.ifEmpty { null },
-                                bio        = bio.ifEmpty { null },
-                                district   = district.ifEmpty { null },
-                                targetYear = targetYear.toIntOrNull(),
-                                prepLevel  = prepLevel.ifEmpty { null }
-                            )
-                        }, contentAlignment = Alignment.Center) {
+
+                    // Save tick button in header
+                    Box(modifier = Modifier.size(38.dp).clip(CircleShape)
+                        .background(
+                            if (name.isNotBlank() && !state.isSaving)
+                                Color(0xFF4CAF50).copy(0.85f)
+                            else Color.White.copy(0.12f)
+                        )
+                        .clickable(enabled = name.isNotBlank() && !state.isSaving) { doSave() },
+                        contentAlignment = Alignment.Center) {
                         if (state.isSaving)
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(color = Color.White,
+                                modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         else
                             Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
@@ -109,129 +114,127 @@ fun EditProfileScreen(
             }
 
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                .padding(horizontal = 16.dp).padding(top = 20.dp, bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                // Avatar preview
-                Box(modifier = Modifier.align(Alignment.CenterHorizontally)
-                    .size(80.dp).clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(Color(0xFF0D47A1), Color(0xFF1976D2)))),
-                    contentAlignment = Alignment.Center) {
-                    Text(
-                        name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").ifEmpty { "?" },
-                        style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold
-                    )
+                // ── Avatar ────────────────────────────────────
+                Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Box(modifier = Modifier.size(90.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(
+                            listOf(Color(0xFF1565C0), Color(0xFF0D47A1)))),
+                        contentAlignment = Alignment.Center) {
+                        Text(
+                            name.split(" ").mapNotNull { it.firstOrNull()?.toString() }
+                                .take(2).joinToString("").ifEmpty { "?" },
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    // Camera icon badge
+                    Box(modifier = Modifier.size(28.dp).clip(CircleShape)
+                        .background(Color(0xFF1565C0))
+                        .border(2.dp, cs.surface, CircleShape)
+                        .align(Alignment.BottomEnd),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.CameraAlt, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
                 }
 
                 // ── Personal Info ──────────────────────────────
-                SectionHeader(str.editPersonalInfo)
-                ProfileField(value = name, label = str.editFullName, icon = Icons.Rounded.Person,
-                    onValueChange = { name = it })
-                ProfileField(value = email, label = str.editEmail, icon = Icons.Rounded.Email,
-                    keyboardType = KeyboardType.Email, onValueChange = { email = it })
-                ProfileField(value = bio, label = str.editBio, icon = Icons.Rounded.Info,
-                    singleLine = false, onValueChange = { bio = it }, minLines = 3)
-                ProfileField(value = district, label = str.editDistrict, icon = Icons.Rounded.LocationOn,
-                    onValueChange = { district = it })
+                EditSection(title = str.editPersonalInfo, isDark = isDark) {
+                    EditField(value = name, label = str.editFullName,
+                        icon = Icons.Rounded.Person, onValueChange = { name = it })
+                    Spacer(Modifier.height(10.dp))
+                    EditField(value = email, label = str.editEmail,
+                        icon = Icons.Rounded.Email, keyboardType = KeyboardType.Email,
+                        onValueChange = { email = it })
+                    Spacer(Modifier.height(10.dp))
+                    EditField(value = district, label = str.editDistrict,
+                        icon = Icons.Rounded.LocationOn, onValueChange = { district = it })
+                    Spacer(Modifier.height(10.dp))
+                    EditField(value = bio, label = str.editBio,
+                        icon = Icons.Rounded.Info, singleLine = false,
+                        minLines = 3, onValueChange = { bio = it })
+                }
 
-                // ── Exam Settings ──────────────────────────────
-                SectionHeader(str.editExamSettings)
-
-                // Prep level picker
-              /*  Text(str.editPrepLevel, style = MaterialTheme.typography.labelMedium,
-                    color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    prepLevels.forEach { level ->
-                        val selected = prepLevel == level
-                        Box(modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) BpscColors.Primary else Color.White)
-                            .border(1.dp, if (selected) BpscColors.Primary else BpscColors.Divider, RoundedCornerShape(12.dp))
-                            .clickable { prepLevel = level }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text(level, style = MaterialTheme.typography.bodyMedium,
-                                color = if (selected) Color.White else BpscColors.TextSecondary,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                // ── Mobile (read-only) ─────────────────────────
+                Card(shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(0.dp)) {
+                    Row(modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(BpscColors.Primary.copy(0.1f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.PhoneAndroid, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
                         }
-                    }
-                }*/
-
-                // Target year picker
-                Text(str.editTargetYear, style = MaterialTheme.typography.labelMedium,
-                    color = BpscColors.TextSecondary, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    targetYears.forEach { year ->
-                        val selected = targetYear == year
-                        Box(modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) BpscColors.CoinGold else Color.White)
-                            .border(1.dp, if (selected) BpscColors.CoinGold else BpscColors.Divider, RoundedCornerShape(12.dp))
-                            .clickable { targetYear = year }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text(year, style = MaterialTheme.typography.bodyMedium,
-                                color = if (selected) Color.White else BpscColors.TextSecondary,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        Column(Modifier.weight(1f)) {
+                            Text(str.editMobile, style = MaterialTheme.typography.labelSmall,
+                                color = cs.onSurfaceVariant)
+                            Text(user?.mobile ?: str.noData, style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onBackground, fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF2E7D32).copy(0.1f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(12.dp))
+                            Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                // ── Save button ────────────────────────────────
+                // ── Save Button ────────────────────────────────
                 Button(
-                    onClick = {
-                        viewModel.updateProfile(
-                            name = name, email = email.ifEmpty { null }, bio = bio.ifEmpty { null },
-                            district = district.ifEmpty { null }, targetYear = targetYear.toIntOrNull(),
-                            prepLevel = prepLevel.ifEmpty { null }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape    = RoundedCornerShape(14.dp),
+                    onClick  = { doSave() },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape    = RoundedCornerShape(16.dp),
                     enabled  = name.isNotBlank() && !state.isSaving,
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                 ) {
                     if (state.isSaving) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(color = Color.White,
+                            modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(str.editSaving, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Icon(Icons.Rounded.Save, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(str.editSaveChanges, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.editSaveChanges, style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold)
                     }
                 }
 
-                // Mobile (read-only — cannot be changed)
-                Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))) {
-                    Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.PhoneAndroid, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
-                        Column {
-                            Text(str.editMobile, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                            Text(user?.mobile ?: str.noData,
-                                style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(20.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary,
-        fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 4.dp))
+private fun EditSection(title: String, isDark: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Column {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = cs.onBackground,
+            fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 10.dp))
+        Card(shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = cs.surface),
+            elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 2.dp)) {
+            Column(modifier = Modifier.padding(16.dp), content = content)
+        }
+    }
 }
 
 @Composable
-private fun ProfileField(
-    value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onValueChange: (String) -> Unit, singleLine: Boolean = true,
-    keyboardType: KeyboardType = KeyboardType.Text, minLines: Int = 1
+private fun EditField(
+    value: String, label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onValueChange: (String) -> Unit,
+    singleLine: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    minLines: Int = 1
 ) {
     OutlinedTextField(
         value         = value,
@@ -239,14 +242,14 @@ private fun ProfileField(
         label         = { Text(label) },
         leadingIcon   = { Icon(icon, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)) },
         modifier      = Modifier.fillMaxWidth(),
-        shape         = RoundedCornerShape(14.dp),
+        shape         = RoundedCornerShape(12.dp),
         singleLine    = singleLine,
         minLines      = minLines,
-        maxLines      = if (singleLine) 1 else 4,
+        maxLines      = if (singleLine) 1 else 5,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor   = BpscColors.Primary,
-            unfocusedBorderColor = BpscColors.Divider,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
             focusedLabelColor    = BpscColors.Primary,
         )
     )

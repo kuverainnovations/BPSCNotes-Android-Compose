@@ -91,20 +91,34 @@ fun LanguageSwitchButton(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val current by LanguageManager.language.collectAsState()
 
+    // Segmented toggle: [ 🇬🇧 EN | 🇮🇳 HI ]
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(0.15f))
-            .clickable {
-                val next = if (current == AppLanguage.ENGLISH) AppLanguage.HINDI else AppLanguage.ENGLISH
-                LanguageManager.setLanguageGlobal(next, context)
-            }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .background(Color.White.copy(0.12f)),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Rounded.Language, null, tint = Color.White, modifier = Modifier.size(14.dp))
-        Text(current.flag + " " + current.nativeName,
-            fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        AppLanguage.entries.forEach { lang ->
+            val isSelected = current == lang
+            val bg by animateColorAsState(
+                if (isSelected) Color.White else Color.Transparent, tween(200), label = "sw"
+            )
+            val textColor by animateColorAsState(
+                if (isSelected) BpscColors.Primary else Color.White.copy(0.75f), tween(200), label = "tc"
+            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(bg)
+                    .clickable { LanguageManager.setLanguageGlobal(lang, context) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    lang.flag + " " + lang.code.uppercase(),
+                    fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = textColor
+                )
+            }
+        }
     }
 }

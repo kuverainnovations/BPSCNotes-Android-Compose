@@ -211,7 +211,7 @@ private fun QuizScreen(
             }
 
             // Options — dynamic 2–4 options, skip blank
-            val optionPairs = listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD)
+            val optionPairs = listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }
                 .filter { (_, text) -> text.isNotBlank() }
 
             optionPairs.forEach { (letter, text) ->

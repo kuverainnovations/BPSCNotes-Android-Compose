@@ -70,8 +70,15 @@ fun MainShell(
     NotificationPermissionEffect()
 
     val str   = LocalStrings.current
+    // Notification badge count — read from shared prefs (set by DashboardViewModel after fetch)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notifCount by androidx.compose.runtime.produceState(initialValue = 0, key1 = Unit) {
+        // Check shared prefs for unread notification count cached by DashboardViewModel
+        val prefs = context.getSharedPreferences("bpsc_prefs", android.content.Context.MODE_PRIVATE)
+        value = prefs.getInt("unread_notifications", 0)
+    }
     val items = listOf(
-        BottomNavItem(route = Screen.Dashboard.route,  label = str.navDashboard,   icon = Icons.Rounded.Home,                       badgeCount = 0),
+        BottomNavItem(route = Screen.Dashboard.route,  label = str.navDashboard,   icon = Icons.Rounded.Home,                       badgeCount = notifCount),
         BottomNavItem(route = Screen.MyLearning.route, label = str.navMyLearning,  icon = Icons.AutoMirrored.Rounded.MenuBook,      badgeCount = 0),
         BottomNavItem(route = Screen.RoomsHub.route,   label = str.navRooms,       icon = Icons.Rounded.LocalLibrary,               badgeCount = 0),
         BottomNavItem(route = Screen.Profile.route,    label = str.navProfile,     icon = Icons.Rounded.Person,                     badgeCount = 0),

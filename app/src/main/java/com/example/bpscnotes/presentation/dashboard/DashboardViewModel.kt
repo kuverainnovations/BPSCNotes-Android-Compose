@@ -70,7 +70,13 @@ class DashboardViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val userJob    = async { safeGet("user")    { authApi.getMe().data?.user } }
-                val coursesJob = async { safeGet("courses") { coursesApi.getCourses(limit = 6).data?.courses } }
+                val userPrimaryExam = tokenStore.getUserPrimaryExam()
+                val coursesJob = async { safeGet("courses") {
+                    val params = if (!userPrimaryExam.isNullOrBlank())
+                        coursesApi.getCourses(limit = 8, exam = userPrimaryExam).data?.courses
+                    else coursesApi.getCourses(limit = 8).data?.courses
+                    params
+                } }
                 val quizzesJob = async { safeGet("quizzes") { quizzesApi.getQuizzes(type = "daily", limit = 3).data?.quizzes } }
                 val bannersJob = async { safeGet("banners") { bannersApi.getBanners().data?.banners } }
                 val statsJob   = async { safeGet("stats")   { statsApi.getStats().data } }
@@ -101,6 +107,7 @@ class DashboardViewModel @Inject constructor(
                 user?.let { u ->
                     u.mobile?.let { tokenStore.saveUserMobile(it) }
                     tokenStore.saveUserName(u.name)
+                    // (notification badge count handled by MainShell reading prefs written by FCM service)
                 }
 
                 // Build last-7-days array — always 7 items so the chart always renders.
