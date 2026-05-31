@@ -1,6 +1,34 @@
 package com.example.bpscnotes.presentation.currentaffairs
 
 import com.example.bpscnotes.data.remote.api.CurrentAffairDto
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+
+/** Formats any ISO date string to a human-readable form.
+ *  Input examples: "2026-05-31T07:10:13.670Z", "2026-05-31", "2026-05-31T07:10:13+00:00"
+ *  Output: "31 May 2026"
+ */
+fun formatCaDate(raw: String?): String {
+    if (raw.isNullOrBlank()) return ""
+    val fmts = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd"
+    )
+    for (fmt in fmts) {
+        try {
+            val sdf = SimpleDateFormat(fmt, Locale.getDefault()).apply { isLenient = true }
+            val parsed = sdf.parse(raw) ?: continue
+            return SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(parsed)
+        } catch (_: Exception) {}
+    }
+    // Fallback: take just the date part if it looks like yyyy-MM-dd...
+    return if (raw.length >= 10) raw.substring(0, 10) else raw
+}
 
 /**
  * UI model for a Current Affairs article.
@@ -14,7 +42,8 @@ data class CAArticle(
     val summary: String,
     val fullContent: String,
     val category: String,
-    val date: String,
+    val rawDate: String,      // original ISO string — used for grouping/sorting
+    val date: String,             // formatted for display e.g. "31 May 2026"
     val readMinutes: Int,
     val mcqCount: Int,
     val isImportant: Boolean,
@@ -45,7 +74,8 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         summary     = summary,
         fullContent = fullContent ?: summary,
         category    = category,
-        date        = date,
+        rawDate     = date,
+        date        = formatCaDate(date),
         readMinutes = readMins,
         mcqCount    = mcqCount,  // real count from API
         isImportant = this.isImportant,

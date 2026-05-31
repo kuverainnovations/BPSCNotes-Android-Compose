@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
@@ -78,8 +80,8 @@ data class StudySessionUiState(
 
 @HiltViewModel
 class StudySessionViewModel @Inject constructor(
-    private val tierRoomsApi: TierRoomsApiService
-) : ViewModel() {
+    private val tierRoomsApi: TierRoomsApiService,
+    private val bus: RefreshEventBus) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudySessionUiState())
     val uiState: StateFlow<StudySessionUiState> = _uiState.asStateFlow()
@@ -222,7 +224,7 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Heartbeat: afk=${data.isAfk} coins=+${data.coinsEarnedThisBeat} " +
-                    "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
+                            "xp=+${data.xpEarnedThisBeat} activeMins=${data.totalActiveMinutes}"
                 )
 
                 _uiState.update { s ->
@@ -283,7 +285,7 @@ class StudySessionViewModel @Inject constructor(
         }
     }
 
-        fun endSession() {
+    fun endSession() {
         val sessionId = _uiState.value.sessionId ?: return
         if (_uiState.value.status == SessionStatus.ENDING) return
 
@@ -298,7 +300,7 @@ class StudySessionViewModel @Inject constructor(
 
                 Log.d(TAG,
                     "Session ended: active=${summary.activeMinutes}min " +
-                    "coins=${summary.totalCoins} xp=${summary.totalXp}"
+                            "coins=${summary.totalCoins} xp=${summary.totalXp}"
                 )
 
                 _uiState.update { s ->

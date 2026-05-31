@@ -17,7 +17,7 @@ data class RoomTierDto(
     val id: String,
     @SerializedName(value = "tier_key", alternate = ["tierKey"])
     val tierKey: String,
-   // @SerializedName("tierKey")       val tier_Key: String?="null",
+    // @SerializedName("tierKey")       val tier_Key: String?="null",
 
     val name: String?,
     val description: String?,
@@ -93,16 +93,24 @@ data class TiersListResponseData(
 // ── Leaderboard DTOs ──────────────────────────────────────────
 
 data class LeaderboardEntryDto(
-    @SerializedName("rank_position")   val rankPosition: Int,
-    @SerializedName("study_minutes")   val studyMinutes: Int,
-    @SerializedName("coins_earned")    val coinsEarned: Int,
-    @SerializedName("xp_earned")       val xpEarned: Int,
-    @SerializedName("goals_completed") val goalsCompleted: Int,
-    @SerializedName("streak_days")     val streakDays: Int,
-    @SerializedName("user_id")         val userId: String,
-    @SerializedName("user_name")       val userName: String,
-    @SerializedName("xp_level")        val xpLevel: Int
-)
+    @SerializedName("rank_position")   val rankPositionRaw: Any? = null,  // backend may send Int or String
+    @SerializedName("study_minutes")   val studyMinutes: Int = 0,
+    @SerializedName("coins_earned")    val coinsEarned: Int = 0,
+    @SerializedName("xp_earned")       val xpEarned: Int = 0,
+    @SerializedName("goals_completed") val goalsCompleted: Int = 0,
+    @SerializedName("streak_days")     val streakDays: Int = 0,
+    @SerializedName("user_id")         val userId: String = "",
+    @SerializedName("user_name")       val userName: String = "",
+    @SerializedName("xp_level")        val xpLevel: Int = 1
+) {
+    val rankPosition: Int get() = when (rankPositionRaw) {
+        is Int    -> rankPositionRaw
+        is Long   -> rankPositionRaw.toInt()
+        is Double -> rankPositionRaw.toInt()
+        is String -> rankPositionRaw.toIntOrNull() ?: 0
+        else      -> 0
+    }
+}
 
 data class LeaderboardResponseData(
     val leaderboard: List<LeaderboardEntryDto> = emptyList(),

@@ -39,7 +39,7 @@ data class CourseDetailUiState(
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
     private val api: CoursesApiService
-,
+    ,
     private val bus: RefreshEventBus
 ) : ViewModel() {
 

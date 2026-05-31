@@ -66,7 +66,7 @@ class DashboardViewModel @Inject constructor(
     private val targetsApi: DailyTargetsApiService,
     private val liveClassesApi: LiveClassesApiService,   // ← NEW
     private val tokenStore: TokenStore
-,
+    ,
     private val bus: RefreshEventBus,
     private val appConfig: AppConfigRepository
 ) : ViewModel() {
@@ -82,7 +82,8 @@ class DashboardViewModel @Inject constructor(
                 when (event) {
                     is RefreshEvent.QuizCompleted,
                     is RefreshEvent.LessonCompleted,
-                    is RefreshEvent.CoinsChanged -> loadDashboard()
+                    is RefreshEvent.CoinsChanged,
+                    is RefreshEvent.TargetUpdated -> loadDashboard()
                     else -> {}
                 }
             }
@@ -285,13 +286,14 @@ class DashboardViewModel @Inject constructor(
                 val freshData = safeGet("targets-refresh") {
                     targetsApi.getDailyTargets().data
                 }
-
+                bus.emit(RefreshEvent.TargetUpdated)
                 _uiState.update {
                     it.copy(
                         isCreatingTarget = false,
                         dailyTargets     = freshData?.targets ?: it.dailyTargets,
                         targetSummary    = freshData?.summary ?: it.targetSummary,
                         targetSuccess    = "${titles.size} target${if (titles.size > 1) "s" else ""} added! ✅"
+
                     )
                 }
             } catch (e: Exception) {

@@ -86,7 +86,8 @@ fun DashboardScreen(
     val str = LocalStrings.current
     val state    by dashboardViewModel.uiState.collectAsState()
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
-val context = LocalContext.current
+    val context = LocalContext.current
+
     // FIX: Refresh coins + user data when dashboard becomes visible
     // This keeps side nav coins and profile coins always up-to-date
     androidx.compose.runtime.DisposableEffect(lifecycle) {
@@ -1347,7 +1348,7 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                     .padding(horizontal = 7.dp, vertical = 3.dp)) { Text("PRO", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.ExtraBold) }
             }
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(8.dp))
@@ -1726,7 +1727,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
         Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
-        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.RoomsHub.route),  // TODO: dedicated leaderboard screen
+        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.Leaderboard.route),
         Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),

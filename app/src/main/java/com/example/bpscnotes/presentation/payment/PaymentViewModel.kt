@@ -11,6 +11,8 @@ import com.example.bpscnotes.data.remote.api.CreateSubscriptionRequest
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
 import com.example.bpscnotes.core.analytics.Event
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,8 +66,8 @@ data class PaymentState(
 class PaymentViewModel @Inject constructor(
     private val api: CoursesApiService,
     private val authApi: AuthApiService,
-    private val tokenStore: TokenStore
-) : ViewModel() {
+    private val tokenStore: TokenStore,
+    private val bus: RefreshEventBus) : ViewModel() {
 
     private val _state = MutableStateFlow(PaymentState())
     val state: StateFlow<PaymentState> = _state.asStateFlow()
@@ -180,9 +182,9 @@ class PaymentViewModel @Inject constructor(
         val plan = s.selectedPlan ?: return
         viewModelScope.launch {
             _state.update { it.copy(isCreatingOrder = true, error = null, razorpayOrderId = null) }
-                val planId = _state.value.selectedPlan?.id ?: ""
-                val amount = _state.value.finalAmount
-                Event.paymentInitiated(planId, amount)
+            val planId = _state.value.selectedPlan?.id ?: ""
+            val amount = _state.value.finalAmount
+            Event.paymentInitiated(planId, amount)
             try {
                 val res = api.createSubscription(CreateSubscriptionRequest(
                     plan        = plan.id ?: "monthly",
@@ -208,7 +210,7 @@ class PaymentViewModel @Inject constructor(
                             subscriptionId  = data.subscriptionId,
                             finalAmount     = finalAmt,
                             error           = "Payment gateway is not configured yet. Please contact support or try again later. " +
-                                              "(Order ID: ${data.subscriptionId.take(8)})"
+                                    "(Order ID: ${data.subscriptionId.take(8)})"
                         )}
                     }
 

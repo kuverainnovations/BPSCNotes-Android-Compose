@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,8 @@ data class CurrentAffairsUiState(
 
 @HiltViewModel
 class CurrentAffairsViewModel @Inject constructor(
-    private val api: CurrentAffairsApiService
+    private val api: CurrentAffairsApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CurrentAffairsUiState())
@@ -31,6 +34,16 @@ class CurrentAffairsViewModel @Inject constructor(
 
     init {
         loadArticles()
+
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged -> refresh()
+                    else -> {}
+                }
+            }
+        }
     }
 
     fun loadArticles(category: String? = null) {

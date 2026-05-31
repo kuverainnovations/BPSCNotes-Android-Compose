@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +27,8 @@ data class ActiveRecallUiState(
 
 @HiltViewModel
 class ActiveRecallViewModel @Inject constructor(
-    private val api: CoinsApiService.FlashcardsApiService
+    private val api: CoinsApiService.FlashcardsApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveRecallUiState())
@@ -34,6 +37,17 @@ class ActiveRecallViewModel @Inject constructor(
     init {
         loadAll()
         loadProgress()   // FIX: load persisted progress from backend on startup
+
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged,
+                    is RefreshEvent.LessonCompleted -> loadAll()
+                    else -> {}
+                }
+            }
+        }
     }
 
     /** Load all flashcards (cached in backend for 5 min). */

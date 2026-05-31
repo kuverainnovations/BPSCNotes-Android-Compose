@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -102,7 +101,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.bpscnotes.data.remote.api.CourseDto
-import com.example.bpscnotes.data.remote.api.MaterialType
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -155,24 +153,29 @@ data class LibraryItem(
 
 
 private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
-    id = id,
-    title = title,
-    instructor = instructor ?: "BPSCNotes",
-    subject = subject,
-    price = price,
-    originalPrice = originalPrice,
-    totalLessons = totalLessons,
-    totalHours = totalHours.toFloatOrNull() ?: 0f,
-    rating = rating.toFloatOrNull() ?: 0f,
-    reviewCount = review_count,
-    studentsEnrolled = enrollmentCount,
-    bpscRelevance = 0,
-    syllabusCoverage = 0,
-    isPaid = isPaid,
-    isFeatured = is_featured,
-    tags = exam_tags,
-    trialLessonTitle = trial_lesson_title ?: "",
-    description =  title?: ""
+    id                = id,
+    title             = title,
+    instructor        = instructor ?: "BPSCNotes",
+    subject           = subject,
+    price             = price,
+    originalPrice     = originalPrice,
+    totalLessons      = totalLessons,
+    totalHours        = totalHours.toFloatOrNull() ?: 0f,
+    rating            = rating.toFloatOrNull() ?: 0f,
+    reviewCount       = review_count,
+    studentsEnrolled  = enrollmentCount,
+    bpscRelevance     = bpsc_relevance,
+    syllabusCoverage  = syllabus_coverage,
+    isPaid            = isPaid,
+    isFeatured        = is_featured,
+    isLimitedOffer    = is_limited_offer,
+    trialLessonTitle  = trial_lesson_title ?: "",
+    description       = description ?: title,
+    // Build syllabus from chapter titles, falling back to whatYouLearn
+    tags     = exam_tags.orEmpty(),
+    syllabus = chapters.orEmpty()
+        .mapNotNull { it.title.takeIf { t -> t.isNotBlank() } }
+        .ifEmpty { whatYouLearn.orEmpty() }
 )
 
 private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
@@ -210,6 +213,73 @@ val storeSubjects = listOf(
     "Bihar GK",
     "Science"
 )
+// ─────────────────────────────────────────────────────────────
+// TIMESTAMP FORMATTER
+// ─────────────────────────────────────────────────────────────
+private fun formatStudiedDate(raw: String): String {
+    if (raw.isBlank()) return ""
+    return try {
+        // Try ISO with fractional seconds + timezone offset: 2026-05-31T06:11:20.854001+00:00
+        val fmts = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX",   // microseconds + offset
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",       // millis + offset
+            "yyyy-MM-dd'T'HH:mm:ssXXX",            // no fraction + offset
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",        // millis + Z
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",            // no fraction + Z
+            "yyyy-MM-dd"
+        )
+        var parsed: java.util.Date? = null
+        for (fmt in fmts) {
+            try {
+                parsed = java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault())
+                    .apply { isLenient = true }.parse(raw)
+                if (parsed != null) break
+            } catch (_: Exception) {}
+        }
+        if (parsed == null) return raw
+
+        val now   = java.util.Date()
+        val diffMs = now.time - parsed.time
+        val diffMins = diffMs / 60_000
+        val diffHrs  = diffMs / 3_600_000
+        val diffDays = diffMs / 86_400_000
+
+        when {
+            diffMins < 2   -> "Just now"
+            diffMins < 60  -> "$diffMins min ago"
+            diffHrs  < 24  -> "$diffHrs hr${if (diffHrs > 1) "s" else ""} ago"
+            diffDays == 1L -> "Yesterday"
+            diffDays < 7   -> "$diffDays days ago"
+            diffDays < 30  -> "${diffDays / 7} week${if (diffDays / 7 > 1) "s" else ""} ago"
+            else -> java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault()).format(parsed)
+        }
+    } catch (_: Exception) { raw }
+}
+
+private fun formatCertDate(raw: String?): String {
+    if (raw.isNullOrBlank()) return ""
+    return try {
+        val fmts = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd"
+        )
+        var parsed: java.util.Date? = null
+        for (fmt in fmts) {
+            try {
+                parsed = java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault())
+                    .apply { isLenient = true }.parse(raw)
+                if (parsed != null) break
+            } catch (_: Exception) {}
+        }
+        if (parsed == null) return raw
+        java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.getDefault()).format(parsed)
+    } catch (_: Exception) { raw }
+}
+
 @Composable
 fun MyLearningScreen(
     navController: NavHostController,
@@ -272,7 +342,7 @@ fun MyLearningScreen(
                         Offset(0f, 0f), Offset(500f, 500f)
                     )
                 )
-            //.statusBarsPadding()
+               // .statusBarsPadding()
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
                 drawCircle(
@@ -634,179 +704,143 @@ private fun EnrolledCoursesContent(
     savedCourseIds: Set<String>          = emptySet(),
     onToggleSave:   (String) -> Unit     = {}
 ) {
-    val cs = MaterialTheme.colorScheme
+    val cs  = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedFilter by remember { mutableIntStateOf(0) }
-    val wishlist = remember { mutableStateListOf<String>() }
     val filters = listOf(str.filterAll, str.courseInProgress, str.coursesCompleted, "Saved")
 
     val filtered = courses.filter { course ->
         when (selectedFilter) {
-            1 -> course.status == CourseStatus.InProgress
-            2 -> course.status == CourseStatus.Completed
-            3 -> savedCourseIds.contains(course.id)
+            1    -> course.status == CourseStatus.InProgress
+            2    -> course.status == CourseStatus.Completed
+            3    -> savedCourseIds.contains(course.id)
             else -> true
         }
     }
-
-    val inProgress = courses.filter { it.status == CourseStatus.InProgress }
-    val completed = courses.filter { it.status == CourseStatus.Completed }
+    val inProgress   = courses.filter { it.status == CourseStatus.InProgress }
+    val completed    = courses.filter { it.status == CourseStatus.Completed }
     val certificates = courses.filter { it.hasCertificate }
-    val totalProgress = if (courses.isNotEmpty())
-        courses.sumOf { it.completedLessons }
-            .toFloat() / courses.sumOf { it.totalLessons }
+    val continueWith = inProgress.maxByOrNull { it.lastStudied }
+    val displayList  = if (selectedFilter == 3) savedCourses else filtered
+
+    val totalProgress = if (courses.sumOf { it.totalLessons } > 0)
+        courses.sumOf { it.completedLessons }.toFloat() / courses.sumOf { it.totalLessons }
     else 0f
     val animProg by animateFloatAsState(totalProgress, tween(1200), label = "tp")
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Progress strip
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(cs.surface)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        str.courseOverallProgress,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cs.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "${(totalProgress * 100).toInt()}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = BpscColors.Primary,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(cs.background)
-                    // .statusBarsPadding()
+    if (courses.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("📚", fontSize = 48.sp)
+                Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleLarge,
+                    color = cs.onSurface, fontWeight = FontWeight.Bold)
+                Text(str.courseExploreStore, style = MaterialTheme.typography.bodyLarge,
+                    color = cs.onSurfaceVariant)
+            }
+        }
+        return
+    }
 
-                ) {
+    // One LazyColumn = everything scrolls together, max screen for the list
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
+
+        // ── 1. Overall progress strip ──
+        item {
+            Box(Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                        Text(str.courseOverallProgress, style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text("${(totalProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(cs.background)) {
+                        Box(Modifier.fillMaxWidth(animProg).fillMaxHeight()
+                            .background(Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF64B5F6))), RoundedCornerShape(4.dp)))
+                    }
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) {
+                        LearningStatItem("📚", "${courses.size}", str.coursesEnrolled)
+                        LearningStatItem("▶️", "${inProgress.size}", str.courseInProgress)
+                        LearningStatItem("✅", "${completed.size}", str.coursesCompleted)
+                        LearningStatItem("🏆", "${certificates.size}", "Certs")
+                    }
+                }
+            }
+        }
+
+        // ── 2. Filter chips ──
+        item {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(filters) { index, filter ->
+                    val sel = selectedFilter == index
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(animProg)
-                            .fillMaxHeight()
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        BpscColors.Primary,
-                                        Color(0xFF64B5F6)
-                                    )
-                                ), RoundedCornerShape(4.dp)
-                            )
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    LearningStatItem("📚", "${courses.size}", str.coursesEnrolled)
-                    LearningStatItem("▶️", "${inProgress.size}", str.courseInProgress)
-                    LearningStatItem("✅", "${completed.size}", str.coursesCompleted)
-                    LearningStatItem("🏆", "${certificates.size}", "Certs")
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (sel) BpscColors.Primary else Color.White)
+                            .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                            .clickable { selectedFilter = index }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(filter, style = MaterialTheme.typography.bodyMedium,
+                            color = if (sel) Color.White else BpscColors.TextSecondary,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                    }
                 }
             }
         }
 
-        // Filter chips
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            itemsIndexed(filters) { index, filter ->
-                val sel = selectedFilter == index
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (sel) BpscColors.Primary else Color.White)
-                        .border(
-                            1.dp,
-                            if (sel) BpscColors.Primary else cs.outline,
-                            RoundedCornerShape(20.dp)
-                        )
-                        .clickable { selectedFilter = index }
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        filter,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (sel) Color.White else BpscColors.TextSecondary,
-                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
-        }
-
-        val continueWith =
-            inProgress.maxByOrNull { it.lastStudied }
+        // ── 3. Continue Learning card (All tab, has in-progress) ──
         if (selectedFilter == 0 && continueWith != null) {
-            ContinueCard(
-                course = continueWith,
-                onContinue = { navController.navigate(Screen.CourseDetail.createRoute(continueWith.id)) })
-            Spacer(Modifier.height(8.dp))
+            item {
+                Column(Modifier.padding(horizontal = 0.dp)) {
+                    ContinueCard(
+                        course     = continueWith,
+                        onContinue = { navController.navigate(Screen.CourseDetail.createRoute(continueWith.id)) }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
         }
-        // When "Saved" filter is active, show savedCourses (not enrolled) too
-        val displayList = if (selectedFilter == 3) savedCourses else filtered
 
+        // ── 4. My Certificates (All tab, has certs) ──
+        if (selectedFilter == 0 && certificates.isNotEmpty()) {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    StoreSectionHeader(str.courseMyCertificates, "${certificates.size} earned")
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(certificates) { course -> CertificateCard(course = course) }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+
+        // ── 5. Course list ──
         if (displayList.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("📚", fontSize = 48.sp)
-                    Text(
-                        str.courseNoCoursesYet,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = cs.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        str.courseExploreStore,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = cs.onSurfaceVariant
-                    )
+            item {
+                Box(Modifier.fillMaxWidth().padding(top = 48.dp), Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("📭", fontSize = 40.sp)
+                        Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         } else {
-            LazyColumn(
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Certificates section
-                if (selectedFilter == 0 && certificates.isNotEmpty()) {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            StoreSectionHeader(str.courseMyCertificates, "${certificates.size} earned")
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(certificates) { course -> CertificateCard(course = course) }
-                            }
-                        }
-                    }
-                    item { Spacer(Modifier.height(6.dp)) }
-                }
-                items(displayList) { course ->
+            items(displayList) { course ->
+                Column(Modifier.padding(horizontal = 16.dp)) {
                     CourseProgressCard(
-                        course = course,
-                        isWishlisted = wishlist.contains(course.id),
-                        onToggleWishlist = {
-                            if (wishlist.contains(course.id)) wishlist.remove(
-                                course.id
-                            ) else wishlist.add(course.id)
-                        },
-                        onClick = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
+                        course           = course,
+                        isWishlisted     = savedCourseIds.contains(course.id),
+                        onToggleWishlist = { onToggleSave(course.id) },
+                        onClick          = { navController.navigate(Screen.CourseDetail.createRoute(course.id)) }
                     )
+                    Spacer(Modifier.height(10.dp))
                 }
             }
         }
@@ -1064,12 +1098,11 @@ private fun LibraryDetailSheet(
 @Composable
 private fun UploadNotesSheet(onDismiss: () -> Unit) {
     val str = LocalStrings.current
-    val cs =MaterialTheme.colorScheme
     var title by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var selType by remember { mutableStateOf(LibraryContentType.PDF) }
     var description by remember { mutableStateOf("") }
-
+val cs= MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = cs.surface,
@@ -2157,10 +2190,10 @@ private fun CertificateCard(course: LearningCourse) {
                 }
                 Text(course.title,
                     style = MaterialTheme.typography.titleSmall, color = Color.White,
-                    fontWeight = FontWeight.ExtraBold, maxLines = 2,
+                    fontWeight = FontWeight.ExtraBold, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
                 if (!course.certificateDate.isNullOrBlank()) {
-                    Text("${str.coursesCompleted} · ${course.certificateDate}",
+                    Text("${str.coursesCompleted} · ${formatCertDate(course.certificateDate)}",
                         style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
                 }
                 // Download + Share row
@@ -2268,7 +2301,7 @@ private fun ContinueCard(course: LearningCourse, onContinue: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "${course.completedLessons}/${course.totalLessons} lessons · ${course.lastStudied}",
+                    "${course.completedLessons}/${course.totalLessons} lessons · ${formatStudiedDate(course.lastStudied)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(0.75f)
                 )
@@ -2421,7 +2454,7 @@ private fun CourseProgressCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text("🏆", fontSize = 11.sp); Text(
-                    "Certified · ${course.certificateDate}",
+                    "Certified · ${formatCertDate(course.certificateDate)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = BpscColors.CoinGold,
                     fontSize = 9.sp,
@@ -2506,8 +2539,7 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
 
 @Composable
 private fun DetailStat(icon: String, value: String, label: String) {
-    val cs = MaterialTheme.colorScheme
-
+    val cs= MaterialTheme.colorScheme
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -2516,6 +2548,7 @@ private fun DetailStat(icon: String, value: String, label: String) {
             .background(cs.background)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
+        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 16.sp)
         Text(
             value,

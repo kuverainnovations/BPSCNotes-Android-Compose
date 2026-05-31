@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import com.example.bpscnotes.data.remote.api.JobsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,13 +23,24 @@ data class JobVacanciesUiState(
 
 @HiltViewModel
 class JobVacanciesViewModel @Inject constructor(
-    private val api: JobsApiService
+    private val api: JobsApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(JobVacanciesUiState())
     val uiState: StateFlow<JobVacanciesUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init { load()
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged -> load()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     fun load(category: String? = null) {
         viewModelScope.launch {

@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -30,13 +32,25 @@ data class AchievementsUiState(
 
 @HiltViewModel
 class AchievementsViewModel @Inject constructor(
-    private val api: AchievementsApiService
+    private val api: AchievementsApiService,
+    private val bus: RefreshEventBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AchievementsUiState())
     val uiState: StateFlow<AchievementsUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init { load()
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.LessonCompleted,
+                    is RefreshEvent.QuizCompleted -> load()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {

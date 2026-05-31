@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,13 +43,26 @@ data class CoinWalletUiState(
 @HiltViewModel
 class CoinWalletViewModel @Inject constructor(
     private val coinsApi: CoinsApiService,
-    private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService
-) : ViewModel() {
+    private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService,
+    private val bus: RefreshEventBus) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoinWalletUiState())
     val uiState: StateFlow<CoinWalletUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init { load()
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged,
+                    is RefreshEvent.QuizCompleted,
+                    is RefreshEvent.LessonCompleted,
+                    is RefreshEvent.TargetUpdated -> load()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {

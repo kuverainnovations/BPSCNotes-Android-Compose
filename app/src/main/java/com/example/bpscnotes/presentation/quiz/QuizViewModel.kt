@@ -10,6 +10,8 @@ import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.*
 import com.example.bpscnotes.data.remote.dto.UserDto
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -118,6 +120,7 @@ data class QuizUiState(
 @HiltViewModel
 class QuizViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
+    private val bus: RefreshEventBus,
     private val authApi: AuthApiService
 ) : ViewModel() {
 
@@ -128,7 +131,18 @@ class QuizViewModel @Inject constructor(
     private var detailJob: Job? = null
     private var startJob:  Job? = null
 
-    init { loadLobby() }
+    init { loadLobby()
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.QuizCompleted,
+                    is RefreshEvent.CoinsChanged -> loadLobby()
+                    else -> {}
+                }
+            }
+        }
+    }
 
     // ── 1. LIST ───────────────────────────────────────────────
 

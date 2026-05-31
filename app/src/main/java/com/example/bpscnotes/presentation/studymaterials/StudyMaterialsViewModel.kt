@@ -15,6 +15,8 @@ import com.example.bpscnotes.data.remote.api.*
 import com.google.gson.Gson
 import dagger.hilt.android.internal.Contexts.getApplication
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.example.bpscnotes.core.events.RefreshEvent
+import com.example.bpscnotes.core.events.RefreshEventBus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -105,8 +107,8 @@ data class StudyMaterialsUiState(
 class StudyMaterialsViewModel @Inject constructor(
     private val api:        StudyMaterialsApiService,
     private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
-    @ApplicationContext private val context: Context
-) : ViewModel() {
+    @ApplicationContext private val context: Context,
+    private val bus: RefreshEventBus) : ViewModel() {
 
     private val _state = MutableStateFlow(StudyMaterialsUiState())
     val state: StateFlow<StudyMaterialsUiState> = _state.asStateFlow()
@@ -125,6 +127,17 @@ class StudyMaterialsViewModel @Inject constructor(
         loadStats()
         loadMaterials(reset = true)
         loadDownloadHistory()
+
+        // ── Refresh on bus events ─────────────────────────────
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                when (event) {
+                    is RefreshEvent.CoinsChanged,
+                    is RefreshEvent.LessonCompleted -> refresh()
+                    else -> {}
+                }
+            }
+        }
     }
 
     // ── Subjects ──────────────────────────────────────────────

@@ -130,7 +130,7 @@ fun CurrentAffairsScreen(
         matchesTab && matchesCat && matchesSearch
     }
 
-    val grouped = filtered.groupBy { it.date }.entries.sortedByDescending { it.key }
+    val grouped = filtered.groupBy { it.rawDate }.entries.sortedByDescending { it.key }
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -274,7 +274,7 @@ fun CurrentAffairsScreen(
                 else -> {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                         grouped.forEach { (date, dateArticles) ->
-                            stickyHeader(key = date) { DateGroupHeader(date = date, count = dateArticles.size) }
+                            stickyHeader(key = date) { DateGroupHeader(date = dateArticles.firstOrNull()?.date ?: date, count = dateArticles.size) }
                             itemsIndexed(dateArticles, key = { _, a -> a.id }) { _, article ->
                                 CAArticleCard(
                                     article     = article,

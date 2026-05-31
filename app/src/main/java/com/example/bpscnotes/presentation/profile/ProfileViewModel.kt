@@ -44,7 +44,8 @@ class ProfileViewModel @Inject constructor(
     private val authApi:    AuthApiService,
     private val statsApi:   UserStatsApiService,
     private val coinsApi:   CoinsApiService,
-    private val tokenStore: TokenStore,
+    private val tokenStore: TokenStore
+    ,
     private val bus: RefreshEventBus
 ) : ViewModel() {
 
