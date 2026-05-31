@@ -80,8 +80,8 @@ fun StudyRoomPipOverlay(
     )
 
     // ── Card dimensions & screen bounds ──────────────────────
-    val cardW  = 172.dp
-    val cardH  = 92.dp
+    val cardW  = 150.dp
+    val cardH  = 80.dp
     val margin = 12.dp
 
     val screenWpx  = with(density) { config.screenWidthDp.dp.toPx() }
@@ -123,7 +123,7 @@ fun StudyRoomPipOverlay(
             color          = Color(0xFF0D1B4B),
             tonalElevation = 8.dp
         ) {
-            Column(Modifier.padding(10.dp)) {
+            Column(Modifier.padding(8.dp)) {
 
                 // ── DRAG HANDLE — the ONLY element with pointerInput ──
                 // All other touches on the card pass through normally
@@ -152,7 +152,7 @@ fun StudyRoomPipOverlay(
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
 
                 // ── Tier + stop button row ────────────────────────────
                 Row(
@@ -160,7 +160,7 @@ fun StudyRoomPipOverlay(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
-                        Modifier.size(34.dp).clip(CircleShape)
+                        Modifier.size(24.dp).clip(CircleShape)
                             .background(tierColor.copy(0.2f))
                             .border(1.5.dp, tierColor.copy(pulseAlpha), CircleShape),
                         Alignment.Center
@@ -193,17 +193,17 @@ fun StudyRoomPipOverlay(
                     }
 
                     Box(
-                        Modifier.size(28.dp).clip(CircleShape)
+                        Modifier.size(24.dp).clip(CircleShape)
                             .background(Color(0xFFEF5350).copy(0.18f))
                             .clickable(onClick = onEndSession),
                         Alignment.Center
                     ) {
                         Icon(Icons.Rounded.Stop, null,
-                            tint = Color(0xFFEF5350), modifier = Modifier.size(15.dp))
+                            tint = Color(0xFFEF5350), modifier = Modifier.size(12.dp))
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
 
                 // ── Timer + coins + Return ───────────────────────────
                 Row(
@@ -233,7 +233,7 @@ fun StudyRoomPipOverlay(
                             style      = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color      = Color.White,
-                            modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier   = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         )
                     }
                 }

@@ -27,7 +27,10 @@ fun AppLoader(
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     val cs = MaterialTheme.colorScheme
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier.background(cs.background),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)

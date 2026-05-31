@@ -169,13 +169,16 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     isPaid            = isPaid,
     isFeatured        = is_featured,
     isLimitedOffer    = is_limited_offer,
+    // API can send explicit null for list fields — orEmpty() guards every one
+    tags              = exam_tags.orEmpty(),
     trialLessonTitle  = trial_lesson_title ?: "",
     description       = description ?: title,
-    // Build syllabus from chapter titles, falling back to whatYouLearn
-    tags     = exam_tags.orEmpty(),
-    syllabus = chapters.orEmpty()
-        .mapNotNull { it.title.takeIf { t -> t.isNotBlank() } }
-        .ifEmpty { whatYouLearn.orEmpty() }
+    syllabus          = chapters.orEmpty().mapNotNull { it.title.takeIf { t -> t.isNotBlank() } }
+        .ifEmpty { whatYouLearn.orEmpty() },
+    reviews           = reviews.orEmpty().map { r ->
+        CourseReview(name = r.reviewerName ?: "Student", rating = r.rating,
+            comment = r.comment ?: "", date = formatCertDate(r.createdAt))
+    }
 )
 
 private fun CourseDto.toLearningCourse(): LearningCourse = LearningCourse(
@@ -342,7 +345,6 @@ fun MyLearningScreen(
                         Offset(0f, 0f), Offset(500f, 500f)
                     )
                 )
-               // .statusBarsPadding()
         ) {
             androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
                 drawCircle(
@@ -437,14 +439,16 @@ fun MyLearningScreen(
                 userCoins      = userCoins,
                 courses        = storeItems,
                 savedCourseIds = state.savedCourseIds,
-                viewModel      = viewModel
+                viewModel      = viewModel,
+                adManager=adManager
             )
             1 -> MyCoursesTab(
                 navController  = navController,
                 courses        = learningCourses,
                 savedCourses   = remember(state.savedCourses) { state.savedCourses.map { it.toLearningCourse() } },
                 savedCourseIds = state.savedCourseIds,
-                onToggleSave   = viewModel::toggleSave
+                onToggleSave   = viewModel::toggleSave,
+                adManager      = adManager
             )
         }
     }
@@ -459,8 +463,10 @@ private fun StoreTab(
     userCoins:      Int,
     courses:        List<StoreItem>,
     savedCourseIds: Set<String>,
-    viewModel:      MyLearningViewModel
-) {
+    viewModel:      MyLearningViewModel,
+    adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
+
+    ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedSubject by remember { mutableStateOf(str.filterAll) }
@@ -558,7 +564,7 @@ private fun StoreTab(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 10.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             if (featured.isNotEmpty()) {
@@ -592,6 +598,13 @@ private fun StoreTab(
                         { viewModel.toggleSave(course.id)
                         }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
                 }
+            }
+            // ── Bottom banner ad ─────────────────────────────────
+            item {
+                if (adManager != null) {
+                    BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                }
+                Spacer(Modifier.height(10.dp))
             }
         }
     }
@@ -672,7 +685,8 @@ private fun MyCoursesTab(
     courses:        List<LearningCourse>,
     savedCourses:   List<LearningCourse> = emptyList(),
     savedCourseIds: Set<String>          = emptySet(),
-    onToggleSave:   (String) -> Unit     = {}
+    onToggleSave:   (String) -> Unit     = {},
+    adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
 ) {
     Column(
         modifier = Modifier
@@ -688,7 +702,8 @@ private fun MyCoursesTab(
             courses        = courses,
             savedCourses   = savedCourses,
             savedCourseIds = savedCourseIds,
-            onToggleSave   = onToggleSave
+            onToggleSave   = onToggleSave,
+            adManager      = adManager
         )
     }
 }
@@ -702,7 +717,8 @@ private fun EnrolledCoursesContent(
     courses:        List<LearningCourse>,
     savedCourses:   List<LearningCourse> = emptyList(),
     savedCourseIds: Set<String>          = emptySet(),
-    onToggleSave:   (String) -> Unit     = {}
+    onToggleSave:   (String) -> Unit     = {},
+    adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
 ) {
     val cs  = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -742,7 +758,7 @@ private fun EnrolledCoursesContent(
     }
 
     // One LazyColumn = everything scrolls together, max screen for the list
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 10.dp)) {
 
         // ── 1. Overall progress strip ──
         item {
@@ -843,6 +859,13 @@ private fun EnrolledCoursesContent(
                     Spacer(Modifier.height(10.dp))
                 }
             }
+        }
+        // ── Bottom banner ad — always last item ─────────────────
+        item {
+            if (adManager != null) {
+                BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+            }
+            Spacer(Modifier.height(10.dp))
         }
     }
 }
@@ -1102,13 +1125,13 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
     var subject by remember { mutableStateOf("") }
     var selType by remember { mutableStateOf(LibraryContentType.PDF) }
     var description by remember { mutableStateOf("") }
-val cs= MaterialTheme.colorScheme
+
+    val cs = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        val cs = MaterialTheme.colorScheme
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1644,6 +1667,7 @@ private fun CourseDetailSheet(
                     }
                     // Syllabus
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (course.syllabus.size > 0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1655,12 +1679,16 @@ private fun CourseDetailSheet(
                                 color = cs.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                if (expandSyllabus) str.courseShowLess else str.courseShowAll,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.Primary,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clickable { expandSyllabus = !expandSyllabus })
+
+                                Text(
+                                    if (expandSyllabus) str.courseShowLess else str.courseShowAll,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = BpscColors.Primary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        expandSyllabus = !expandSyllabus
+                                    })
+                            }
                         }
                         (if (expandSyllabus) course.syllabus else course.syllabus.take(3)).forEachIndexed { i, item ->
                             Row(
@@ -2539,7 +2567,7 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
 
 @Composable
 private fun DetailStat(icon: String, value: String, label: String) {
-    val cs= MaterialTheme.colorScheme
+    val cs = MaterialTheme.colorScheme
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -2548,7 +2576,6 @@ private fun DetailStat(icon: String, value: String, label: String) {
             .background(cs.background)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        val cs = MaterialTheme.colorScheme
         Text(icon, fontSize = 16.sp)
         Text(
             value,

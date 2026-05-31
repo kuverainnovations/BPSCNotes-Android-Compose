@@ -42,7 +42,8 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 fun RoomsHubScreen(
     navController: NavHostController,
     tiersViewModel:   TierRoomsViewModel,
-    sessionViewModel: StudySessionViewModel
+    sessionViewModel: StudySessionViewModel,
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
 ) {
     val state by tiersViewModel.uiState.collectAsState()
     val tiersState = state  // alias used in DemotionWarningBanner block
@@ -337,7 +338,14 @@ fun RoomsHubScreen(
                             onChallenges = { navController.navigate(Screen.WeeklyChallenges.route) }
                         )
 
-                        Spacer(Modifier.height(80.dp))
+                        // ── Bottom banner ad ──────────────────────────────
+                        if (adManager != null) {
+                            com.example.bpscnotes.core.ads.BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        } else {
+                            Spacer(Modifier.height(80.dp))
+                        }
                     }
                 }
             }
@@ -374,7 +382,7 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                     Offset(0f, 0f), Offset(500f, 500f)
                 )
             )
-        // .statusBarsPadding()
+//            .statusBarsPadding()
     ) {
         Column(modifier = Modifier
             .padding(horizontal = 20.dp)
@@ -554,18 +562,18 @@ private fun RoomCard(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    // Dark-themed cards that match the navy/dark room background
     val bgColor = when {
-        isClaimReady -> BpscColors.Success.copy(0.05f)
-        isMyRoom     -> Color.White
-        isLocked     -> Color(0xFFF7F7F7)
-        else         -> Color.White
+        isClaimReady -> Color(0xFF1E4D35)            // soft green
+        isMyRoom     -> Color(0xFF1A3460)            // medium navy highlight
+        isLocked     -> Color(0xFF1C2540)            // muted navy
+        else         -> Color(0xFF1E2D52)            // clean navy card
     }
-
     val borderColor = when {
         isClaimReady -> BpscColors.Success
-        isMyRoom     -> tierColor.copy(alpha = 0.45f)
-        isLocked     -> Color(0xFFE2E2E2)
-        else         -> cs.outline
+        isMyRoom     -> tierColor
+        isLocked     -> Color.White.copy(0.08f)
+        else         -> Color.White.copy(0.12f)
     }
 
     Card(
@@ -575,11 +583,8 @@ private fun RoomCard(
             .clickable(onClick = onClick),
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = bgColor),
-        border = BorderStroke(
-            width = if (isMyRoom) 1.5.dp else 1.dp,
-            color = borderColor
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border    = BorderStroke(if (isMyRoom) 1.5.dp else 1.dp, borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier              = Modifier
@@ -593,13 +598,13 @@ private fun RoomCard(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (isLocked) Color(0xFFE8E8E8) else tierColor.copy(0.15f)),
+                    .background(if (isLocked) Color.White.copy(0.06f) else tierColor.copy(0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 when {
                     isStarting   -> CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     isClaimReady -> Text("🎉", fontSize = 24.sp)
-                    isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(22.dp))
+                    isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(22.dp))
                     else         -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
                 }
             }
@@ -610,7 +615,7 @@ private fun RoomCard(
                     Text(
                         tier.name ?: tier.tierKey.replaceFirstChar { it.uppercase() },
                         style      = MaterialTheme.typography.titleMedium,
-                        color      = if (isLocked) Color(0xFFAAAAAA) else BpscColors.TextPrimary,
+                        color      = if (isLocked) Color.White.copy(0.4f) else Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     when {

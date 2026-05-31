@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.rounded.LocalLibrary
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,11 +27,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import dagger.hilt.android.EntryPointAccessors
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen
@@ -53,6 +58,8 @@ fun MainShell(
     adManager: AdManager/*, tokenStore: com.example.bpscnotes.data.local.TokenStore*/) {
     val str = LocalStrings.current
     val bottomNavController = rememberNavController()
+
+    val innerEntry by bottomNavController.currentBackStackEntryAsState()
 
     // Listen for tab switch requests from other screens (e.g. CoinWallet → "go to RoomsHub")
     // Screens navigate to Screen.Main with savedStateHandle["tab"] = route
@@ -97,9 +104,10 @@ fun MainShell(
     val sessionStateForPip by sessionViewModel.uiState.collectAsState()
 
     // Track if user is currently inside StudyFocusScreen
-    val currentRoute by rootNavController.currentBackStackEntryFlow
-        .collectAsState(initial = rootNavController.currentBackStackEntry)
-    val isOnStudyFocus = currentRoute?.destination?.route == Screen.StudyFocus.route
+    val currentRoute by rootNavController.currentBackStackEntryAsState()
+    val isOnStudyFocus = try {
+        currentRoute?.destination?.route == Screen.StudyFocus.route
+    } catch (_: Exception) { false }
 
     val sessionIsActive = sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.ACTIVE ||
             sessionStateForPip.status == com.example.bpscnotes.presentation.rooms.SessionStatus.AFK
@@ -143,7 +151,9 @@ fun MainShell(
         }
     }
 
+    val scaffoldBg = MaterialTheme.colorScheme.background
     Scaffold(
+        containerColor = scaffoldBg,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             BpscBottomNav(
@@ -152,34 +162,43 @@ fun MainShell(
             )
         }
     ) { innerPadding ->
-        // Each screen handles its own statusBarsPadding on its header.
-        // MainShell only provides the bottom padding for the nav bar.
+        val cs = MaterialTheme.colorScheme
         Box(
             Modifier
                 .fillMaxSize()
+                .background(cs.background)
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
+            // ── Hide NavHost until inner nav is ready (eliminates white flash) ──
+            // innerEntry is NULL for ~50ms when MainShell re-enters composition
+            // (bottomNavController exists but NavHost hasn't rendered startDestination yet).
+            // We keep NavHost in the tree so it can register routes, but cover it with
+            // an opaque background overlay until the first route is settled.
             NavHost(
                 navController    = bottomNavController,
                 startDestination = Screen.Dashboard.route,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    // Invisible while no route is active — avoids white flash
+                    alpha = if (innerEntry != null) 1f else 0f
+                }
             ) {
                 composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
                 composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
                 //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
                 composable(Screen.RoomsHub.route) { backStackEntry ->
-
                     val parentEntry = remember(backStackEntry) {
-                        rootNavController.getBackStackEntry(Screen.Main.route)
+                        try { rootNavController.getBackStackEntry(Screen.Main.route) }
+                        catch (_: Exception) { backStackEntry }
                     }
 
                     val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
                     val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
 
                     RoomsHubScreen(
-                        navController = rootNavController,
+                        navController    = rootNavController,
                         sessionViewModel = sessionVM,
-                        tiersViewModel = tiersVM
+                        tiersViewModel   = tiersVM,
+                        adManager        = adManager
                     )
                 }
                 composable(Screen.Profile.route)    { ProfileScreen(rootNavController) }

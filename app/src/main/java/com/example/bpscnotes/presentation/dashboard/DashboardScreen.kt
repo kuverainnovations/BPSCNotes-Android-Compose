@@ -267,7 +267,16 @@ fun DashboardScreen(
                         // ── FIX: enough bottom padding to clear the bottom nav bar ──
                         Spacer(modifier = Modifier
                             .navigationBarsPadding()
-                            .height(80.dp))
+                            .height(5.dp))
+                        // Ad banner bottom
+                        if (adManager != null) {
+                            BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        }
+                        Spacer(modifier = Modifier
+                            .navigationBarsPadding()
+                            .height(5.dp))
                     }  // end scrollable Column
 
 

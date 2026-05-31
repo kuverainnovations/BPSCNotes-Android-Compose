@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
@@ -52,8 +53,10 @@ private fun rankTier(coins: Int): Triple<String, Int, Int> {
 @Composable
 fun ProfileScreen(
     navController: NavHostController,
-    viewModel: ProfileViewModel = hiltViewModel()
-) {
+    viewModel: ProfileViewModel = hiltViewModel(),
+    adManager: com.example.bpscnotes.core.ads.AdManager? = null,
+
+    ) {
     val state   by viewModel.uiState.collectAsState()
     val str     = LocalStrings.current
     val isDark  = LocalDarkMode.current
@@ -140,7 +143,11 @@ fun ProfileScreen(
                     onViewAll    = { navController.navigate(Screen.CoinWallet.route) }
                 )
 
-                Spacer(Modifier.height(60.dp))
+                // ── Bottom banner ad ─────────────────────────────────
+                    if (adManager != null) {
+                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                    }
+
             }
         }
     }

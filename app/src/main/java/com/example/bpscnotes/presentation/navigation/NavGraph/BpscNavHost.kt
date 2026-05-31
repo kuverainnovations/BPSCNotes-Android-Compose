@@ -3,12 +3,20 @@ package com.example.bpscnotes.presentation.navigation.NavGraph
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
@@ -70,302 +78,323 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
     //   • Something to pop  → pop it (normal navigation, no black screen)
     //   • Nothing to pop    → minimise the app (move to background)
     // ── Root safety-net BackHandler ──────────────────────────────────────
-    // Lowest priority (registered first = last called in LIFO order).
-    // Fires ONLY when MainShell's BackHandler and NavHost's internal handler
-    // are both inactive (rapid double-tap during navigation transition).
-    // NEVER pop the NavController here — just minimize. Popping would empty
-    // the back stack and leave NavHost with nothing to render (white screen).
-    BackHandler(enabled = true) {
+    // Root safety net — ONLY fires on terminal/entry screens.
+    // For all other screens, NavHost's own back handler pops normally.
+    // This closes the brief race window during a transition where
+    // MainShell's BackHandler hasn't registered yet — preventing a
+    // spurious pop that empties the stack and causes a white screen.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentTopRoute = currentEntry?.destination?.route
+    val isAtRoot = currentTopRoute == Screen.Main.route
+            || currentTopRoute == Screen.Splash.route
+            || currentTopRoute == Screen.Login.route
+            || currentTopRoute == Screen.LanguageSelection.route
+            || currentTopRoute == Screen.Onboarding.route
+            || currentTopRoute == Screen.ExamSetup.route
+
+    BackHandler(enabled = isAtRoot) {
         (context as? Activity)?.moveTaskToBack(true)
     }
 
-    NavHost(
-        navController    = navController,
-        startDestination = Screen.Splash.route
+    val cs = MaterialTheme.colorScheme
+
+    Box(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxSize()
+            .background(cs.background)
     ) {
-        // ── Auth ─────────────────────────────────────────────────
-        composable(Screen.Splash.route)            { SplashScreen(navController) }
-        composable(Screen.LanguageSelection.route) { LanguageSelectionScreen(navController) }
-        composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
-        composable(Screen.Login.route)      { LoginScreen(navController) }
-
-
-
-        composable(
-            Screen.Otp.route,
-            arguments = listOf(navArgument("mobile") { type = NavType.StringType })
+        NavHost(
+            navController         = navController,
+            startDestination      = Screen.Splash.route,
+            // Disable all transitions — eliminates white flash between screens
+            // The animation gap between entering/exiting screens was the white screen source
+            enterTransition       = { EnterTransition.None },
+            exitTransition        = { ExitTransition.None },
+            popEnterTransition    = { EnterTransition.None },
+            popExitTransition     = { ExitTransition.None }
         ) {
-            OtpScreen(
-                navController = navController,
-                mobile        = it.arguments?.getString("mobile") ?: ""
-            )
-        }
+            // ── Auth ─────────────────────────────────────────────────
+            composable(Screen.Splash.route)            { SplashScreen(navController) }
+            composable(Screen.LanguageSelection.route) { LanguageSelectionScreen(navController) }
+            composable(Screen.Onboarding.route) { OnboardingScreen(navController) }
+            composable(Screen.Login.route)      { LoginScreen(navController) }
 
-        // Register screen — reached when isNewUser == true after OTP verify
-        composable(
-            Screen.Register.route,
-            arguments = listOf(navArgument("tempToken") { type = NavType.StringType })
-        ) {
-            val raw       = it.arguments?.getString("tempToken") ?: ""
-            val tempToken = java.net.URLDecoder.decode(raw, "UTF-8")
-            RegisterScreen(navController = navController, tempToken = tempToken)
-        }
 
-        // ── NEW: Exam Setup flow ──────────────────────────────────
-        // Reached after: Register success OR from Splash when examSetupDone=false
-        composable(Screen.ExamSetup.route) {
-            ExamSetupScreen(navController = navController)
-        }
-        // ── Main shell ────────────────────────────────────────────
-        composable(Screen.Main.route) { backStackEntry ->
-            // Scope the session ViewModel to THIS entry (Screen.Main) so every child
-            // composable (StudyFocusScreen, MainShell PIP) shares the SAME instance.
-            val sessionVM: com.example.bpscnotes.presentation.rooms.StudySessionViewModel =
-                hiltViewModel(backStackEntry)
-            val tiersVM: com.example.bpscnotes.presentation.rooms.TierRoomsViewModel =
-                hiltViewModel(backStackEntry)
-            MainShell(
-                rootNavController = navController,
-                adManager         = adManager,
-                sessionViewModel  = sessionVM,
-                tiersViewModel    = tiersVM
-            )
-        }
 
-        // ── Real screens ─────────────────────────────────────────
-        composable(Screen.DailyTargets.route)   { DailyTargetsScreen(navController) }
-        composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController, adManager = adManager) }
-
-        // ── Payment screens ──────────────────────────────────────
-        composable(Screen.Payment.route) {
-            SubscriptionPaymentScreen(navController)
-        }
-
-        // Debug screen — remove before production release
-        composable("fcm_debug") {
-            FcmDebugScreen(navController)
-        }
-
-        composable(
-            route     = "course_payment/{courseId}/{courseTitle}/{price}/{orderId}/{keyId}",
-            arguments = listOf(
-                navArgument("courseId")    { type = NavType.StringType },
-                navArgument("courseTitle") { type = NavType.StringType },
-                navArgument("price")       { type = NavType.IntType    },
-                navArgument("orderId")     { type = NavType.StringType },
-                navArgument("keyId")       { type = NavType.StringType }
-            )
-        ) { back ->
-            val courseId    = back.arguments?.getString("courseId")    ?: return@composable
-            val courseTitle = back.arguments?.getString("courseTitle") ?: ""
-            val price       = back.arguments?.getInt("price")          ?: 0
-            val orderId     = back.arguments?.getString("orderId")?.takeIf { it != "none" }
-            val keyId       = back.arguments?.getString("keyId")?.takeIf   { it != "none" }
-            CoursePaymentScreen(navController, courseId, courseTitle, price, orderId, keyId)
-        }
-
-        composable(
-            route     = "ca_mcq_quiz/{affairId}",
-            arguments = listOf(navArgument("affairId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
-            CaMcqQuizScreen(navController = navController, affairId = affairId)
-        }
-
-        composable(
-            Screen.DailyQuiz.route,
-            arguments = listOf(navArgument("date") { type = NavType.StringType })
-        ) { backStackEntry ->
-
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(Screen.Main.route)
+            composable(
+                Screen.Otp.route,
+                arguments = listOf(navArgument("mobile") { type = NavType.StringType })
+            ) {
+                OtpScreen(
+                    navController = navController,
+                    mobile        = it.arguments?.getString("mobile") ?: ""
+                )
             }
 
-            val viewModel: QuizViewModel = hiltViewModel(parentEntry)
+            // Register screen — reached when isNewUser == true after OTP verify
+            composable(
+                Screen.Register.route,
+                arguments = listOf(navArgument("tempToken") { type = NavType.StringType })
+            ) {
+                val raw       = it.arguments?.getString("tempToken") ?: ""
+                val tempToken = java.net.URLDecoder.decode(raw, "UTF-8")
+                RegisterScreen(navController = navController, tempToken = tempToken)
+            }
 
-            DailyQuizScreen(
-                navController = navController,
-                date = backStackEntry.arguments?.getString("date") ?: "",
-                viewModel = viewModel
-            )
-        }
-        /* composable(
-             Screen.TopicQuiz.route,
-             arguments = listOf(
-                 navArgument("subject")    { type = NavType.StringType },
-                 navArgument("topicTitle") { type = NavType.StringType }
-             )
-         ) {
-             TopicQuizScreen(
-                 navController = navController,
-                 subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
-                 topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
-             )
-         }*/
+            // ── NEW: Exam Setup flow ──────────────────────────────────
+            // Reached after: Register success OR from Splash when examSetupDone=false
+            composable(Screen.ExamSetup.route) {
+                ExamSetupScreen(navController = navController)
+            }
+            // ── Main shell ────────────────────────────────────────────
+            composable(Screen.Main.route) { backStackEntry ->
+                // Scope the session ViewModel to THIS entry (Screen.Main) so every child
+                // composable (StudyFocusScreen, MainShell PIP) shares the SAME instance.
+                val sessionVM: com.example.bpscnotes.presentation.rooms.StudySessionViewModel =
+                    hiltViewModel(backStackEntry)
+                val tiersVM: com.example.bpscnotes.presentation.rooms.TierRoomsViewModel =
+                    hiltViewModel(backStackEntry)
+                MainShell(
+                    rootNavController = navController,
+                    adManager         = adManager,
+                    sessionViewModel  = sessionVM,
+                    tiersViewModel    = tiersVM
+                )
+            }
 
-        composable(
-            Screen.TopicQuiz.route,
-            arguments = listOf(
-                navArgument("subject") { type = NavType.StringType },
-                navArgument("topicTitle") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
+            // ── Real screens ─────────────────────────────────────────
+            composable(Screen.DailyTargets.route)   { DailyTargetsScreen(navController) }
+            composable(Screen.CurrentAffairs.route) { CurrentAffairsScreen(navController, adManager = adManager) }
 
-            val subject = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("subject") ?: "",
-                "UTF-8"
-            )
+            // ── Payment screens ──────────────────────────────────────
+            composable(Screen.Payment.route) {
+                SubscriptionPaymentScreen(navController)
+            }
 
-            val topicTitle = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("topicTitle") ?: "",
-                "UTF-8"
-            )
+            // Debug screen — remove before production release
+            composable("fcm_debug") {
+                FcmDebugScreen(navController)
+            }
 
-            TopicQuizScreen(
-                navController = navController,
-                subject = subject,
-                topicTitle = topicTitle
-            )
-        }
+            composable(
+                route     = "course_payment/{courseId}/{courseTitle}/{price}/{orderId}/{keyId}",
+                arguments = listOf(
+                    navArgument("courseId")    { type = NavType.StringType },
+                    navArgument("courseTitle") { type = NavType.StringType },
+                    navArgument("price")       { type = NavType.IntType    },
+                    navArgument("orderId")     { type = NavType.StringType },
+                    navArgument("keyId")       { type = NavType.StringType }
+                )
+            ) { back ->
+                val courseId    = back.arguments?.getString("courseId")    ?: return@composable
+                val courseTitle = back.arguments?.getString("courseTitle") ?: ""
+                val price       = back.arguments?.getInt("price")          ?: 0
+                val orderId     = back.arguments?.getString("orderId")?.takeIf { it != "none" }
+                val keyId       = back.arguments?.getString("keyId")?.takeIf   { it != "none" }
+                CoursePaymentScreen(navController, courseId, courseTitle, price, orderId, keyId)
+            }
 
-        // ✅ Quiz List Screen
-        composable(Screen.QuizList.route) {
-            QuizListScreen(navController)
-        }
+            composable(
+                route     = "ca_mcq_quiz/{affairId}",
+                arguments = listOf(navArgument("affairId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
+                CaMcqQuizScreen(navController = navController, affairId = affairId)
+            }
+
+            composable(
+                Screen.DailyQuiz.route,
+                arguments = listOf(navArgument("date") { type = NavType.StringType })
+            ) { backStackEntry ->
+
+                val parentEntry = remember(backStackEntry) {
+                    try { navController.getBackStackEntry(Screen.Main.route) }
+                    catch (_: Exception) { backStackEntry }
+                }
+
+                val viewModel: QuizViewModel = hiltViewModel(parentEntry)
+
+                DailyQuizScreen(
+                    navController = navController,
+                    date = backStackEntry.arguments?.getString("date") ?: "",
+                    viewModel = viewModel
+                )
+            }
+            /* composable(
+                 Screen.TopicQuiz.route,
+                 arguments = listOf(
+                     navArgument("subject")    { type = NavType.StringType },
+                     navArgument("topicTitle") { type = NavType.StringType }
+                 )
+             ) {
+                 TopicQuizScreen(
+                     navController = navController,
+                     subject       = java.net.URLDecoder.decode(it.arguments?.getString("subject") ?: "", "UTF-8"),
+                     topicTitle    = java.net.URLDecoder.decode(it.arguments?.getString("topicTitle") ?: "", "UTF-8")
+                 )
+             }*/
+
+            composable(
+                Screen.TopicQuiz.route,
+                arguments = listOf(
+                    navArgument("subject") { type = NavType.StringType },
+                    navArgument("topicTitle") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+
+                val subject = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("subject") ?: "",
+                    "UTF-8"
+                )
+
+                val topicTitle = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("topicTitle") ?: "",
+                    "UTF-8"
+                )
+
+                TopicQuizScreen(
+                    navController = navController,
+                    subject = subject,
+                    topicTitle = topicTitle
+                )
+            }
+
+            // ✅ Quiz List Screen
+            composable(Screen.QuizList.route) {
+                QuizListScreen(navController)
+            }
 
 // ✅ Quiz Detail Screen
-        composable(
-            route = Screen.QuizDetail.route,
-            arguments = listOf(navArgument("quizId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+            composable(
+                route = Screen.QuizDetail.route,
+                arguments = listOf(navArgument("quizId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
 
-            QuizDetailScreen(
-                quizId = quizId,
-                navController = navController
-            )
-        }
+                QuizDetailScreen(
+                    quizId = quizId,
+                    navController = navController
+                )
+            }
 
 // ✅ Quiz Player Screen
-        composable(
-            route = Screen.QuizPlayer.route,
-            arguments = listOf(navArgument("quizId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
-            QuizPlayScreen(quizId = quizId, navController = navController, adManager = adManager)
-        }
-
-        composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
-        composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
-        composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
-        // ── Tier Room System (Phase 1) ──────────────────────────
-        composable(Screen.RoomsHub.route) { backStackEntry ->
-
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(Screen.Main.route)
+            composable(
+                route = Screen.QuizPlayer.route,
+                arguments = listOf(navArgument("quizId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val quizId = backStackEntry.arguments?.getString("quizId") ?: return@composable
+                QuizPlayScreen(quizId = quizId, navController = navController, adManager = adManager)
             }
 
-            val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
-            val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
-
-            RoomsHubScreen(
-                navController = navController,
-                sessionViewModel = sessionVM,
-                tiersViewModel = tiersVM
-            )
-        }
-
-        composable(Screen.StudyFocus.route) { backStackEntry ->
-            // Get the SAME ViewModel scoped to Screen.Main that is shared across all
-            // room-related screens (MainShell PIP, RoomsHub, StudyFocusScreen).
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(Screen.Main.route)
+            composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
+            composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
+            composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
+            // ── Tier Room System (Phase 1) ──────────────────────────
+            composable(Screen.RoomsHub.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    try { navController.getBackStackEntry(Screen.Main.route) }
+                    catch (_: Exception) { backStackEntry }
+                }
+                val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+                RoomsHubScreen(
+                    navController = navController,
+                    sessionViewModel = sessionVM,
+                    tiersViewModel = tiersVM
+                )
             }
-            val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
-            val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
 
-            StudyFocusScreen(
-                navController  = navController,
-                viewModel      = sessionVM,
-                tiersViewModel = tiersVM,
-                adManager      = adManager
-            )
-        }
+            composable(Screen.StudyFocus.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    try { navController.getBackStackEntry(Screen.Main.route) }
+                    catch (_: Exception) { backStackEntry }
+                }
+                val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
+                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
 
-
-        composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
-
-        // PDF Viewer — custom in-app renderer with page locking
-        composable(
-            route     = Screen.PdfViewer.route,
-            arguments = listOf(
-                navArgument("fileUrl")     { type = NavType.StringType },
-                navArgument("title")       { type = NavType.StringType },
-                navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
-                navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
-            )
-        ) { back ->
-            val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
-            val title       = back.arguments?.getString("title")?.let  { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Document"
-            val freePages   = back.arguments?.getInt("freePages")  ?: 3
-            val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
-            PdfViewerScreen(
-                fileUrl       = fileUrl,
-                title         = title,
-                freePages     = freePages,
-                isPurchased   = isPurchased,
-                navController = navController,
-                authToken     = ""//tokenStore.getToken() ?: ""
-            )
-        }
-
-        composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
-        composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
-
-        composable(Screen.Leaderboard.route) { backStackEntry ->
-            val parentEntry = remember(backStackEntry) {
-                try { navController.getBackStackEntry(Screen.Main.route) }
-                catch (_: Exception) { backStackEntry }
+                StudyFocusScreen(
+                    navController  = navController,
+                    viewModel      = sessionVM,
+                    tiersViewModel = tiersVM,
+                    adManager      = adManager
+                )
             }
-            val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
-            LeaderboardScreen(navController = navController, viewModel = tiersVM)
-        }
-        composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
-        composable(Screen.MyLearning.route)    { MyLearningScreen(navController, fromScreen = "nav-host") }
 
-        // ── Placeholders ─────────────────────────────────────────
-        composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }
-        composable(Screen.Profile.route)       { ProfileScreen(navController) }
-        composable(Screen.CoinWallet.route)    { CoinWalletScreen(navController, adManager = adManager) }
-        composable(Screen.Subscription.route)  { SubscriptionScreen(navController) }
-        composable(Screen.EditProfile.route)    { EditProfileScreen(navController) }
-        composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
-        composable(Screen.Settings.route)      { SettingsScreen(navController) }
-        composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
 
-        composable(
-            Screen.CourseDetail.route,
-            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
-        ) { CourseDetailScreen(navController, it.arguments?.getString("courseId") ?: "") }
+            composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
 
-        composable(
-            Screen.NotesReader.route,
-            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-        ) { NotesReaderScreen(navController, it.arguments?.getString("noteId") ?: "") }
+            // PDF Viewer — custom in-app renderer with page locking
+            composable(
+                route     = Screen.PdfViewer.route,
+                arguments = listOf(
+                    navArgument("fileUrl")     { type = NavType.StringType },
+                    navArgument("title")       { type = NavType.StringType },
+                    navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
+                    navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
+                )
+            ) { back ->
+                val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                val title       = back.arguments?.getString("title")?.let  { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Document"
+                val freePages   = back.arguments?.getInt("freePages")  ?: 3
+                val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
+                PdfViewerScreen(
+                    fileUrl       = fileUrl,
+                    title         = title,
+                    freePages     = freePages,
+                    isPurchased   = isPurchased,
+                    navController = navController,
+                    authToken     = ""//tokenStore.getToken() ?: ""
+                )
+            }
 
-        // ── Lesson Viewer (PDF / Video / Quiz / Live) ─────────
-        composable(
-            Screen.LessonViewer.route,
-            arguments = listOf(
-                navArgument("courseId")  { type = NavType.StringType },
-                navArgument("lessonId")  { type = NavType.StringType }
-            )
-        ) { backStack ->
-            LessonViewerScreen(
-                nav      = navController,
-                courseId = backStack.arguments?.getString("courseId") ?: "",
-                lessonId = backStack.arguments?.getString("lessonId") ?: ""
-            )
+            composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
+            composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
+
+            composable(Screen.Leaderboard.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    try { navController.getBackStackEntry(Screen.Main.route) }
+                    catch (_: Exception) { backStackEntry }
+                }
+                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+                LeaderboardScreen(navController = navController, viewModel = tiersVM)
+            }
+            composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
+            composable(Screen.MyLearning.route)    { MyLearningScreen(navController, fromScreen = "nav-host") }
+
+            // ── Placeholders ─────────────────────────────────────────
+            composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }
+            composable(Screen.Profile.route)       { ProfileScreen(navController) }
+            composable(Screen.CoinWallet.route)    { CoinWalletScreen(navController, adManager = adManager) }
+            composable(Screen.Subscription.route)  { SubscriptionScreen(navController) }
+            composable(Screen.EditProfile.route)    { EditProfileScreen(navController) }
+            composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
+            composable(Screen.Settings.route)      { SettingsScreen(navController) }
+            composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
+
+            composable(
+                Screen.CourseDetail.route,
+                arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+            ) { CourseDetailScreen(navController, it.arguments?.getString("courseId") ?: "") }
+
+            composable(
+                Screen.NotesReader.route,
+                arguments = listOf(navArgument("noteId") { type = NavType.StringType })
+            ) { NotesReaderScreen(navController, it.arguments?.getString("noteId") ?: "") }
+
+            // ── Lesson Viewer (PDF / Video / Quiz / Live) ─────────
+            composable(
+                Screen.LessonViewer.route,
+                arguments = listOf(
+                    navArgument("courseId")  { type = NavType.StringType },
+                    navArgument("lessonId")  { type = NavType.StringType }
+                )
+            ) { backStack ->
+                LessonViewerScreen(
+                    nav      = navController,
+                    courseId = backStack.arguments?.getString("courseId") ?: "",
+                    lessonId = backStack.arguments?.getString("lessonId") ?: ""
+                )
+            }
         }
     }
 }
