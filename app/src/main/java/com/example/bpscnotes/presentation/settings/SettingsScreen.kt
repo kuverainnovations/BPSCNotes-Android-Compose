@@ -23,6 +23,7 @@ import com.example.bpscnotes.core.language.LanguagePickerRow
 import com.example.bpscnotes.core.language.LocalStrings
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.profile.ProfileViewModel
 
@@ -107,7 +108,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .background(cs.background)
         ) {
-            SettingsHeader(onBack = { navController.popBackStack() })
+            SettingsHeader(onBack = { navController.popBackStackSafe() })
 
             Column(
                 modifier = Modifier

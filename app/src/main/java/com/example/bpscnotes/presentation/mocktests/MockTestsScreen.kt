@@ -5,6 +5,8 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -275,8 +277,8 @@ fun MockTestsScreen(
             // Show ad when user navigates back from mock test section
             androidx.activity.compose.BackHandler {
                 if (adManager != null && activity != null)
-                    adManager.showInterstitialIfReady(activity) { navController.popBackStack() }
-                else navController.popBackStack()
+                    adManager.showInterstitialIfReady(activity) { navController.popBackStackSafe() }
+                else navController.popBackStackSafe()
             }
             MockTestLobbyScreen(
                 navController   = navController,
@@ -452,7 +454,7 @@ private fun MockTestLobbyScreen(
                             Box(
                                 modifier = Modifier.size(36.dp).clip(CircleShape)
                                     .background(Color.White.copy(0.15f))
-                                    .clickable { navController.popBackStack() },
+                                    .clickable { navController.popBackStackSafe() },
                                 contentAlignment = Alignment.Center
                             ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                             Column {

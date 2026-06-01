@@ -28,6 +28,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.DailyTargetDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import kotlinx.coroutines.launch
 
@@ -130,7 +131,7 @@ fun DailyTargetsScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             IconButton(
-                                onClick  = { navController.popBackStack() },
+                                onClick  = { navController.popBackStackSafe() },
                                 modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
                             ) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))

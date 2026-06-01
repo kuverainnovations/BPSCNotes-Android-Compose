@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.http.*
 import javax.inject.Inject
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
 
 // ════════════════════════════════════════════════════════════
 // NOTIFICATIONS — fully dynamic
@@ -178,7 +180,7 @@ fun NotificationSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
-                            .clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
+                            .clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {

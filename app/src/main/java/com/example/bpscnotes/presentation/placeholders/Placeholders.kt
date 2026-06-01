@@ -28,6 +28,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.*
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -225,7 +226,7 @@ fun DownloadsScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.White.copy(0.15f))
-                                .clickable { nav.popBackStack() },
+                                .clickable { nav.popBackStackSafe() },
                                 contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
@@ -556,7 +557,7 @@ fun SubscriptionScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.White.copy(0.15f))
-                                .clickable { nav.popBackStack() },
+                                .clickable { nav.popBackStackSafe() },
                                 contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }

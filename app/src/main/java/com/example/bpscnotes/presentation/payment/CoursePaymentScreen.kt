@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 @Composable
 fun CoursePaymentScreen(
@@ -74,7 +75,7 @@ fun CoursePaymentScreen(
             state.isSuccess -> SuccessScreen(
                 title   = str.courseUnlocked,
                 message = "\"$courseTitle\" " + str.courseUnlockedBody,
-                onDone  = { navController.popBackStack() }
+                onDone  = { navController.popBackStackSafe() }
             )
             else -> Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
                 // Header
@@ -83,7 +84,7 @@ fun CoursePaymentScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                         .background(Color.White.copy(0.15f))
-                        .clickable { navController.popBackStack() },
+                        .clickable { navController.popBackStackSafe() },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }

@@ -29,6 +29,7 @@ import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 // ─────────────────────────────────────────────────────────────
 // SUBSCRIPTION PAYMENT SCREEN
@@ -72,7 +73,7 @@ fun SubscriptionPaymentScreen(
                 title   = str.paymentActivated,
                 message = str.paymentWelcome,
                 bonusCoins = state.bonusCoins,
-                onDone  = { navController.popBackStack() }
+                onDone  = { navController.popBackStackSafe() }
             )
             else -> Column(modifier = Modifier.fillMaxSize()) {
                 // Header
@@ -83,7 +84,7 @@ fun SubscriptionPaymentScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                             .background(Color.White.copy(0.15f))
-                            .clickable { navController.popBackStack() },
+                            .clickable { navController.popBackStackSafe() },
                             contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }

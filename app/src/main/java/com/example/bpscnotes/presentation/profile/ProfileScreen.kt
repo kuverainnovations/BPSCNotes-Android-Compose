@@ -22,6 +22,7 @@ import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import java.time.LocalDate
 

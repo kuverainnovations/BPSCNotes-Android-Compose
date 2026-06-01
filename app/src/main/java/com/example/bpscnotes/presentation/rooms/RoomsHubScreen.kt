@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.*
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 // ════════════════════════════════════════════════════════════
@@ -179,7 +180,7 @@ fun RoomsHubScreen(
         // FIX: Pin header using Column + pinned header above scrollable LazyColumn
         Column(Modifier.fillMaxSize().padding(padding)) {
             // Pinned — does not scroll
-            RoomsHeroHeader(state = state, onBack = { navController.popBackStack() })
+            RoomsHeroHeader(state = state, onBack = { navController.popBackStackSafe() })
 
             // Scrollable content
             LazyColumn(

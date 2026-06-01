@@ -37,6 +37,7 @@ import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.AppQuitDialog
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.CaMcqDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 @Composable
 fun CaMcqQuizScreen(
@@ -60,9 +61,9 @@ fun CaMcqQuizScreen(
     // Back from result screen → show interstitial ad
     val navigateBack: () -> Unit = {
         if (adManager != null && activity != null)
-            adManager.showInterstitialIfReady(activity) { navController.popBackStack() }
+            adManager.showInterstitialIfReady(activity) { navController.popBackStackSafe() }
         else
-            navController.popBackStack()
+            navController.popBackStackSafe()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
@@ -76,7 +77,7 @@ fun CaMcqQuizScreen(
                 title       = str.caNoMcqs,
                 body        = str.caNoMcqsBody,
                 actionLabel = str.caGoBack,
-                onAction    = { navController.popBackStack() }
+                onAction    = { navController.popBackStackSafe() }
             )
 
             // ── Result screen ────────────────────────────────────

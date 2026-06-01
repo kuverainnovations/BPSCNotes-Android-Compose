@@ -20,6 +20,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.LeaderboardEntryDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 @Composable
 fun LeaderboardScreen(
@@ -68,7 +69,7 @@ fun LeaderboardScreen(
                     Box(
                         Modifier.size(36.dp).clip(CircleShape)
                             .background(Color.White.copy(0.15f))
-                            .clickable { navController.popBackStack() },
+                            .clickable { navController.popBackStackSafe() },
                         Alignment.Center
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))

@@ -423,7 +423,7 @@ private fun RoomLobbyScreen(
                                      .size(36.dp)
                                      .clip(CircleShape)
                                      .background(Color.White.copy(0.15f))
-                                     .clickable { navController.popBackStack() },
+                                     .clickable { navController.popBackStackSafe() },
                                  contentAlignment = Alignment.Center
                              ) {
                                  Icon(

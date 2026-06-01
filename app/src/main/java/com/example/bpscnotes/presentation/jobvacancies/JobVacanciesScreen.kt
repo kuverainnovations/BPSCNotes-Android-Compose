@@ -30,6 +30,7 @@ import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -179,7 +180,7 @@ fun JobVacanciesScreen(
 
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStack() }, Alignment.Center) {
+                            Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, Alignment.Center) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {

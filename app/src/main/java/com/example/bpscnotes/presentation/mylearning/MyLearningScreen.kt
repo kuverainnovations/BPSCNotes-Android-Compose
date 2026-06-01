@@ -96,6 +96,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
@@ -365,7 +366,7 @@ fun MyLearningScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (fromScreen=="nav-host") Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
-                        .clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
+                        .clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column(Modifier.weight(1f)) {

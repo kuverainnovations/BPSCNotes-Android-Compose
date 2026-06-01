@@ -36,6 +36,7 @@ import kotlinx.coroutines.*
 import kotlin.math.abs
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -637,7 +638,7 @@ private fun FlashcardLobbyScreen(
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {

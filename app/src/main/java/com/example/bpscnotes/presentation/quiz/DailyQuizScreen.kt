@@ -5,6 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -150,7 +152,7 @@ private fun QuizLobbyScreen(
                             Box(
                                 modifier = Modifier.size(36.dp).clip(CircleShape)
                                     .background(Color.White.copy(0.15f))
-                                    .clickable { navController.popBackStack() },
+                                    .clickable { navController.popBackStackSafe() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))

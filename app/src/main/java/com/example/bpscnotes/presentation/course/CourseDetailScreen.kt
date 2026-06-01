@@ -30,6 +30,7 @@ import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.data.remote.api.CourseReview
 import com.example.bpscnotes.data.remote.api.Lesson
 import com.example.bpscnotes.data.remote.api.RatingDistribution
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import java.text.SimpleDateFormat
 import java.util.*
@@ -205,7 +206,7 @@ fun CourseDetailScreen(
                 // ── Pinned HeroHeader overlaid on top ──────────────
                 HeroHeader(
                     course, accent, totalLessons, completedLessons, animProg, isEnrolled
-                ) { nav.popBackStack() }
+                ) { nav.popBackStackSafe() }
             } // end pinned-header Box
 
             // Bottom bar

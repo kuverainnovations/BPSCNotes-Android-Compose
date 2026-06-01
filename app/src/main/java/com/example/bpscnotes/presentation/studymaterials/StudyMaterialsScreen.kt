@@ -41,6 +41,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
 
@@ -172,7 +173,7 @@ fun StudyMaterialsScreen(
             // ── HEADER ──────────────────────────────────────────
             StudyMaterialsHeader(
                 stats = state.stats,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafe() },
                 onUpload = { viewModel.showUpload() }
             )
 

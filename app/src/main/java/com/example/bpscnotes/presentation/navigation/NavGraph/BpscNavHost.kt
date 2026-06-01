@@ -39,6 +39,7 @@ import com.example.bpscnotes.presentation.jobvacancies.JobVacanciesScreen
 import com.example.bpscnotes.presentation.mocktests.MockTestsScreen
 import com.example.bpscnotes.presentation.mylearning.MyLearningScreen
 import com.example.bpscnotes.presentation.navigation.MainShell.MainShell
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.nofification.NotificationSettingsScreen
 import com.example.bpscnotes.presentation.placeholders.DownloadsScreen

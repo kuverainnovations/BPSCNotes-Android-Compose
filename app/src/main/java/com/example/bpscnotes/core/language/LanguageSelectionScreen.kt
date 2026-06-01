@@ -28,6 +28,7 @@ import com.kuvera.bpscnotes.R
 
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

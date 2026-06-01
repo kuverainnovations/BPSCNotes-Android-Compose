@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -153,7 +154,7 @@ fun PdfViewerScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStackSafe() }) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
                     }
                 },
@@ -199,7 +200,7 @@ fun PdfViewerScreen(
                             style = MaterialTheme.typography.titleLarge)
                         Text(error!!, color = Color.White.copy(0.6f),
                             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                        Button(onClick = { navController.popBackStack() },
+                        Button(onClick = { navController.popBackStackSafe() },
                             shape = RoundedCornerShape(12.dp)) {
                             Text(str.pdfGoBack)
                         }

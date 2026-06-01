@@ -26,6 +26,7 @@ import androidx.navigation.NavHostController
 import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 // ─────────────────────────────────────────────────────────────
 // LESSON VIEWER SCREEN
@@ -64,7 +65,7 @@ fun LessonViewerScreen(
             LessonTopBar(
                 title     = state.lesson?.title ?: "Lesson",
                 isLoading = state.isLoading,
-                onBack    = { nav.popBackStack() }
+                onBack    = { nav.popBackStackSafe() }
             )
         },
         bottomBar    = {
@@ -88,7 +89,7 @@ fun LessonViewerScreen(
                         "video"       -> VideoPlayer(lesson.video_url ?: lesson.notes_url)
                         "pdf", "notes" -> PdfViewer(lesson.notes_url)
                         "live"        -> LiveClassView(lesson)
-                        "quiz"        -> QuizRedirectView(lesson, onQuizTap = { nav.popBackStack() })
+                        "quiz"        -> QuizRedirectView(lesson, onQuizTap = { nav.popBackStackSafe() })
                         else          -> PdfViewer(lesson.notes_url ?: lesson.video_url)
                     }
 

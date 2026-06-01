@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.bpscnotes.data.remote.api.EndSessionResponseData
 import com.example.bpscnotes.data.remote.api.MyTierResponseData
 import com.example.bpscnotes.data.remote.api.TierMemberDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.readingrooms.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel

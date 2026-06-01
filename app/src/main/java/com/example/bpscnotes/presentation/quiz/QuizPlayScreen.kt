@@ -6,6 +6,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,9 +75,9 @@ fun QuizPlayScreen(
                     // Show interstitial after quiz result (enforces 20min cooldown internally)
                     activity?.let { act ->
                         adManager.showInterstitialIfReady(act) {
-                            navController.popBackStack()
+                            navController.popBackStackSafe()
                         }
-                    } ?: navController.popBackStack()
+                    } ?: navController.popBackStackSafe()
                 }
             )
         }
@@ -79,7 +85,7 @@ fun QuizPlayScreen(
             QuizPlayerContent(
                 session  = state.activeSession!!,
                 viewModel = viewModel,
-                onExit   = { viewModel.exitSession(); navController.popBackStack() }
+                onExit   = { viewModel.exitSession(); navController.popBackStackSafe() }
             )
         }
         state.isStartingQuiz -> {
@@ -103,7 +109,7 @@ fun QuizPlayScreen(
                     Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
-                    OutlinedButton(onClick = { viewModel.exitSession(); navController.popBackStack() }, modifier = Modifier
+                    OutlinedButton(onClick = { viewModel.exitSession(); navController.popBackStackSafe() }, modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(str.goBack) }
                 }

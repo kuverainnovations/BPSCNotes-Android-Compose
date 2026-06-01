@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.google.gson.annotations.SerializedName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -128,7 +129,7 @@ fun MarketplaceScreen(
                 Column(Modifier.padding(20.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { nav.popBackStack() }, Alignment.Center) {
+                            Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { nav.popBackStackSafe() }, Alignment.Center) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {

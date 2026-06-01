@@ -24,6 +24,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
 import com.example.bpscnotes.presentation.quiz.components.SectionLabel
@@ -78,7 +79,7 @@ fun QuizListScreen(
                         Box(
                             modifier         = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.White.copy(0.15f))
-                                .clickable { navController.popBackStack() },
+                                .clickable { navController.popBackStackSafe() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))

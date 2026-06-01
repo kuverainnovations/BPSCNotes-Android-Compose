@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,7 @@ fun FcmDebugScreen(navController: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
                     .background(Color.White.copy(0.15f))
-                    .clickable { navController.popBackStack() },
+                    .clickable { navController.popBackStackSafe() },
                     contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }

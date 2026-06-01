@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 private val BIHAR_DISTRICTS = listOf(
     "Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Darbhanga",
@@ -84,7 +86,7 @@ fun RegisterScreen(
                 .statusBarsPadding()
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(onClick = { navController.popBackStackSafe() }) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
                 }
                 Spacer(Modifier.height(8.dp))

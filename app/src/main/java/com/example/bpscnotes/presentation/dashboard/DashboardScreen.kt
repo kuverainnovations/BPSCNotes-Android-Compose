@@ -65,6 +65,7 @@ import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.UserStatsData
 import com.example.bpscnotes.data.remote.dto.UserDto
 import com.example.bpscnotes.domain.model.DayProgress
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.shared.BookmarkViewModel
 import kotlinx.coroutines.launch

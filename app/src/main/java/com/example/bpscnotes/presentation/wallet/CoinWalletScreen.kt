@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
@@ -105,7 +106,7 @@ fun CoinWalletScreen(
             .fillMaxSize()
             .padding(scaffoldPadding)) {
             // Pinned header — does not scroll
-            CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStack() })
+            CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStackSafe() })
             // Pinned tab row — does not scroll
             CoinTabRow(selectedTab = selectedTab, tabs = tabs, onSelect = { selectedTab = it })
 

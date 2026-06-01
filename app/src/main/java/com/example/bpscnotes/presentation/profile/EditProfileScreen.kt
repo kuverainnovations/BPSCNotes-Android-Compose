@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun EditProfileScreen(
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
             viewModel.clearMessages()
-            navController.popBackStack()
+            navController.popBackStackSafe()
         }
     }
     LaunchedEffect(state.error) {
@@ -87,7 +88,7 @@ fun EditProfileScreen(
                     // Back
                     Box(modifier = Modifier.size(38.dp).clip(CircleShape)
                         .background(Color.White.copy(0.12f))
-                        .clickable { navController.popBackStack() },
+                        .clickable { navController.popBackStackSafe() },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }

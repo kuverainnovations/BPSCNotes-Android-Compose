@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 @Composable
 fun TopicQuizScreen(
@@ -46,7 +47,7 @@ fun TopicQuizScreen(
                 session       = state.activeSession!!,
                 result        = state.result!!,
                 onReviewAll   = { },
-                onExit        = { viewModel.exitSession(); navController.popBackStack() },
+                onExit        = { viewModel.exitSession(); navController.popBackStackSafe() },
                 navController = navController
             )
         }
@@ -56,7 +57,7 @@ fun TopicQuizScreen(
             QuizSessionScreen(
                 session   = state.activeSession!!,
                 viewModel = viewModel,
-                onExit    = { viewModel.exitSession(); navController.popBackStack() }
+                onExit    = { viewModel.exitSession(); navController.popBackStackSafe() }
             )
         }
 
@@ -99,7 +100,7 @@ fun TopicQuizScreen(
                             Text(str.retry)
                         }
                     }
-                    OutlinedButton(onClick = { navController.popBackStack() }, shape = RoundedCornerShape(12.dp)) {
+                    OutlinedButton(onClick = { navController.popBackStackSafe() }, shape = RoundedCornerShape(12.dp)) {
                         Text("← " + str.back)
                     }
                 }
@@ -140,7 +141,7 @@ private fun TopicQuizIntroScreen(
                     .statusBarsPadding().padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStack() }, contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
                         androidx.compose.material3.Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
