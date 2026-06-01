@@ -56,9 +56,9 @@ data class CAArticle(
 
 /** Maps backend [CurrentAffairDto] to the UI [CAArticle] model. */
 fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArticle {
-    // Estimate read time: ~200 words per minute
-    val wordCount    = (fullContent ?: summary).split("\\s+".toRegex()).size
-    val readMins     = maxOf(1, wordCount / 200)
+    // Use admin-set read time; fall back to word count estimate only if not set
+    val readMins = if (readTime > 0) readTime
+    else maxOf(1, (fullContent ?: summary).split("\\s+".toRegex()).size / 200)
 
     // Determine prelims/mains from examTags
     val examTagsLower = examTags.map { it.lowercase() }

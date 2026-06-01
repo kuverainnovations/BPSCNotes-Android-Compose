@@ -256,6 +256,16 @@ fun RoomsHubScreen(
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
                         )
 
+
+                        // ── Above Room list banner ad ──────────────────────────────
+                        if (adManager != null) {
+                            com.example.bpscnotes.core.ads.BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        } else {
+                            Spacer(Modifier.height(80.dp))
+                        }
+
                         // ── ROOMS LIST ────────────────────────────
                         if (state.isLoadingTiers) {
                             repeat(4) {

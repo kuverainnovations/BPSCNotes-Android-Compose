@@ -107,11 +107,9 @@ fun DailyTargetsScreen(
     )
 
     //var selectedTab    by remember { mutableIntStateOf(0) }
-    var selectedFilter by remember { mutableStateOf(str.targetAllFilter) }
     var showAddSheet   by remember { mutableStateOf(false) }
 
     //val tabs    = listOf("List", "Cards", "Timeline")
-    val filters = listOf(str.targetAllFilter) + allTargets.map { it.target.subject }.distinct()
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -260,9 +258,6 @@ fun DailyTargetsScreen(
                 }*/
                 ListTabContent(
                     items = allTargets,
-                    filters = filters,
-                    selectedFilter = selectedFilter,
-                    onFilterChange = { selectedFilter = it },
                     onToggleComplete = { id -> viewModel.toggleTargetComplete(id) }
                 )
             }
@@ -285,26 +280,14 @@ fun DailyTargetsScreen(
 @Composable
 private fun ListTabContent(
     items: List<TargetItem>,
-    filters: List<String>,
-    selectedFilter: String,
-    onFilterChange: (String) -> Unit,
     onToggleComplete: (String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val filtered = if (selectedFilter == str.targetAllFilter) items else items.filter { it.target.subject == selectedFilter }
-    val carried  = filtered.filter { it.target.isCarriedForward }
-    val today    = filtered.filter { !it.target.isCarriedForward }
+    val carried = items.filter { it.target.isCarriedForward }
+    val today   = items.filter { !it.target.isCarriedForward }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(filters) { filter ->
-                val sel = filter == selectedFilter
-                Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { onFilterChange(filter) }.padding(horizontal = 14.dp, vertical = 7.dp)) {
-                    Text(filter, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
-                }
-            }
-        }
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (carried.isNotEmpty()) {
                 item { SectionLabel("📅", "Carried Forward", "From yesterday") }

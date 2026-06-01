@@ -326,14 +326,21 @@ class QuizViewModel @Inject constructor(
                             answerDetails  = answerDetails
                         ),
                         isSubmitting    = false,
+                        // Update isAttempted AND myLastScore locally for immediate UI update
                         dailyQuizzes    = state.dailyQuizzes.map { q ->
-                            if (q.id == session.id) q.copy(isAttempted = true) else q
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
+                        },
+                        topicQuizzes    = state.topicQuizzes.map { q ->
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
                         },
                         mockTestQuizzes = state.mockTestQuizzes.map { q ->
-                            if (q.id == session.id) q.copy(isAttempted = true) else q
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
                         }
                     )
                 }
+                // Broadcast so QuizListScreen's VM (separate hiltViewModel instance)
+                // picks up the event and reloads the list with fresh scores + solved count
+                bus.emit(RefreshEvent.QuizCompleted)
             } catch (e: Exception) {
                 Log.e("QuizVM", "submitQuiz: ${e.message}", e)
                 _uiState.update { it.copy(isSubmitting = false, submitError = e.message ?: "Submit failed") }

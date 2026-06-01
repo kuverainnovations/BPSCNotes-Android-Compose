@@ -286,6 +286,7 @@ data class CurrentAffairDto(
     @SerializedName("bookmark_count")  val bookmarkCount: Int = 0,
     @SerializedName("is_bookmarked")   val isBookmarked: Boolean = false,
     @SerializedName("mcq_count")       val mcqCount: Int = 0,
+    @SerializedName("read_time")       val readTime: Int = 1,
     val chapters: List<Chapter> = emptyList(),
 )
 data class Chapter(

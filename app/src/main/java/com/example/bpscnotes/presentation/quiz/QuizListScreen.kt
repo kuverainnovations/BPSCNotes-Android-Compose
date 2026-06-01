@@ -47,7 +47,7 @@ fun QuizListScreen(
 
     LaunchedEffect(Unit) {
         // Only reload if list is empty (avoid re-fetching on back navigation)
-        if (state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() && state.mockTestQuizzes.isEmpty() && !state.isLoadingList) {
+        if (state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() && !state.isLoadingList) {
             viewModel.loadLobby()
         }
     }
@@ -123,7 +123,7 @@ fun QuizListScreen(
                     Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                     LobbyStatChip("🏆", if (p?.rank != null) "#${p.rank}" else "--",          "Rank")
                     Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                    LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Solved")
+                    LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Attempted")
                 }
             }
         }
@@ -144,7 +144,7 @@ fun QuizListScreen(
                     }
                 }
             }
-            state.dailyQuizzes.isEmpty() && state.mockTestQuizzes.isEmpty() -> {
+            state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📝", fontSize = 48.sp)
@@ -181,23 +181,6 @@ fun QuizListScreen(
                                     android.widget.Toast.makeText(context,
                                         "\"${quiz.title}\" " + str.quizNoQuestions,
                                         android.widget.Toast.LENGTH_SHORT).show()
-                                } else {
-                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
-                                }
-                            }
-                        }
-                    }
-                    if (state.mockTestQuizzes.isNotEmpty()) {
-                        item { Spacer(Modifier.height(4.dp)) }
-                        item { SectionLabel("📋 " + str.quizMock + "s", "Full length practice exams") }
-                        items(state.mockTestQuizzes, key = { it.id }) { quiz ->
-                            QuizCard(quiz = quiz) {
-                                if (quiz.totalQuestions == 0) {
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        "\"${quiz.title}\" has no questions yet. Try another quiz.",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
                                 } else {
                                     navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
                                 }

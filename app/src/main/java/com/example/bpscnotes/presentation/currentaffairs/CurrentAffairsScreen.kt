@@ -107,16 +107,17 @@ fun CurrentAffairsScreen(
     val focusManager      = LocalFocusManager.current
     val tabs              = listOf(str.filterAll, str.filterPrelims, str.filterMains, str.filterSaved)
 
-    // Reload when category changes
-    LaunchedEffect(selectedCategory) {
-        viewModel.loadArticles(category = selectedCategory)
-    }
-
     val context = LocalContext.current
 
-    val articles = state.articles
+    val allArticles = state.allArticles
+    val articles    = state.articles
 
-    val filtered = articles.filter { article ->
+    // Categories derived from full unfiltered list — never changes when user picks a filter
+    val dynamicCategories: List<String> = remember(allArticles) {
+        listOf(str.filterAll) + allArticles.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
+    }
+
+    val filtered = allArticles.filter { article ->
         val matchesTab = when (selectedTab) {
             1 -> article.isPrelims
             2 -> article.isMains
@@ -214,9 +215,9 @@ fun CurrentAffairsScreen(
                 }
             }
 
-            // Category chips — uses CA_CATEGORIES from CAArticle.kt
+            // Category chips — dynamic from loaded articles
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(CA_CATEGORIES) { cat ->
+                items(dynamicCategories) { cat ->
                     val sel = cat == selectedCategory
                     Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { selectedCategory = cat }.padding(horizontal = 14.dp, vertical = 7.dp)) {
                         Text(cat, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)

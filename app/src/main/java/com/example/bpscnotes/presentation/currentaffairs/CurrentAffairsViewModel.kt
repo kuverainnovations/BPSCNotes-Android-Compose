@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class CurrentAffairsUiState(
+    val allArticles: List<CAArticle> = emptyList(),   // full unfiltered list — for category chips
     val articles: List<CAArticle> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
@@ -50,10 +51,11 @@ class CurrentAffairsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = it.articles.isEmpty(), error = null) }
             try {
-                val response  = api.getAffairs(limit = 60, category = category?.takeIf { it != "All" })
+                // Always fetch ALL articles — no server-side category filter
+                // Categories are filtered locally so chips never disappear
+                val response  = api.getAffairs(limit = 60, category = null)
                 val serverList = response.data?.affairs ?: emptyList()
 
-                // Seed bookmarks from server response
                 val serverBookmarked = serverList.filter { it.isBookmarked }.map { it.id }.toSet()
                 _bookmarkedIds.value = serverBookmarked
 
@@ -61,7 +63,7 @@ class CurrentAffairsViewModel @Inject constructor(
                     dto.toUiModel(isBookmarked = serverBookmarked.contains(dto.id))
                 }
 
-                _uiState.update { it.copy(articles = articles, isLoading = false) }
+                _uiState.update { it.copy(allArticles = articles, articles = articles, isLoading = false) }
 
             } catch (e: Exception) {
                 _uiState.update {
