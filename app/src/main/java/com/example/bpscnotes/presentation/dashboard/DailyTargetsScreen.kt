@@ -49,8 +49,8 @@ enum class Difficulty(val label: String, val color: Color) {
     Hard  ("Hard",   Color(0xFFE74C3C));
     @Composable fun localLabel(): String {
         val str = LocalStrings.current
-    val cs = MaterialTheme.colorScheme
-    LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("daily_targets") }
+        val cs = MaterialTheme.colorScheme
+        LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("daily_targets") }
         return when(this) { Easy -> str.targetEasy; Medium -> str.targetMedium; Hard -> str.targetHard }
     }
 }
@@ -263,17 +263,7 @@ fun DailyTargetsScreen(
                     filters = filters,
                     selectedFilter = selectedFilter,
                     onFilterChange = { selectedFilter = it },
-                    onToggleComplete = { id ->
-                        viewModel.toggleTargetComplete(id)
-                    },
-                    onStartQuiz = { subjectId ->
-                        navController.navigate(Screen.DailyQuiz.createRoute(subjectId))
-                    },
-                    onViewNotes = {
-                        // FIX: Navigate to Study Materials (not ELibrary which causes black screen)
-                        // ELibraryScreen just redirects to RoomsHub — wrong destination for notes
-                        navController.navigate(Screen.StudyMaterials.route)
-                    }
+                    onToggleComplete = { id -> viewModel.toggleTargetComplete(id) }
                 )
             }
         }
@@ -298,9 +288,7 @@ private fun ListTabContent(
     filters: List<String>,
     selectedFilter: String,
     onFilterChange: (String) -> Unit,
-    onToggleComplete: (String) -> Unit,
-    onStartQuiz: (String) -> Unit,
-    onViewNotes: () -> Unit
+    onToggleComplete: (String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -321,13 +309,13 @@ private fun ListTabContent(
             if (carried.isNotEmpty()) {
                 item { SectionLabel("📅", "Carried Forward", "From yesterday") }
                 items(carried, key = { it.target.id }) { item ->
-                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onStartQuiz = { onStartQuiz(item.target.id) }, onViewNotes = onViewNotes)
+                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) })
                 }
                 item { Spacer(Modifier.height(4.dp)) }
             }
             item { SectionLabel("🎯", "Today's Targets", "${today.size} topics assigned") }
             items(today, key = { it.target.id }) { item ->
-                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onStartQuiz = { onStartQuiz(item.target.id) }, onViewNotes = onViewNotes)
+                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) })
             }
         }
     }
@@ -347,56 +335,28 @@ private fun SectionLabel(icon: String, title: String, subtitle: String) {
 }
 
 @Composable
-private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onStartQuiz: () -> Unit, onViewNotes: () -> Unit) {
+private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    var expanded by remember { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(if (expanded) 4.dp else 2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(if (isCompleted) BpscColors.Success else Color.Transparent).border(2.dp, if (isCompleted) BpscColors.Success else BpscColors.TextHint, CircleShape)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        onToggleComplete()
-                    }, contentAlignment = Alignment.Center) {
-                    if (isCompleted) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.target.title, style = MaterialTheme.typography.titleMedium, color = if (isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = if (expanded) TextOverflow.Visible else TextOverflow.Ellipsis, textDecoration = if (isCompleted) TextDecoration.LineThrough else null)
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        SubjectTag(item.target.subject)
-                        // DifficultyBadge(item.difficulty)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
-                            Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
-                        }
-                        if (item.target.isCarriedForward) {
-                            Text(str.targetCarried, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF0EA)).padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp)
-                        }
-                    }
-                }
-                Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = BpscColors.TextHint, modifier = Modifier.size(20.dp).clickable { expanded = !expanded })
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+        Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(if (isCompleted) BpscColors.Success else Color.Transparent).border(2.dp, if (isCompleted) BpscColors.Success else BpscColors.TextHint, CircleShape)
+                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                    onToggleComplete()
+                }, contentAlignment = Alignment.Center) {
+                if (isCompleted) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
             }
-            AnimatedVisibility(visible = expanded) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = cs.outline)
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ActionButton(Icons.Rounded.Quiz,     str.quizStart, BpscColors.PrimaryLight,  BpscColors.Primary,     Modifier.weight(1f), onStartQuiz)
-                        ActionButton(Icons.Rounded.MenuBook, str.materialsView, Color(0xFFF3E8FD),        Color(0xFF9B59B6),      Modifier.weight(1f), onViewNotes)
-                        ActionButton(Icons.Rounded.Bookmark,
-                            if (item.target.isCompleted) str.caBookmarked else str.caBookmark,
-                            if (item.target.isCompleted) Color(0xFFFFF8E1) else BpscColors.Surface,
-                            if (item.target.isCompleted) BpscColors.CoinGold else BpscColors.TextHint,
-                            Modifier.weight(1f)) {
-                            // FIX: Collapse card after bookmarking — matches client request
-                            // "when expand bookmark it should be removed" means close the expanded view
-                            expanded = false
-                        }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(item.target.title, style = MaterialTheme.typography.titleMedium, color = if (isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textDecoration = if (isCompleted) TextDecoration.LineThrough else null)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    SubjectTag(item.target.subject)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
+                        Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                    }
+                    if (item.target.isCarriedForward) {
+                        Text(str.targetCarried, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF0EA)).padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp)
                     }
                 }
             }

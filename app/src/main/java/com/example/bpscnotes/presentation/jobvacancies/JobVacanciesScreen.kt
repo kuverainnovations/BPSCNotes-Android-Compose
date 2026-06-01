@@ -512,6 +512,55 @@ private fun JobDetailSheet(
                     }
                 }
 
+                // Brief description (short summary)
+                if (!job.briefDescription.isNullOrBlank()) {
+                    SectionCard(title = "Brief Description") {
+                        Text(job.briefDescription.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 24.sp)
+                    }
+                }
+
+                // PDF notification download
+                if (!job.pdfUrl.isNullOrBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFFEE8E8))
+                            .clickable { openLink(job.pdfUrl.orEmpty()) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(20.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Official Notification PDF", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
+                            Text("Tap to download / view PDF", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        }
+                        Icon(Icons.Rounded.Download, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                // Direct Apply Link (if different from officialLink)
+                if (!job.officialLink.isNullOrBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(BpscColors.PrimaryLight)
+                            .clickable { openLink(job.officialLink.orEmpty()) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Apply Online", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                            Text(job.officialLink.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
+                    }
+                }
+
                 // Eligibility — FIXED: all fields rendered
                 SectionCard(title = str.jobsEligibility, accentColor = BpscColors.Primary, accentBg = BpscColors.PrimaryLight) {
                     if (!job.qualification.isNullOrBlank()) DetailRow("🎓", "Qualification", job.qualification.orEmpty())

@@ -205,6 +205,13 @@ fun DashboardScreen(
                             isLoading = state.isLoading
                         )
 
+                        // Ad banner below weekly consistency chart
+                        if (adManager != null) {
+                            BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        }
+
                         // ── Daily quizzes ──────────────────────────────────────────
                         DailyQuizSection(
                             quizzes = state.dailyQuizzes,
@@ -224,13 +231,6 @@ fun DashboardScreen(
                             isLoading = state.isLoading,
                             navController = navController
                         )
-
-                        // Ad banner between recommended and schedule
-                        if (adManager != null) {
-                            BannerAdView(
-                                adUnitId = adManager.getBannerAdUnitId()
-                            )
-                        }
 
                         MyScheduleSection(
                             liveClasses        = state.liveClasses,
@@ -559,6 +559,30 @@ private fun DailyQuizSection(
             }
         }
 
+        // Current Affairs MCQs shortcut
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 8.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFFE8F4FD))
+                .clickable { navController.navigate(Screen.CurrentAffairs.route) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Rounded.Newspaper, null, tint = BpscColors.Primary, modifier = Modifier.size(16.dp))
+            Text(
+                "Current Affairs Related MCQs",
+                style = MaterialTheme.typography.bodyMedium,
+                color = BpscColors.Primary,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
+        }
+
         when {
             isLoading && quizzes.isEmpty() -> {
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -713,7 +737,7 @@ private fun DashboardHeader(
 
         Column(modifier = Modifier
             .fillMaxWidth()
-           // .statusBarsPadding()
+            // .statusBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(top = 44.dp)) {
             // Top bar

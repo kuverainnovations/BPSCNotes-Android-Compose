@@ -1046,7 +1046,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         dashboardNoActivity="No activity data yet",
         dashboardStartStudying="Start studying to see your progress",
         dashboardQuickAccess="Quick Access", dashboardRecommended="Recommended for You",
-        dashboardMySchedule="My Schedule", dashboardUpcomingEvents="Upcoming events",
+        dashboardMySchedule="My Schedule", dashboardUpcomingEvents="Upcomings",
         dashboardNoClasses="No upcoming classes scheduled",
         dashboardNoMeetingLink="No meeting link available. Please check back shortly.",
         dashboardClassEnded="This class has already ended.",

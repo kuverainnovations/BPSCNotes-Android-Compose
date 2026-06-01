@@ -676,7 +676,9 @@ data class JobVacancyDto(
     @SerializedName("is_urgent") val isUrgent: Boolean = false,
     @SerializedName("nearby_districts") val nearbyDistricts: List<String>? = null,
     @SerializedName("is_saved") val isSaved: Boolean = false,
-    val status: String? = null
+    val status: String? = null,
+    @SerializedName("brief_description") val briefDescription: String? = null,
+    @SerializedName("pdf_url") val pdfUrl: String? = null
 )
 
 data class JobsResponseData(
