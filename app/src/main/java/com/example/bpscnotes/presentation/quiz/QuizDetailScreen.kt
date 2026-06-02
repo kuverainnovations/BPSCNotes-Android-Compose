@@ -94,12 +94,6 @@ private fun QuizIntroContent(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
-    val difficultyColor = when (quiz.difficulty.lowercase()) {
-        "easy" -> Color(0xFF2ECC71)
-        "hard" -> Color(0xFFE74C3C)
-        else   -> Color(0xFFF39C12)
-    }
-
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -183,17 +177,7 @@ private fun QuizIntroContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                            .background(difficultyColor.copy(0.1f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(Icons.Rounded.BarChart, null, tint = difficultyColor, modifier = Modifier.size(14.dp))
-                        Text(quiz.difficulty.replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall, color = difficultyColor, fontWeight = FontWeight.Bold)
-                    }
+
                     if (quiz.attemptCount > 0) {
                         Row(
                             modifier = Modifier.clip(RoundedCornerShape(10.dp))

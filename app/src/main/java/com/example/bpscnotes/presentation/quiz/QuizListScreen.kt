@@ -203,7 +203,9 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
         colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(
                 modifier         = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight),
                 contentAlignment = Alignment.Center
@@ -211,25 +213,55 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                 Text(when (quiz.type) { "daily"->"📅"; "topic"->"📝"; "mock"->"📋"; else->"🎯" }, fontSize = 24.sp)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    if (quiz.isAttempted) {
-                        Text(str.dashboardDone, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
+                // Title row — coins badge pinned to the right, never displaced
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        if (quiz.isAttempted) {
+                            Text(str.dashboardDone, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
+                    }
+                    // Coins — always right-aligned, never wraps to second line
+                    if (quiz.coinsReward > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFFFF8E1))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("🪙", fontSize = 9.sp)
+                            Text("+${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        }
                     }
                 }
+                // Info row — subject · Qs · duration, no coins here
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(quiz.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    Text(quiz.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("·", color = BpscColors.TextHint)
                     Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     Text("·", color = BpscColors.TextHint)
                     Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    if (quiz.coinsReward > 0) {
-                        Text("·", color = BpscColors.TextHint)
-                        Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
-                    }
                 }
                 if (quiz.isAttempted) {
-                    Text("Last score: ${quiz.avgScore.toInt()}%", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.SemiBold)
+                    val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
+                    val passed = lastScore >= quiz.passingScore
+                    Text(
+                        "Last score: $lastScore%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
             Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(20.dp))

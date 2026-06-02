@@ -439,7 +439,6 @@ internal fun QuizSessionScreen(
                 // Subject + difficulty chips
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     SubjectChip(current.subject)
-                    DifficultyChip(current.difficulty)
                 }
 
                 // Question card
@@ -460,6 +459,7 @@ internal fun QuizSessionScreen(
 
                 // Options
                 current.options.forEachIndexed { index, option ->
+                    if (option.isBlank()) return@forEachIndexed
                     val optionState = when {
                         answerState == AnswerState.None && localSelectedIndex == index -> "selected"
                         answerState != AnswerState.None && optLetters[index] == viewModel.getAnswer(current.id) && answerState == AnswerState.Correct -> "correct"
@@ -720,7 +720,6 @@ internal fun QuizAnswerReviewScreen(
                                     Text("${index + 1}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                                 }
                                 SubjectChip(detail.question.subject)
-                                DifficultyChip(detail.question.difficulty)
                             }
                             Text(
                                 when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
@@ -733,6 +732,7 @@ internal fun QuizAnswerReviewScreen(
                         Text(detail.question.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
 
                         detail.question.options.forEachIndexed { i, option ->
+                            if (option.isBlank()) return@forEachIndexed
                             val isCorrectOpt = i == detail.correctIndex
                             val isUserOpt    = i == detail.selectedIndex
                             val bgOpt = when { isCorrectOpt -> Color(0xFFE8FDF4); isUserOpt && !isCorrectOpt -> Color(0xFFFEE8E8); else -> Color.Transparent }
@@ -779,16 +779,5 @@ internal fun SubjectChip(subject: String) {
     )
     val (fg, bg) = colors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
     Text(subject, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 9.sp,
-        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
-}
-
-@Composable
-internal fun DifficultyChip(difficulty: String) {
-    val (color, bg) = when (difficulty.lowercase()) {
-        "easy" -> Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4))
-        "hard" -> Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8))
-        else   -> Pair(Color(0xFFF39C12), Color(0xFFFFF8E1))
-    }
-    Text(difficulty.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
 }

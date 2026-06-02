@@ -140,7 +140,6 @@ internal fun QuizReviewScreen(
                                     )
                                 }
                                 SubjectChip(question.subject)
-                                DifficultyChip(question.difficulty)
                             }
 
                             Text(
@@ -170,8 +169,9 @@ internal fun QuizReviewScreen(
                             lineHeight = 22.sp
                         )
 
-                        // Options
+                        // Options — skip empty ones (questions may have 2 or 3 options)
                         question.options.forEachIndexed { i, option ->
+                            if (option.isBlank()) return@forEachIndexed
                             val isUserChoice   = i == selectedIndex
                             val isCorrectOpt   = resultKnown && i == correctIndex
 

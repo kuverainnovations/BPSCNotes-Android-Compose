@@ -43,18 +43,6 @@ data class TargetItem(
     val timeSlot: TimeSlot,       // derived from target.timeSlot string
 )
 
-enum class Difficulty(val label: String, val color: Color) {
-    Easy  ("Easy",   Color(0xFF2ECC71)),
-    Medium("Medium", Color(0xFFF39C12)),
-    Hard  ("Hard",   Color(0xFFE74C3C));
-    @Composable fun localLabel(): String {
-        val str = LocalStrings.current
-        val cs = MaterialTheme.colorScheme
-        LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("daily_targets") }
-        return when(this) { Easy -> str.targetEasy; Medium -> str.targetMedium; Hard -> str.targetHard }
-    }
-}
-
 enum class TimeSlot(val label: String, val icon: String, val range: String) {
     Morning  ("Morning",   "🌅", "6AM – 12PM"),
     Afternoon("Afternoon", "☀️", "12PM – 6PM"),
@@ -364,12 +352,6 @@ private fun SubjectTag(subject: String) {
     Text(subject, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 9.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 
-@Composable
-private fun DifficultyBadge(difficulty: Difficulty) {
-    val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    Text(difficulty.label, style = MaterialTheme.typography.labelSmall, color = difficulty.color, fontSize = 9.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(difficulty.color.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp))
-}
 
 // ─────────────────────────────────────────────────────────────
 // TAB 2 — CARD SWIPE VIEW

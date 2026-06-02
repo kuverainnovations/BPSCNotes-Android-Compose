@@ -924,7 +924,6 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
                         Text("${index + 1}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                     }
                     SubjectChip(detail.question.subject)
-                    DifficultyChip(detail.question.difficulty)
                 }
                 Text(
                     when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },

@@ -163,21 +163,7 @@ private fun QuizScreen(
                         color      = Color.White,
                         fontWeight = FontWeight.Bold
                     )
-                    val diff      = runCatching { q.difficulty }.getOrNull().orEmpty()
-                    val diffColor = when (diff) {
-                        "easy" -> Color(0xFF2ECC71); "hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12)
-                    }
-                    if (diff.isNotBlank()) {
-                        Text(
-                            diff.replaceFirstChar { it.uppercaseChar() },
-                            style    = MaterialTheme.typography.labelSmall,
-                            color    = diffColor,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                                .background(diffColor.copy(0.2f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    } else { Spacer(Modifier.size(36.dp)) }
+
                 }
                 // Progress bar
                 Box(modifier = Modifier.fillMaxWidth().height(5.dp)

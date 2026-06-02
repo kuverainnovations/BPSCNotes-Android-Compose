@@ -153,7 +153,7 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         id             = id,
         title          = title,
         subtitle       = buildString {
-            append("$totalQuestions Qs · ${durationMins}m · $difficulty")
+            append("$totalQuestions Qs · ${durationMins}m")
             if (isScheduledFuture) append(" · Upcoming")
         },
         type           = when (type) {
@@ -1027,7 +1027,6 @@ private fun ActiveTestScreen(
                             contentAlignment = Alignment.Center
                         ) { Text("${currentIndex + 1}", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp) }
                         SubjectBadge(current.subject)
-                        DiffBadge(current.difficulty)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Mark for review
@@ -1239,13 +1238,6 @@ private fun SubjectBadge(subject: String) {
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
 }
 
-@Composable
-private fun DiffBadge(difficulty: String) {
-    val str = LocalStrings.current
-    val color = when (difficulty) { "Easy" -> Color(0xFF2ECC71); "Hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12) }
-    Text(difficulty, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
-        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(0.1f)).padding(horizontal = 7.dp, vertical = 2.dp))
-}
 
 // ─────────────────────────────────────────────────────────────
 // ANALYSIS SCREEN

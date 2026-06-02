@@ -281,8 +281,11 @@ class QuizViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, submitError = null) }
             try {
-                val requestAnswers = session.questions.map { q ->
-                    QuizAnswerRequest(questionId = q.id, answer = answers[q.id] ?: "a")
+                // Only send questions the user actually answered — skipped questions
+                // must NOT default to "a", that would count as a wrong answer unfairly
+                val requestAnswers = session.questions.mapNotNull { q ->
+                    val answer = answers[q.id] ?: return@mapNotNull null
+                    QuizAnswerRequest(questionId = q.id, answer = answer)
                 }
                 val response = quizzesApi.submitQuiz(
                     session.id,
