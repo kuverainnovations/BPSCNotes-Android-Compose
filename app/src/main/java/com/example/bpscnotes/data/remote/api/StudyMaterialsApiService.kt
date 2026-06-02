@@ -13,10 +13,10 @@ import retrofit2.http.*
 
 // ── Enums ─────────────────────────────────────────────────────
 enum class MaterialType(val apiKey: String, val label: String, val emoji: String) {
-    PDF("pdf",   "PDF Notes",      "📄"),
-    PYQ("pyq",   "Prev. Papers",   "📝"),
-    BOOK("book", "Books",          "📚"),
-    VIDEO("video","Video Notes",   "🎬");
+    PDF( "pdf",  "PDF Notes",    "📄"),
+    PYQ( "pyq",  "Prev. Papers", "📝"),
+    BOOK("book", "Books",        "📚");
+    // VIDEO — disabled, Phase 2
 
     companion object {
         fun fromKey(key: String?) = values().firstOrNull { it.apiKey == key } ?: PDF
@@ -299,6 +299,10 @@ interface StudyMaterialsApiService {
         @Query("page")  page: Int  = 1,
         @Query("limit") limit: Int = 50
     ): ApiResponse<MyDownloadsData>
+
+    /** DELETE /study-materials/my-downloads/:id — remove from history */
+    @DELETE("study-materials/my-downloads/{materialId}")
+    suspend fun removeDownload(@Path("materialId") materialId: String): ApiResponse<Unit>
 
     /** POST /study-materials/:id/purchase — buy a paid material with coins */
     @POST("study-materials/{id}/purchase")

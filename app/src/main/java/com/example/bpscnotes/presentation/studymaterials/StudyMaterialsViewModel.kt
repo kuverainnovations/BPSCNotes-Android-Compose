@@ -307,8 +307,8 @@ class StudyMaterialsViewModel @Inject constructor(
                 val url = res.data?.downloadUrl ?: throw Exception("No download URL")
 
                 val ext = when {
-                    material.type == MaterialType.VIDEO -> "mp4"
-                    url.contains(".mp4")  -> "mp4"
+                   // material.type == MaterialType.VIDEO -> "mp4"
+                  //  url.contains(".mp4")  -> "mp4"
                     url.contains(".png")  -> "png"
                     url.contains(".jpg") || url.contains(".jpeg") -> "jpg"
                     else -> "pdf"

@@ -663,7 +663,9 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     Spacer(Modifier.height(2.dp))
                     Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
                         // Type badge
                         Text(typeLabel, style = MaterialTheme.typography.labelSmall, color = typeColor.first, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(typeColor.second).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -678,9 +680,16 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                         // Negative marking
                         Text("-${test.negativeMarking}m", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        // Year
                         if (test.year != null) {
                             Text("${test.year}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
+                        // Coins — last badge, always single line
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                            Text("🪙", fontSize = 9.sp)
+                            Text("+${test.coinsReward}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold, fontSize = 9.sp)
                         }
                     }
                 }
@@ -699,10 +708,6 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     MiniStat(Icons.Rounded.People, "${(test.totalAttempts / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${test.totalAttempts}" }}", "Attempts")
                     MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", str.quizAvgScore)
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", str.quizDuration)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("🪙", fontSize = 12.sp)
-                        Text("+${test.coinsReward}", style = MaterialTheme.typography.labelMedium, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
-                    }
                 }
                 Button(
                     onClick  = { if (!test.isScheduledFuture){ if (test.totalQuestions !=0) onStart() else { android.widget.Toast.makeText(

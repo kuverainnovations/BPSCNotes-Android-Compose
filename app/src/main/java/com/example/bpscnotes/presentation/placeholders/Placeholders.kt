@@ -134,8 +134,10 @@ class DownloadsViewModel @Inject constructor(
             try {
                 val file = File(item.localPath)
                 if (file.exists()) file.delete()
-                // Remove from TokenStore so the download button resets
+                // Remove from TokenStore so download button resets
                 tokenStore.removeDownloadedId(item.id)
+                // Remove from server download history
+                try { materialsApi.removeDownload(item.id) } catch (_: Exception) { /* non-blocking */ }
                 _state.update { s -> s.copy(
                     deletingId   = null,
                     downloads    = s.downloads.filterNot { it.id == item.id },
@@ -324,30 +326,44 @@ private fun DownloadedFileCard(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val typeEmoji = when (item.materialType) { "pyq" -> "📝"; "book" -> "📚"; "video" -> "🎬"; else -> "📄" }
+    val typeEmoji = when (item.materialType) { "pyq" -> "📝"; "book" -> "📚"; else -> "📄" }
     val typeColor = when (item.materialType) { "pyq" -> Color(0xFF9B59B6); "book" -> Color(0xFF1565C0); else -> Color(0xFFE74C3C) }
     val typeBg    = when (item.materialType) { "pyq" -> Color(0xFFF3E8FD); "book" -> Color(0xFFE8F0FD); else -> Color(0xFFFEE8E8) }
 
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(2.dp)) {
+    // Smart file size — show KB when < 1MB, 0 MB hidden
+    val sizeLabel = when {
+        item.fileSizeMb <= 0f -> ""
+        item.fileSizeMb < 1f  -> "💾 ${(item.fileSizeMb * 1024).toInt()} KB"
+        else                  -> "💾 ${"%.1f".format(item.fileSizeMb)} MB"
+    }
+
+    Card(
+        modifier  = Modifier.fillMaxWidth().then(
+            if (item.fileExists) Modifier.clickable(onClick = onOpen) else Modifier
+        ),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
         Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Icon
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
             Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(typeBg),
                 contentAlignment = Alignment.Center) {
-                if (isDeleting) CircularProgressIndicator(color = typeColor, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                if (isDeleting) CircularProgressIndicator(color = typeColor,
+                    modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
                 else Text(typeEmoji, fontSize = 22.sp)
             }
 
-            // Info
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(item.title, style = MaterialTheme.typography.titleSmall, color = cs.onSurface,
                     fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(item.subject, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("💾 ${"%.1f".format(item.fileSizeMb)} MB",
-                        style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                    if (sizeLabel.isNotEmpty())
+                        Text(sizeLabel, style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.TextHint, fontSize = 10.sp)
                     if (!item.fileExists)
                         Text(str.placeholderFileMissing, style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFFE74C3C), fontSize = 10.sp)
@@ -357,28 +373,17 @@ private fun DownloadedFileCard(
                 }
             }
 
-            // Actions
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(modifier = Modifier.size(32.dp).clip(CircleShape)
-                    .background(if (item.fileExists) BpscColors.PrimaryLight else cs.outline)
-                    .clickable(enabled = item.fileExists, onClick = onOpen),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.OpenInNew, null,
-                        tint = if (item.fileExists) BpscColors.Primary else BpscColors.TextHint,
-                        modifier = Modifier.size(15.dp))
-                }
-                Box(modifier = Modifier.size(32.dp).clip(CircleShape)
-                    .background(Color(0xFFFEE8E8))
-                    .clickable(enabled = !isDeleting, onClick = onDelete),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Delete, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(15.dp))
-                }
+            // Delete button only — whole card is the open action
+            Box(modifier = Modifier.size(32.dp).clip(CircleShape)
+                .background(Color(0xFFFEE8E8))
+                .clickable(enabled = !isDeleting, onClick = onDelete),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Delete, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(15.dp))
             }
         }
     }
 }
 
-// ════════════════════════════════════════════════════════════
 // SUBSCRIPTION / PAID CONTENT SCREEN
 // ════════════════════════════════════════════════════════════
 data class SubscriptionPlanItem(

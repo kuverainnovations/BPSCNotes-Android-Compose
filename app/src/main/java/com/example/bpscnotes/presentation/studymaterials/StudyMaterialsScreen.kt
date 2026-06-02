@@ -891,7 +891,7 @@ private fun LibraryItemCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 if (item.pageCount > 0) LibInfoChip(Icons.Rounded.Description, "${item.pageCount} pages")
-                LibInfoChip(Icons.Rounded.Storage, "${"%.1f".format(item.fileSizeMb)} MB")
+                LibInfoChip(Icons.Rounded.Storage, if (item.fileSizeMb > 0f && item.fileSizeMb < 1f) "${(item.fileSizeMb * 1024).toInt()} KB" else "${"%.1f".format(item.fileSizeMb)} MB")
                 LibInfoChip(Icons.Rounded.Download, formatCount(item.downloadCount))
                 // Show price/lock badge for paid materials
                 if ((item.price ?: 0) > 0) {
@@ -1015,7 +1015,7 @@ private fun MaterialDetailSheet(
                         style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         if (material.pageCount > 0) SheetStatWhite("📄", "${material.pageCount} pages")
-                        SheetStatWhite("💾", "${"%.1f".format(material.fileSizeBytes / 1048576f)} MB")
+                        SheetStatWhite("💾", run { val mb = material.fileSizeBytes / 1048576f; if (mb > 0f && mb < 1f) "${(mb * 1024).toInt()} KB" else "${"%.1f".format(mb)} MB" })
                         SheetStatWhite("⬇️", formatCount(material.downloadCount))
                         SheetStatWhite("⭐", "${material.rating}")
                     }
@@ -1097,7 +1097,7 @@ private fun MaterialDetailSheet(
                     Text(when {
                         isDownloaded -> str.materialsDownloadedDone
                         material.isPremium -> str.materialsUnlockPro
-                        !material.resolvedUrl.isNullOrBlank() -> if (material.type == MaterialType.VIDEO) "▶ Play Video" else "Open PDF"
+                        !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                         else -> str.materialsDownloadFree
                     }, style = MaterialTheme.typography.titleMedium)
                 }
@@ -1189,15 +1189,9 @@ private fun UploadSheet(
     }
 
     fun launchFilePicker() {
-        val mime = when (selType) {
-            MaterialType.VIDEO -> "video/*"
-            else               -> "application/pdf"
-        }
+        val mime = "application/pdf" // VIDEO disabled — Phase 2
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val perms = if (selType == MaterialType.VIDEO)
-                arrayOf(android.Manifest.permission.READ_MEDIA_VIDEO)
-            else
-                arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES)
+            val perms = arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES)
             val allGranted = perms.all {
                 androidx.core.content.ContextCompat.checkSelfPermission(context, it) ==
                         android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -1294,8 +1288,7 @@ private fun UploadSheet(
                         .background(if (sel) color else typeBg(type))
                         .clickable {
                             fileUri = null; fileName = ""  // reset local file state
-                            onFormChange(null, null, null, null, null, type,
-                                null, if (type == MaterialType.VIDEO) "0" else "3", null)
+                            onFormChange(null, null, null, null, null, type, null, "3", null)
                         }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1312,7 +1305,6 @@ private fun UploadSheet(
                     MaterialType.PDF   -> "📄 Study notes, summaries, handwritten scans, any PDF material"
                     MaterialType.PYQ   -> "📝 Previous Year Question papers from past BPSC / UPSC exams"
                     MaterialType.BOOK  -> "📚 Reference books, standard textbooks, study guides (PDF)"
-                    MaterialType.VIDEO -> "🎬 Short lecture or concept videos — max 20 MB recommended"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = BpscColors.TextSecondary,
@@ -1333,8 +1325,8 @@ private fun UploadSheet(
                 supportingText = { Text("Comma separated — helps others find your material") })
 
             // ── Marketplace / Premium Settings ─────────────────
-            // Free pages concept only applies to PDF-type content
-            val isPdfType = selType != MaterialType.VIDEO
+            // Free pages concept only applies to PDF-type content (VIDEO disabled — Phase 2)
+            val isPdfType = true
             Card(shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (isPremium) Color(0xFFFFF8E1) else BpscColors.Surface)) {
@@ -1345,7 +1337,7 @@ private fun UploadSheet(
                                 fontWeight = FontWeight.Bold, color = cs.onSurface)
                             Text(
                                 if (isPdfType) str.materialsChargeCoins
-                                else "Charge coins to unlock full video",
+                                else str.materialsChargeCoins,
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Switch(checked = isPremium, onCheckedChange = { onFormChange(null, null, null, null, null, null, it, null, null) },
@@ -1386,7 +1378,7 @@ private fun UploadSheet(
                                     if (isPdfType)
                                         "Users see ${freePages.ifEmpty { "3" }} free pages. Full PDF unlocks after purchase."
                                     else
-                                        "Users see a preview thumbnail. Full video unlocks after purchase.",
+                                        "Users see ${freePages.ifEmpty { "3" }} free pages. Full PDF unlocks after purchase.",
                                     style = MaterialTheme.typography.bodySmall, color = Color(0xFF856404))
                             }
                         }
@@ -1406,7 +1398,6 @@ private fun UploadSheet(
                     Text(
                         if (fileUri != null) "✅ $fileName"
                         else when (selType) {
-                            MaterialType.VIDEO -> "Tap to attach video (MP4 recommended)"
                             else               -> "Tap to attach PDF file"
                         },
                         style = MaterialTheme.typography.bodyLarge,
@@ -1587,13 +1578,11 @@ private fun typeColor(type: MaterialType) = when (type) {
     MaterialType.PDF   -> Color(0xFFE74C3C)
     MaterialType.PYQ   -> Color(0xFF9B59B6)
     MaterialType.BOOK  -> Color(0xFF1565C0)
-    MaterialType.VIDEO -> Color(0xFFE67E22)
 }
 private fun typeBg(type: MaterialType) = when (type) {
     MaterialType.PDF   -> Color(0xFFFEE8E8)
     MaterialType.PYQ   -> Color(0xFFF3E8FD)
     MaterialType.BOOK  -> Color(0xFFE8F0FD)
-    MaterialType.VIDEO -> Color(0xFFFFF0EA)
 }
 private fun formatCount(count: Int): String {
     return if (count >= 1000) "${"%.1f".format(count / 1000f)}k" else "$count"
