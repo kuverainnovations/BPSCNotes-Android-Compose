@@ -26,6 +26,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -82,10 +83,21 @@ data class StudyMaterialsUiState(
 
     // Upload
     val showUploadSheet:    Boolean                = false,
+    val showUploadCancelDialog: Boolean            = false,  // shown when user tries to close mid-upload
     val isUploading:        Boolean                = false,
     val uploadProgress:     Float                  = 0f,
     val uploadSuccess:      String?                = null,
     val uploadError:        String?                = null,
+    // Upload form fields — kept in VM so they survive sheet close/reopen
+    val uploadTitle:        String                 = "",
+    val uploadDescription:  String                 = "",
+    val uploadSubject:      String                 = "",
+    val uploadAuthor:       String                 = "",
+    val uploadTags:         String                 = "",
+    val uploadType:         MaterialType           = MaterialType.PDF,
+    val uploadIsPremium:    Boolean                = false,
+    val uploadFreePages:    String                 = "3",
+    val uploadPrice:        String                 = "0",
 
     // My uploads tab
     val myUploads:          List<StudyMaterialDto> = emptyList(),
@@ -95,6 +107,7 @@ data class StudyMaterialsUiState(
     // Download
     val downloadingId:      String?                = null,
     val downloadedIds:      Set<String>            = emptySet(),
+    val localPaths:         Map<String, String>    = emptyMap(), // materialId → local file path
 
     // Bookmark (optimistic)
     val bookmarkedIds:      Set<String>            = emptySet(),
@@ -115,18 +128,24 @@ class StudyMaterialsViewModel @Inject constructor(
 
     companion object { private const val TAG = "StudyMaterialsVM" }
 
-    private var searchJob: Job? = null
+    private var searchJob:  Job? = null
+    private var uploadJob:  Job? = null  // tracked so user can cancel mid-upload
 
     init {
         // FIX: Load persisted downloaded IDs so "Saved" button survives app restart
+        val downloadedIds = tokenStore.getDownloadedIds()
         _state.update { it.copy(
-            downloadedIds = tokenStore.getDownloadedIds(),
-            purchasedIds  = tokenStore.getPurchasedIds()
+            downloadedIds = downloadedIds,
+            purchasedIds  = tokenStore.getPurchasedIds(),
+            localPaths    = downloadedIds.mapNotNull { id ->
+                tokenStore.getLocalPath(id)?.let { id to it }
+            }.toMap()
         )}
         loadSubjects()
         loadStats()
         loadMaterials(reset = true)
         loadDownloadHistory()
+        loadMyUploads()
 
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
@@ -265,73 +284,63 @@ class StudyMaterialsViewModel @Inject constructor(
         }
     }
 
-    // ── Download via DownloadManager ──────────────────────────
-    /**
-     * On Android 10+ (API 29+): DownloadManager doesn't need any permission.
-     * On Android 9 and below: WRITE_EXTERNAL_STORAGE is a dangerous permission and
-     * must be granted at runtime. We emit needsStoragePermission = true so the UI
-     * can call ActivityCompat.requestPermissions(), then call retryPendingDownload().
-     */
+    // ── Download to app-private storage ───────────────────────
+    // Files saved to context.filesDir/materials/ — NOT accessible to
+    // other apps, file managers, or gallery. Cannot be shared externally.
+    // User can only open the file through BPSCNotes in-app viewers.
     fun downloadMaterial(material: StudyMaterialDto) {
         if (_state.value.downloadedIds.contains(material.id)) {
-            _state.update { it.copy(toastMessage = "Already downloaded") }
-            return
-        }
-        // Android 9 and below needs runtime WRITE_EXTERNAL_STORAGE permission
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-            if (!granted) {
-                // Save material so we can retry after the user grants permission
-                _state.update { it.copy(
-                    needsStoragePermission    = true,
-                    pendingDownloadMaterial   = material
-                )}
+            val localPath = tokenStore.getLocalPath(material.id)
+            if (localPath != null && java.io.File(localPath).exists()) {
+                _state.update { it.copy(toastMessage = "Already downloaded — open from My Learning") }
                 return
             }
+            // File deleted — remove stale record and re-download
+            tokenStore.removeDownloadedId(material.id)
+            _state.update { it.copy(downloadedIds = it.downloadedIds - material.id) }
         }
-        viewModelScope.launch {
+
+        viewModelScope.launch(Dispatchers.IO) {
             _state.update { it.copy(downloadingId = material.id) }
             try {
                 val res = api.recordDownload(material.id)
                 val url = res.data?.downloadUrl ?: throw Exception("No download URL")
 
-                val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-
-                // FIX: Sanitize filename — only safe chars, max 100 chars
-                val safeName = material.title
-                    .replace("[^a-zA-Z0-9 ._-]".toRegex(), "")
-                    .replace(" ", "_")
-                    .take(80)
-                    .ifEmpty { "bpscnotes_material" }
-                val fileName = "$safeName.pdf"
-
-                val request = DownloadManager.Request(Uri.parse(url)).apply {
-                    setTitle(material.title)
-                    setDescription("Downloading from BPSCNotes")
-                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    setAllowedOverMetered(true)
-                    setAllowedOverRoaming(false)
-                    // FIX: Don't use a subdirectory — DownloadManager can't create subdirs
-                    // on older Android versions, causing a crash.
-                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                val ext = when {
+                    material.type == MaterialType.VIDEO -> "mp4"
+                    url.contains(".mp4")  -> "mp4"
+                    url.contains(".png")  -> "png"
+                    url.contains(".jpg") || url.contains(".jpeg") -> "jpg"
+                    else -> "pdf"
                 }
-                dm.enqueue(request)
 
-                // FIX: Persist to SharedPreferences so button stays "Saved" after restart
+                val dir       = java.io.File(context.filesDir, "materials").also { it.mkdirs() }
+                val localFile = java.io.File(dir, "${material.id}.$ext")
+
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(5, java.util.concurrent.TimeUnit.MINUTES)
+                    .build()
+                val body = client.newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().body ?: throw Exception("Empty response")
+
+                body.byteStream().use { input ->
+                    java.io.FileOutputStream(localFile).use { output ->
+                        input.copyTo(output, bufferSize = 65536)
+                    }
+                }
+
                 tokenStore.addDownloadedId(material.id)
-                _state.update {
-                    it.copy(
-                        downloadingId = null,
-                        downloadedIds = it.downloadedIds + material.id,
-                        toastMessage  = "⬇️ Download started — check Downloads app"
-                    )
-                }
-                // Refresh download history so Downloads tab updates
+                tokenStore.saveLocalPath(material.id, localFile.absolutePath)
+
+                _state.update { it.copy(
+                    downloadingId = null,
+                    downloadedIds = it.downloadedIds + material.id,
+                    localPaths    = it.localPaths + (material.id to localFile.absolutePath),
+                    toastMessage  = "✅ Downloaded — open from My Learning tab"
+                )}
                 loadDownloadHistory()
+
             } catch (e: Exception) {
                 Log.e(TAG, "download: ${e.message}", e)
                 _state.update { it.copy(downloadingId = null, toastMessage = "Download failed: ${e.message}") }
@@ -339,9 +348,69 @@ class StudyMaterialsViewModel @Inject constructor(
         }
     }
 
+    fun getLocalPath(materialId: String): String? {
+        val path = _state.value.localPaths[materialId] ?: tokenStore.getLocalPath(materialId)
+        return if (path != null && java.io.File(path).exists()) path else null
+    }
+
     // ── Upload ────────────────────────────────────────────────
     fun showUpload() = _state.update { it.copy(showUploadSheet = true, uploadSuccess = null, uploadError = null) }
-    fun hideUpload() = _state.update { it.copy(showUploadSheet = false) }
+
+    fun hideUpload() {
+        // If upload is in progress, show confirmation dialog instead of closing
+        if (_state.value.isUploading) {
+            _state.update { it.copy(showUploadCancelDialog = true) }
+        } else {
+            _state.update { it.copy(showUploadSheet = false) }
+        }
+    }
+
+    fun dismissCancelDialog() = _state.update { it.copy(showUploadCancelDialog = false) }
+
+    fun confirmCancelUpload() {
+        uploadJob?.cancel()
+        uploadJob = null
+        _state.update { it.copy(
+            showUploadCancelDialog = false,
+            showUploadSheet        = false,
+            isUploading            = false,
+            uploadProgress         = 0f,
+            uploadError            = null
+        )}
+    }
+
+    fun updateUploadForm(
+        title:       String?       = null,
+        description: String?       = null,
+        subject:     String?       = null,
+        author:      String?       = null,
+        tags:        String?       = null,
+        type:        MaterialType? = null,
+        isPremium:   Boolean?      = null,
+        freePages:   String?       = null,
+        price:       String?       = null,
+    ) {
+        _state.update { s -> s.copy(
+            uploadTitle       = title       ?: s.uploadTitle,
+            uploadDescription = description ?: s.uploadDescription,
+            uploadSubject     = subject     ?: s.uploadSubject,
+            uploadAuthor      = author      ?: s.uploadAuthor,
+            uploadTags        = tags        ?: s.uploadTags,
+            uploadType        = type        ?: s.uploadType,
+            uploadIsPremium   = isPremium   ?: s.uploadIsPremium,
+            uploadFreePages   = freePages   ?: s.uploadFreePages,
+            uploadPrice       = price       ?: s.uploadPrice,
+        )}
+    }
+
+    fun resetUploadForm() {
+        _state.update { it.copy(
+            uploadTitle = "", uploadDescription = "", uploadSubject = "",
+            uploadAuthor = "", uploadTags = "", uploadType = MaterialType.PDF,
+            uploadIsPremium = false, uploadFreePages = "3", uploadPrice = "0",
+            uploadError = null, uploadProgress = 0f
+        )}
+    }
 
     /**
      * FIX: Upload via direct multipart POST to our own server.
@@ -369,35 +438,47 @@ class StudyMaterialsViewModel @Inject constructor(
         freePages: Int = 3,
         price: Int = 0
     ) {
-        viewModelScope.launch {
-
+        uploadJob = viewModelScope.launch(Dispatchers.IO) {
             try {
+                _state.update { it.copy(isUploading = true, uploadProgress = 0.02f, uploadError = null) }
 
-                _state.update {
-                    it.copy(
-                        isUploading = true,
-                        uploadProgress = 0f,
-                        uploadError = null
-                    )
+                val mimeType     = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                val realFileName = getFileName(uri) ?: "upload.${ext(mimeType)}"
+
+                // ── Compress / copy to temp file ──────────────
+                _state.update { it.copy(uploadProgress = 0.05f) }
+                val (uploadFile, uploadMime) = when {
+                    mimeType.startsWith("video/") -> compressVideo(uri, realFileName)
+                    else -> copyToTemp(uri, realFileName) to mimeType
                 }
 
+                _state.update { it.copy(uploadProgress = 0.2f) }
 
-                val inputStream = context.contentResolver.openInputStream(uri)
-                    ?: throw Exception("Unable to open file")
+                // ── Streaming RequestBody with progress ───────
+                val fileLength = uploadFile.length()
+                val progressBody = object : okhttp3.RequestBody() {
+                    override fun contentType() = uploadMime.toMediaTypeOrNull()
+                    // CRITICAL: return -1 so OkHttp does NOT buffer the whole body before sending.
+                    // Returning the real length causes OkHttp to load everything into RAM first,
+                    // which is why the progress bar stays at 0 until the upload finishes.
+                    override fun contentLength() = -1L
+                    override fun writeTo(sink: okio.BufferedSink) {
+                        val buf = ByteArray(65536) // 64KB chunks
+                        var uploaded = 0L
+                        uploadFile.inputStream().use { fis ->
+                            var read: Int
+                            while (fis.read(buf).also { read = it } != -1) {
+                                sink.write(buf, 0, read)
+                                sink.flush() // push each chunk immediately — don't wait for full buffer
+                                uploaded += read
+                                val p = 0.2f + (uploaded.toFloat() / fileLength) * 0.75f
+                                _state.update { it.copy(uploadProgress = p.coerceIn(0.2f, 0.95f)) }
+                            }
+                        }
+                    }
+                }
 
-                val bytes = inputStream.readBytes()
-
-                val requestFile = bytes.toRequestBody(
-                    context.contentResolver.getType(uri)?.toMediaTypeOrNull()
-                )
-
-                val realFileName = getFileName(uri) ?: "upload.pdf"
-
-                val filePart = MultipartBody.Part.createFormData(
-                    "file",
-                    realFileName,
-                    requestFile
-                )
+                val filePart = MultipartBody.Part.createFormData("file", uploadFile.name, progressBody)
 
                 val response = api.uploadMaterial(
                     file         = filePart,
@@ -413,27 +494,265 @@ class StudyMaterialsViewModel @Inject constructor(
                     price        = price.toString().toRequestBody("text/plain".toMediaTypeOrNull())
                 )
 
+                uploadFile.delete() // cleanup temp
+
                 _state.update {
                     it.copy(
-                        isUploading = false,
-                        uploadProgress = 1f,
+                        isUploading     = false,
+                        uploadProgress  = 1f,
                         showUploadSheet = false,
-                        toastMessage = response.message ?: "Upload successful"
+                        toastMessage    = response.message ?: "Upload successful",
+                        // Reset form for next upload
+                        uploadTitle = "", uploadDescription = "", uploadSubject = "",
+                        uploadAuthor = "", uploadTags = "", uploadType = MaterialType.PDF,
+                        uploadIsPremium = false, uploadFreePages = "3", uploadPrice = "0",
                     )
                 }
-
                 refresh()
 
             } catch (e: Exception) {
-
-                _state.update {
-                    it.copy(
-                        isUploading = false,
-                        uploadError = e.message ?: "Upload failed"
-                    )
-                }
+                Log.e(TAG, "uploadMaterial: ${e.message}", e)
+                _state.update { it.copy(isUploading = false, uploadError = e.message ?: "Upload failed") }
             }
         }
+    }
+
+    // ── Copy URI → temp file (streaming, no full RAM load) ────
+    private fun copyToTemp(uri: Uri, fileName: String): File {
+        val safe = fileName.replace("[^a-zA-Z0-9._-]".toRegex(), "_").take(60)
+        val tmp  = File(context.cacheDir, "up_${System.currentTimeMillis()}_$safe")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            tmp.outputStream().use { out -> input.copyTo(out, bufferSize = 65536) }
+        }
+        return tmp
+    }
+
+    // ── Video transcoding using MediaCodec ────────────────────
+    // Re-encodes video at lower bitrate — typically reduces 21MB → 3-5MB for a 6s clip.
+    // Falls back to simple remux if transcoding fails.
+    private fun compressVideo(uri: Uri, originalName: String): Pair<File, String> {
+        val inputFile  = copyToTemp(uri, originalName)
+        val outputFile = File(context.cacheDir, "comp_${System.currentTimeMillis()}.mp4")
+
+        // Skip compression for already-small files
+        if (inputFile.length() < 2 * 1024 * 1024) {
+            outputFile.delete()
+            return inputFile to "video/mp4"
+        }
+
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            retriever.setDataSource(context, uri)
+            val srcW = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 1280
+            val srcH = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 720
+            val rotation = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+            retriever.release()
+
+            // Target max 720p — keeps quality reasonable, massively reduces size
+            val scale = minOf(1f, minOf(1280f / srcW, 720f / srcH))
+            // Keep dimensions divisible by 2 (codec requirement)
+            val outW = ((srcW * scale).toInt() / 2) * 2
+            val outH = ((srcH * scale).toInt() / 2) * 2
+
+            // Target bitrate: 1.5 Mbps for 720p, 800 Kbps for smaller
+            val targetBitrate = if (outW >= 1280 || outH >= 720) 1_500_000 else 800_000
+
+            val extractor = android.media.MediaExtractor()
+            extractor.setDataSource(context, uri, null)
+
+            // Find video and audio track indices
+            var videoTrackIdx = -1
+            var audioTrackIdx = -1
+            for (i in 0 until extractor.trackCount) {
+                val mime = extractor.getTrackFormat(i).getString(android.media.MediaFormat.KEY_MIME) ?: continue
+                if (mime.startsWith("video/") && videoTrackIdx == -1) videoTrackIdx = i
+                if (mime.startsWith("audio/") && audioTrackIdx == -1) audioTrackIdx = i
+            }
+
+            if (videoTrackIdx == -1) {
+                extractor.release()
+                return inputFile to "video/mp4"
+            }
+
+            // ── Set up video encoder ──────────────────────────
+            val encFormat = android.media.MediaFormat.createVideoFormat("video/avc", outW, outH).apply {
+                setInteger(android.media.MediaFormat.KEY_BIT_RATE, targetBitrate)
+                setInteger(android.media.MediaFormat.KEY_FRAME_RATE, 30)
+                setInteger(android.media.MediaFormat.KEY_I_FRAME_INTERVAL, 2)
+                setInteger(android.media.MediaFormat.KEY_COLOR_FORMAT,
+                    android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+            }
+            val encoder = android.media.MediaCodec.createEncoderByType("video/avc")
+            encoder.configure(encFormat, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE)
+            val encSurface = encoder.createInputSurface()
+            encoder.start()
+
+            // ── Set up video decoder ──────────────────────────
+            val decFormat = extractor.getTrackFormat(videoTrackIdx)
+            val decoder = android.media.MediaCodec.createDecoderByType(
+                decFormat.getString(android.media.MediaFormat.KEY_MIME) ?: "video/avc"
+            )
+            decoder.configure(decFormat, encSurface, null, 0)
+            decoder.start()
+
+            val muxer = android.media.MediaMuxer(outputFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            var muxerVideoTrack = -1
+            var muxerAudioTrack = -1
+            var muxerStarted = false
+
+            // Copy audio track directly (no re-encoding — audio is small)
+            val audioSamples = mutableListOf<Triple<java.nio.ByteBuffer, android.media.MediaCodec.BufferInfo, Int>>()
+            if (audioTrackIdx != -1) {
+                extractor.selectTrack(audioTrackIdx)
+                val audioBuf = java.nio.ByteBuffer.allocate(512 * 1024)
+                val audioInfo = android.media.MediaCodec.BufferInfo()
+                while (true) {
+                    audioInfo.size = extractor.readSampleData(audioBuf, 0)
+                    if (audioInfo.size < 0) break
+                    audioInfo.presentationTimeUs = extractor.sampleTime
+                    audioInfo.flags = extractor.sampleFlags
+                    val copy = java.nio.ByteBuffer.allocate(audioInfo.size)
+                    audioBuf.rewind(); audioBuf.limit(audioInfo.size)
+                    copy.put(audioBuf); copy.rewind()
+                    audioSamples.add(Triple(copy, android.media.MediaCodec.BufferInfo().also {
+                        it.offset = 0; it.size = audioInfo.size
+                        it.presentationTimeUs = audioInfo.presentationTimeUs
+                        it.flags = audioInfo.flags
+                    }, audioTrackIdx))
+                    extractor.advance()
+                }
+                extractor.unselectTrack(audioTrackIdx)
+            }
+
+            // Transcode video
+            extractor.selectTrack(videoTrackIdx)
+            extractor.seekTo(0, android.media.MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+
+            val decBufInfo = android.media.MediaCodec.BufferInfo()
+            val encBufInfo = android.media.MediaCodec.BufferInfo()
+            var inputDone = false
+            var outputDone = false
+            val TIMEOUT = 10_000L // 10ms
+
+            while (!outputDone) {
+                // Feed decoder
+                if (!inputDone) {
+                    val inIdx = decoder.dequeueInputBuffer(TIMEOUT)
+                    if (inIdx >= 0) {
+                        val buf = decoder.getInputBuffer(inIdx)!!
+                        val size = extractor.readSampleData(buf, 0)
+                        if (size < 0) {
+                            decoder.queueInputBuffer(inIdx, 0, 0, 0, android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            inputDone = true
+                        } else {
+                            decoder.queueInputBuffer(inIdx, 0, size, extractor.sampleTime, extractor.sampleFlags)
+                            extractor.advance()
+                        }
+                    }
+                }
+
+                // Drain decoder → encoder surface
+                val decOutIdx = decoder.dequeueOutputBuffer(decBufInfo, TIMEOUT)
+                if (decOutIdx >= 0) {
+                    val render = decBufInfo.size > 0
+                    decoder.releaseOutputBuffer(decOutIdx, render)
+                    if (decBufInfo.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                        encoder.signalEndOfInputStream()
+                    }
+                }
+
+                // Drain encoder → muxer
+                val encOutIdx = encoder.dequeueOutputBuffer(encBufInfo, TIMEOUT)
+                when {
+                    encOutIdx == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        muxerVideoTrack = muxer.addTrack(encoder.outputFormat)
+                        if (audioTrackIdx != -1 && audioSamples.isNotEmpty()) {
+                            val audioFmt = extractor.getTrackFormat(audioTrackIdx)
+                            muxerAudioTrack = muxer.addTrack(audioFmt)
+                        }
+                        muxer.start(); muxerStarted = true
+
+                        // Write audio now that muxer is started
+                        audioSamples.forEach { (buf, info, _) ->
+                            if (muxerAudioTrack >= 0) muxer.writeSampleData(muxerAudioTrack, buf, info)
+                        }
+                    }
+                    encOutIdx >= 0 -> {
+                        if (muxerStarted && encBufInfo.size > 0 &&
+                            encBufInfo.flags and android.media.MediaCodec.BUFFER_FLAG_CODEC_CONFIG == 0) {
+                            muxer.writeSampleData(muxerVideoTrack, encoder.getOutputBuffer(encOutIdx)!!, encBufInfo)
+                        }
+                        encoder.releaseOutputBuffer(encOutIdx, false)
+                        if (encBufInfo.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            outputDone = true
+                        }
+                    }
+                }
+            }
+
+            decoder.stop(); decoder.release()
+            encoder.stop(); encoder.release()
+            encSurface.release()
+            extractor.release()
+            if (muxerStarted) { muxer.stop() }
+            muxer.release()
+
+            val origKb = inputFile.length() / 1024
+            val compKb = outputFile.length() / 1024
+            Log.i(TAG, "Video transcoded: ${origKb}KB → ${compKb}KB (${100 - compKb * 100 / origKb}% smaller) ${outW}x${outH} @ ${targetBitrate/1000}kbps")
+            inputFile.delete()
+            outputFile to "video/mp4"
+
+        } catch (e: Exception) {
+            Log.w(TAG, "Video transcoding failed, falling back to remux: ${e.message}")
+            outputFile.delete()
+            // Fallback: simple remux without re-encoding
+            remuxVideo(uri, inputFile)
+        }
+    }
+
+    // ── Fallback: remux only (no quality change, but fixes container issues) ─
+    private fun remuxVideo(uri: Uri, inputFile: File): Pair<File, String> {
+        val outputFile = File(context.cacheDir, "remux_${System.currentTimeMillis()}.mp4")
+        return try {
+            val extractor = android.media.MediaExtractor()
+            extractor.setDataSource(context, uri, null)
+            val muxer = android.media.MediaMuxer(outputFile.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            val trackMap = mutableMapOf<Int, Int>()
+            for (i in 0 until extractor.trackCount) {
+                val fmt = extractor.getTrackFormat(i)
+                val mime = fmt.getString(android.media.MediaFormat.KEY_MIME) ?: continue
+                if (mime.startsWith("video/") || mime.startsWith("audio/")) {
+                    extractor.selectTrack(i); trackMap[i] = muxer.addTrack(fmt)
+                }
+            }
+            muxer.start()
+            val buf = java.nio.ByteBuffer.allocate(1024 * 1024)
+            val info = android.media.MediaCodec.BufferInfo()
+            while (true) {
+                info.size = extractor.readSampleData(buf, 0)
+                if (info.size < 0) break
+                info.presentationTimeUs = extractor.sampleTime; info.flags = extractor.sampleFlags
+                trackMap[extractor.sampleTrackIndex]?.let { muxer.writeSampleData(it, buf, info) }
+                extractor.advance()
+            }
+            muxer.stop(); muxer.release(); extractor.release()
+            inputFile.delete()
+            outputFile to "video/mp4"
+        } catch (e: Exception) {
+            Log.w(TAG, "Remux also failed: ${e.message}")
+            outputFile.delete()
+            inputFile to "video/mp4"
+        }
+    }
+
+    private fun ext(mimeType: String) = when (mimeType) {
+        "application/pdf"  -> "pdf"
+        "video/mp4"        -> "mp4"
+        "video/quicktime"  -> "mov"
+        "image/jpeg"       -> "jpg"
+        "image/png"        -> "png"
+        else               -> "bin"
     }
 
 

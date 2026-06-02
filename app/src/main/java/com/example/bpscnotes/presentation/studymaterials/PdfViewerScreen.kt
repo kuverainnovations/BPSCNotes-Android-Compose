@@ -62,12 +62,22 @@ fun PdfViewerScreen(
     freePages:     Int     = 3,
     isPurchased:   Boolean = false,
     navController: NavHostController,
-    authToken:     String  = "",      // Bearer token for authenticated file URLs
+    authToken:     String  = "",
+    adManager:     com.example.bpscnotes.core.ads.AdManager? = null,
     onPurchase:    () -> Unit = {}
 ) {
     val str = LocalStrings.current
     val context    = LocalContext.current
+    val activity   = context as? android.app.Activity
     val listState  = rememberLazyListState()
+
+    fun navigateBack() {
+        if (adManager != null && activity != null) {
+            adManager.showInterstitialIfReady(activity) { navController.popBackStackSafe() }
+        } else {
+            navController.popBackStackSafe()
+        }
+    }
 
     var pdfPages   by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var totalPages by remember { mutableIntStateOf(0) }
@@ -154,7 +164,7 @@ fun PdfViewerScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStackSafe() }) {
+                    IconButton(onClick = { navigateBack() }) {
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
                     }
                 },
@@ -200,7 +210,7 @@ fun PdfViewerScreen(
                             style = MaterialTheme.typography.titleLarge)
                         Text(error!!, color = Color.White.copy(0.6f),
                             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                        Button(onClick = { navController.popBackStackSafe() },
+                        Button(onClick = { navigateBack() },
                             shape = RoundedCornerShape(12.dp)) {
                             Text(str.pdfGoBack)
                         }
@@ -390,6 +400,13 @@ fun PdfViewerScreen(
 
 /** Download PDF to app-private cache. Returns the local file. */
 private suspend fun downloadPdf(url: String, cacheDir: File, authToken: String = ""): File {
+    // Local file — already on device, no network needed
+    if (url.startsWith("file://")) {
+        val localFile = File(url.removePrefix("file://"))
+        if (localFile.exists() && localFile.length() > 0) return localFile
+        throw Exception("Downloaded file not found. Please re-download it.")
+    }
+
     val fileName = "pdf_${url.hashCode()}.pdf"
     val file     = File(cacheDir, fileName)
 

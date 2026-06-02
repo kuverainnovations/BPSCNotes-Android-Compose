@@ -96,6 +96,16 @@ sealed class Screen(val route: String) {
             "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased"
     }
 
+    object VideoPlayer : Screen("video_player/{videoUrl}/{title}") {
+        fun createRoute(videoUrl: String, title: String) =
+            "video_player/${videoUrl.encodeUrl()}/${title.encodeUrl()}"
+    }
+
+    object ImageViewer : Screen("image_viewer/{imageUrl}/{title}") {
+        fun createRoute(imageUrl: String, title: String) =
+            "image_viewer/${imageUrl.encodeUrl()}/${title.encodeUrl()}"
+    }
+
     // Wallet / payments
     object CoinWallet   : Screen("wallet")
     object Subscription : Screen("subscription")

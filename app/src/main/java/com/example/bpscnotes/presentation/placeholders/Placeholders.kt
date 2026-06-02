@@ -67,7 +67,9 @@ data class DownloadedFileItem(
 
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
-    private val materialsApi: StudyMaterialsApiService
+    private val materialsApi: StudyMaterialsApiService,
+    private val tokenStore:   com.example.bpscnotes.data.local.TokenStore,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DownloadsUiState())
@@ -76,76 +78,38 @@ class DownloadsViewModel @Inject constructor(
     // FIX: Scan the root Downloads directory — that's where DownloadManager saves files
     // by default (setDestinationInExternalPublicDir(DIRECTORY_DOWNLOADS, fileName)).
     // The BPSCNotes subfolder doesn't exist / is never populated by our download code.
-    private val downloadsDir: File =
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-
     init { load() }
 
     fun load(refresh: Boolean = false) {
         viewModelScope.launch {
             _state.update { it.copy(
-                isLoading   = !refresh && it.downloads.isEmpty(),
+                isLoading    = !refresh && it.downloads.isEmpty(),
                 isRefreshing = refresh
             )}
             try {
-                // FIX: Use getMyDownloads() — the correct endpoint for download history
-                // myUploads() returns what the user UPLOADED, not what they downloaded
                 val downloadHistory = try {
                     materialsApi.getMyDownloads().data?.downloads ?: emptyList()
                 } catch (e: Exception) { emptyList() }
 
-                // Also scan local device Downloads/BPSCNotes folder for actual files
-                val localFiles = if (downloadsDir.exists())
-                    downloadsDir.walkTopDown().filter { it.isFile && it.extension == "pdf" }.toList()
-                else emptyList()
-
                 val items = mutableListOf<DownloadedFileItem>()
 
-                // Map backend download history to UI items
-                // Build the sanitized filename the same way StudyMaterialsViewModel does
-                fun expectedFileName(title: String) = title
-                    .replace("[^a-zA-Z0-9 ._-]".toRegex(), "")
-                    .replace(" ", "_")
-                    .take(80)
-                    .ifEmpty { "bpscnotes_material" }
-                    .let { "$it.pdf" }
-
                 downloadHistory.forEach { dto ->
-                    // Match strategy:
-                    // 1. Title-based filename — matches what DownloadManager saves (most reliable)
-                    // 2. ID prefix — legacy fallback for old downloads
-                    // 3. fileUrl filename — matches the remote filename used in URL
-                    val expectedName = expectedFileName(dto.title)
-                    val urlFileName  = dto.fileUrl?.substringAfterLast("/") ?: ""
-                    val localFile = localFiles.firstOrNull { f ->
-                        f.name.equals(expectedName, ignoreCase = true) ||                          // title match
-                                f.name.contains(dto.id.take(8), ignoreCase = true) ||                     // id prefix
-                                (urlFileName.isNotBlank() && f.name.contains(urlFileName.substringAfterLast("_").take(12), ignoreCase = true))  // url hash
-                    }
+                    // Look up app-private local path saved by StudyMaterialsViewModel
+                    // File is at context.filesDir/materials/<id>.<ext>
+                    val localPath = tokenStore.getLocalPath(dto.id)
+                    val localFile = if (localPath != null) java.io.File(localPath) else null
+                    val fileExists = localFile?.exists() == true
+
                     items.add(DownloadedFileItem(
                         id           = dto.id,
                         title        = dto.title,
                         subject      = dto.subject,
                         materialType = dto.materialType,
-                        fileSizeMb   = localFile?.length()?.div(1048576f)
-                            ?: (dto.fileSizeBytes / 1048576f),
+                        fileSizeMb   = if (fileExists) localFile!!.length() / 1048576f
+                        else dto.fileSizeBytes / 1048576f,
                         downloadedAt = dto.downloadedAt,
-                        localPath    = localFile?.absolutePath ?: "",
-                        fileExists   = localFile?.exists() == true
-                    ))
-                }
-
-                // Also include local files not in server history (e.g. renamed)
-                localFiles.filter { f -> items.none { it.localPath == f.absolutePath } }.forEach { f ->
-                    items.add(DownloadedFileItem(
-                        id           = f.nameWithoutExtension,
-                        title        = f.nameWithoutExtension.replace("_", " "),
-                        subject      = "Unknown",
-                        materialType = "pdf",
-                        fileSizeMb   = f.length() / 1048576f,
-                        downloadedAt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(f.lastModified())),
-                        localPath    = f.absolutePath,
-                        fileExists   = true
+                        localPath    = localPath ?: "",
+                        fileExists   = fileExists
                     ))
                 }
 
@@ -170,6 +134,8 @@ class DownloadsViewModel @Inject constructor(
             try {
                 val file = File(item.localPath)
                 if (file.exists()) file.delete()
+                // Remove from TokenStore so the download button resets
+                tokenStore.removeDownloadedId(item.id)
                 _state.update { s -> s.copy(
                     deletingId   = null,
                     downloads    = s.downloads.filterNot { it.id == item.id },
@@ -310,50 +276,19 @@ fun DownloadsScreen(
                                     item       = item,
                                     isDeleting = state.deletingId == item.id,
                                     onOpen     = {
-                                        if (item.fileExists) {
-                                            // Files are in public Downloads — query MediaStore for a
-                                            // content:// URI. No FileProvider or manifest config needed.
-                                            val file = File(item.localPath)
-                                            val mime = when (item.materialType.lowercase()) {
-                                                "video" -> "video/*"
-                                                "pdf"   -> "application/pdf"
-                                                else    -> "*/*"
-                                            }
-                                            try {
-                                                // Android 10+ MediaStore query
-                                                val contentUri = if (android.os.Build.VERSION.SDK_INT >= 29) {
-                                                    val projection = arrayOf(android.provider.MediaStore.Downloads._ID)
-                                                    val selection  = android.provider.MediaStore.Downloads.DISPLAY_NAME + " = ?"
-                                                    val selArgs    = arrayOf(file.name)
-                                                    context.contentResolver.query(
-                                                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                                                        projection, selection, selArgs, null
-                                                    )?.use { cursor ->
-                                                        if (cursor.moveToFirst()) {
-                                                            val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads._ID))
-                                                            android.content.ContentUris.withAppendedId(
-                                                                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, id
-                                                            )
-                                                        } else null
-                                                    }
-                                                } else null
-
-                                                // Fallback: Uri.fromFile works for public storage < Android 10
-                                                val uri = contentUri ?: android.net.Uri.fromFile(file)
-                                                context.startActivity(
-                                                    Intent(Intent.ACTION_VIEW).apply {
-                                                        setDataAndType(uri, mime)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
+                                        if (item.fileExists && item.localPath.isNotBlank()) {
+                                            // Open in in-app viewer using file:// URI — private storage
+                                            val localUrl = "file://${item.localPath}"
+                                            when (item.materialType.lowercase()) {
+                                                "video" -> nav.navigate(
+                                                    Screen.VideoPlayer.createRoute(localUrl, item.title)
                                                 )
-                                            } catch (e: Exception) {
-                                                // Last resort: open with Files app using generic chooser
-                                                context.startActivity(
-                                                    Intent.createChooser(
-                                                        Intent(Intent.ACTION_VIEW).apply {
-                                                            setDataAndType(android.net.Uri.fromFile(file), mime)
-                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        }, str.placeholdersOpenWith
+                                                else -> nav.navigate(
+                                                    Screen.PdfViewer.createRoute(
+                                                        fileUrl     = localUrl,
+                                                        title       = item.title,
+                                                        freePages   = Int.MAX_VALUE,
+                                                        isPurchased = true
                                                     )
                                                 )
                                             }

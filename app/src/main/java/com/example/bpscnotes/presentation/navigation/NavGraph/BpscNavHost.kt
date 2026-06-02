@@ -66,6 +66,8 @@ import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
 import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
+import com.example.bpscnotes.presentation.studymaterials.VideoPlayerScreen
+import com.example.bpscnotes.presentation.studymaterials.ImageViewerScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
 
 @Composable
@@ -344,7 +346,44 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                     freePages     = freePages,
                     isPurchased   = isPurchased,
                     navController = navController,
-                    authToken     = ""//tokenStore.getToken() ?: ""
+                    adManager     = adManager,
+                    authToken     = ""
+                )
+            }
+
+            // In-app Video Player with interstitial ads
+            composable(
+                route     = Screen.VideoPlayer.route,
+                arguments = listOf(
+                    navArgument("videoUrl") { type = NavType.StringType },
+                    navArgument("title")    { type = NavType.StringType },
+                )
+            ) { back ->
+                val videoUrl = back.arguments?.getString("videoUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                val title    = back.arguments?.getString("title")?.let    { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Video"
+                VideoPlayerScreen(
+                    videoUrl      = videoUrl,
+                    title         = title,
+                    navController = navController,
+                    adManager     = adManager
+                )
+            }
+
+            // In-app Image Viewer with pinch-zoom and interstitial ads
+            composable(
+                route     = Screen.ImageViewer.route,
+                arguments = listOf(
+                    navArgument("imageUrl") { type = NavType.StringType },
+                    navArgument("title")    { type = NavType.StringType },
+                )
+            ) { back ->
+                val imageUrl = back.arguments?.getString("imageUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                val title    = back.arguments?.getString("title")?.let    { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Image"
+                ImageViewerScreen(
+                    imageUrl      = imageUrl,
+                    title         = title,
+                    navController = navController,
+                    adManager     = adManager
                 )
             }
 

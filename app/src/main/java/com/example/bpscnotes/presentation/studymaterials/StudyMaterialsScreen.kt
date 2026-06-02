@@ -60,52 +60,49 @@ import com.example.bpscnotes.data.remote.api.*
 //   UNKNOWN                   → Browser fallback
 // ─────────────────────────────────────────────────────────────
 private fun openMaterial(
-    context:     android.content.Context,
+    context:      android.content.Context,
     navController: androidx.navigation.NavHostController,
-    url:         String,
-    title:       String,
-    freePages:   Int,
-    isPurchased: Boolean
+    url:          String,
+    title:        String,
+    freePages:    Int,
+    isPurchased:  Boolean,
+    adManager:    com.example.bpscnotes.core.ads.AdManager? = null
 ) {
     val lower = url.lowercase()
+    val activity = context as? android.app.Activity
+
+    fun navigateAfterAd(destination: () -> Unit) {
+        if (adManager != null && activity != null) {
+            adManager.showInterstitialIfReady(activity) { destination() }
+        } else {
+            destination()
+        }
+    }
+
     when {
-        // Video files → system video player (supports locking via isPremium check earlier)
         lower.endsWith(".mp4") || lower.endsWith(".mkv") || lower.endsWith(".webm") ||
                 lower.endsWith(".avi") || lower.endsWith(".mov") || lower.contains("/video/") -> {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(android.net.Uri.parse(url), "video/*")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            try {
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                // No video app — open in browser
-                context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            navigateAfterAd {
+                navController.navigate(Screen.VideoPlayer.createRoute(url, title))
             }
         }
-        // Image files → system image viewer
         lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
                 lower.endsWith(".webp") || lower.endsWith(".gif") -> {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(android.net.Uri.parse(url), "image/*")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            try {
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            navigateAfterAd {
+                navController.navigate(Screen.ImageViewer.createRoute(url, title))
             }
         }
-        // Everything else (PDF / PYQ / BOOK / DOC / NOTES) → in-app PDF viewer with locking
         else -> {
-            navController.navigate(
-                Screen.PdfViewer.createRoute(
-                    fileUrl = url,
-                    title = title,
-                    freePages = freePages,
-                    isPurchased = isPurchased
+            navigateAfterAd {
+                navController.navigate(
+                    Screen.PdfViewer.createRoute(
+                        fileUrl     = url,
+                        title       = title,
+                        freePages   = freePages,
+                        isPurchased = isPurchased
+                    )
                 )
-            )
+            }
         }
     }
 }
@@ -205,6 +202,11 @@ fun StudyMaterialsScreen(
             // ── Tab row: Explore | My Uploads ────────────────────
             var selectedTab by remember { mutableIntStateOf(0) }
 
+            // Reload My Uploads every time user switches to that tab
+            LaunchedEffect(selectedTab) {
+                if (selectedTab == 1) viewModel.loadMyUploads()
+            }
+
             // Switch to My Uploads tab after successful upload
             LaunchedEffect(state.showUploadSheet) {
                 if (!state.showUploadSheet && state.myUploads.isNotEmpty()) {
@@ -297,7 +299,7 @@ fun StudyMaterialsScreen(
                     isLoading = state.isLoadingList && state.myUploads.isEmpty(),
                     // Open PDF with full access — user owns their uploads, no page locks
                     onOpenPdf = { url, title, freePages, _ ->
-                        openMaterial(context, navController, url, title, freePages, isPurchased = true)
+                        openMaterial(context, navController, url, title, freePages, isPurchased = true, adManager = adManager)
                     },
                     onRefresh = { viewModel.refresh() }
                 )
@@ -338,9 +340,33 @@ fun StudyMaterialsScreen(
                 viewModel.downloadMaterial(dto)
             },
             onOpenPdf      = { url, title, freePages, isPurchased ->
-                openMaterial(context, navController, url, title, freePages, isPurchased)
+                openMaterial(
+                    context, navController,
+                    // Use local file path if downloaded — works offline, no network needed
+                    viewModel.getLocalPath(detail.id)?.let { "file://$it" } ?: url,
+                    title, freePages, isPurchased, adManager = adManager
+                )
             },
             onDismiss      = viewModel::closeDetail
+        )
+    }
+
+    // ── UPLOAD CANCEL CONFIRMATION DIALOG ────────────────────
+    if (state.showUploadCancelDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissCancelDialog,
+            title = { Text("Upload in progress", fontWeight = FontWeight.Bold) },
+            text  = { Text("Your file is still uploading in the background. Cancel the upload?") },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmCancelUpload) {
+                    Text("Cancel Upload", color = Color(0xFFE74C3C))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissCancelDialog) {
+                    Text("Continue Uploading", color = BpscColors.Primary)
+                }
+            }
         )
     }
 
@@ -352,7 +378,11 @@ fun StudyMaterialsScreen(
             uploadError    = state.uploadError,
             onSubmit       = viewModel::uploadMaterial,
             onDismiss      = viewModel::hideUpload,
-            state =state
+            onCancel       = viewModel::confirmCancelUpload,
+            onFormChange   = { t, d, s, a, tg, ty, ip, fp, p ->
+                viewModel.updateUploadForm(t, d, s, a, tg, ty, ip, fp, p)
+            },
+            state          = state
         )
     }
 }
@@ -1064,8 +1094,12 @@ private fun MaterialDetailSheet(
                         Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(when { isDownloaded -> str.materialsDownloadedDone; material.isPremium -> str.materialsUnlockPro; !material.resolvedUrl.isNullOrBlank() -> "Open PDF"; else -> str.materialsDownloadFree },
-                        style = MaterialTheme.typography.titleMedium)
+                    Text(when {
+                        isDownloaded -> str.materialsDownloadedDone
+                        material.isPremium -> str.materialsUnlockPro
+                        !material.resolvedUrl.isNullOrBlank() -> if (material.type == MaterialType.VIDEO) "▶ Play Video" else "Open PDF"
+                        else -> str.materialsDownloadFree
+                    }, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -1083,40 +1117,57 @@ private fun UploadSheet(
     uploadError: String?,
     onSubmit: (Uri, String, String, String, MaterialType, String, List<String>, Int, Boolean, Int, Int) -> Unit,
     onDismiss: () -> Unit,
+    onCancel: () -> Unit,
+    onFormChange: (title: String?, description: String?, subject: String?, author: String?,
+                   tags: String?, type: MaterialType?, isPremium: Boolean?, freePages: String?, price: String?) -> Unit,
     state: StudyMaterialsUiState
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = LocalContext.current
-    var title       by remember { mutableStateOf("") }
-    var subject     by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var author      by remember { mutableStateOf("") }
-    var tagsInput   by remember { mutableStateOf("") }
-    var selType     by remember { mutableStateOf(MaterialType.PDF) }
+
+    // Form state lives in ViewModel — survives sheet close/reopen
+    val title       = state.uploadTitle
+    val subject     = state.uploadSubject
+    val description = state.uploadDescription
+    val author      = state.uploadAuthor
+    val tagsInput   = state.uploadTags
+    val selType     = state.uploadType
+    val isPremium   = state.uploadIsPremium
+    val freePages   = state.uploadFreePages
+    val price       = state.uploadPrice
+
+    // File URI is still local — can't serialize a URI into ViewModel state safely
     var fileUri     by remember { mutableStateOf<Uri?>(null) }
     var fileName    by remember { mutableStateOf("") }
-    // Marketplace fields
-    var isPremium   by remember { mutableStateOf(false) }
-    var freePages   by remember { mutableStateOf("3") }
-    var price       by remember { mutableStateOf("0") }
+    var fileSizeWarning by remember { mutableStateOf<String?>(null) }
 
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-
         uri?.let {
+            // Check file size — warn if > 20MB
+            val sizeBytes = try {
+                context.contentResolver.query(it, null, null, null, null)?.use { c ->
+                    val sizeIdx = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    if (c.moveToFirst() && sizeIdx >= 0) c.getLong(sizeIdx) else 0L
+                } ?: 0L
+            } catch (_: Exception) { 0L }
+
+            if (sizeBytes > 20 * 1024 * 1024) {
+                // Show warning but still allow — ViewModel will compress video
+                fileSizeWarning = "⚠️ File is ${sizeBytes / (1024 * 1024)}MB — large files may take longer to upload on slow connections."
+            } else {
+                fileSizeWarning = null
+            }
+
             fileUri = it
-
             var name = "file"
-
             try {
                 context.contentResolver.query(it, null, null, null, null)
                     ?.use { cursor ->
-
                         val nameIndex =
                             cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-
                         if (cursor.moveToFirst() && nameIndex >= 0) {
                             name = cursor.getString(nameIndex)
                         }
@@ -1128,7 +1179,59 @@ private fun UploadSheet(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = cs.surface,
+    // Request READ_MEDIA_VIDEO + READ_MEDIA_IMAGES on Android 13+
+    // or READ_EXTERNAL_STORAGE on older — without this, openInputStream() returns null
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        // Launch picker regardless — partial grant still allows document picker to work
+        filePicker.launch("*/*")
+    }
+
+    fun launchFilePicker() {
+        val mime = when (selType) {
+            MaterialType.VIDEO -> "video/*"
+            else               -> "application/pdf"
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val perms = if (selType == MaterialType.VIDEO)
+                arrayOf(android.Manifest.permission.READ_MEDIA_VIDEO)
+            else
+                arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES)
+            val allGranted = perms.all {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, it) ==
+                        android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+            if (allGranted) filePicker.launch(mime) else mediaPermissionLauncher.launch(perms)
+        } else if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
+            val perm = android.Manifest.permission.READ_EXTERNAL_STORAGE
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, perm) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) filePicker.launch(mime)
+            else mediaPermissionLauncher.launch(arrayOf(perm))
+        } else {
+            filePicker.launch(mime)
+        }
+    }
+
+    // Block sheet from physically closing while upload is in progress
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { newValue ->
+            // When user tries to hide/swipe-close while uploading, block it and show dialog
+            if (isUploading && newValue == androidx.compose.material3.SheetValue.Hidden) {
+                onDismiss() // this calls hideUpload() → shows the cancel dialog
+                false       // return false = block the physical close
+            } else {
+                true
+            }
+        }
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState,
+        containerColor   = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp)
             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1148,7 +1251,7 @@ private fun UploadSheet(
                 }
             }
 
-            OutlinedTextField(value = title, onValueChange = { title = it },
+            OutlinedTextField(value = title, onValueChange = { onFormChange(it, null, null, null, null, null, null, null, null) },
                 label = { Text(str.materialsNotesTitle) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
@@ -1171,12 +1274,12 @@ private fun UploadSheet(
                 )
                 ExposedDropdownMenu(expanded = subjectExpanded, onDismissRequest = { subjectExpanded = false }) {
                     backendSubjects.forEach { s ->
-                        DropdownMenuItem(text = { Text(s) }, onClick = { subject = s; subjectExpanded = false })
+                        DropdownMenuItem(text = { Text(s) }, onClick = { onFormChange(null, null, s, null, null, null, null, null, null); subjectExpanded = false })
                     }
                 }
             }
 
-            OutlinedTextField(value = author, onValueChange = { author = it },
+            OutlinedTextField(value = author, onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null) },
                 label = { Text(str.materialsAuthorName) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
@@ -1189,7 +1292,11 @@ private fun UploadSheet(
                     val color = typeColor(type)
                     Row(modifier = Modifier.clip(RoundedCornerShape(20.dp))
                         .background(if (sel) color else typeBg(type))
-                        .clickable { selType = type }
+                        .clickable {
+                            fileUri = null; fileName = ""  // reset local file state
+                            onFormChange(null, null, null, null, null, type,
+                                null, if (type == MaterialType.VIDEO) "0" else "3", null)
+                        }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(type.emoji, fontSize = 12.sp)
@@ -1199,17 +1306,35 @@ private fun UploadSheet(
                     }
                 }
             }
+            // Type description
+            Text(
+                when (selType) {
+                    MaterialType.PDF   -> "📄 Study notes, summaries, handwritten scans, any PDF material"
+                    MaterialType.PYQ   -> "📝 Previous Year Question papers from past BPSC / UPSC exams"
+                    MaterialType.BOOK  -> "📚 Reference books, standard textbooks, study guides (PDF)"
+                    MaterialType.VIDEO -> "🎬 Short lecture or concept videos — max 20 MB recommended"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = BpscColors.TextSecondary,
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(BpscColors.Surface)
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
+            )
 
-            OutlinedTextField(value = description, onValueChange = { description = it },
+            OutlinedTextField(value = description, onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null) },
                 label = { Text(str.coursesRateSubtitle) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
-            OutlinedTextField(value = tagsInput, onValueChange = { tagsInput = it },
-                label = { Text(str.materialsTags) }, modifier = Modifier.fillMaxWidth(),
+            OutlinedTextField(value = tagsInput, onValueChange = { onFormChange(null, null, null, null, it, null, null, null, null) },
+                label = { Text("Tags (optional)") }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true,
-                placeholder = { Text(str.materialsTagHint) })
+                placeholder = { Text("e.g. BPSC, Polity, Indian Constitution") },
+                supportingText = { Text("Comma separated — helps others find your material") })
 
             // ── Marketplace / Premium Settings ─────────────────
+            // Free pages concept only applies to PDF-type content
+            val isPdfType = selType != MaterialType.VIDEO
             Card(shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (isPremium) Color(0xFFFFF8E1) else BpscColors.Surface)) {
@@ -1218,10 +1343,12 @@ private fun UploadSheet(
                         Column {
                             Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold, color = cs.onSurface)
-                            Text(str.materialsChargeCoins,
+                            Text(
+                                if (isPdfType) str.materialsChargeCoins
+                                else "Charge coins to unlock full video",
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
-                        Switch(checked = isPremium, onCheckedChange = { isPremium = it },
+                        Switch(checked = isPremium, onCheckedChange = { onFormChange(null, null, null, null, null, null, it, null, null) },
                             colors = SwitchDefaults.colors(checkedThumbColor = BpscColors.CoinGold,
                                 checkedTrackColor = BpscColors.CoinGold.copy(0.3f)))
                     }
@@ -1230,29 +1357,36 @@ private fun UploadSheet(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedTextField(
                                     value = price,
-                                    onValueChange = { price = it.filter { c -> c.isDigit() } },
+                                    onValueChange = { onFormChange(null, null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }) },
                                     label = { Text(str.materialPriceCoins) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = if (isPdfType) Modifier.weight(1f) else Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp), singleLine = true,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                                 )
-                                OutlinedTextField(
-                                    value = freePages,
-                                    onValueChange = { freePages = it.filter { c -> c.isDigit() } },
-                                    label = { Text("${str.coursesFree} pages") },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp), singleLine = true,
-                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                                )
+                                // Free pages — only relevant for PDF/PYQ/BOOK
+                                if (isPdfType) {
+                                    OutlinedTextField(
+                                        value = freePages,
+                                        onValueChange = { onFormChange(null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }, null) },
+                                        label = { Text("${str.coursesFree} pages") },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                    )
+                                }
                             }
                             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
                                 .background(Color(0xFFFFF3CD)).padding(10.dp),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 Text("💡", fontSize = 12.sp)
-                                Text("Users see ${freePages.ifEmpty { "3" }} free pages. Full PDF unlocks after purchase.",
+                                Text(
+                                    if (isPdfType)
+                                        "Users see ${freePages.ifEmpty { "3" }} free pages. Full PDF unlocks after purchase."
+                                    else
+                                        "Users see a preview thumbnail. Full video unlocks after purchase.",
                                     style = MaterialTheme.typography.bodySmall, color = Color(0xFF856404))
                             }
                         }
@@ -1264,24 +1398,48 @@ private fun UploadSheet(
             Box(modifier = Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(14.dp))
                 .background(if (fileUri != null) BpscColors.Success.copy(0.08f) else BpscColors.Surface)
                 .border(1.5.dp, if (fileUri != null) BpscColors.Success else cs.outline, RoundedCornerShape(14.dp))
-                .clickable { filePicker.launch("*/*") }, contentAlignment = Alignment.Center) {
+                .clickable { launchFilePicker() }, contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Rounded.AttachFile, null,
                         tint = if (fileUri != null) BpscColors.Success else BpscColors.Primary,
                         modifier = Modifier.size(22.dp))
-                    Text(if (fileUri != null) "✅ $fileName" else "Tap to attach file (PDF / DOC)",
+                    Text(
+                        if (fileUri != null) "✅ $fileName"
+                        else when (selType) {
+                            MaterialType.VIDEO -> "Tap to attach video (MP4 recommended)"
+                            else               -> "Tap to attach PDF file"
+                        },
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (fileUri != null) BpscColors.Success else BpscColors.TextSecondary)
+                        color = if (fileUri != null) BpscColors.Success else BpscColors.TextSecondary
+                    )
                 }
+            }
+
+            // File size warning
+            fileSizeWarning?.let { warning ->
+                Text(warning,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF856404),
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFFFF3CD))
+                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                )
             }
 
             // Upload progress
             if (isUploading) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LinearProgressIndicator(progress = uploadProgress, modifier = Modifier.fillMaxWidth(),
                         color = BpscColors.Primary, trackColor = cs.outline)
-                    Text("${(uploadProgress * 100).toInt()}% uploaded…",
-                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("${(uploadProgress * 100).toInt()}% uploaded…",
+                            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        TextButton(onClick = onCancel) {
+                            Text("Cancel", color = Color(0xFFE74C3C),
+                                style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
                 }
             }
 

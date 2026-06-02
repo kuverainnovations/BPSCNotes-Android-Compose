@@ -62,7 +62,17 @@ class TokenStore @Inject constructor(
         val current = getDownloadedIds().toMutableSet()
         current.remove(id)
         prefs.edit().putStringSet("downloaded_material_ids", current).apply()
+        // Also remove local path
+        prefs.edit().remove("dl_path_$id").apply()
     }
+
+    // Store the app-private local file path for a downloaded material
+    fun saveLocalPath(id: String, path: String) {
+        prefs.edit().putString("dl_path_$id", path).apply()
+    }
+
+    fun getLocalPath(id: String): String? =
+        prefs.getString("dl_path_$id", null)
 
     // ── Purchased material IDs (locked PDF access) ──────────────
     fun getPurchasedIds(): Set<String> =

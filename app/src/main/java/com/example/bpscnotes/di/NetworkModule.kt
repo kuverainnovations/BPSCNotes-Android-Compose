@@ -30,10 +30,15 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
+import javax.inject.Named
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    private const val BASE_URL = "https://api.bpscnotes.in/api/v1/"
+
+    // ── Standard client — 30s timeout for all normal API calls ──
     @Provides
     @Singleton
     fun provideOkHttp(authInterceptor: AuthInterceptor): OkHttpClient =
@@ -44,15 +49,40 @@ object NetworkModule {
             })
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+    // ── Upload client — 10 min timeout for large video/file uploads ──
+    @Provides
+    @Singleton
+    @Named("upload")
+    fun provideUploadOkHttp(authInterceptor: AuthInterceptor): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            })
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.MINUTES)
+            .readTimeout(2, TimeUnit.MINUTES)
+            .retryOnConnectionFailure(true)
             .build()
 
     @Provides @Singleton
     fun provideRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-//            .baseUrl("http://10.250.106.186:5000/api/v1/")
-//            .baseUrl("http://10.250.106.186:5000/api/v1/")
-//            .baseUrl("http://168.144.29.238/api/v1/")
-            .baseUrl("https://api.bpscnotes.in/api/v1/")
+            .baseUrl(BASE_URL)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+    // ── Separate Retrofit instance for uploads ────────────────
+    @Provides
+    @Singleton
+    @Named("upload")
+    fun provideUploadRetrofit(@Named("upload") client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -117,7 +147,7 @@ object NetworkModule {
         r.create(ChatApiService::class.java)
 
     @Provides @Singleton
-    fun provideStudyMaterialsApi(r: Retrofit): StudyMaterialsApiService =
+    fun provideStudyMaterialsApi(@Named("upload") r: Retrofit): StudyMaterialsApiService =
         r.create(StudyMaterialsApiService::class.java)
 
     @Provides @Singleton
