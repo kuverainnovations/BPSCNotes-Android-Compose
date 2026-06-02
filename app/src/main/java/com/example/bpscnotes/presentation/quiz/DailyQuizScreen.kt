@@ -52,10 +52,6 @@ fun DailyQuizScreen(
         }
     }
 
-    /*LaunchedEffect(Unit) {
-        viewModel.loadLobby()
-    }
-*/
     when {
         // ── Result screen ─────────────────────────────────────
         state.result != null && state.activeSession != null -> {
@@ -301,8 +297,15 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                         Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
                     }
                 }
-                if (quiz.isAttempted && quiz.avgScore > 0) {
-                    Text("Last score: ${quiz.avgScore.toInt()}%", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.SemiBold)
+                if (quiz.isAttempted) {
+                    val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
+                    val passed = lastScore >= quiz.passingScore
+                    Text(
+                        "Last score: $lastScore%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -323,7 +326,6 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
 // QUIZ SESSION — wired to ViewModel
 // ─────────────────────────────────────────────────────────────
 
-enum class AnswerState { None, Correct, Wrong }
 
 @Composable
 internal fun QuizSessionScreen(
@@ -337,18 +339,12 @@ internal fun QuizSessionScreen(
     val questions           = session.questions
     var currentIndex       by remember { mutableIntStateOf(0) }
     // Local ephemeral UI state — reset per question
-    var localSelectedIndex by remember(currentIndex) { mutableIntStateOf(-1) }
-    var answerState        by remember(currentIndex) { mutableStateOf(AnswerState.None) }
-    var showExplanation    by remember(currentIndex) { mutableStateOf(false) }
     var showHint           by remember(currentIndex) { mutableStateOf(false) }
     var timeLeft           by remember(currentIndex) { mutableIntStateOf(30) }
-    var timerActive        by remember(currentIndex) { mutableStateOf(true) }
-    var streak             by remember { mutableIntStateOf(0) }
     var totalTimeSecs      by remember { mutableIntStateOf(0) }
     var isQuizComplete     by remember { mutableStateOf(false) }
     var showReviewAll      by remember { mutableStateOf(false) }
 
-    val scope   = rememberCoroutineScope()
     val current = questions.getOrNull(currentIndex)
 
     val optLetters = listOf("a", "b", "c", "d")
@@ -358,15 +354,16 @@ internal fun QuizSessionScreen(
         if (isQuizComplete) viewModel.submitQuiz(totalTimeSecs)
     }
 
-    // ── Per-question timer ─────────────────────────────────────
-    LaunchedEffect(currentIndex, timerActive) {
+    // ── Per-question timer — stops when quiz complete or question changes ──
+    LaunchedEffect(currentIndex) {
+        if (isQuizComplete) return@LaunchedEffect
         timeLeft = 30
-        while (timeLeft > 0 && timerActive && answerState == AnswerState.None) {
+        while (timeLeft > 0 && !isQuizComplete) {
             delay(1000L)
             timeLeft--
             totalTimeSecs++
         }
-        if (timeLeft == 0 && answerState == AnswerState.None && current != null) {
+        if (timeLeft == 0 && !isQuizComplete && current != null) {
             // Auto-skip — no answer recorded (ViewModel treats missing = skipped)
             if (currentIndex < questions.size - 1) {
                 currentIndex++
@@ -410,12 +407,6 @@ internal fun QuizSessionScreen(
                         }
                         Text("Q ${currentIndex + 1} / ${questions.size}", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (streak > 1) {
-                                Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFF3CD)).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text("🔥", fontSize = 11.sp)
-                                    Text("$streak", style = MaterialTheme.typography.labelSmall, color = Color(0xFF856404), fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
                             Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
                                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                                     val s = 3.dp.toPx()
@@ -458,49 +449,38 @@ internal fun QuizSessionScreen(
                 }
 
                 // Options
+                val answeredLetter = viewModel.getAnswer(current.id)
                 current.options.forEachIndexed { index, option ->
                     if (option.isBlank()) return@forEachIndexed
-                    val optionState = when {
-                        answerState == AnswerState.None && localSelectedIndex == index -> "selected"
-                        answerState != AnswerState.None && optLetters[index] == viewModel.getAnswer(current.id) && answerState == AnswerState.Correct -> "correct"
-                        answerState != AnswerState.None && optLetters[index] == viewModel.getAnswer(current.id) && answerState == AnswerState.Wrong -> "wrong"
-                        else -> "default"
-                    }
-                    val bg      = when (optionState) { "selected"->"bg"; "correct"->"correct"; "wrong"->"wrong"; else->"default" }
-                    val bgColor = when (bg) { "bg"->BpscColors.PrimaryLight; "correct"->Color(0xFFE8FDF4); "wrong"->Color(0xFFFEE8E8); else->Color.White }
-                    val border  = when (bg) { "bg"->BpscColors.Primary; "correct"->BpscColors.Success; "wrong"->Color(0xFFE74C3C); else->cs.outline }
-                    val txtClr  = when (bg) { "bg"->BpscColors.Primary; "correct"->BpscColors.Success; "wrong"->Color(0xFFE74C3C); else->BpscColors.TextPrimary }
+                    val letter      = optLetters[index]
+                    val isSelected  = answeredLetter == letter
+
+                    val bgColor = if (isSelected) BpscColors.PrimaryLight else Color.White
+                    val border  = if (isSelected) BpscColors.Primary else cs.outline
+                    val txtClr  = if (isSelected) BpscColors.Primary else BpscColors.TextPrimary
 
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bgColor).border(1.5.dp, border, RoundedCornerShape(14.dp))
-                            .clickable(enabled = answerState == AnswerState.None) {
-                                localSelectedIndex = index
-                                timerActive        = false
-                                val letter         = optLetters[index]
+                            .clickable(enabled = answeredLetter == null) {
                                 viewModel.recordAnswer(current.id, letter)
-                                // Determine correct/wrong — we don't know correctOption yet (backend doesn't send it),
-                                // so we mark answer visually as "selected" only; the visual correct/wrong shows after submit.
-                                // For instant feedback we show it as "answered" and allow proceeding.
-                                answerState     = AnswerState.Correct  // visual placeholder — real eval is server-side
-                                if (streak >= 0) streak++
-                                showExplanation = false                 // no client-side explanation — shown after submit
                             }
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(border.copy(alpha = if (optionState == "default") 0.1f else 0.2f)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(border.copy(alpha = if (!isSelected) 0.1f else 0.2f)), contentAlignment = Alignment.Center) {
                             Text(listOf("A","B","C","D")[index], style = MaterialTheme.typography.titleMedium, color = border, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                         }
                         Text(option, style = MaterialTheme.typography.bodyLarge, color = txtClr, modifier = Modifier.weight(1f))
-                        if (optionState == "selected") Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
+                        if (isSelected) Icon(Icons.Rounded.CheckCircle, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
                     }
                 }
             }
 
             // ── Bottom bar ────────────────────────────────────
+            val isAnswered = viewModel.getAnswer(current.id) != null
             Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp)) {
-                if (answerState == AnswerState.None) {
+                if (!isAnswered) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
                             onClick  = { showHint = !showHint },
@@ -512,7 +492,6 @@ internal fun QuizSessionScreen(
 
                         OutlinedButton(
                             onClick = {
-                                streak = 0
                                 if (currentIndex < questions.size - 1) { currentIndex++ }
                                 else { isQuizComplete = true }
                             },
@@ -530,11 +509,8 @@ internal fun QuizSessionScreen(
                     } else {
                         Button(
                             onClick  = {
-                                if (currentIndex < questions.size - 1) {
-                                    currentIndex++
-                                } else {
-                                    isQuizComplete = true
-                                }
+                                if (currentIndex < questions.size - 1) { currentIndex++ }
+                                else { isQuizComplete = true }
                             },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape    = RoundedCornerShape(14.dp),

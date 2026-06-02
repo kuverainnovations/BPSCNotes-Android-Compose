@@ -27,16 +27,14 @@ import javax.inject.Inject
 data class QuizSessionQuestion(
     val id: String,
     val question: String,
-    val options: List<String>,              // text options (may be empty for image-type)
+    val options: List<String>,
     val subject: String,
-    val difficulty: String,
     val correctOptionLetter: String? = null,
     val explanation: String? = null,
-    // Image support
-    val questionType: String = "text",      // "text" | "image"
-    val questionImageUrl: String? = null,   // shown above question text
-    val optionType: String = "text",        // "text" | "image" | "mixed"
-    val optionImages: List<String?> = emptyList(), // [a,b,c,d] image URLs (null = no image)
+    val questionType: String = "text",
+    val questionImageUrl: String? = null,
+    val optionType: String = "text",
+    val optionImages: List<String?> = emptyList(),
 ) {
     val correctIndex: Int get() = when (correctOptionLetter?.lowercase()) {
         "a" -> 0; "b" -> 1; "c" -> 2; "d" -> 3; else -> -1
@@ -226,9 +224,8 @@ class QuizViewModel @Inject constructor(
                     QuizSessionQuestion(
                         id               = q.id,
                         question         = q.questionText,
-                        options          = q.optionTexts,  // dynamic: filters empty options
+                        options          = q.optionTexts,
                         subject          = q.subject ?: quiz.subject,
-                        difficulty       = q.difficulty,
                         explanation      = q.explanation,
                         questionType     = q.questionType,
                         questionImageUrl = q.questionImageUrl,
@@ -276,6 +273,8 @@ class QuizViewModel @Inject constructor(
 
     fun submitQuiz(timeTakenSecs: Int) {
         val session = _uiState.value.activeSession ?: return
+        // Guard against double-submit (timer + button can both trigger simultaneously)
+        if (_uiState.value.isSubmitting || _uiState.value.result != null) return
         val answers = _uiState.value.selectedAnswers
 
         viewModelScope.launch {

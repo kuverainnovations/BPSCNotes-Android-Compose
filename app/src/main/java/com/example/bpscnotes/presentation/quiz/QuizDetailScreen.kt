@@ -191,17 +191,28 @@ private fun QuizIntroContent(
                                 style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                         }
                     }
-                    if (quiz.isAttempted && quiz.avgScore > 0) {
+                    if (quiz.isAttempted) {
+                        val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
+                        val passed    = lastScore >= quiz.passingScore
                         Row(
                             modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.Success.copy(0.1f))
+                                .background(if (passed) BpscColors.Success.copy(0.1f) else Color(0xFFFEE8E8))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Rounded.Star, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
-                            Text("Your best: ${quiz.avgScore.toInt()}%",
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.SemiBold)
+                            Icon(
+                                if (passed) Icons.Rounded.Star else Icons.Rounded.Refresh,
+                                null,
+                                tint = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "Last score: $lastScore%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
