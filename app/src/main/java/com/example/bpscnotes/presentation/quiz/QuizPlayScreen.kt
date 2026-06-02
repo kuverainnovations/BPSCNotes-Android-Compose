@@ -82,11 +82,13 @@ fun QuizPlayScreen(
             )
         }
         state.activeSession != null && !state.isStartingQuiz -> {
-            QuizPlayerContent(
-                session  = state.activeSession!!,
-                viewModel = viewModel,
-                onExit   = { viewModel.exitSession(); navController.popBackStackSafe() }
-            )
+            key(state.activeSession!!.id) {
+                QuizPlayerContent(
+                    session   = state.activeSession!!,
+                    viewModel = viewModel,
+                    onExit    = { viewModel.exitSession(); navController.popBackStackSafe() }
+                )
+            }
         }
         state.isStartingQuiz -> {
             Box(Modifier
@@ -140,23 +142,16 @@ private fun QuizPlayerContent(
     val current        = questions.getOrNull(currentIndex) ?: return
     val state         by viewModel.uiState.collectAsState()
     var showHint      by remember(currentIndex) { mutableStateOf(false) }
-    // FIX: Per-question time = total quiz duration ÷ question count
-    // e.g. 15 min quiz with 10 Qs → 90s per Q, not static 30/45s
-    val perQuestionSecs = remember(session.durationMins, questions.size) {
-        val total = (session.durationMins * 60).coerceAtLeast(questions.size * 20)
-        (total / questions.size.coerceAtLeast(1)).coerceIn(20, 180)
-    }
-    val perQImageBonus = (perQuestionSecs * 0.5f).toInt().coerceAtMost(60)
-    val timerForCurrent = if (current.isImageQuestion || current.isImageOptions)
-        perQuestionSecs + perQImageBonus else perQuestionSecs
+
+    // Per-question time = total quiz duration ÷ question count (no cap)
+    // e.g. 7 min / 1 question = 420s, 7 min / 4 questions = 105s
+    val perQuestionSecs = (session.durationMins * 60) / questions.size.coerceAtLeast(1)
+    val timerForCurrent = perQuestionSecs
+    val timerMax        = perQuestionSecs
 
     // FIX: When returning to a previous question, don't reset to full time
     // Store remaining time per question index in a map
-    val questionTimers = remember { mutableStateMapOf<Int, Int>() }
-    var timeLeft      by remember(currentIndex) {
-        mutableIntStateOf(questionTimers[currentIndex] ?: timerForCurrent)
-    }
-    var timerRunning  by remember(currentIndex) { mutableStateOf(true) }
+    var timeLeft      by remember(currentIndex) { mutableIntStateOf(perQuestionSecs) }
     var totalTimeSecs by remember { mutableIntStateOf(0) }
     var showReview    by remember { mutableStateOf(false) }
     var submitClicked by remember { mutableStateOf(false) }
@@ -167,35 +162,22 @@ private fun QuizPlayerContent(
     val answeredCount   = questions.count { q -> viewModel.getAnswer(q.id) != null }
     val progress       by animateFloatAsState((currentIndex + 1).toFloat() / questions.size, tween(400), label = "p")
 
-    // Timer — 45s for image questions (more time needed), 30s for text
-    val timerMax = timerForCurrent  // dynamic, not static
-
+    // Per-question countdown — resets for each new question via remember(currentIndex)
     LaunchedEffect(currentIndex) {
-        // Restore saved time or start fresh for this question
-        timeLeft = questionTimers[currentIndex] ?: timerForCurrent
-        timerRunning = true
-        while (timeLeft > 0 && timerRunning) {
+        timeLeft = perQuestionSecs
+        while (timeLeft > 0 && !submitClicked) {
             delay(1000L)
             timeLeft--
             totalTimeSecs++
-            questionTimers[currentIndex] = timeLeft  // persist remaining time
         }
-    }
-
-    // FIX: Timer auto-advances to next question when expired
-    // On last question: submits quiz. On any other question: moves forward.
-    LaunchedEffect(timeLeft) {
-        if (timeLeft == 0) {
-            when {
-                isLastQuestion && !submitClicked -> {
-                    submitClicked = true
-                    viewModel.submitQuiz(totalTimeSecs)
-                }
-                !isLastQuestion -> {
-                    // Auto-advance to next question after 0.5s pause
-                    delay(500L)
-                    currentIndex++
-                }
+        // Time ran out on this question — auto-advance or submit
+        if (timeLeft == 0 && !submitClicked) {
+            if (!isLastQuestion) {
+                delay(300L)
+                currentIndex++
+            } else {
+                submitClicked = true
+                viewModel.submitQuiz(totalTimeSecs)
             }
         }
     }
@@ -257,7 +239,7 @@ private fun QuizPlayerContent(
                 timerMax      = timerMax,
                 progress      = progress,
                 isImageQuiz   = current.isImageQuestion || current.isImageOptions,
-                onExit        = onExit,
+                onExit        = { showExitConfirm = true },
                 // Review button shows question navigator (no answer preview during active quiz)
                 onReview      = { showReview = true }
             )
@@ -293,7 +275,7 @@ private fun QuizPlayerContent(
                         selectedLetter = selectedLetter,
                         onSelect       = { letter ->
                             viewModel.recordAnswer(current.id, letter)
-                            timerRunning = false; showHint = false
+                            showHint = false
                         }
                     )
                 } else {
@@ -302,7 +284,7 @@ private fun QuizPlayerContent(
                         selectedLetter = selectedLetter,
                         onSelect       = { letter ->
                             viewModel.recordAnswer(current.id, letter)
-                            timerRunning = false; showHint = false
+                            showHint = false
                         }
                     )
                 }
@@ -317,7 +299,7 @@ private fun QuizPlayerContent(
                 submitError    = state.submitError,
                 currentIndex   = currentIndex,
                 onHint         = { showHint = !showHint },
-                onNext         = { currentIndex++; showHint = false; timerRunning = true },
+                onNext         = { currentIndex++; showHint = false },
                 onSubmit       = { if (!submitClicked) { submitClicked = true; viewModel.submitQuiz(totalTimeSecs) } },
                 onPrev         = { currentIndex--; showHint = false }
             )
@@ -634,19 +616,23 @@ private fun QuizHeader(
                         Icon(Icons.Rounded.GridView, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                     // Timer ring
-                    Box(Modifier.size(40.dp), Alignment.Center) {
+                    val timerColor = if (timeLeft > timerMax / 3) Color.White else Color(0xFFFF6B6B)
+                    val timerText  = if (timeLeft >= 60) "%d:%02d".format(timeLeft / 60, timeLeft % 60) else "$timeLeft"
+                    Box(Modifier.size(52.dp), Alignment.Center) {
                         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                             val s = 3.dp.toPx()
                             drawArc(Color.White.copy(0.2f), -90f, 360f, false, style = Stroke(s))
                             drawArc(
-                                color = if (timeLeft > timerMax / 3) Color.White else Color(0xFFFF6B6B),
+                                color = timerColor,
                                 startAngle = -90f, sweepAngle = (timeLeft.toFloat() / timerMax) * 360f,
                                 useCenter = false, style = Stroke(s, cap = StrokeCap.Round)
                             )
                         }
-                        Text("$timeLeft", style = MaterialTheme.typography.labelSmall,
-                            color = if (timeLeft > timerMax / 3) Color.White else Color(0xFFFF6B6B),
-                            fontWeight = FontWeight.ExtraBold)
+                        Text(timerText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = timerColor,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp)
                     }
                 }
             }

@@ -46,7 +46,6 @@ fun TopicQuizScreen(
             QuizSummaryScreen(
                 session       = state.activeSession!!,
                 result        = state.result!!,
-                onReviewAll   = { },
                 onExit        = { viewModel.exitSession(); navController.popBackStackSafe() },
                 navController = navController
             )

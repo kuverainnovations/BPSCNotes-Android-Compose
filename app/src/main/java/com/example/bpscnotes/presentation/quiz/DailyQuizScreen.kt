@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -56,21 +55,45 @@ fun DailyQuizScreen(
         // ── Result screen ─────────────────────────────────────
         state.result != null && state.activeSession != null -> {
             QuizSummaryScreen(
-                session      = state.activeSession!!,
-                result       = state.result!!,
-                onReviewAll  = { /* handled inside summary via showReviewAll flag */ },
-                onExit       = { viewModel.exitSession() },
+                session       = state.activeSession!!,
+                result        = state.result!!,
+                onExit        = { viewModel.exitSession() },
                 navController = navController
             )
         }
 
+        // ── Starting quiz (loading questions) ─────────────────
+        state.isStartingQuiz -> {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = BpscColors.Primary)
+                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                }
+            }
+        }
+
+        // ── Start error ───────────────────────────────────────
+        state.startError != null -> {
+            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
+                    Text("⚠️", fontSize = 40.sp)
+                    Text(state.startError ?: "Failed to start quiz", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                        Text(str.back)
+                    }
+                }
+            }
+        }
+
         // ── Active play screen ────────────────────────────────
         state.activeSession != null && !state.isLoadingDetail -> {
-            QuizSessionScreen(
-                session       = state.activeSession!!,
-                viewModel     = viewModel,
-                onExit        = { viewModel.exitSession() }
-            )
+            key(state.activeSession!!.id) {
+                QuizSessionScreen(
+                    session       = state.activeSession!!,
+                    viewModel     = viewModel,
+                    onExit        = { viewModel.exitSession() }
+                )
+            }
         }
 
         // ── Loading quiz detail ───────────────────────────────
@@ -338,43 +361,76 @@ internal fun QuizSessionScreen(
     val state              by viewModel.uiState.collectAsState()
     val questions           = session.questions
     var currentIndex       by remember { mutableIntStateOf(0) }
-    // Local ephemeral UI state — reset per question
-    var showHint           by remember(currentIndex) { mutableStateOf(false) }
-    var timeLeft           by remember(currentIndex) { mutableIntStateOf(30) }
+    val totalDurationSecs   = session.durationMins * 60          // total quiz time from admin
+    var timeLeft           by remember { mutableIntStateOf(totalDurationSecs) }  // shared countdown
     var totalTimeSecs      by remember { mutableIntStateOf(0) }
+    var showHint           by remember(currentIndex) { mutableStateOf(false) }
     var isQuizComplete     by remember { mutableStateOf(false) }
     var showReviewAll      by remember { mutableStateOf(false) }
 
     val current = questions.getOrNull(currentIndex)
-
     val optLetters = listOf("a", "b", "c", "d")
+
+    // ── BackHandler — warn before quitting mid-quiz ────────────
+    var showExitDialog by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler { showExitDialog = true }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Quit Quiz?", fontWeight = FontWeight.Bold) },
+            text  = { Text("Your progress will be lost. Are you sure you want to exit?") },
+            confirmButton = {
+                TextButton(onClick = { showExitDialog = false; onExit() }) {
+                    Text("Quit", color = Color(0xFFE74C3C))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("Continue", color = BpscColors.Primary)
+                }
+            }
+        )
+    }
 
     // ── Submit when quiz flagged complete ──────────────────────
     LaunchedEffect(isQuizComplete) {
         if (isQuizComplete) viewModel.submitQuiz(totalTimeSecs)
     }
 
-    // ── Per-question timer — stops when quiz complete or question changes ──
-    LaunchedEffect(currentIndex) {
-        if (isQuizComplete) return@LaunchedEffect
-        timeLeft = 30
+    // ── Single quiz-wide countdown timer ──────────────────────
+    LaunchedEffect(Unit) {
         while (timeLeft > 0 && !isQuizComplete) {
             delay(1000L)
             timeLeft--
             totalTimeSecs++
         }
-        if (timeLeft == 0 && !isQuizComplete && current != null) {
-            // Auto-skip — no answer recorded (ViewModel treats missing = skipped)
-            if (currentIndex < questions.size - 1) {
-                currentIndex++
-            } else {
-                isQuizComplete = true
-            }
+        // Time ran out — auto-submit with whatever was answered
+        if (!isQuizComplete) {
+            isQuizComplete = true
         }
     }
 
     // ── Show result when API returns ──────────────────────────
     if (state.result != null) return  // parent handles this via DailyQuizScreen
+
+    // ── Submit error ───────────────────────────────────────────
+    if (state.submitError != null) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
+                Text("⚠️", fontSize = 40.sp)
+                Text("Submit failed: ${state.submitError}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = onExit) { Text("Quit") }
+                    Button(
+                        onClick = { viewModel.submitQuiz(totalTimeSecs) },
+                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                    ) { Text("Retry") }
+                }
+            }
+        }
+        return
+    }
 
     // ── Review screen ─────────────────────────────────────────
     if (showReviewAll && state.activeSession != null) {
@@ -407,13 +463,34 @@ internal fun QuizSessionScreen(
                         }
                         Text("Q ${currentIndex + 1} / ${questions.size}", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
+                            val timerColor = when {
+                                timeLeft <= 30  -> Color(0xFFFF4444)   // last 30s — urgent red
+                                timeLeft <= 60  -> Color(0xFFFF6B6B)   // last 1 min — warning
+                                else            -> Color.White
+                            }
+                            val timerProgress by animateFloatAsState(
+                                targetValue = timeLeft.toFloat() / totalDurationSecs.toFloat(),
+                                animationSpec = tween(800),
+                                label = "timer"
+                            )
+                            // Format as mm:ss
+                            val mins = timeLeft / 60
+                            val secs = timeLeft % 60
+                            val timerText = if (totalDurationSecs >= 60) "%d:%02d".format(mins, secs) else "$timeLeft"
+                            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                                    val s = 3.dp.toPx()
-                                    drawArc(Color.White.copy(0.2f), -90f, 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(s))
-                                    drawArc(if (timeLeft > 10) Color.White else Color(0xFFFF6B6B), -90f, (timeLeft / 30f) * 360f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(s, cap = StrokeCap.Round))
+                                    val s = 4.dp.toPx()
+                                    drawArc(Color.White.copy(0.2f), -90f, 360f, false,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(s))
+                                    drawArc(timerColor, -90f, timerProgress * 360f, false,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(s, cap = StrokeCap.Round))
                                 }
-                                Text("$timeLeft", style = MaterialTheme.typography.labelSmall, color = if (timeLeft > 10) Color.White else Color(0xFFFF6B6B), fontWeight = FontWeight.ExtraBold)
+                                Text(
+                                    timerText,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = timerColor,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
                             }
                         }
                     }
@@ -536,7 +613,6 @@ internal fun QuizSessionScreen(
 internal fun QuizSummaryScreen(
     session: QuizSession,
     result: QuizResult,
-    onReviewAll: () -> Unit,
     onExit: () -> Unit,
     navController: NavHostController
 ) {
