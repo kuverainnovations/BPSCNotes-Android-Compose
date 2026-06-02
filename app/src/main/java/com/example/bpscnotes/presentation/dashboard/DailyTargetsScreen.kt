@@ -128,9 +128,9 @@ fun DailyTargetsScreen(
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            IconButton(
-                                onClick  = { navController.popBackStackSafe() },
-                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                            Box(
+                                Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() },
+                                Alignment.Center
                             ) {
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
