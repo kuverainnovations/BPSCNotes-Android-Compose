@@ -74,10 +74,23 @@ fun DailyQuizScreen(
 
         // ── Start error ───────────────────────────────────────
         state.startError != null -> {
+            val isScheduled = state.startError == "not_yet_available"
             Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
-                    Text("⚠️", fontSize = 40.sp)
-                    Text(state.startError ?: "Failed to start quiz", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Text(if (isScheduled) "🗓️" else "⚠️", fontSize = 40.sp)
+                    Text(
+                        if (isScheduled) "Quiz Not Available Yet" else str.error,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        if (isScheduled) "This quiz is scheduled for a future date. Please check back later."
+                        else (state.startError ?: "Failed to start quiz"),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = cs.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                     Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                         Text(str.back)
                     }

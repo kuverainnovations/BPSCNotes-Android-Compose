@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import javax.inject.Inject
 
 // ─────────────────────────────────────────────────────────────
@@ -247,10 +248,14 @@ class QuizViewModel @Inject constructor(
                 _uiState.update { it.copy(activeSession = session, isStartingQuiz = false) }
             } catch (e: Exception) {
                 Log.e("QuizVM", "startQuiz: ${e.message}", e)
-                // Parse the actual message from the API response body
-                // e.message just says "HTTP 400" — the real message is in the JSON body
-                val msg =  when {
-                    e.message?.contains("400") == true ->
+                // Parse actual JSON error body — e.message only says "HTTP 400"
+                val body = if (e is HttpException) e.response()?.errorBody()?.string() ?: "" else ""
+                val msg = when {
+                    body.contains("not yet available", ignoreCase = true) ||
+                            body.contains("scheduled", ignoreCase = true) ->
+                        "not_yet_available"
+                    body.contains("no questions", ignoreCase = true) ||
+                            e.message?.contains("400") == true ->
                         "This quiz has no questions yet. Please try another quiz or contact admin."
                     e.message?.contains("404") == true -> "Quiz not found."
                     e.message?.contains("403") == true -> "You don't have access to this quiz."

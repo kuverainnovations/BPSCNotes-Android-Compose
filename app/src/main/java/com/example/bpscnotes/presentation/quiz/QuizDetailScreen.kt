@@ -243,24 +243,47 @@ private fun QuizIntroContent(
 
                 Spacer(Modifier.height(8.dp))
 
-                Button(
-                    onClick = {
-                        if ((state.quizDetail?.totalQuestions ?: 0) == 0) {
-                            onSetError(str.quizNoQuestions)
-                        } else {
-                            navController.navigate(Screen.QuizPlayer.createRoute(quizId))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (quiz.isAttempted) str.quizRetake else str.quizStartNow,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                // Check if quiz is scheduled for a future date
+                val isFutureScheduled = quiz.scheduledFor?.let { scheduled ->
+                    try {
+                        val scheduledDate = scheduled.substring(0, 10) // "YYYY-MM-DD"
+                        val today = java.time.LocalDate.now().toString()
+                        scheduledDate > today
+                    } catch (e: Exception) { false }
+                } ?: false
+
+                if (isFutureScheduled) {
+                    Button(
+                        onClick  = {},
+                        enabled  = false,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape    = RoundedCornerShape(16.dp),
+                        colors   = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFFE0E0E0))
+                    ) {
+                        Text("🗓️  Available from ${quiz.scheduledFor?.substring(0, 10) ?: ""}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF757575))
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            if ((state.quizDetail?.totalQuestions ?: 0) == 0) {
+                                onSetError(str.quizNoQuestions)
+                            } else {
+                                navController.navigate(Screen.QuizPlayer.createRoute(quizId))
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                    ) {
+                        Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (quiz.isAttempted) str.quizRetake else str.quizStartNow,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
                 }
             }
         }

@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
-import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
-import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -101,19 +99,32 @@ fun QuizPlayScreen(
             }
         }
         state.startError != null -> {
+            val isScheduled = state.startError == "not_yet_available"
             Box(Modifier
                 .fillMaxSize()
                 .background(cs.background), Alignment.Center) {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("⚠️", fontSize = 48.sp)
-                    Text(str.error, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(state.startError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                    Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
+                    Text(if (isScheduled) "🗓️" else "⚠️", fontSize = 48.sp)
+                    Text(
+                        if (isScheduled) "Quiz Not Available Yet" else str.error,
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        if (isScheduled) "This quiz is scheduled for a future date. Please check back later."
+                        else state.startError!!,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = cs.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                     OutlinedButton(onClick = { viewModel.exitSession(); navController.popBackStackSafe() }, modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(str.goBack) }
+                    if (!isScheduled) {
+                        Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
+                    }
                 }
             }
         }
