@@ -1117,7 +1117,7 @@ private fun WeeklyConsistencyCard(
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)) {
+                        .height(110.dp)) {
 
                         // Y-axis labels
                         Column(

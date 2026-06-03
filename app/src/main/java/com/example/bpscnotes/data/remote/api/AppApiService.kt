@@ -400,6 +400,17 @@ data class SubjectAccuracyDto(
     @SerializedName("avg_accuracy") val avgAccuracy: String? = null  // percentage 0-100, or null
 )
 
+data class SubjectDto(
+    val id:       String = "",
+    val name:     String = "",
+    val emoji:    String = "📚",
+    @SerializedName("color_hex") val colorHex: String = "#1565C0"
+)
+
+data class SubjectsResponseData(
+    val subjects: List<SubjectDto> = emptyList()
+)
+
 data class UserStatsData(
     @SerializedName("weekly_activity")     val weeklyActivity: List<WeeklyActivityDto> = emptyList(),
     @SerializedName("total_study_minutes") val totalStudyMinutes: Int = 0,
@@ -612,6 +623,9 @@ interface UserStatsApiService {
 
     @GET("users/referrals")
     suspend fun getReferrals(): ApiResponse<ReferralStatsDto>
+
+    @GET("app-config/subjects")
+    suspend fun getSubjects(): ApiResponse<SubjectsResponseData>
 }
 
 interface DailyTargetsApiService {

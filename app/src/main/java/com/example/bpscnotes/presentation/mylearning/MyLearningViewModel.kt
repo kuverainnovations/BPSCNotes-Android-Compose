@@ -36,6 +36,7 @@ data class MyLearningUiState(
 class MyLearningViewModel @Inject constructor(
     private val coursesApi: CoursesApiService,
     private val authApi:    AuthApiService,
+    private val statsApi:   com.example.bpscnotes.data.remote.api.UserStatsApiService,
     private val bus: RefreshEventBus
 ) : ViewModel() {
 
@@ -88,6 +89,14 @@ class MyLearningViewModel @Inject constructor(
                 val enrolledIds     = enrolledCourses.map { it.id }.toSet()
                 val storeCourses    = allCourses.filter { it.id !in enrolledIds }
 
+                val subjectNames = kotlinx.coroutines.supervisorScope {
+                    try {
+                        val res = statsApi.getSubjects().data?.subjects ?: emptyList()
+                        listOf("All") + res.map { it.name }
+                    } catch (_: Exception) {
+                        listOf("All", "Polity", "History", "Geography", "Economy", "Bihar GK", "Science")
+                    }
+                }
                 _uiState.update {
                     it.copy(
                         storeCourses    = storeCourses,
@@ -95,6 +104,7 @@ class MyLearningViewModel @Inject constructor(
                         savedCourses    = savedCourses,
                         savedCourseIds  = savedIds,
                         userCoins       = userCoinsVal,
+                        subjects        = subjectNames,
                         isLoading       = false
                     )
                 }

@@ -372,7 +372,19 @@ private fun MockTestLobbyScreen(
             .map { it.toMockTest() }
     }
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
-    val tabs = listOf(str.filterAll, str.quizFullMock, "Mini Tests", str.quizPrevYear/*, str.mockCustom*/)
+
+    // Derive tabs dynamically — only show tab if tests of that type exist
+    val hasFull     = allTests.any { it.type == MockTestType.Full }
+    val hasMini     = allTests.any { it.type == MockTestType.SubjectWise }
+    val hasPrevYear = allTests.any { it.type == MockTestType.PreviousYear }
+
+    data class MockTab(val label: String, val type: MockTestType?)
+    val tabs = buildList {
+        add(MockTab(str.filterAll, null))
+        if (hasFull)     add(MockTab(str.quizFullMock, MockTestType.Full))
+        if (hasMini)     add(MockTab("Mini Tests", MockTestType.SubjectWise))
+        if (hasPrevYear) add(MockTab(str.quizPrevYear, MockTestType.PreviousYear))
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -443,31 +455,26 @@ private fun MockTestLobbyScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Type filter tabs
+                    // Type filter tabs — dynamic from available test types
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(end = 4.dp)
                     ) {
-                        itemsIndexed(tabs) { index, tab ->
-                            val type = when (index) {
-                                1 -> MockTestType.Full; 2 -> MockTestType.SubjectWise
-                                3 -> MockTestType.PreviousYear; else -> null
-                            }
-                            val sel = if (index == 0) selectedType == null else selectedType == type
+                        items(tabs) { tab ->
+                            val sel = selectedType == tab.type
                             Box(
                                 modifier = Modifier.clip(RoundedCornerShape(20.dp))
                                     .background(if (sel) Color.White else Color.White.copy(0.15f))
                                     .clickable {
-                                        // FIX: clicking already-selected tab deselects it (returns to All)
                                         selectedType = when {
-                                            index == 0 -> null  // str.filterAll always clears filter
-                                            type == selectedType -> null  // clicking same filter deselects
-                                            else -> type
+                                            tab.type == null -> null
+                                            tab.type == selectedType -> null
+                                            else -> tab.type
                                         }
                                     }
                                     .padding(horizontal = 14.dp, vertical = 7.dp)
                             ) {
-                                Text(tab,
+                                Text(tab.label,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = if (sel) BpscColors.Primary else Color.White,
                                     fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
@@ -491,29 +498,40 @@ private fun MockTestLobbyScreen(
                 if (filtered.isEmpty()) {
                     item {
                         Box(
-                            Modifier.fillMaxWidth().padding(top = 48.dp),
-                            Alignment.Center
+                            Modifier.fillParentMaxSize().padding(32.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Text("📝", fontSize = 48.sp)
-                                Text(
-                                    if (selectedType != null) str.quizNoTestsCategory
-                                    else str.quizNoTestsYet,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = cs.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    str.quizTestsComingSoon,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = cs.onSurfaceVariant
-                                )
+                                Box(
+                                    modifier = Modifier.size(80.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("📝", fontSize = 36.sp) }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        if (selectedType != null) str.quizNoTestsCategory
+                                        else str.quizNoTestsYet,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = cs.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    Text(
+                                        str.quizTestsComingSoon,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = cs.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
+                    return@LazyColumn   // hide all section headers when no data
                 }
                 // Featured tests
                 val featured = filtered.filter { it.isFeatured }

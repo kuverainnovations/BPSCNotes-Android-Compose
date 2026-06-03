@@ -208,13 +208,53 @@ fun DailyTargetsScreen(
 
             // ── Empty state when loaded but no targets ──────────
             if (!state.isLoading && allTargets.isEmpty() && state.error == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("🎯", fontSize = 56.sp)
-                        Text(str.targetNoTargets, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text("", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                        Button(onClick = { showAddSheet = true }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.targetCreate)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(CircleShape)
+                                .background(BpscColors.PrimaryLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🎯", fontSize = 44.sp)
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                str.targetNoTargets,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = cs.onSurface,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Text(
+                                "Set your daily study goals and earn coins when you complete them!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Button(
+                            onClick = { showAddSheet = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Rounded.Add, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(str.targetCreate, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

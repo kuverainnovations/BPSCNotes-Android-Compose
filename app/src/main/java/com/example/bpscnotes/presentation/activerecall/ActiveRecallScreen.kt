@@ -683,11 +683,26 @@ private fun FlashcardLobbyScreen(
 
                 if (allCards.isEmpty()) {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("📚", fontSize = 48.sp)
-                                Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                                Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                        Box(
+                            Modifier.fillParentMaxSize().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(80.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("📚", fontSize = 36.sp) }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge,
+                                        color = cs.onSurface, fontWeight = FontWeight.Bold,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyMedium,
+                                        color = cs.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                }
                             }
                         }
                     }

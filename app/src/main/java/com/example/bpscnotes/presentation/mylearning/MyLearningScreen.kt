@@ -441,6 +441,7 @@ fun MyLearningScreen(
                 courses        = storeItems,
                 savedCourseIds = state.savedCourseIds,
                 viewModel      = viewModel,
+                subjects       = state.subjects.ifEmpty { listOf("All") },
                 adManager=adManager
             )
             1 -> MyCoursesTab(
@@ -465,9 +466,9 @@ private fun StoreTab(
     courses:        List<StoreItem>,
     savedCourseIds: Set<String>,
     viewModel:      MyLearningViewModel,
+    subjects:       List<String> = listOf("All"),
     adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
-
-    ) {
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var selectedSubject by remember { mutableStateOf(str.filterAll) }
@@ -535,12 +536,12 @@ private fun StoreTab(
                     .clickable { searchQuery = "" })
         }
 
-        // Subject filter
+        // Subject filter — dynamic from API
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(storeSubjects) { sub ->
+            items(subjects) { sub ->
                 val sel = selectedSubject == sub
                 Box(
                     modifier = Modifier
@@ -564,48 +565,93 @@ private fun StoreTab(
             }
         }
 
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            if (featured.isNotEmpty()) {
-                item { StoreSectionHeader(str.jobsFeatured, "${featured.size} courses") }
-                items(featured) { course ->
-                    StoreCourseCard(
-                        course,
-                        savedCourseIds.contains(course.id),
-                        { viewModel.toggleSave(course.id)
-                        }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+        // Empty state — no courses at all or no match for filter/search
+        if (filtered.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(BpscColors.PrimaryLight),
+                        contentAlignment = Alignment.Center
+                    ) { Text("🛍️", fontSize = 36.sp) }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            str.courseNoCoursesYet,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = cs.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Text(
+                            if (searchQuery.isNotEmpty() || selectedSubject != str.filterAll)
+                                "Try a different subject or search term"
+                            else
+                                "Courses will appear here once added by admin",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
-                item { Spacer(Modifier.height(4.dp)) }
             }
-            if (free.isNotEmpty()) {
-                item { StoreSectionHeader("🆓 " + str.coursesFree + " Courses", "${free.size} courses") }
-                items(free) { course ->
-                    StoreCourseCard(
-                        course,
-                        savedCourseIds.contains(course.id),
-                        { viewModel.toggleSave(course.id)
-                        }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                if (featured.isNotEmpty()) {
+                    item { StoreSectionHeader(str.jobsFeatured, "${featured.size} courses") }
+                    items(featured) { course ->
+                        StoreCourseCard(
+                            course,
+                            savedCourseIds.contains(course.id),
+                            { viewModel.toggleSave(course.id)
+                            }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+                    }
+                    item { Spacer(Modifier.height(4.dp)) }
                 }
-                item { Spacer(Modifier.height(4.dp)) }
-            }
-            if (paid.isNotEmpty()) {
-                item { StoreSectionHeader("🔒 " + str.premium + " Courses", "${paid.size} courses") }
-                items(paid) { course ->
-                    StoreCourseCard(
-                        course,
-                        savedCourseIds.contains(course.id),
-                        { viewModel.toggleSave(course.id)
-                        }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+                if (free.isNotEmpty()) {
+                    item { StoreSectionHeader("🆓 " + str.coursesFree + " Courses", "${free.size} courses") }
+                    items(free) { course ->
+                        StoreCourseCard(
+                            course,
+                            savedCourseIds.contains(course.id),
+                            { viewModel.toggleSave(course.id)
+                            }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+                    }
+                    item { Spacer(Modifier.height(4.dp)) }
                 }
-            }
-            // ── Bottom banner ad ─────────────────────────────────
-            item {
-                if (adManager != null) {
-                    BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                if (paid.isNotEmpty()) {
+                    item { StoreSectionHeader("🔒 " + str.premium + " Courses", "${paid.size} courses") }
+                    items(paid) { course ->
+                        StoreCourseCard(
+                            course,
+                            savedCourseIds.contains(course.id),
+                            { viewModel.toggleSave(course.id)
+                            }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+                    }
                 }
-                Spacer(Modifier.height(10.dp))
+                // ── Bottom banner ad ─────────────────────────────────
+                item {
+                    if (adManager != null) {
+                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }
@@ -746,13 +792,26 @@ private fun EnrolledCoursesContent(
     val animProg by animateFloatAsState(totalProgress, tween(1200), label = "tp")
 
     if (courses.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("📚", fontSize = 48.sp)
-                Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleLarge,
-                    color = cs.onSurface, fontWeight = FontWeight.Bold)
-                Text(str.courseExploreStore, style = MaterialTheme.typography.bodyLarge,
-                    color = cs.onSurfaceVariant)
+        Box(
+            Modifier.fillMaxSize().padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(80.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                    contentAlignment = Alignment.Center
+                ) { Text("📚", fontSize = 36.sp) }
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleLarge,
+                        color = cs.onSurface, fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(str.courseExploreStore, style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
         }
         return
@@ -840,11 +899,25 @@ private fun EnrolledCoursesContent(
         // ── 5. Course list ──
         if (displayList.isEmpty()) {
             item {
-                Box(Modifier.fillMaxWidth().padding(top = 48.dp), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("📭", fontSize = 40.sp)
+                Box(
+                    Modifier.fillMaxWidth().padding(top = 64.dp, start = 32.dp, end = 32.dp),
+                    Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(72.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                            contentAlignment = Alignment.Center
+                        ) { Text("📭", fontSize = 32.sp) }
                         Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            color = cs.onSurface, fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text("Try a different subject filter",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }
@@ -1669,17 +1742,17 @@ private fun CourseDetailSheet(
                     // Syllabus
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (course.syllabus.size > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                str.courseSyllabus,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = cs.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    str.courseSyllabus,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = cs.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
 
                                 Text(
                                     if (expandSyllabus) str.courseShowLess else str.courseShowAll,
