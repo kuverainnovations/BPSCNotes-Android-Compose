@@ -88,8 +88,8 @@ class ActiveRecallViewModel @Inject constructor(
         return if (subject == "All") all else all.filter { it.subject == subject }
     }
 
-    fun subjects(): List<String> =
-        listOf("All") + _uiState.value.allCards.map { it.subject }.distinct().sorted()
+    // FIX: All flashcards shown as one combined session — no separate subject breakdown
+    fun subjects(): List<String> = listOf("All")
 
     // ── Mastery — optimistic update + backend persist ──────────────
 

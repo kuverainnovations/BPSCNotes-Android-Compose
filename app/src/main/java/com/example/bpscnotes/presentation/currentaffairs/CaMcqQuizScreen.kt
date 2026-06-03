@@ -42,6 +42,7 @@ import com.example.bpscnotes.core.ui.AppQuitDialog
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.CaMcqDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import kotlinx.coroutines.delay
 
 // Answer DTO — returned from server after user taps (anti-cheat pattern)
 data class CaMcqAnswerDto(
@@ -91,6 +92,39 @@ fun CaMcqQuizScreen(
     var answers       by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showResult    by remember { mutableStateOf(false) }
     var showReview    by remember { mutableStateOf(false) }
+    var retryKey      by remember { mutableIntStateOf(0) }  // increments on each retry to reset timer
+    // Ad gate: user must watch 15-sec ad before starting quiz
+    var adGateSecsLeft  by remember { mutableIntStateOf(15) }
+    var adGatePassed    by remember { mutableStateOf(false) }
+    // Per-question 30-second countdown
+    var questionSecsLeft by remember { mutableIntStateOf(30) }
+
+    // Ad gate countdown
+    LaunchedEffect(adGatePassed) {
+        if (!adGatePassed) {
+            adGateSecsLeft = 15
+            while (adGateSecsLeft > 0) {
+                delay(1_000L)
+                adGateSecsLeft--
+            }
+            adGatePassed = true
+        }
+    }
+
+    // Per-question countdown — resets on each question AND on retry
+    LaunchedEffect(currentIndex, adGatePassed, retryKey) {
+        if (!adGatePassed || showResult || showReview) return@LaunchedEffect
+        questionSecsLeft = 30
+        while (questionSecsLeft > 0) {
+            delay(1_000L)
+            questionSecsLeft--
+        }
+        // Time's up — auto-advance to next question without answer
+        if (!showResult && !showReview) {
+            if (currentIndex < mcqs.size - 1) currentIndex++
+            else showResult = true
+        }
+    }
 
     val navigateBack: () -> Unit = {
         if (adManager != null && activity != null)
@@ -122,6 +156,47 @@ fun CaMcqQuizScreen(
                 onAction    = { navController.popBackStackSafe() }
             )
 
+            // ── Ad gate: 15-second wait before quiz starts ────────
+            !adGatePassed -> Box(
+                modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text("📺", fontSize = 64.sp)
+                    Text(
+                        "Your quiz is ready!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White, fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Starting in $adGateSecsLeft seconds...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                    // Countdown ring
+                    Box(contentAlignment = Alignment.Center) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.size(80.dp)) {
+                            val sweep = (adGateSecsLeft / 15f) * 360f
+                            drawArc(Color.White.copy(0.15f), -90f, 360f, false,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = StrokeCap.Round))
+                            drawArc(Color(0xFF1565C0), -90f, sweep, false,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = StrokeCap.Round))
+                        }
+                        Text("$adGateSecsLeft", style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    }
+                    if (adManager != null) {
+                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                    }
+                }
+            }
+
             showReview -> ReviewScreen(
                 mcqs      = mcqs,
                 answers   = answers,
@@ -137,6 +212,7 @@ fun CaMcqQuizScreen(
                     answers = emptyMap()
                     currentIndex = 0
                     showResult = false
+                    retryKey++          // forces timer LaunchedEffect to re-run even if index stays 0
                     viewModel.loadMcqs(affairId)
                 },
                 onReview      = { showReview = true },
@@ -151,8 +227,10 @@ fun CaMcqQuizScreen(
                 answers       = answers,
                 serverAnswers = mcqAnswers,
                 adManager     = adManager,
+                questionSecsLeft = questionSecsLeft,
                 onAnswer      = { qId, letter ->
                     answers = answers + (qId to letter)
+                    questionSecsLeft = 30  // reset timer after answering
                     viewModel.fetchMcqAnswer(qId)  // fetch correct answer after user taps
                 },
                 onNext        = {
@@ -167,14 +245,15 @@ fun CaMcqQuizScreen(
 
 @Composable
 private fun QuizScreen(
-    mcqs:          List<CaMcqDto>,
-    currentIndex:  Int,
-    answers:       Map<String, String>,
-    serverAnswers: Map<String, CaMcqAnswerDto>,
-    adManager:     AdManager?,
-    onAnswer:      (String, String) -> Unit,
-    onNext:        () -> Unit,
-    onBack:        () -> Unit,
+    mcqs:             List<CaMcqDto>,
+    currentIndex:     Int,
+    answers:          Map<String, String>,
+    serverAnswers:    Map<String, CaMcqAnswerDto>,
+    adManager:        AdManager?,
+    questionSecsLeft: Int = 30,
+    onAnswer:         (String, String) -> Unit,
+    onNext:           () -> Unit,
+    onBack:           () -> Unit,
 ) {
     val str      = LocalStrings.current
     val cs       = MaterialTheme.colorScheme
@@ -225,8 +304,31 @@ private fun QuizScreen(
                         color = Color.White, fontWeight = FontWeight.Bold
                     )
 
-                    // Spacer for layout balance
-                    Spacer(Modifier.size(36.dp))
+                    // 30-second countdown timer
+                    Box(
+                        modifier = Modifier.size(36.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                            val sweep = (questionSecsLeft / 30f) * 360f
+                            val timerColor = when {
+                                questionSecsLeft > 15 -> Color(0xFF4CAF50)
+                                questionSecsLeft > 8  -> Color(0xFFFF9800)
+                                else                  -> Color(0xFFF44336)
+                            }
+                            drawArc(Color.White.copy(0.2f), -90f, 360f, false,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+                            drawArc(timerColor, -90f, sweep, false,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+                        }
+                        Text(
+                            "$questionSecsLeft",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
                 // Progress bar
                 Box(modifier = Modifier.fillMaxWidth().height(5.dp)
@@ -365,7 +467,10 @@ private fun ResultScreen(
     activity:      Activity?,
 ) {
     val str     = LocalStrings.current
-    val correct = mcqs.count { q -> serverAnswers[q.id]?.correct == answers[q.id] }
+    val correct = mcqs.count { q ->
+        val userAnswer = answers[q.id]
+        userAnswer != null && serverAnswers[q.id]?.correct == userAnswer
+    }
     val skipped = mcqs.count { q -> answers[q.id] == null }
     val wrong   = mcqs.size - correct - skipped
     val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0

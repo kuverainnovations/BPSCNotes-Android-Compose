@@ -124,11 +124,14 @@ class MyLearningViewModel @Inject constructor(
             try {
                 coursesApi.enrollCourse(courseId)
                 load() // refresh so enrolled tab shows the new course & store removes it
-                _uiState.update { it.copy(
-                    isEnrolling   = false,
-                    enrollSuccess  = "Enrolled successfully!",
-                    justEnrolledId = courseId   // Screen observes this to switch to My Courses tab
-                ) }
+                // justEnrolledId is set AFTER load() — ensures Courses tab has fresh data before switching
+                _uiState.update { s ->
+                    s.copy(
+                        isEnrolling    = false,
+                        enrollSuccess  = "Enrolled successfully!",
+                        justEnrolledId = courseId
+                    )
+                }
             } catch (e: Exception) {
                 Log.e("MyLearningVM", "enroll: ${e.message}", e)
                 _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }

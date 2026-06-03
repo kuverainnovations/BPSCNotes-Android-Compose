@@ -134,8 +134,6 @@ fun ProfileScreen(
 
                 StudyHeatmapCard(studyDays = state.studyHeatmap, isDark = isDark)
 
-                SubjectProgressCard(subjects = uiSubjects, navController = navController, isDark = isDark)
-
                 BadgesCard(badges = uiBadges, isDark = isDark)
 
                 CoinWalletSection(
@@ -145,9 +143,9 @@ fun ProfileScreen(
                 )
 
                 // ── Bottom banner ad ─────────────────────────────────
-                    if (adManager != null) {
-                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
-                    }
+                if (adManager != null) {
+                    BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                }
 
             }
         }
@@ -379,7 +377,7 @@ private fun RankProgressCard(
 private fun WeeklyStreakCard(weekDays: List<WeekDay>, streakCount: Int, isDark: Boolean) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(if (isDark) 0.dp else 2.dp)) {

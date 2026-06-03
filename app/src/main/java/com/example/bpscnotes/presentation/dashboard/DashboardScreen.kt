@@ -1117,7 +1117,7 @@ private fun WeeklyConsistencyCard(
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)) {
+                        .height(150.dp)) {
 
                         // Y-axis labels
                         Column(
@@ -1278,7 +1278,7 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
                     }
                 }
             }
-            LargeQuickCard("My Courses", str.dashboardContinueLearning, Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearning.route) }
+            LargeQuickCard("My Courses", str.dashboardContinueLearning, Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearningCourses.route) }
         }
         Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1841,12 +1841,12 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
         Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
+        Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
         Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.Leaderboard.route),
         Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
-        Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )

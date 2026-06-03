@@ -43,6 +43,14 @@ fun CreateTargetSheet(
     val remaining     = 5 - currentCount - addedTitles.size
     val canAdd        = inputText.trim().isNotEmpty() && remaining > 0
 
+    // Subject dropdown state
+    val predefinedSubjects = listOf(
+        "Polity", "History", "Geography", "Economy", "Bihar GK",
+        "Science & Tech", "General Studies", "Environment", "Maths", "English", "Current Affairs"
+    )
+    var selectedSubject    by remember { mutableStateOf(predefinedSubjects[0]) }
+    var subjectExpanded    by remember { mutableStateOf(false) }
+
     // Estimated time chips
 
     val focusRequester      = remember { FocusRequester() }
@@ -65,9 +73,9 @@ fun CreateTargetSheet(
     fun addCurrentInput() {
         val trimmed = inputText.trim()
         if (trimmed.isNotEmpty() && remaining > 0) {
-            addedTitles.add(trimmed)
+            // Format: "Subject - Sub-topic"
+            addedTitles.add("$selectedSubject - $trimmed")
             inputText = ""
-            // Keep focus so user can type next item immediately
             focusRequester.requestFocus()
         }
     }
@@ -110,7 +118,43 @@ fun CreateTargetSheet(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Input row ─────────────────────────────────────────
+            // ── Subject dropdown ──────────────────────────────────
+            ExposedDropdownMenuBox(
+                expanded = subjectExpanded,
+                onExpandedChange = { subjectExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedSubject,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Subject") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BpscColors.Primary,
+                        focusedLabelColor  = BpscColors.Primary
+                    )
+                )
+                ExposedDropdownMenu(
+                    expanded = subjectExpanded,
+                    onDismissRequest = { subjectExpanded = false }
+                ) {
+                    predefinedSubjects.forEach { subject ->
+                        DropdownMenuItem(
+                            text = { Text(subject) },
+                            onClick = {
+                                selectedSubject = subject
+                                subjectExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Sub-topic input ───────────────────────────────────
             // Using OutlinedTextField so the label floats and user always sees
             // what they're typing, even with keyboard open
             OutlinedTextField(
@@ -119,8 +163,8 @@ fun CreateTargetSheet(
                 modifier      = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
-                label         = { Text(str.targetPlaceholder) },
-                placeholder   = { Text("e.g. Read 30 pages of Polity", color = BpscColors.TextHint) },
+                label         = { Text("Sub-topic (optional detail)") },
+                placeholder   = { Text("e.g. Fundamental Rights, Chapter 3", color = BpscColors.TextHint) },
                 singleLine    = true,
                 shape         = RoundedCornerShape(14.dp),
                 trailingIcon  = {
@@ -226,10 +270,10 @@ fun CreateTargetSheet(
             Button(
                 onClick  = {
                     val trimmed = inputText.trim()
-                    if (trimmed.isNotEmpty() && remaining > 0) addedTitles.add(trimmed)
+                    if (trimmed.isNotEmpty() && remaining > 0) addedTitles.add("$selectedSubject - $trimmed")
                     if (addedTitles.isNotEmpty() && !isLoading) {
                         keyboardController?.hide()
-                        viewModel.createTargets(addedTitles.toList())
+                        viewModel.createTargets(addedTitles.toList(), subject = selectedSubject)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),

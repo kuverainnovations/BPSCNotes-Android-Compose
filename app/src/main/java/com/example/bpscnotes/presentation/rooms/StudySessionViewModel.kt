@@ -200,16 +200,29 @@ class StudySessionViewModel @Inject constructor(
             val intervalMs = _uiState.value.heartbeatIntervalSeconds * 1000L
             Log.d(TAG, "Heartbeat started for session=$sessionId interval=${intervalMs}ms")
 
-            while (isActive) {
+            // FIX: Send one early heartbeat at 4.5 min (just above anti-cheat 4-min minimum).
+            // Without this, ending before the first 5-min heartbeat shows 0m active time.
+            val earlyDelayMs = 270_000L // 4.5 minutes
+            if (earlyDelayMs < intervalMs) {
+                delay(earlyDelayMs)
+                if (_uiState.value.sessionId == sessionId &&
+                    _uiState.value.status != SessionStatus.ENDED) {
+                    sendHeartbeat(sessionId)
+                }
+                // Then wait the remaining time before the regular loop kicks in
+                val remaining = intervalMs - earlyDelayMs
+                if (remaining > 0) delay(remaining)
+            } else {
                 delay(intervalMs)
+            }
 
-                // Check session is still active before sending
+            while (isActive) {
                 if (_uiState.value.sessionId != sessionId) {
                     Log.d(TAG, "Session changed — stopping heartbeat for $sessionId")
                     break
                 }
-
                 sendHeartbeat(sessionId)
+                delay(intervalMs)
             }
         }
     }

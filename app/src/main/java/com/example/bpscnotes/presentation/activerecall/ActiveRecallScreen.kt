@@ -43,8 +43,8 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 // ─────────────────────────────────────────────────────────────
 
 private const val ADS_EVERY_N_CARDS = 5        // show ad break after every 5 cards
-private const val ADS_PER_BREAK     = 2        // show 2 ads per break
-private const val AD_DURATION_SECS  = 120      // 2 minutes per ad (auto-advance)
+private const val ADS_PER_BREAK     = 1        // show 1 ad per break
+private const val AD_DURATION_SECS  = 30       // 30 seconds per ad (auto-advance)
 
 // Test ad unit ID — replace with your real ID before release
 private const val AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
@@ -683,74 +683,106 @@ private fun FlashcardLobbyScreen(
 
                 if (allCards.isEmpty()) {
                     item {
-                        Box(
-                            Modifier.fillParentMaxSize().padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(80.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
-                                    contentAlignment = Alignment.Center
-                                ) { Text("📚", fontSize = 36.sp) }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge,
-                                        color = cs.onSurface, fontWeight = FontWeight.Bold,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                    Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyMedium,
-                                        color = cs.onSurfaceVariant,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                }
+                        Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("📚", fontSize = 48.sp)
+                                Text(str.recallNoCards, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                                Text(str.recallAskAdmin, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                             }
                         }
                     }
                     return@LazyColumn
                 }
 
-                item { Text(str.recallChooseSubject, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
+                item {
+                    // ── Start Session Card ────────────────────────────
+                    val totalCards   = allCards.size
+                    val masteredCount2 = masteredIds.size
+                    val weakCount2   = weakIds.size
+                    val unseenCount  = totalCards - masteredCount2 - weakCount2
+                    val progress2    = if (totalCards > 0) masteredCount2.toFloat() / totalCards else 0f
+                    val animProg by animateFloatAsState(progress2, tween(900), label = "lobby_prog")
 
-                items(subjects, key = { it }) { subject ->
-                    val subjectCards = if (subject == str.filterAll) allCards else allCards.filter { it.subject == subject }
-                    val subMastered  = subjectCards.count { masteredIds.contains(it.id) }
-                    val subWeak      = subjectCards.count { weakIds.contains(it.id) }
-                    val subProgress  = if (subjectCards.isNotEmpty()) subMastered.toFloat() / subjectCards.size else 0f
-                    val subjectColors = mapOf(
-                        str.filterAll to Pair(BpscColors.Primary, BpscColors.PrimaryLight),
-                        "Polity"    to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)),
-                        "History"   to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)),
-                        "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)),
-                        "Economy"   to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)),
-                        "Bihar GK"  to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)),
-                        "Science"   to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)),
-                    )
-                    val (accent, bg) = subjectColors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-                    val emoji = when (subject) { str.filterAll->"📚"; "Polity"->"⚖️"; "History"->"🏛️"; "Geography"->"🗺️"; "Economy"->"💰"; "Bihar GK"->"🏔️"; "Science"->"🔬"; else->"📖" }
+                    Spacer(Modifier.height(8.dp))
 
-                    Card(modifier = Modifier.fillMaxWidth().clickable { onStartSubject(subject) }, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(2.dp)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(bg), contentAlignment = Alignment.Center) { Text(emoji, fontSize = 22.sp) }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(subject, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                                    Text("${subjectCards.size} cards · $subMastered mastered", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                                }
-                                Box(modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 14.dp, vertical = 8.dp)) {
-                                    Text(str.start, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RoundedCornerShape(24.dp),
+                        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(3.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                            // Top row: icon + title
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Box(
+                                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(BpscColors.PrimaryLight),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("📚", fontSize = 28.sp) }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("All Flashcards", style = MaterialTheme.typography.titleLarge,
+                                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                                    Text("$totalCards cards across all subjects",
+                                        style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                 }
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(cs.background)) {
-                                    Box(modifier = Modifier.fillMaxWidth(subProgress).fillMaxHeight().background(accent, RoundedCornerShape(3.dp)))
+
+                            // Stats row
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                    .background(cs.background).padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("✅", fontSize = 18.sp)
+                                    Text("$masteredCount2", style = MaterialTheme.typography.titleMedium,
+                                        color = Color(0xFF2ECC71), fontWeight = FontWeight.ExtraBold)
+                                    Text("Mastered", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("${(subProgress * 100).toInt()}% mastered", style = MaterialTheme.typography.labelSmall, color = accent, fontSize = 10.sp)
-                                    if (subWeak > 0) Text("$subWeak ${str.recallHard}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontSize = 10.sp)
+                                Box(Modifier.width(1.dp).height(40.dp).background(cs.outline))
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("🔄", fontSize = 18.sp)
+                                    Text("$weakCount2", style = MaterialTheme.typography.titleMedium,
+                                        color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold)
+                                    Text("Needs Work", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
+                                Box(Modifier.width(1.dp).height(40.dp).background(cs.outline))
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("📖", fontSize = 18.sp)
+                                    Text("$unseenCount", style = MaterialTheme.typography.titleMedium,
+                                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                                    Text("Unseen", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                }
+                            }
+
+                            // Progress bar
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                                    Text("Overall Mastery", style = MaterialTheme.typography.labelMedium,
+                                        color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                                    Text("${(progress2 * 100).toInt()}%", style = MaterialTheme.typography.labelMedium,
+                                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                                }
+                                Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(cs.background)) {
+                                    Box(Modifier.fillMaxWidth(animProg).fillMaxHeight()
+                                        .background(Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF42A5F5))),
+                                            RoundedCornerShape(4.dp)))
+                                }
+                            }
+
+                            // Start button
+                            Button(
+                                onClick   = { onStartSubject(str.filterAll) },
+                                modifier  = Modifier.fillMaxWidth().height(52.dp),
+                                shape     = RoundedCornerShape(14.dp),
+                                colors    = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                            ) {
+                                Text("▶  Start Session", style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         }

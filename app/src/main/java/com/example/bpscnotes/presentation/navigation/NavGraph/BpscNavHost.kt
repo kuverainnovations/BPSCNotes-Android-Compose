@@ -400,7 +400,8 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 LeaderboardScreen(navController = navController, viewModel = tiersVM)
             }
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
-            composable(Screen.MyLearning.route)    { MyLearningScreen(navController, fromScreen = "nav-host") }
+            composable(Screen.MyLearning.route)         { MyLearningScreen(navController, fromScreen = "nav-host") }
+            composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, startTab = 1, fromScreen = "nav-host") }
 
             // ── Placeholders ─────────────────────────────────────────
             composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }
@@ -422,7 +423,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                     navArgument("durationMins") { type = NavType.IntType }
                 )
             ) {
-             LiveClassViewerScreen(
+                LiveClassViewerScreen(
                     navController = navController,
                     meetingUrl    = java.net.URLDecoder.decode(it.arguments?.getString("url") ?: "", "UTF-8"),
                     classTitle    = java.net.URLDecoder.decode(it.arguments?.getString("title") ?: "", "UTF-8"),

@@ -262,14 +262,14 @@ class DashboardViewModel @Inject constructor(
             )
         )
     }
-    fun createTargets(titles: List<String>, estimatedMinutes: Int = 30) {
+    fun createTargets(titles: List<String>, estimatedMinutes: Int = 30, subject: String = "General") {
         if (titles.isEmpty()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingTarget = true, error = null) }
             try {
                 val response = targetsApi.createTargets(
-                    CreateTargetRequest(titles = titles, estimatedMinutes = estimatedMinutes)
+                    CreateTargetRequest(titles = titles, estimatedMinutes = estimatedMinutes, subject = subject)
                 )
 
                 if (!response.success) {

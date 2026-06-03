@@ -411,7 +411,7 @@ fun MyLearningScreen(
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("🛍️  " + str.marketTitle, "📚  " + str.coursesTitle).forEachIndexed { index, tab ->
+                    listOf("🛍️  " + str.marketTitle, "📚  My Courses").forEachIndexed { index, tab ->
                         val sel = selectedTab == index
                         Box(
                             modifier = Modifier
