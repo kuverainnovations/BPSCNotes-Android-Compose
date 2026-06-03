@@ -180,8 +180,110 @@ fun AppQuitDialog(
 }
 
 // ─────────────────────────────────────────────────────────────
-// AppErrorState — uniform error with retry button
+// AppErrorDialog — uniform error dialog with optional retry + dismiss
+// Use for transient errors (submit failed, questions failed to load)
 // ─────────────────────────────────────────────────────────────
+@Composable
+fun AppErrorDialog(
+    title:        String  = "",
+    message:      String,
+    retryLabel:   String  = "",
+    dismissLabel: String  = "",
+    onRetry:      (() -> Unit)? = null,
+    onDismiss:    () -> Unit
+) {
+    val cs  = MaterialTheme.colorScheme
+    val str = LocalStrings.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape            = RoundedCornerShape(20.dp),
+        containerColor   = Color.White,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("⚠️", fontSize = 26.sp)
+                Text(
+                    title.ifBlank { str.uiSomethingWrong },
+                    fontWeight = FontWeight.ExtraBold,
+                    color      = cs.onSurface
+                )
+            }
+        },
+        text = {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            if (onRetry != null) {
+                Button(
+                    onClick = onRetry,
+                    colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                    shape   = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(retryLabel.ifBlank { str.uiTryAgain }, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(10.dp)) {
+                Text(dismissLabel.ifBlank { str.back }, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    )
+}
+
+// ─────────────────────────────────────────────────────────────
+// AppInfoScreen — full-screen info state (scheduled quiz, no access, etc.)
+// Use for non-error states that block navigation (not really a crash)
+// ─────────────────────────────────────────────────────────────
+@Composable
+fun AppInfoScreen(
+    emoji:        String,
+    title:        String,
+    message:      String,
+    actionLabel:  String  = "",
+    onAction:     (() -> Unit)? = null,
+    modifier:     Modifier = Modifier.fillMaxSize()
+) {
+    val cs  = MaterialTheme.colorScheme
+    val str = LocalStrings.current
+    Box(modifier = modifier.background(cs.background), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(emoji, fontSize = 52.sp)
+            Text(
+                title,
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color      = BpscColors.TextPrimary,
+                textAlign  = TextAlign.Center
+            )
+            Text(
+                message,
+                style     = MaterialTheme.typography.bodyMedium,
+                color     = cs.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            if (actionLabel.isNotBlank() && onAction != null) {
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = onAction,
+                    colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                    shape   = RoundedCornerShape(12.dp)
+                ) {
+                    Text(actionLabel, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
 @Composable
 fun AppErrorState(
     message:  String,

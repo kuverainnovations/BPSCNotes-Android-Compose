@@ -75,26 +75,19 @@ fun DailyQuizScreen(
         // ── Start error ───────────────────────────────────────
         state.startError != null -> {
             val isScheduled = state.startError == "not_yet_available"
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
-                    Text(if (isScheduled) "🗓️" else "⚠️", fontSize = 40.sp)
-                    Text(
-                        if (isScheduled) "Quiz Not Available Yet" else str.error,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        if (isScheduled) "This quiz is scheduled for a future date. Please check back later."
-                        else (state.startError ?: "Failed to start quiz"),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = cs.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                        Text(str.back)
-                    }
-                }
+            if (isScheduled) {
+                com.example.bpscnotes.core.ui.AppInfoScreen(
+                    emoji       = "🗓️",
+                    title       = "Quiz Not Available Yet",
+                    message     = "This quiz is scheduled for a future date. Please check back later.",
+                    actionLabel = str.back,
+                    onAction    = { viewModel.clearErrors() }
+                )
+            } else {
+                com.example.bpscnotes.core.ui.AppErrorState(
+                    message = state.startError ?: "Failed to start quiz",
+                    onRetry = { viewModel.clearErrors() }
+                )
             }
         }
 
@@ -122,15 +115,10 @@ fun DailyQuizScreen(
 
         // ── Detail error ──────────────────────────────────────
         state.detailError != null -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("⚠️", fontSize = 40.sp)
-                    Text(state.detailError ?: "An error occurred", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                    Button(onClick = { viewModel.clearErrors() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                        Text(str.back)
-                    }
-                }
-            }
+            com.example.bpscnotes.core.ui.AppErrorState(
+                message = state.detailError ?: "An error occurred",
+                onRetry = { viewModel.clearErrors() }
+            )
         }
 
         // ── Lobby ─────────────────────────────────────────────
@@ -248,13 +236,10 @@ private fun QuizLobbyScreen(
                     }
                 }
                 state.listError != null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("⚠️", fontSize = 40.sp)
-                            Text(state.listError ?: "Failed to load quizzes", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                            Button(onClick = onRetryList, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.tryAgain) }
-                        }
-                    }
+                    com.example.bpscnotes.core.ui.AppErrorState(
+                        message = state.listError ?: "Failed to load quizzes",
+                        onRetry = onRetryList
+                    )
                 }
                 state.dailyQuizzes.isEmpty() && state.mockTestQuizzes.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -377,8 +362,8 @@ internal fun QuizSessionScreen(
     val totalDurationSecs   = session.durationMins * 60          // total quiz time from admin
     var timeLeft           by remember { mutableIntStateOf(totalDurationSecs) }  // shared countdown
     var totalTimeSecs      by remember { mutableIntStateOf(0) }
-    var showHint           by remember(currentIndex) { mutableStateOf(false) }
     var isQuizComplete     by remember { mutableStateOf(false) }
+    var showHint           by remember(currentIndex) { mutableStateOf(false) }
     var showReviewAll      by remember { mutableStateOf(false) }
 
     val current = questions.getOrNull(currentIndex)
@@ -429,19 +414,13 @@ internal fun QuizSessionScreen(
 
     // ── Submit error ───────────────────────────────────────────
     if (state.submitError != null) {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
-                Text("⚠️", fontSize = 40.sp)
-                Text("Submit failed: ${state.submitError}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onExit) { Text("Quit") }
-                    Button(
-                        onClick = { viewModel.submitQuiz(totalTimeSecs) },
-                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                    ) { Text("Retry") }
-                }
-            }
-        }
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = "Submit failed: ${state.submitError}",
+            retryLabel   = str.tryAgain,
+            dismissLabel = str.back,
+            onRetry      = { viewModel.submitQuiz(totalTimeSecs) },
+            onDismiss    = onExit
+        )
         return
     }
 

@@ -100,32 +100,19 @@ fun QuizPlayScreen(
         }
         state.startError != null -> {
             val isScheduled = state.startError == "not_yet_available"
-            Box(Modifier
-                .fillMaxSize()
-                .background(cs.background), Alignment.Center) {
-                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(if (isScheduled) "🗓️" else "⚠️", fontSize = 48.sp)
-                    Text(
-                        if (isScheduled) "Quiz Not Available Yet" else str.error,
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        if (isScheduled) "This quiz is scheduled for a future date. Please check back later."
-                        else state.startError!!,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = cs.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    OutlinedButton(onClick = { viewModel.exitSession(); navController.popBackStackSafe() }, modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(str.goBack) }
-                    if (!isScheduled) {
-                        Button(onClick = { viewModel.startQuiz(quizId) }, modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.tryAgain) }
-                    }
-                }
+            if (isScheduled) {
+                com.example.bpscnotes.core.ui.AppInfoScreen(
+                    emoji       = "🗓️",
+                    title       = "Quiz Not Available Yet",
+                    message     = "This quiz is scheduled for a future date. Please check back later.",
+                    actionLabel = str.goBack,
+                    onAction    = { viewModel.exitSession(); navController.popBackStackSafe() }
+                )
+            } else {
+                com.example.bpscnotes.core.ui.AppErrorState(
+                    message = state.startError ?: "Failed to start quiz",
+                    onRetry = { viewModel.startQuiz(quizId) }
+                )
             }
         }
         else -> Box(Modifier
@@ -376,7 +363,6 @@ private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("💡", fontSize = 14.sp)
-                    Log.e("TAG", "QuestionCard: ${question.explanation}")
                     Text(
                         question.explanation?.takeIf { it.isNotBlank() }
                             ?: if (question.isImageOptions)
@@ -682,6 +668,16 @@ private fun QuizBottomBar(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    // Submit error shown as dialog, not inline text
+    submitError?.let {
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = it,
+            retryLabel   = str.tryAgain,
+            dismissLabel = str.back,
+            onRetry      = onSubmit,
+            onDismiss    = {}
+        )
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -689,10 +685,6 @@ private fun QuizBottomBar(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        submitError?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(
                 onClick  = onHint,

@@ -245,8 +245,9 @@ fun DailyTargetsScreen(
                     )
                 }*/
                 ListTabContent(
-                    items = allTargets,
-                    onToggleComplete = { id -> viewModel.toggleTargetComplete(id) }
+                    items            = allTargets,
+                    onToggleComplete = { id -> viewModel.toggleTargetComplete(id) },
+                    onDelete         = { id -> viewModel.deleteTarget(id) }
                 )
             }
         }
@@ -268,7 +269,8 @@ fun DailyTargetsScreen(
 @Composable
 private fun ListTabContent(
     items: List<TargetItem>,
-    onToggleComplete: (String) -> Unit
+    onToggleComplete: (String) -> Unit,
+    onDelete: (String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -280,13 +282,13 @@ private fun ListTabContent(
             if (carried.isNotEmpty()) {
                 item { SectionLabel("📅", "Carried Forward", "From yesterday") }
                 items(carried, key = { it.target.id }) { item ->
-                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) })
+                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) })
                 }
                 item { Spacer(Modifier.height(4.dp)) }
             }
             item { SectionLabel("🎯", "Today's Targets", "${today.size} topics assigned") }
             items(today, key = { it.target.id }) { item ->
-                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) })
+                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) })
             }
         }
     }
@@ -306,15 +308,20 @@ private fun SectionLabel(icon: String, title: String, subtitle: String) {
 }
 
 @Composable
-private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit) {
+private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onDelete: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
         Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(if (isCompleted) BpscColors.Success else Color.Transparent).border(2.dp, if (isCompleted) BpscColors.Success else BpscColors.TextHint, CircleShape)
-                .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                    onToggleComplete()
-                }, contentAlignment = Alignment.Center) {
+            // Completed = locked green check (cannot uncheck)
+            // Incomplete = tappable circle
+            Box(
+                modifier = Modifier.size(26.dp).clip(CircleShape)
+                    .background(if (isCompleted) BpscColors.Success else Color.Transparent)
+                    .border(2.dp, if (isCompleted) BpscColors.Success else BpscColors.TextHint, CircleShape)
+                    .then(if (!isCompleted) Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onToggleComplete() } else Modifier),
+                contentAlignment = Alignment.Center
+            ) {
                 if (isCompleted) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -322,14 +329,19 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     SubjectTag(item.target.subject)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
-                        Text("${item.target.estimatedMinutes}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
-                    }
                     if (item.target.isCarriedForward) {
                         Text(str.targetCarried, style = MaterialTheme.typography.labelSmall, color = Color(0xFFE67E22), modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF0EA)).padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.sp)
                     }
                 }
+            }
+            // Delete button — always visible, for both complete and incomplete
+            Box(
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFFEE8E8))
+                    .clickable { onDelete() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Delete, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(15.dp))
             }
         }
     }

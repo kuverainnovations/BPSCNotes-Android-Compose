@@ -83,6 +83,22 @@ import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
+// Inline study time tracker — starts timing when screen opens, logs on leave
+@androidx.compose.runtime.Composable
+private fun TrackStudyTime(
+    activityType: String,
+    onLog: (activityType: String, durationSecs: Int) -> Unit
+) {
+    val startTime = androidx.compose.runtime.remember { System.currentTimeMillis() }
+    androidx.compose.runtime.DisposableEffect(activityType) {
+        onDispose {
+            val elapsed = ((System.currentTimeMillis() - startTime) / 1000)
+                .toInt().coerceIn(0, 3600)
+            if (elapsed >= 10) onLog(activityType, elapsed)
+        }
+    }
+}
+
 // ── NOTE: mockCAArticles and local `categories` removed.
 // ── Articles come from CurrentAffairsViewModel.
 // ── Categories from CAArticle.kt → CA_CATEGORIES constant.
@@ -99,6 +115,11 @@ fun CurrentAffairsScreen(
     val cs = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("current_affairs") }
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
+
+    // ── Silent background time tracker ────────────────────────
+    TrackStudyTime(
+        activityType = "reading"
+    ) { type, secs -> viewModel.logStudyTime(type, secs) }
 
     var selectedTab      by remember { mutableIntStateOf(0) }
     var searchQuery      by remember { mutableStateOf("") }
@@ -249,16 +270,10 @@ fun CurrentAffairsScreen(
 
                 // Error
                 state.error != null && articles.isNullOrEmpty() -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
-                            Text("⚠️", fontSize = 40.sp)
-                            Text(str.error, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                            Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                            Button(onClick = { viewModel.refresh() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                                Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(str.retry)
-                            }
-                        }
-                    }
+                    com.example.bpscnotes.core.ui.AppErrorState(
+                        message = state.error!!,
+                        onRetry = { viewModel.refresh() }
+                    )
                 }
 
                 // Empty filter result

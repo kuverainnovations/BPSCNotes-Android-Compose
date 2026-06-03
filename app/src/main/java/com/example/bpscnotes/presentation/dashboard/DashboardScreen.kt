@@ -49,6 +49,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.DashboardBannerStrip
 import com.example.bpscnotes.core.language.LanguageManager
@@ -1339,48 +1340,147 @@ private fun RecommendedSection(
 private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val subjectColors = mapOf("Bihar GK" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)))
-    val (accent, bg) = subjectColors[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+    val subjectColors = mapOf(
+        "Bihar GK"    to Triple(Color(0xFF2ECC71), Color(0xFFE8FDF4), "📗"),
+        "Polity"      to Triple(Color(0xFF9B59B6), Color(0xFFF3E8FD), "⚖️"),
+        "Economy"     to Triple(Color(0xFFE67E22), Color(0xFFFFF0EA), "📈"),
+        "Geography"   to Triple(Color(0xFF1ABC9C), Color(0xFFE8FDF8), "🗺️"),
+        "History"     to Triple(Color(0xFFE74C3C), Color(0xFFFEE8E8), "📜"),
+        "Science"     to Triple(Color(0xFF3498DB), Color(0xFFE8F4FD), "🔬"),
+        "Mathematics" to Triple(Color(0xFFF39C12), Color(0xFFFFF8E1), "➗"),
+    )
+    val (accent, bg, emoji) = subjectColors[course.subject] ?: Triple(BpscColors.Primary, BpscColors.PrimaryLight, "📚")
     val rawCompleted = course.enrollment?.completed_lessons?.toFloat() ?: 0f
     val progress = if (course.totalLessons > 0) (rawCompleted / course.totalLessons).coerceIn(0f, 1f) else 0f
-    Card(modifier = Modifier
-        .width(168.dp)
-        .clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
+    val hasThumbnail = !course.thumbnail_url.isNullOrBlank()
+
+    Card(
+        modifier  = Modifier.width(168.dp).clickable(onClick = onClick),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(3.dp)
+    ) {
         Column {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .background(bg), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.MenuBook, null, tint = accent, modifier = Modifier.size(38.dp))
-                if (course.isPaid) Box(modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(BpscColors.CoinGold)
-                    .padding(horizontal = 7.dp, vertical = 3.dp)) { Text("PRO", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.ExtraBold) }
-            }
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(course.title, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
-                Spacer(Modifier.height(4.dp))
-                Text(course.instructor ?: "BPSCNotes", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(8.dp))
-                // Uniform height: always reserve progress bar space (Fix #11)
-                LinearProgressIndicator(
-                    progress = { if (progress > 0f) progress else 0f },
-                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
-                    color = accent, trackColor = if (progress > 0f) bg else Color.Transparent
-                )
-                Spacer(Modifier.height(4.dp))
-                if (progress > 0f) {
-                    Text("${(progress * 100).toInt()}% complete", style = MaterialTheme.typography.labelSmall, color = accent)
+            // ── Thumbnail / Fallback ──────────────────────────
+            Box(
+                modifier = Modifier.fillMaxWidth().height(78.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (hasThumbnail) {
+                    AsyncImage(
+                        model        = course.thumbnail_url,
+                        contentDescription = course.title,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier     = Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Black.copy(0.15f), Color.Transparent),
+                                    startY = 0f, endY = 60f
+                                ),
+                                RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
+                            )
+                    )
                 } else {
-                    Text(if (course.isPaid) "₹${course.price}" else "Free", style = MaterialTheme.typography.titleMedium, color = if (course.isPaid) BpscColors.Accent else BpscColors.Success, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(
+                                Brush.linearGradient(listOf(accent.copy(0.15f), bg)),
+                                RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(emoji, fontSize = 28.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                course.subject.ifBlank { "Course" },
+                                style      = MaterialTheme.typography.labelSmall,
+                                color      = accent,
+                                fontWeight = FontWeight.Bold,
+                                fontSize   = 9.sp
+                            )
+                        }
+                    }
+                }
+                if (course.isPaid) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(BpscColors.CoinGold)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text("PRO", style = MaterialTheme.typography.labelSmall,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
+
+            // ── Fixed-height details — all cards same size ────
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
+                    .height(76.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Title always exactly 2 lines
+                Text(
+                    course.title,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    color      = cs.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    minLines   = 2,
+                    maxLines   = 2,
+                    overflow   = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
+                // Instructor
+                Text(
+                    course.instructor ?: "BPSCNotes",
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = cs.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                // Progress / price — no dot artifact at 0%
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (progress > 0f) {
+                        LinearProgressIndicator(
+                            progress   = { progress },
+                            modifier   = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                            color      = accent,
+                            trackColor = bg
+                        )
+                        Text(
+                            "${(progress * 100).toInt()}% complete",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accent
+                        )
+                    } else {
+                        // Plain Box — zero progress, no dot/nub
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(bg)
+                        )
+                        Text(
+                            if (course.isPaid) "₹${course.price}" else "Free",
+                            style      = MaterialTheme.typography.titleSmall,
+                            color      = if (course.isPaid) BpscColors.Accent else BpscColors.Success,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
     }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // SCHEDULE  (placeholder until Live Classes API — intentional, noted clearly)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1430,13 +1530,16 @@ private fun MyScheduleSection(
             val onCardClick: () -> Unit = {
                 when (item.status) {
                     "live" -> {
-                        // Live → open meeting link directly
                         val link = item.meetingLink
                         if (!link.isNullOrBlank()) {
-                            val uri = android.net.Uri.parse(
-                                if (link.startsWith("http")) link else "https://$link"
+                            navController.navigate(
+                                Screen.LiveClassViewer.createRoute(
+                                    url          = link,
+                                    title        = item.title,
+                                    instructor   = item.instructor,
+                                    durationMins = item.durationMins
+                                )
                             )
-                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
                         } else {
                             viewModel.setScheduleToast(str.dashboardNoMeetingLink)
                         }

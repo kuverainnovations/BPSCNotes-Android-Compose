@@ -99,7 +99,7 @@ class MockTestsViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        allTests             = tests.filter { it.type == "mock" },
+                        allTests             = tests.filter { it.type == "mock" || it.type == "topic" || it.type == "previous_year" },
                         userAccuracy         = stats?.accuracy ?: 0.0,
                         userRank             = stats?.rank,
                         userQuizzesAttempted = stats?.quizzesAttempted ?: 0,
@@ -157,8 +157,9 @@ class MockTestsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, submitError = null) }
             try {
-                val answerList = answers.map { (qId, answerIdx) ->
-                    val letter = listOf("a", "b", "c", "d").getOrElse(answerIdx) { "a" }
+                // Only send answered questions — skipped ones must NOT default to "a"
+                val answerList = answers.mapNotNull { (qId, answerIdx) ->
+                    val letter = listOf("a", "b", "c", "d").getOrNull(answerIdx) ?: return@mapNotNull null
                     QuizAnswerRequest(questionId = qId, answer = letter)
                 }
                 val result = quizzesApi.submitQuiz(

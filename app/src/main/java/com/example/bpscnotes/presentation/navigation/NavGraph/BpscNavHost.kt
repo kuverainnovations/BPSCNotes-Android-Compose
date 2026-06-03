@@ -58,6 +58,7 @@ import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.LeaderboardScreen
 import com.example.bpscnotes.presentation.course.LessonViewerScreen
+import com.example.bpscnotes.presentation.liveclasses.LiveClassViewerScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
 import com.example.bpscnotes.presentation.rooms.AchievementsScreen
 import com.example.bpscnotes.presentation.rooms.ChallengesScreen
@@ -410,6 +411,25 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
             composable(Screen.Settings.route)      { SettingsScreen(navController) }
             composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
+
+            // Live Class Viewer — in-app WebView
+            composable(
+                Screen.LiveClassViewer.route,
+                arguments = listOf(
+                    navArgument("url")          { type = NavType.StringType },
+                    navArgument("title")        { type = NavType.StringType },
+                    navArgument("instructor")   { type = NavType.StringType },
+                    navArgument("durationMins") { type = NavType.IntType }
+                )
+            ) {
+             LiveClassViewerScreen(
+                    navController = navController,
+                    meetingUrl    = java.net.URLDecoder.decode(it.arguments?.getString("url") ?: "", "UTF-8"),
+                    classTitle    = java.net.URLDecoder.decode(it.arguments?.getString("title") ?: "", "UTF-8"),
+                    instructor    = java.net.URLDecoder.decode(it.arguments?.getString("instructor") ?: "", "UTF-8"),
+                    durationMins  = it.arguments?.getInt("durationMins") ?: 60
+                )
+            }
 
             composable(
                 Screen.CourseDetail.route,

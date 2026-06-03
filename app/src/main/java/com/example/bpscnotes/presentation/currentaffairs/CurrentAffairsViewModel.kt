@@ -129,17 +129,49 @@ class CurrentAffairsViewModel @Inject constructor(
     private val _mcqLoading = MutableStateFlow(false)
     val mcqLoading: StateFlow<Boolean> = _mcqLoading.asStateFlow()
 
+    private val _mcqError = MutableStateFlow<String?>(null)
+    val mcqError: StateFlow<String?> = _mcqError.asStateFlow()
+
+    private val _mcqAnswers = MutableStateFlow<Map<String, CaMcqAnswerDto>>(emptyMap())
+    val mcqAnswers: StateFlow<Map<String, CaMcqAnswerDto>> = _mcqAnswers.asStateFlow()
+
     fun loadMcqs(affairId: String) {
         viewModelScope.launch {
             _mcqLoading.value = true
-            _mcqs.value = emptyList()
+            _mcqError.value   = null
+            _mcqs.value       = emptyList()
+            _mcqAnswers.value = emptyMap()
             try {
                 val data = api.getMcqs(affairId).data
                 _mcqs.value = data?.mcqs ?: emptyList()
             } catch (e: Exception) {
+                _mcqError.value = e.message ?: "Failed to load questions"
                 _mcqs.value = emptyList()
             }
             _mcqLoading.value = false
+        }
+    }
+
+    /** After user taps — resolve correct answer from already-loaded mcqs */
+    fun fetchMcqAnswer(mcqId: String) {
+        val mcq = _mcqs.value.find { it.id == mcqId } ?: return
+        val answer = CaMcqAnswerDto(correct = mcq.correct, explanation = mcq.explanation)
+        _mcqAnswers.update { it + (mcqId to answer) }
+    }
+
+    fun clearMcqError() { _mcqError.value = null }
+
+    /** Called by TrackStudyTime — logs time silently in background */
+    fun logStudyTime(activityType: String, durationSecs: Int) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                api.logActivity(
+                    com.example.bpscnotes.data.remote.api.LogActivityRequest(
+                        activityType = activityType,
+                        durationSecs = durationSecs
+                    )
+                )
+            } catch (_: Exception) { /* silent — tracking must never crash the app */ }
         }
     }
 }

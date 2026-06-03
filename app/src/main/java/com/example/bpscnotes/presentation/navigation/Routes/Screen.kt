@@ -114,6 +114,12 @@ sealed class Screen(val route: String) {
     object NotificationSettings : Screen("notification_settings")
     object Settings             : Screen("settings")
     object EditProfile          : Screen("edit_profile")
+
+    // Live Class Viewer — in-app WebView for live meetings
+    object LiveClassViewer : Screen("live_class/{url}/{title}/{instructor}/{durationMins}") {
+        fun createRoute(url: String, title: String, instructor: String, durationMins: Int) =
+            "live_class/${url.encodeUrl()}/${title.encodeUrl()}/${instructor.encodeUrl()}/$durationMins"
+    }
 }
 
 fun String.encodeUrl(): String = java.net.URLEncoder.encode(this, "UTF-8")

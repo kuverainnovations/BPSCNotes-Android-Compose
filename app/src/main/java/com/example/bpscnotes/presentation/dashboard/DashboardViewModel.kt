@@ -390,10 +390,15 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                targetsApi.deleteTarget(targetId)
+                val response = targetsApi.deleteTarget(targetId)
+                // If completed target deleted, backend debits coins — tell user
+                if (response.data?.coinsDebited == true) {
+                    _uiState.update { it.copy(targetSuccess = "🗑️ Target deleted — coins reversed") }
+                }
+                // Reload so coins balance in header reflects the debit
+                loadDashboard()
             } catch (e: Exception) {
                 Log.e("DASHBOARD", "deleteTarget failed: ${e.message}", e)
-                // Reload to restore correct state
                 val freshData = safeGet("targets-restore") { targetsApi.getDailyTargets().data }
                 _uiState.update { state ->
                     state.copy(

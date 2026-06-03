@@ -31,25 +31,29 @@ data class CoinWalletUiState(
     val transactions: List<CoinTransactionDto>  = emptyList(),
     val isLoading: Boolean                      = true,
     val isCheckingIn: Boolean                   = false,
-    val claimingTaskId: String?                 = null,  // which task is being claimed
+    val claimingTaskId: String?                 = null,
     val isLoadingTransactions: Boolean          = false,
     val transactionPage: Int                    = 1,
     val hasMoreTransactions: Boolean            = true,
     val error: String?                          = null,
     val successMessage: String?                 = null,
-    val referralCode: String                    = ""
+    val referralCode: String                    = "",
+    val referralStats: com.example.bpscnotes.data.remote.api.ReferralStatsDto? = null,
+    val isLoadingReferrals: Boolean             = false
 )
 
 @HiltViewModel
 class CoinWalletViewModel @Inject constructor(
     private val coinsApi: CoinsApiService,
     private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService,
+    private val statsApi: com.example.bpscnotes.data.remote.api.UserStatsApiService,
     private val bus: RefreshEventBus) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoinWalletUiState())
     val uiState: StateFlow<CoinWalletUiState> = _uiState.asStateFlow()
 
     init { load()
+        loadReferrals()
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
             bus.events.collect { event ->
@@ -237,6 +241,24 @@ class CoinWalletViewModel @Inject constructor(
     fun clearMessage() { _uiState.update { it.copy(successMessage = null, error = null) } }
 
     /** Returns the current user's referral code for sharing */
-    fun getReferralCode(): String = _uiState.value.referralCode.ifBlank { "BPSCNOTES" }
+    fun getReferralCode(): String = _uiState.value.referralCode.ifBlank {
+        _uiState.value.referralStats?.referralCode?.ifBlank { "BPSCNOTES" } ?: "BPSCNOTES"
+    }
+
+    fun loadReferrals() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingReferrals = true) }
+            try {
+                val stats = statsApi.getReferrals().data
+                _uiState.update { it.copy(
+                    referralStats       = stats,
+                    referralCode        = stats?.referralCode ?: it.referralCode,
+                    isLoadingReferrals  = false
+                ) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingReferrals = false) }
+            }
+        }
+    }
     fun retry() = load()
 }

@@ -73,68 +73,8 @@ data class LeaderboardEntry(
     val isCurrentUser: Boolean = false,
 )
 
-val mockTests = listOf(
-    MockTest("mt1", "BPSC 69th Full Mock Test", "100 Questions · 2 Hours · All Subjects",
-        MockTestType.Full, 100, 120, null, isPaid = false, totalAttempts = 12450, averageScore = 62f, isFeatured = true),
-    MockTest("mt2", "BPSC 68th Full Mock Test", "100 Questions · 2 Hours · All Subjects",
-        MockTestType.Full, 100, 120, null, isPaid = true, totalAttempts = 8900, averageScore = 58f),
-    MockTest("mt3", "Polity Mini Test", "30 Questions · 45 Minutes",
-        MockTestType.SubjectWise, 30, 45, "Polity", isPaid = false, totalAttempts = 5200, averageScore = 68f),
-    MockTest("mt4", "History Mini Test", "25 Questions · 35 Minutes",
-        MockTestType.SubjectWise, 25, 35, "History", isPaid = false, totalAttempts = 4100, averageScore = 60f),
-    MockTest("mt5", "Economy Mini Test", "20 Questions · 30 Minutes",
-        MockTestType.SubjectWise, 20, 30, "Economy", isPaid = true, totalAttempts = 3200, averageScore = 55f),
-    MockTest("mt6", "Bihar GK Mini Test", "30 Questions · 40 Minutes",
-        MockTestType.SubjectWise, 30, 40, "Bihar GK", isPaid = false, totalAttempts = 6800, averageScore = 72f),
-    MockTest("mt7", "BPSC 67th Previous Year", "150 Questions · 2 Hours",
-        MockTestType.PreviousYear, 150, 120, null, year = 2022, isPaid = false, totalAttempts = 15600, averageScore = 65f, isFeatured = true),
-    MockTest("mt8", "BPSC 66th Previous Year", "150 Questions · 2 Hours",
-        MockTestType.PreviousYear, 150, 120, null, year = 2020, isPaid = true, totalAttempts = 11200, averageScore = 61f),
-)
 
-val sampleQuestions = listOf(
-    MockQuestion("mq1", "Which Article of the Indian Constitution abolishes untouchability?",
-        listOf("Article 14", "Article 17", "Article 21", "Article 25"), 1,
-        "Article 17 abolishes untouchability in any form.", "Polity", "Easy"),
-    MockQuestion("mq2", "The term 'Secular' was added to the Preamble by which Amendment?",
-        listOf("42nd Amendment", "44th Amendment", "52nd Amendment", "86th Amendment"), 0,
-        "The 42nd Constitutional Amendment Act 1976 added 'Socialist', 'Secular' and 'Integrity' to the Preamble.", "Polity", "Medium"),
-    MockQuestion("mq3", "Repo Rate is set by which institution?",
-        listOf("SEBI", "NABARD", "RBI", "Finance Ministry"), 2,
-        "The Reserve Bank of India (RBI) sets the Repo Rate through its Monetary Policy Committee.", "Economy", "Easy"),
-    MockQuestion("mq4", "Which river is known as the 'Sorrow of Bihar'?",
-        listOf("Ganga", "Kosi", "Gandak", "Son"), 1,
-        "The Kosi river is called the 'Sorrow of Bihar' due to its frequent flooding.", "Bihar GK", "Easy"),
-    MockQuestion("mq5", "The Dandi March was led by Gandhi in which year?",
-        listOf("1919", "1925", "1930", "1942"), 2,
-        "The Dandi March or Salt March was led from March 12 to April 6, 1930.", "History", "Medium"),
-    MockQuestion("mq6", "Which Schedule deals with Anti-Defection Law?",
-        listOf("8th Schedule", "9th Schedule", "10th Schedule", "12th Schedule"), 2,
-        "The Tenth Schedule added by 52nd Amendment 1985 deals with Anti-Defection.", "Polity", "Hard"),
-    MockQuestion("mq7", "SLR is maintained by banks with whom?",
-        listOf("RBI", "Themselves", "SEBI", "Finance Ministry"), 1,
-        "SLR (Statutory Liquidity Ratio) is maintained by banks with themselves as liquid assets.", "Economy", "Hard"),
-    MockQuestion("mq8", "Which dynasty built the Nalanda University?",
-        listOf("Maurya", "Gupta", "Pala", "Chola"), 2,
-        "Nalanda University was established during the Gupta period but greatly patronised by the Pala dynasty.", "History", "Medium"),
-    MockQuestion("mq9", "Bihar was separated from Bengal Presidency in which year?",
-        listOf("1905", "1912", "1920", "1935"), 1,
-        "Bihar was separated from Bengal Presidency and made a separate province in 1912.", "Bihar GK", "Medium"),
-    MockQuestion("mq10", "What is the concept of Judicial Review borrowed from?",
-        listOf("UK", "USA", "Ireland", "Canada"), 1,
-        "India borrowed the concept of Judicial Review from the USA (Marbury vs Madison, 1803).", "Polity", "Medium"),
-)
 
-val mockLeaderboard = listOf(
-    LeaderboardEntry(1, "Priya Singh",    95.33f, "1h 45m"),
-    LeaderboardEntry(2, "Amit Kumar",    92.67f, "1h 52m"),
-    LeaderboardEntry(3, "Rahul Kumar",   89.33f, "1h 58m", isCurrentUser = true),
-    LeaderboardEntry(4, "Sneha Verma",   87.0f,  "2h 00m"),
-    LeaderboardEntry(5, "Ravi Shankar",  85.33f, "1h 49m"),
-    LeaderboardEntry(6, "Pooja Kumari",  82.0f,  "1h 55m"),
-    LeaderboardEntry(7, "Ajay Yadav",    79.33f, "2h 00m"),
-    LeaderboardEntry(8, "Divya Pandey",  77.0f,  "1h 42m"),
-)
 
 enum class MockTestState { Lobby, Instructions, Active, Analysis, Leaderboard }
 
@@ -222,12 +162,10 @@ fun MockTestsScreen(
     }
 
     if (state.error != null && allTests.isEmpty()) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Error: ${state.error}")
-            Button(onClick = { viewModel.retry() }) {
-                Text(str.retry)
-            }
-        }
+        com.example.bpscnotes.core.ui.AppErrorState(
+            message = state.error ?: "Failed to load tests",
+            onRetry = { viewModel.retry() }
+        )
         return
     }
 
@@ -258,17 +196,23 @@ fun MockTestsScreen(
         }
     }
 
-    // ── Questions error dialog ────────────────────────────────
+    // ── Questions error ───────────────────────────────────────
     if (state.questionsError != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.clearQuestions(); screenState = MockTestState.Lobby },
-            title = { Text(str.error) },
-            text  = { Text(state.questionsError!!) },
-            confirmButton = {
-                Button(onClick = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }) {
-                    Text(str.ok)
-                }
-            }
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = state.questionsError!!,
+            dismissLabel = str.ok,
+            onDismiss    = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
+        )
+    }
+
+    // ── Submit error ──────────────────────────────────────────
+    if (state.submitError != null) {
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = "${state.submitError}\n\nYour answers were recorded locally. Please try again.",
+            retryLabel   = str.tryAgain,
+            dismissLabel = str.goBack,
+            onRetry      = { selectedTest?.let { t -> viewModel.submitTest(t.id, userAnswers, 0) } },
+            onDismiss    = { viewModel.clearQuestions(); screenState = MockTestState.Lobby }
         )
     }
 
@@ -314,30 +258,32 @@ fun MockTestsScreen(
                 }
                 questions.isNotEmpty() -> {
                     val testStartTime = remember { System.currentTimeMillis() }
-                    ActiveTestScreen(
-                        test          = test,
-                        questions     = questions,
-                        userAnswers   = userAnswers,
-                        bookmarked    = bookmarked,
-                        reviewMarked  = reviewMarked,
-                        onSubmit      = { score ->
-                            finalScore = score
-                            val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
-                            viewModel.submitTest(test.id, userAnswers, elapsed)
-                            // Show ad after completing test, then go to Analysis
-                            if (adManager != null && activity != null)
-                                adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Analysis }
-                            else
-                                screenState = MockTestState.Analysis
-                        },
-                        onExit = {
-                            viewModel.clearQuestions()
-                            if (adManager != null && activity != null)
-                                adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
-                            else
-                                screenState = MockTestState.Lobby
-                        }
-                    )
+                    key(test.id) {
+                        ActiveTestScreen(
+                            test          = test,
+                            questions     = questions,
+                            userAnswers   = userAnswers,
+                            bookmarked    = bookmarked,
+                            reviewMarked  = reviewMarked,
+                            onSubmit      = { score ->
+                                finalScore = score
+                                val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
+                                viewModel.submitTest(test.id, userAnswers, elapsed)
+                                // Show ad after completing test, then go to Analysis
+                                if (adManager != null && activity != null)
+                                    adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Analysis }
+                                else
+                                    screenState = MockTestState.Analysis
+                            },
+                            onExit = {
+                                viewModel.clearQuestions()
+                                if (adManager != null && activity != null)
+                                    adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
+                                else
+                                    screenState = MockTestState.Lobby
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -632,10 +578,14 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
         MockTestType.Custom       -> "Custom"
     }
 
+    // Determine card state
+    val hasNoQuestions = test.totalQuestions == 0
+    val isClickable    = !test.isScheduledFuture && !hasNoQuestions
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        modifier  = Modifier.fillMaxWidth().clickable(enabled = isClickable, onClick = onStart),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(if (isFeatured) 4.dp else 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -657,15 +607,40 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(test.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // Title row — coins pinned to the right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            test.title,
+                            style    = MaterialTheme.typography.titleMedium,
+                            color    = if (hasNoQuestions) cs.onSurfaceVariant else cs.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (test.coinsReward > 0 && !hasNoQuestions && !test.isScheduledFuture) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFFFF8E1))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text("🪙", fontSize = 9.sp)
+                                Text("+${test.coinsReward}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                            }
+                        }
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     Spacer(Modifier.height(4.dp))
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         // Type badge
                         Text(typeLabel, style = MaterialTheme.typography.labelSmall, color = typeColor.first, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(typeColor.second).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -680,61 +655,62 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                         // Negative marking
                         Text("-${test.negativeMarking}m", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 6.dp, vertical = 2.dp))
-                        // Year
                         if (test.year != null) {
                             Text("${test.year}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
                         }
-                        // Coins — last badge, always single line
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                            Text("🪙", fontSize = 9.sp)
-                            Text("+${test.coinsReward}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF57F17), fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                        }
                     }
                 }
+
+                // Right chevron — or lock/clock/no-questions icon
+                Icon(
+                    imageVector = when {
+                        test.isScheduledFuture -> Icons.Rounded.Schedule
+                        hasNoQuestions         -> Icons.Rounded.LockClock
+                        else                   -> Icons.Rounded.ChevronRight
+                    },
+                    contentDescription = null,
+                    tint     = when {
+                        test.isScheduledFuture -> BpscColors.TextHint
+                        hasNoQuestions         -> BpscColors.TextHint
+                        else                   -> BpscColors.TextHint
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             HorizontalDivider(color = cs.outline)
-            val context = androidx.compose.ui.platform.LocalContext.current
 
-            // Stats + Start button
+            // Stats row + status chip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     MiniStat(Icons.Rounded.People, "${(test.totalAttempts / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${test.totalAttempts}" }}", "Attempts")
                     MiniStat(Icons.Rounded.BarChart, "${test.averageScore.toInt()}%", str.quizAvgScore)
                     MiniStat(Icons.Rounded.Timer, "${test.durationMinutes}m", str.quizDuration)
                 }
-                Button(
-                    onClick  = { if (!test.isScheduledFuture){ if (test.totalQuestions !=0) onStart() else { android.widget.Toast.makeText(
-                        context,
-                        "\"${test.title}\" has no questions yet. Try another Test.",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()}} },
-                    enabled  = !test.isScheduledFuture,
-                    shape    = RoundedCornerShape(10.dp),
-                    colors   = ButtonDefaults.buttonColors(
-                        containerColor = when {
-                            test.isScheduledFuture -> BpscColors.TextHint
-                            test.isPaid            -> BpscColors.CoinGold
-                            else                   -> BpscColors.Primary
-                        }
-                    ),
-                    modifier = Modifier.height(38.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    Text(
-                        when {
-                            test.isScheduledFuture -> "🕐 Soon"
-                            test.isPaid -> "Unlock"
-                            else -> "Start"
-                        },
-                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, fontSize = 12.sp
-                    )
+                // Status chip — replaces the Start button
+                when {
+                    test.isScheduledFuture -> Text("🕐 Soon", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.TextHint, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(cs.background).padding(horizontal = 8.dp, vertical = 4.dp))
+                    hasNoQuestions -> Text("No Questions", style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 8.dp, vertical = 4.dp))
+                    else -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(BpscColors.PrimaryLight)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("Tap to view", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Primary, modifier = Modifier.size(12.dp))
+                    }
                 }
             }
         }
@@ -917,8 +893,9 @@ private fun ActiveTestScreen(
             onDismiss = { showQuitDialog = false }
         )
     }
-    val scope           = rememberCoroutineScope()
     val current         = questions.getOrNull(currentIndex)
+
+    var submitClicked by remember { mutableStateOf(false) }
 
     // Timer
     LaunchedEffect(Unit) {
@@ -926,9 +903,11 @@ private fun ActiveTestScreen(
             delay(1000)
             timeLeft--
         }
-        // Auto submit
-        val score = calculateScore(questions, userAnswers, test.negativeMarking)
-        onSubmit(score)
+        // Auto submit — guard against double submit
+        if (!submitClicked) {
+            submitClicked = true
+            onSubmit(0f)  // score ignored — server calculates and returns real score
+        }
     }
 
     val attempted     = userAnswers.size
@@ -1074,6 +1053,7 @@ private fun ActiveTestScreen(
 
                 // Options
                 current.options.forEachIndexed { index, option ->
+                    if (option.isBlank()) return@forEachIndexed
                     val isSelected = userAnswers[current.id] == index
                     Row(
                         modifier = Modifier.fillMaxWidth()
@@ -1200,8 +1180,10 @@ private fun ActiveTestScreen(
                     Button(
                         onClick = {
                             showSubmitDialog = false
-                            val score = calculateScore(questions, userAnswers, test.negativeMarking)
-                            onSubmit(score)
+                            if (!submitClicked) {
+                                submitClicked = true
+                                onSubmit(0f)  // score ignored — server calculates real score
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                         shape  = RoundedCornerShape(10.dp)
@@ -1238,6 +1220,13 @@ private fun SubjectBadge(subject: String) {
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
 }
 
+@Composable
+private fun DiffBadge(difficulty: String) {
+    val str = LocalStrings.current
+    val color = when (difficulty) { "Easy" -> Color(0xFF2ECC71); "Hard" -> Color(0xFFE74C3C); else -> Color(0xFFF39C12) }
+    Text(difficulty, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
+        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(0.1f)).padding(horizontal = 7.dp, vertical = 2.dp))
+}
 
 // ─────────────────────────────────────────────────────────────
 // ANALYSIS SCREEN

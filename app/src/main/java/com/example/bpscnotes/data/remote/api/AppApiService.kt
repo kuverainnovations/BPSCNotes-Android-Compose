@@ -460,6 +460,15 @@ data class CompleteTargetResponse(
     @SerializedName("coins_earned") val coinsEarned: Int = 0
 )
 
+data class DeleteTargetResponseData(
+    @SerializedName("coins_debited") val coinsDebited: Boolean = false
+)
+
+data class LogActivityRequest(
+    @SerializedName("activityType") val activityType: String,
+    @SerializedName("durationSecs") val durationSecs: Int
+)
+
 // ══════════════════════════════════════════════════════════════
 // API SERVICE INTERFACES
 // ══════════════════════════════════════════════════════════════
@@ -583,6 +592,9 @@ interface CurrentAffairsApiService {
 
     @GET("current-affairs/{id}/mcqs")
     suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
+
+    @POST("current-affairs/log-activity")
+    suspend fun logActivity(@Body body: LogActivityRequest): ApiResponse<Any>
 }
 
 interface BannersApiService {
@@ -597,6 +609,9 @@ interface UserStatsApiService {
 
     @GET("users/stats")
     suspend fun getStats(): ApiResponse<UserStatsData>
+
+    @GET("users/referrals")
+    suspend fun getReferrals(): ApiResponse<ReferralStatsDto>
 }
 
 interface DailyTargetsApiService {
@@ -610,7 +625,7 @@ interface DailyTargetsApiService {
     suspend fun toggleComplete(@Path("id") id: String): ApiResponse<CompleteTargetResponse>
 
     @DELETE("users/daily-targets/{id}")
-    suspend fun deleteTarget(@Path("id") id: String): ApiResponse<Any>
+    suspend fun deleteTarget(@Path("id") id: String): ApiResponse<DeleteTargetResponseData>
 }
 
 
@@ -872,6 +887,31 @@ data class AdRewardRequest(val source: String = "wallet")
 data class AdConfigDto(
     @com.google.gson.annotations.SerializedName("coinsPerAd") val coinsPerAd: Int = 10,
     @com.google.gson.annotations.SerializedName("minAdsPerSession") val minAdsPerSession: Int = 2
+)
+
+// ── Referral milestone DTOs ─────────────────────────────────
+data class ReferralMilestoneDto(
+    val earned:    Boolean = false,
+    val coins:     Int     = 0,
+    @SerializedName("awarded_at") val awardedAt: String? = null
+)
+data class ReferralMilestonesDto(
+    val signup:     ReferralMilestoneDto = ReferralMilestoneDto(),
+    val engagement: ReferralMilestoneDto = ReferralMilestoneDto(),
+    val active:     ReferralMilestoneDto = ReferralMilestoneDto()
+)
+data class RefereeDto(
+    val id:          String               = "",
+    val name:        String               = "",
+    @SerializedName("joined_at")          val joinedAt:         String               = "",
+    val milestones:                       ReferralMilestonesDto = ReferralMilestonesDto(),
+    @SerializedName("total_coins_earned") val totalCoinsEarned: Int                  = 0
+)
+data class ReferralStatsDto(
+    @SerializedName("referral_code")   val referralCode:   String           = "",
+    @SerializedName("total_referrals") val totalReferrals: Int              = 0,
+    @SerializedName("total_earned")    val totalEarned:    Int              = 0,
+    val referees:                                         List<RefereeDto>  = emptyList()
 )
 
 interface CoinsApiService {

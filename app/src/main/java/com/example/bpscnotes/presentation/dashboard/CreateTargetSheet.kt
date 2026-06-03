@@ -44,8 +44,6 @@ fun CreateTargetSheet(
     val canAdd        = inputText.trim().isNotEmpty() && remaining > 0
 
     // Estimated time chips
-    val timeOptions  = listOf(15, 30, 45, 60, 120)
-    var selectedMins by remember { mutableStateOf(30) }
 
     val focusRequester      = remember { FocusRequester() }
     val keyboardController  = LocalSoftwareKeyboardController.current
@@ -166,36 +164,6 @@ fun CreateTargetSheet(
                 }
             }
 
-            // ── Estimated time chips ───────────────────────────────
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "Estimated time",
-                style      = MaterialTheme.typography.labelMedium,
-                color      = BpscColors.TextSecondary,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                timeOptions.forEach { mins ->
-                    val label = if (mins >= 60) "${mins / 60}h" else "${mins}m"
-                    val selected = selectedMins == mins
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (selected) BpscColors.Primary else cs.background)
-                            .clickable { selectedMins = mins }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            label,
-                            style      = MaterialTheme.typography.labelMedium,
-                            color      = if (selected) Color.White else BpscColors.TextSecondary,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-
             // ── Added targets list ─────────────────────────────────
             if (addedTitles.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
@@ -261,7 +229,7 @@ fun CreateTargetSheet(
                     if (trimmed.isNotEmpty() && remaining > 0) addedTitles.add(trimmed)
                     if (addedTitles.isNotEmpty() && !isLoading) {
                         keyboardController?.hide()
-                        viewModel.createTargets(addedTitles.toList(), estimatedMinutes = selectedMins)
+                        viewModel.createTargets(addedTitles.toList())
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),

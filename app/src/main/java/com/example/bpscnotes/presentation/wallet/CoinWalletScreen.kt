@@ -38,6 +38,7 @@ import com.example.bpscnotes.core.ads.WatchAdForCoinsCard
 import com.example.bpscnotes.presentation.wallet.CoinWalletViewModel
 import android.app.Activity
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -72,7 +73,7 @@ fun CoinWalletScreen(
 
     // Coins are now awarded server-side when actions complete (upload approved, quiz passed).
     // No client-side claim needed — getEarnTasks() already reflects the updated state.
-    val tabs = listOf(str.walletEarnCoins, str.walletHistory)
+    val tabs = listOf(str.walletEarnCoins, str.walletHistory, "Referrals")
 
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
@@ -280,6 +281,53 @@ fun CoinWalletScreen(
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // ─── REFERRALS TAB ────────────────────────────────
+                    2 -> {
+                        item {
+                            ReferralHeader(
+                                code         = viewModel.getReferralCode(),
+                                totalEarned  = state.referralStats?.totalEarned ?: 0,
+                                totalFriends = state.referralStats?.totalReferrals ?: 0,
+                                isLoading    = state.isLoadingReferrals,
+                                onShare      = {
+                                    val code = viewModel.getReferralCode()
+                                    val msg = "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn 25 bonus coins when you sign up.\n\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
+                                    context.startActivity(android.content.Intent.createChooser(
+                                        android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_TEXT, msg)
+                                        }, "Invite a friend"
+                                    ))
+                                }
+                            )
+                        }
+                        item {
+                            MilestoneExplainer()
+                        }
+                        val referees = state.referralStats?.referees ?: emptyList()
+                        if (referees.isEmpty() && !state.isLoadingReferrals) {
+                            item { ReferralEmptyState(onShare = {
+                                val code = viewModel.getReferralCode()
+                                val msg = "Join BPSCNotes! Use code: $code\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
+                                context.startActivity(android.content.Intent.createChooser(
+                                    android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, msg)
+                                    }, "Invite a friend"
+                                ))
+                            }) }
+                        } else {
+                            item {
+                                Text("Your Referrals (${referees.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                            }
+                            items(referees, key = { it.id }) { referee ->
+                                RefereeCard(referee = referee)
                             }
                         }
                     }
@@ -871,3 +919,231 @@ private fun formatDate(iso: String): String {
 }
 
 private fun Int.formatWithComma(): String = "%,d".format(this)
+
+// ─────────────────────────────────────────────────────────────
+// REFERRAL UI COMPONENTS
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun ReferralHeader(
+    code:         String,
+    totalEarned:  Int,
+    totalFriends: Int,
+    isLoading:    Boolean,
+    onShare:      () -> Unit
+) {
+    val context = LocalContext.current
+    val cs = MaterialTheme.colorScheme
+    var codeCopied by remember { mutableStateOf(false) }
+
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(16.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFFFF8E1)), contentAlignment = Alignment.Center) {
+                    Text("🎁", fontSize = 22.sp)
+                }
+                Column {
+                    Text("Invite Friends, Earn Coins", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
+                    Text("Up to 150 coins per friend", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                }
+            }
+
+            // Stats row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                ReferralStatChip("👥", "$totalFriends", "Invited")
+                ReferralStatChip("🪙", "$totalEarned", "Earned")
+                ReferralStatChip("✨", "${totalFriends * 150}", "Potential")
+            }
+
+            // Code box
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF5F5F5)).padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Your Referral Code", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    Text(code, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary, letterSpacing = 2.sp)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Copy
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
+                        .background(if (codeCopied) BpscColors.Success.copy(0.15f) else BpscColors.PrimaryLight)
+                        .clickable {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Referral code", code))
+                            codeCopied = true
+                        }, contentAlignment = Alignment.Center) {
+                        Icon(if (codeCopied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, null,
+                            tint = if (codeCopied) BpscColors.Success else BpscColors.Primary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+
+            // Share button
+            Button(
+                onClick  = onShare,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape    = RoundedCornerShape(12.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+            ) {
+                Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Invite a Friend", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReferralStatChip(emoji: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(emoji, fontSize = 20.sp)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun MilestoneExplainer() {
+    val milestones = listOf(
+        Triple("✍️", "Friend Signs Up", "50 🪙"),
+        Triple("📚", "Friend Enrolls / Uploads", "50 🪙"),
+        Triple("🏆", "Friend Completes 5 Quizzes", "50 🪙"),
+    )
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FF)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("How It Works", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
+            milestones.forEachIndexed { i, (emoji, label, coins) ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
+                        Text(emoji, fontSize = 14.sp)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Step ${i + 1}: $label", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = Color(0xFF1A1A2E))
+                    }
+                    Text(coins, style = MaterialTheme.typography.labelMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                }
+                if (i < milestones.size - 1) {
+                    Box(Modifier.padding(start = 16.dp).width(1.dp).height(12.dp).background(BpscColors.Divider))
+                }
+            }
+            HorizontalDivider(color = BpscColors.Divider)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.CardGiftcard, null, tint = BpscColors.CoinGold, modifier = Modifier.size(16.dp))
+                Text("Your friend also gets 25 🪙 for joining!", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RefereeCard(referee: com.example.bpscnotes.data.remote.api.RefereeDto) {
+    val cs = MaterialTheme.colorScheme
+    val m  = referee.milestones
+    val completedCount = listOf(m.signup.earned, m.engagement.earned, m.active.earned).count { it }
+    val progress = completedCount / 3f
+
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Top row
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.size(38.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
+                        Text(referee.name.firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Column {
+                        Text(referee.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = cs.onSurface)
+                        Text(referee.joinedAt.take(10), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    }
+                }
+                // Total coins earned from this referee
+                Row(
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text("🪙", fontSize = 11.sp)
+                    Text("+${referee.totalCoinsEarned}", style = MaterialTheme.typography.labelMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+
+            // Progress bar
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Progress", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    Text("$completedCount / 3 milestones", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                }
+                val animProgress by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(800), label = "ref_prog")
+                LinearProgressIndicator(
+                    progress    = { animProgress },
+                    modifier    = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color       = if (completedCount == 3) BpscColors.Success else BpscColors.Primary,
+                    trackColor  = BpscColors.Divider
+                )
+            }
+
+            // Milestone chips
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MilestoneChip("Signed Up",   m.signup.earned,     m.signup.coins)
+                MilestoneChip("Enrolled",    m.engagement.earned, m.engagement.coins)
+                MilestoneChip("5 Quizzes",   m.active.earned,     m.active.coins)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.MilestoneChip(label: String, earned: Boolean, coins: Int) {
+    Row(
+        modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
+            .background(if (earned) Color(0xFFE8FDF4) else Color(0xFFF5F5F5))
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            if (earned) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+            null, tint = if (earned) BpscColors.Success else BpscColors.TextHint, modifier = Modifier.size(12.dp)
+        )
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = if (earned) Color(0xFF1A7A4A) else BpscColors.TextHint, fontWeight = FontWeight.SemiBold, fontSize = 9.sp, maxLines = 1)
+            if (earned && coins > 0) Text("+${coins}🪙", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun ReferralEmptyState(onShare: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("👋", fontSize = 48.sp)
+            Text("No referrals yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+            Text("Share your code and earn up to 150 coins for every friend who joins and stays active!",
+                style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(4.dp))
+            Button(onClick = onShare, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Invite Now", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
