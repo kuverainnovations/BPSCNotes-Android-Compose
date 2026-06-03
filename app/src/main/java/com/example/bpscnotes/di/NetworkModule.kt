@@ -37,6 +37,7 @@ import javax.inject.Named
 object NetworkModule {
 
     private const val BASE_URL = "https://api.bpscnotes.in/api/v1/"
+//    private const val BASE_URL = "https://api-stg.bpscnotes.in/api/v1/"
 
     // ── Standard client — 30s timeout for all normal API calls ──
     @Provides
