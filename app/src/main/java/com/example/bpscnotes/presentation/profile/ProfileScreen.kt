@@ -93,6 +93,7 @@ fun ProfileScreen(
                 coins       = user?.coins ?: 0,
                 rank        = user?.rank ?: 0,
                 isDark      = isDark,
+                avatarUrl   = user?.avatarUrl,
                 onEditClick = { navController.navigate(Screen.EditProfile.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onShareClick = {
@@ -157,6 +158,7 @@ fun ProfileScreen(
 private fun ProfileHeader(
     name: String, email: String?,
     coins: Int, rank: Int, isDark: Boolean,
+    avatarUrl: String? = null,
     onEditClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onShareClick: () -> Unit
@@ -219,10 +221,19 @@ private fun ProfileHeader(
                 Box(modifier = Modifier.fillMaxSize().clip(CircleShape)
                     .background(Color(0xFF1A4080)),
                     contentAlignment = Alignment.Center) {
-                    Text(
-                        name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
-                        style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold
-                    )
+                    if (!avatarUrl.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Profile photo",
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
+                            style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
             }
 

@@ -400,6 +400,11 @@ data class SubjectAccuracyDto(
     @SerializedName("avg_accuracy") val avgAccuracy: String? = null  // percentage 0-100, or null
 )
 
+data class NotificationsResponseData(
+    val notifications: List<Any> = emptyList(),
+    @SerializedName("unreadCount") val unreadCount: Int = 0
+)
+
 data class SubjectDto(
     val id:       String = "",
     val name:     String = "",
@@ -626,6 +631,12 @@ interface UserStatsApiService {
 
     @GET("app-config/subjects")
     suspend fun getSubjects(): ApiResponse<SubjectsResponseData>
+
+    @GET("notifications")
+    suspend fun getNotifications(
+        @Query("page")  page:  Int = 1,
+        @Query("limit") limit: Int = 1   // only need unreadCount, not full list
+    ): ApiResponse<NotificationsResponseData>
 }
 
 interface DailyTargetsApiService {

@@ -40,6 +40,13 @@ interface AuthApiService {
     @PATCH("auth/users/profile")
     suspend fun updateProfile(@Body body: UpdateProfileRequest): ApiResponse<GetMeData>
 
+    /** POST /users/upload-avatar — upload profile picture */
+    @Multipart
+    @POST("users/upload-avatar")
+    suspend fun uploadAvatar(
+        @Part avatar: okhttp3.MultipartBody.Part
+    ): ApiResponse<AvatarUploadData>
+
     /** POST /auth/logout — invalidate server-side token */
     @POST("auth/logout")
     suspend fun logOut(): ApiResponse<Any>
@@ -91,4 +98,9 @@ data class RegisterData(val accessToken: String, val refreshToken: String)
 data class GetMeResponse(
     val success: Boolean, val message: String,
     val data: GetMeData? = null
+)
+
+
+data class AvatarUploadData(
+    val url: String? = null
 )

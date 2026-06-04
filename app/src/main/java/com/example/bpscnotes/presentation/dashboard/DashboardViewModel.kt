@@ -38,13 +38,14 @@ data class DashboardUiState(
     val targetSummary: DailyTargetsSummary    = DailyTargetsSummary(),
     val liveClasses: List<LiveClassDto>       = emptyList(),
     val achievements: List<AchievementItem>   = emptyList(),
+    val unreadNotifCount: Int                 = 0,             // live unread notification count
     // Schedule interaction state
-    val registeredClassIds: Set<String>       = emptySet(),        // classes user has registered for
+    val registeredClassIds: Set<String>       = emptySet(),
     val scheduleToast:      String?           = null,
     val isLoading: Boolean                    = true,
-    val isCreatingTarget: Boolean             = false,    // separate flag for create action
+    val isCreatingTarget: Boolean             = false,
     val error: String?                        = null,
-    val targetSuccess: String?                = null,      // success message after create/complete
+    val targetSuccess: String?                = null,
 )
 
 data class AchievementItem(
@@ -111,8 +112,8 @@ class DashboardViewModel @Inject constructor(
                 val targetsJob = async { safeGet("targets") { targetsApi.getDailyTargets().data } }
                 val liveClassesJob = async { safeGet("live-classes") {
                     liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses }
-
                 }
+                val notifJob = async { safeGet("notif-count") { statsApi.getNotifications(limit = 1).data?.unreadCount } }
 
 
                 val user       = userJob.await()
@@ -122,6 +123,7 @@ class DashboardViewModel @Inject constructor(
                 val stats      = statsJob.await()
                 val targetsData = targetsJob.await()
                 val liveClasses = liveClassesJob.await() ?: emptyList()
+                val unreadCount = notifJob.await() ?: 0
 
                 // FIX: Seed registeredClassIds from the is_registered flag the GET API already returns.
                 // No extra API call needed — backend joins live_class_registrations per user in getLiveClasses().
@@ -170,6 +172,7 @@ class DashboardViewModel @Inject constructor(
                         // Merge server state with any optimistic local additions
                         registeredClassIds = serverRegisteredIds + it.registeredClassIds,
                         achievements=achievements,
+                        unreadNotifCount = unreadCount,
                         isLoading      = false
                     )
                 }
@@ -475,6 +478,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun clearUnreadNotifCount() { _uiState.update { it.copy(unreadNotifCount = 0) } }
     fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearTargetSuccess() { _uiState.update { it.copy(targetSuccess = null) } }
 

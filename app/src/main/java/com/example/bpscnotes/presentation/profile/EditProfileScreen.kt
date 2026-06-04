@@ -1,5 +1,8 @@
 package com.example.bpscnotes.presentation.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,11 +17,13 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
@@ -40,6 +45,17 @@ fun EditProfileScreen(
     var email    by remember(user?.email)    { mutableStateOf(user?.email ?: "") }
     var bio      by remember(user?.bio)      { mutableStateOf(user?.bio ?: "") }
     var district by remember(user?.district) { mutableStateOf(user?.district ?: "") }
+    var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Image picker — opens gallery
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedAvatarUri = it
+            viewModel.uploadAvatar(it)
+        }
+    }
 
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -119,25 +135,52 @@ fun EditProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                 // ── Avatar ────────────────────────────────────
-                Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Box(modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .clickable { imagePickerLauncher.launch("image/*") }) {
                     Box(modifier = Modifier.size(90.dp).clip(CircleShape)
                         .background(Brush.linearGradient(
                             listOf(Color(0xFF1565C0), Color(0xFF0D47A1)))),
                         contentAlignment = Alignment.Center) {
-                        Text(
-                            name.split(" ").mapNotNull { it.firstOrNull()?.toString() }
-                                .take(2).joinToString("").ifEmpty { "?" },
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold
-                        )
+                        if (selectedAvatarUri != null) {
+                            // Show newly selected image
+                            AsyncImage(
+                                model = selectedAvatarUri,
+                                contentDescription = "Profile photo",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                            )
+                        } else if (!user?.avatarUrl.isNullOrBlank()) {
+                            // Show existing avatar from server
+                            AsyncImage(
+                                model = user?.avatarUrl,
+                                contentDescription = "Profile photo",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                            )
+                        } else {
+                            // Initials fallback
+                            Text(
+                                name.split(" ").mapNotNull { it.firstOrNull()?.toString() }
+                                    .take(2).joinToString("").ifEmpty { "?" },
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = Color.White, fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
-                    // Camera icon badge
+                    // Camera icon badge — tappable
                     Box(modifier = Modifier.size(28.dp).clip(CircleShape)
                         .background(Color(0xFF1565C0))
                         .border(2.dp, cs.surface, CircleShape)
-                        .align(Alignment.BottomEnd),
+                        .align(Alignment.BottomEnd)
+                        .clickable { imagePickerLauncher.launch("image/*") },
                         contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.CameraAlt, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        if (state.isUploadingAvatar) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Rounded.CameraAlt, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        }
                     }
                 }
 

@@ -964,7 +964,7 @@ private fun SessionSummaryScreen(
                 textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             Spacer(Modifier.height(24.dp))
 
-            // Arc ring
+            // Arc ring — shows study time of THIS session
             Box(Modifier.size(100.dp), Alignment.Center) {
                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                     val stroke = 8.dp.toPx(); val inset = stroke / 2
@@ -978,17 +978,16 @@ private fun SessionSummaryScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${summary?.activeMinutes ?: 0}m",
                         style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text(str.focusActive, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
+                    Text("this session", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
                 }
             }
             Spacer(Modifier.height(20.dp))
 
-            // Stats grid
+            // Stats grid — 3 items: Today Total, Coins, XP
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SumStat("⏱️", "${summary?.durationMinutes ?: 0}m", str.focusTotal)
-                    SumStat("🎯", "${summary?.activeMinutes ?: 0}m", str.focusActive)
+                    SumStat("📅", "${summary?.todayStudyMinutes ?: summary?.durationMinutes ?: 0}m", "Today Total")
                     SumStat("🪙", "+${summary?.totalCoins ?: 0}", "Coins")
                     SumStat("⚡", "+${summary?.totalXp ?: 0}", "XP")
                 }

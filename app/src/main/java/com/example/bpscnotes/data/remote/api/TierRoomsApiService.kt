@@ -194,11 +194,12 @@ data class EndSessionRequest(
  */
 data class EndSessionResponseData(
     val sessionId: String,
-    @SerializedName("durationMinutes")  val durationMinutes: Int,
-    @SerializedName("activeMinutes")    val activeMinutes: Int,
-    @SerializedName("totalCoins")       val totalCoins: Int,
-    @SerializedName("totalXp")          val totalXp: Int,
-    @SerializedName("bonusCoins")       val bonusCoins: Int,
+    @SerializedName("durationMinutes")    val durationMinutes: Int,
+    @SerializedName("activeMinutes")      val activeMinutes: Int,
+    @SerializedName("todayStudyMinutes")  val todayStudyMinutes: Int = 0,
+    @SerializedName("totalCoins")         val totalCoins: Int,
+    @SerializedName("totalXp")            val totalXp: Int,
+    @SerializedName("bonusCoins")         val bonusCoins: Int,
     val message: String
 )
 

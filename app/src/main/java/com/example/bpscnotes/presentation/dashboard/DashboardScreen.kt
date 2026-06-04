@@ -152,10 +152,7 @@ fun DashboardScreen(
                     .background(cs.background)
             ) {
                 // ── STICKY HEADER — never scrolls ──────────────────────────
-                val notifCount by androidx.compose.runtime.produceState(initialValue = 0) {
-                    val prefs = context.getSharedPreferences("bpsc_prefs", android.content.Context.MODE_PRIVATE)
-                    value = prefs.getInt("unread_notifications", 0)
-                }
+                val notifCount = state.unreadNotifCount
                 DashboardHeader(
                     user = state.user,
                     stats = state.stats,
@@ -1838,15 +1835,18 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val menuItems = listOf(
+        // ── Study (0-4) ──────────────────────────────────────
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
         Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
+        // ── Explore (5-8) ────────────────────────────────────
         Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.Leaderboard.route),
         Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
+        // ── Account (9-10) ───────────────────────────────────
         Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )
@@ -1873,9 +1873,19 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                         .size(50.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(0.2f))
-                        .border(1.5.dp, Color.White.copy(0.3f), CircleShape), contentAlignment = Alignment.Center) {
-                        val initials = user?.name?.split(" ")?.mapNotNull { it.firstOrNull()?.toString() }?.take(2)?.joinToString("") ?: "?"
-                        Text(initials, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        .border(1.5.dp, Color.White.copy(0.3f), CircleShape),
+                        contentAlignment = Alignment.Center) {
+                        if (!user?.avatarUrl.isNullOrBlank()) {
+                            coil.compose.AsyncImage(
+                                model = user?.avatarUrl,
+                                contentDescription = "Profile photo",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                            )
+                        } else {
+                            val initials = user?.name?.split(" ")?.mapNotNull { it.firstOrNull()?.toString() }?.take(2)?.joinToString("") ?: "?"
+                            Text(initials, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(user?.name ?: "Aspirant", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
@@ -1902,9 +1912,9 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     .padding(vertical = 4.dp)) {
                     // Grouped menu items with section headers
                     val groups = listOf(
-                        "Study" to menuItems.take(5),
-                        "Explore" to menuItems.drop(5).take(3),
-                        "Account" to menuItems.drop(8),
+                        "Study"   to menuItems.take(5),
+                        "Explore" to menuItems.drop(5).take(4),
+                        "Account" to menuItems.drop(9),
                     )
                     groups.forEachIndexed { gIdx, (groupLabel, groupItems) ->
                         if (gIdx > 0) Spacer(Modifier.height(4.dp))

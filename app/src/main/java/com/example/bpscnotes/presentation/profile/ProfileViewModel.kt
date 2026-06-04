@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import javax.inject.Inject
 
 data class WeekDayUi(val label: String, val status: DayStatus)
@@ -35,6 +36,7 @@ data class ProfileUiState(
     val recentTransactions: List<CoinTransactionDto> = emptyList(),
     val isLoading: Boolean              = true,
     val isSaving: Boolean               = false,
+    val isUploadingAvatar: Boolean      = false,
     val error: String?                  = null,
     val successMessage: String?         = null
 )
@@ -42,6 +44,7 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authApi:    AuthApiService,
+    private val app:        android.app.Application,
     private val statsApi:   UserStatsApiService,
     private val coinsApi:   CoinsApiService,
     private val tokenStore: TokenStore
@@ -220,6 +223,35 @@ class ProfileViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ProfileVM", "updateProfile: ${e.message}", e)
                 _uiState.update { it.copy(isSaving = false, error = e.message ?: "Failed to update") }
+            }
+        }
+    }
+
+    fun uploadAvatar(uri: android.net.Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, error = null) }
+            try {
+                val context = app  // need application context for content resolver
+                val stream  = context.contentResolver.openInputStream(uri)
+                    ?: throw Exception("Cannot read image")
+                val bytes   = stream.readBytes(); stream.close()
+                val mime    = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val ext     = when { mime.contains("png") -> "png"; mime.contains("gif") -> "gif"; else -> "jpg" }
+                val body    = okhttp3.RequestBody.create(mime.toMediaTypeOrNull(), bytes)
+                val part    = okhttp3.MultipartBody.Part.createFormData("avatar", "avatar.$ext", body)
+                val res     = authApi.uploadAvatar(part)
+                val url     = res.data?.url
+                if (!url.isNullOrBlank()) {
+                    _uiState.update { it.copy(
+                        isUploadingAvatar = false,
+                        user = it.user?.copy(avatarUrl = url),
+                        successMessage = "Photo updated!"
+                    ) }
+                } else {
+                    _uiState.update { it.copy(isUploadingAvatar = false, error = "Upload failed") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isUploadingAvatar = false, error = e.message ?: "Upload failed") }
             }
         }
     }
