@@ -1876,8 +1876,13 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                         .border(1.5.dp, Color.White.copy(0.3f), CircleShape),
                         contentAlignment = Alignment.Center) {
                         if (!user?.avatarUrl.isNullOrBlank()) {
+                            val navCtx = androidx.compose.ui.platform.LocalContext.current
                             coil.compose.AsyncImage(
-                                model = user?.avatarUrl,
+                                model = coil.request.ImageRequest.Builder(navCtx)
+                                    .data(user?.avatarUrl)
+                                    .diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                                    .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                    .build(),
                                 contentDescription = "Profile photo",
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape)

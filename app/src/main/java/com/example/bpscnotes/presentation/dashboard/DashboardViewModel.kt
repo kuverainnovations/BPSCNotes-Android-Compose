@@ -84,7 +84,11 @@ class DashboardViewModel @Inject constructor(
                     is RefreshEvent.QuizCompleted,
                     is RefreshEvent.LessonCompleted,
                     is RefreshEvent.CoinsChanged,
-                    is RefreshEvent.TargetUpdated -> loadDashboard()
+                    is RefreshEvent.TargetUpdated  -> loadDashboard()
+                    is RefreshEvent.ProfileUpdated -> loadDashboard()
+                    is RefreshEvent.AvatarUpdated  ->
+                        // Update avatar URL directly — no API re-fetch, instant update
+                        _uiState.update { it.copy(user = it.user?.copy(avatarUrl = event.avatarUrl)) }
                     else -> {}
                 }
             }

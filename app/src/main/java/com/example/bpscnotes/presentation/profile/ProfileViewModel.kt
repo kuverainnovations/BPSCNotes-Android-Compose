@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.data.local.TokenStore
@@ -19,7 +20,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import javax.inject.Inject
 
 data class WeekDayUi(val label: String, val status: DayStatus)
@@ -61,9 +61,11 @@ class ProfileViewModel @Inject constructor(
             bus.events.collect { event ->
                 when (event) {
                     is RefreshEvent.CoinsChanged,
-                    is RefreshEvent.ProfileUpdated,
                     is RefreshEvent.LessonCompleted -> load()
                     is RefreshEvent.ProfileUpdated  -> load()
+                    is RefreshEvent.AvatarUpdated   ->
+                        // Instant update — no API call needed
+                        _uiState.update { it.copy(user = it.user?.copy(avatarUrl = event.avatarUrl)) }
                     else -> {}
                 }
             }
@@ -231,26 +233,34 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingAvatar = true, error = null) }
             try {
-                val context = app  // need application context for content resolver
-                val stream  = context.contentResolver.openInputStream(uri)
-                    ?: throw Exception("Cannot read image")
-                val bytes   = stream.readBytes(); stream.close()
-                val mime    = context.contentResolver.getType(uri) ?: "image/jpeg"
-                val ext     = when { mime.contains("png") -> "png"; mime.contains("gif") -> "gif"; else -> "jpg" }
-                val body    = okhttp3.RequestBody.create(mime.toMediaTypeOrNull(), bytes)
-                val part    = okhttp3.MultipartBody.Part.createFormData("avatar", "avatar.$ext", body)
-                val res     = authApi.uploadAvatar(part)
-                val url     = res.data?.url
+                // Handle both content:// (gallery) and file:// (cache crop output) URIs
+                val bytes = if (uri.scheme == "file") {
+                    java.io.File(uri.path!!).readBytes()
+                } else {
+                    val stream = app.contentResolver.openInputStream(uri)
+                        ?: throw Exception("Cannot read image")
+                    stream.readBytes().also { stream.close() }
+                }
+                val mime = if (uri.scheme == "file") "image/jpeg"
+                else app.contentResolver.getType(uri) ?: "image/jpeg"
+                val ext  = when { mime.contains("png") -> "png"; else -> "jpg" }
+                val body = okhttp3.RequestBody.create(mime.toMediaTypeOrNull(), bytes)
+                val part = okhttp3.MultipartBody.Part.createFormData("avatar", "avatar.$ext", body)
+                val res  = authApi.uploadAvatar(part)
+                val url  = res.data?.url
                 if (!url.isNullOrBlank()) {
                     _uiState.update { it.copy(
                         isUploadingAvatar = false,
                         user = it.user?.copy(avatarUrl = url),
                         successMessage = "Photo updated!"
                     ) }
+                    bus.emit(RefreshEvent.AvatarUpdated(url))  // carries URL — no API re-fetch needed
+                    bus.emit(RefreshEvent.ProfileUpdated)
                 } else {
-                    _uiState.update { it.copy(isUploadingAvatar = false, error = "Upload failed") }
+                    _uiState.update { it.copy(isUploadingAvatar = false, error = "Upload failed — no URL returned") }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("ProfileVM", "uploadAvatar failed: ${e.message}", e)
                 _uiState.update { it.copy(isUploadingAvatar = false, error = e.message ?: "Upload failed") }
             }
         }

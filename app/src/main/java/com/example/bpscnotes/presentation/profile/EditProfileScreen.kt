@@ -1,9 +1,11 @@
 package com.example.bpscnotes.presentation.profile
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.*
@@ -16,11 +18,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
@@ -45,16 +56,36 @@ fun EditProfileScreen(
     var email    by remember(user?.email)    { mutableStateOf(user?.email ?: "") }
     var bio      by remember(user?.bio)      { mutableStateOf(user?.bio ?: "") }
     var district by remember(user?.district) { mutableStateOf(user?.district ?: "") }
-    var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedAvatarUri  by remember { mutableStateOf<Uri?>(null) }
+    var showCropDialog     by remember { mutableStateOf(false) }
+    var imageUriToCrop     by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
 
-    // Image picker — opens gallery
+    // Gallery picker — opens crop dialog after selection
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            selectedAvatarUri = it
-            viewModel.uploadAvatar(it)
+            imageUriToCrop = it
+            showCropDialog = true
         }
+    }
+
+    // Show crop dialog when image is selected
+    if (showCropDialog && imageUriToCrop != null) {
+        ImageCropDialog(
+            imageUri    = imageUriToCrop!!,
+            onCropped   = { croppedUri ->
+                selectedAvatarUri = croppedUri
+                viewModel.uploadAvatar(croppedUri)
+                showCropDialog = false
+                imageUriToCrop = null
+            },
+            onDismiss   = {
+                showCropDialog = false
+                imageUriToCrop = null
+            }
+        )
     }
 
     val snackbarHost = remember { SnackbarHostState() }
@@ -298,4 +329,219 @@ private fun EditField(
             focusedLabelColor    = BpscColors.Primary,
         )
     )
+}
+
+
+// ── Built-in Crop Dialog — resizable + draggable ────────────────────────────
+@Composable
+private fun ImageCropDialog(
+    imageUri: Uri,
+    onCropped: (Uri) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val bitmap = remember(imageUri) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                android.graphics.ImageDecoder.decodeBitmap(
+                    android.graphics.ImageDecoder.createSource(context.contentResolver, imageUri)
+                ) { decoder, _, _ -> decoder.isMutableRequired = true }
+            } else {
+                @Suppress("DEPRECATION")
+                android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
+            }
+        } catch (e: Exception) { null }
+    }
+
+    if (bitmap == null) { onDismiss(); return }
+
+    // Crop box state
+    var boxLeft   by remember { mutableFloatStateOf(0f) }
+    var boxTop    by remember { mutableFloatStateOf(0f) }
+    var boxSize   by remember { mutableFloatStateOf(0f) }
+    var viewW     by remember { mutableFloatStateOf(0f) }
+    var viewH     by remember { mutableFloatStateOf(0f) }
+    var initialized by remember { mutableStateOf(false) }
+
+    val HANDLE = 44f  // touch target size for corners in px
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // ── Top bar ──────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.White)
+                    }
+                    Text("Crop Photo", color = Color.White, fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium)
+                    TextButton(onClick = {
+                        if (viewW > 0 && boxSize > 0) {
+                            val imgW = bitmap.width.toFloat()
+                            val imgH = bitmap.height.toFloat()
+                            // Scale factors from view coords → bitmap coords
+                            val scaleX = imgW / viewW
+                            val scaleY = imgH / viewH
+                            val bx = (boxLeft * scaleX).toInt().coerceIn(0, bitmap.width - 1)
+                            val by = (boxTop  * scaleY).toInt().coerceIn(0, bitmap.height - 1)
+                            val bw = (boxSize * scaleX).toInt().coerceIn(1, bitmap.width - bx)
+                            val bh = (boxSize * scaleY).toInt().coerceIn(1, bitmap.height - by)
+                            val cropped = android.graphics.Bitmap.createBitmap(bitmap, bx, by, bw, bh)
+                            val scaled  = android.graphics.Bitmap.createScaledBitmap(cropped, 512, 512, true)
+                            val file    = java.io.File(context.cacheDir, "avatar_${System.currentTimeMillis()}.jpg")
+                            file.outputStream().use { scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+                            onCropped(Uri.fromFile(file))
+                        }
+                    }) {
+                        Text("Use Photo", color = Color(0xFF64B5F6), fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // ── Image + crop overlay ─────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .onGloballyPositioned { coords ->
+                            viewW = coords.size.width.toFloat()
+                            viewH = coords.size.height.toFloat()
+                            if (!initialized && viewW > 0 && viewH > 0) {
+                                val initSize = minOf(viewW, viewH) * 0.75f
+                                boxSize  = initSize
+                                boxLeft  = (viewW - initSize) / 2f
+                                boxTop   = (viewH - initSize) / 2f
+                                initialized = true
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Overlay canvas — handles drag (move) and corner resize
+                    var dragMode by remember { mutableStateOf("none") } // "move","tl","tr","bl","br"
+
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                               awaitPointerEventScope {
+                                    while (true) {
+                                        val down = awaitPointerEvent()
+                                        val pos  = down.changes.firstOrNull()?.position ?: continue
+
+                                        // Determine drag mode based on where finger landed
+                                        dragMode = when {
+                                            // Corners — check 44px touch target
+                                            (pos.x - boxLeft).let { it * it } + (pos.y - boxTop).let { it * it } < HANDLE * HANDLE -> "tl"
+                                            (pos.x - (boxLeft + boxSize)).let { it * it } + (pos.y - boxTop).let { it * it } < HANDLE * HANDLE -> "tr"
+                                            (pos.x - boxLeft).let { it * it } + (pos.y - (boxTop + boxSize)).let { it * it } < HANDLE * HANDLE -> "bl"
+                                            (pos.x - (boxLeft + boxSize)).let { it * it } + (pos.y - (boxTop + boxSize)).let { it * it } < HANDLE * HANDLE -> "br"
+                                            // Inside box — move
+                                            pos.x > boxLeft && pos.x < boxLeft + boxSize &&
+                                                    pos.y > boxTop  && pos.y < boxTop  + boxSize -> "move"
+                                            else -> "none"
+                                        }
+
+                                        // Consume drag events
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val drag  = event.changes.firstOrNull() ?: break
+                                            if (!drag.pressed) break
+                                            drag.consume()
+                                            val dx = drag.position.x - drag.previousPosition.x
+                                            val dy = drag.position.y - drag.previousPosition.y
+                                            val minSize = 80f
+
+                                            when (dragMode) {
+                                                "move" -> {
+                                                    boxLeft = (boxLeft + dx).coerceIn(0f, viewW - boxSize)
+                                                    boxTop  = (boxTop  + dy).coerceIn(0f, viewH - boxSize)
+                                                }
+                                                "br" -> {
+                                                    val newSize = (boxSize + dx).coerceIn(minSize, minOf(viewW - boxLeft, viewH - boxTop))
+                                                    boxSize = newSize
+                                                }
+                                                "bl" -> {
+                                                    val newSize = (boxSize - dx).coerceIn(minSize, minOf(boxLeft + boxSize, viewH - boxTop))
+                                                    boxLeft = (boxLeft + dx).coerceIn(0f, viewW - minSize)
+                                                    boxSize = newSize
+                                                }
+                                                "tr" -> {
+                                                    val newSize = (boxSize - dy).coerceIn(minSize, minOf(viewW - boxLeft, boxTop + boxSize))
+                                                    boxTop  = (boxTop + dy).coerceIn(0f, viewH - minSize)
+                                                    boxSize = newSize
+                                                }
+                                                "tl" -> {
+                                                    val newSize = (boxSize - dx).coerceIn(minSize, minOf(boxLeft + boxSize, boxTop + boxSize))
+                                                    boxLeft = (boxLeft + dx).coerceIn(0f, viewW - minSize)
+                                                    boxTop  = (boxTop  + dy).coerceIn(0f, viewH - minSize)
+                                                    boxSize = newSize
+                                                }
+                                            }
+                                        } while (true)
+                                    }
+                                }
+                            }
+                    ) {
+                        if (boxSize > 0f) {
+                            // Dark overlay outside crop
+                            val path = androidx.compose.ui.graphics.Path().apply {
+                                addRect(Rect(0f, 0f, size.width, size.height))
+                                addRect(Rect(boxLeft, boxTop, boxLeft + boxSize, boxTop + boxSize))
+                            }
+                            drawPath(path, Color.Black.copy(0.65f), blendMode = BlendMode.SrcOver)
+
+                            // Crop border
+                            drawRect(Color.White, topLeft = Offset(boxLeft, boxTop),
+                                size = Size(boxSize, boxSize), style = Stroke(2.dp.toPx()))
+
+                            // Grid lines
+                            val t = boxSize / 3f
+                            repeat(2) { i ->
+                                drawLine(Color.White.copy(0.35f),
+                                    Offset(boxLeft + t * (i + 1), boxTop),
+                                    Offset(boxLeft + t * (i + 1), boxTop + boxSize), 0.8.dp.toPx())
+                                drawLine(Color.White.copy(0.35f),
+                                    Offset(boxLeft, boxTop + t * (i + 1)),
+                                    Offset(boxLeft + boxSize, boxTop + t * (i + 1)), 0.8.dp.toPx())
+                            }
+
+                            // Corner handles
+                            val hl = 22.dp.toPx(); val hw = 3.dp.toPx()
+                            listOf(
+                                Triple(Offset(boxLeft, boxTop), 1f, 1f),
+                                Triple(Offset(boxLeft + boxSize, boxTop), -1f, 1f),
+                                Triple(Offset(boxLeft, boxTop + boxSize), 1f, -1f),
+                                Triple(Offset(boxLeft + boxSize, boxTop + boxSize), -1f, -1f)
+                            ).forEach { (c, sx, sy) ->
+                                drawLine(Color.White, c, Offset(c.x + hl * sx, c.y), hw)
+                                drawLine(Color.White, c, Offset(c.x, c.y + hl * sy), hw)
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Drag inside to move  •  Drag corners to resize",
+                    color = Color.White.copy(0.55f),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(10.dp)
+                )
+            }
+        }
+    }
 }

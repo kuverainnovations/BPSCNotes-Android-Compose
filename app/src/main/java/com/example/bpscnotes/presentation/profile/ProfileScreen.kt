@@ -214,16 +214,29 @@ private fun ProfileHeader(
 
             Spacer(Modifier.height(14.dp))
 
-            // Avatar
-            Box(modifier = Modifier.size(80.dp).clip(CircleShape)
-                .background(Brush.linearGradient(listOf(Color(0xFFFFD600), Color(0xFFFF8F00))))
-                .padding(3.dp), contentAlignment = Alignment.Center) {
+            // Avatar — tap to view fullscreen
+            var showFullImage by remember { mutableStateOf(false) }
+
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Color(0xFFFFD600), Color(0xFFFF8F00))))
+                    .padding(3.dp)
+                    .clickable { if (!avatarUrl.isNullOrBlank()) showFullImage = true },
+                contentAlignment = Alignment.Center
+            ) {
                 Box(modifier = Modifier.fillMaxSize().clip(CircleShape)
                     .background(Color(0xFF1A4080)),
                     contentAlignment = Alignment.Center) {
                     if (!avatarUrl.isNullOrBlank()) {
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
                         coil.compose.AsyncImage(
-                            model = avatarUrl,
+                            model = coil.request.ImageRequest.Builder(ctx)
+                                .data(avatarUrl)
+                                .diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .build(),
                             contentDescription = "Profile photo",
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
@@ -232,6 +245,62 @@ private fun ProfileHeader(
                         Text(
                             name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
                             style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+
+            // Fullscreen image dialog
+            if (showFullImage && !avatarUrl.isNullOrBlank()) {
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { showFullImage = false },
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.95f))
+                            .clickable { showFullImage = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val ctx2 = androidx.compose.ui.platform.LocalContext.current
+                        coil.compose.AsyncImage(
+                            model = coil.request.ImageRequest.Builder(ctx2)
+                                .data(avatarUrl)
+                                .diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .memoryCachePolicy(coil.request.CachePolicy.DISABLED)
+                                .build(),
+                            contentDescription = "Profile photo",
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .wrapContentHeight()
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        )
+                        // Close button top right
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(20.dp)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(0.2f))
+                                .clickable { showFullImage = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Icon(
+                                androidx.compose.material.icons.Icons.Rounded.Close,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        // Tap to dismiss hint
+                        Text(
+                            "Tap anywhere to close",
+                            color = Color.White.copy(0.5f),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)
                         )
                     }
                 }

@@ -259,6 +259,9 @@ fun SettingsScreen(
                 }
 
                 // ── About ─────────────────────────────────────────
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val packageName = context.packageName
+
                 SettingsSectionLabel(str.settingsAbout)
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -275,27 +278,81 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Star, iconBg = Color(0xFFFFF8E1), iconTint = Color(0xFFFF8F00),
-                            title = str.settingsRate, subtitle = str.settingsRateSubtitle, onClick = {}
+                            title = str.settingsRate, subtitle = str.settingsRateSubtitle,
+                            onClick = {
+                                try {
+                                    // Try opening Play Store app first
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("market://details?id=$packageName"))
+                                    )
+                                } catch (e: android.content.ActivityNotFoundException) {
+                                    // Fallback to browser
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+                                    )
+                                }
+                            }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Share, iconBg = Color(0xFFE8F5E9), iconTint = Color(0xFF2E7D32),
-                            title = str.settingsShare, subtitle = str.settingsShareSubtitle, onClick = {}
+                            title = str.settingsShare, subtitle = str.settingsShareSubtitle,
+                            onClick = {
+                                val shareText = "🎯 I'm preparing for BPSC on BPSCNotes!\n\n" +
+                                        "Best app for BPSC exam prep — Daily quizzes, Current Affairs, Mock Tests & more.\n\n" +
+                                        "Download now: https://play.google.com/store/apps/details?id=$packageName"
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(intent, "Share BPSCNotes"))
+                            }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
-                            title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle, onClick = {}
+                            title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle,
+                            onClick = {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
+                                )
+                            }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Gavel, iconBg = Color(0xFFF5F5F5), iconTint = Color(0xFF616161),
-                            title = str.settingsTerms, subtitle = str.settingsTermsSubtitle, onClick = {}
+                            title = str.settingsTerms, subtitle = str.settingsTermsSubtitle,
+                            onClick = {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://bpscnotes.in/terms-of-service"))
+                                )
+                            }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.HeadsetMic, iconBg = Color(0xFFF3E5F5), iconTint = Color(0xFF7B1FA2),
-                            title = str.settingsSupport, subtitle = str.settingsSupportSubtitle, onClick = {}
+                            title = str.settingsSupport, subtitle = str.settingsSupportSubtitle,
+                            onClick = {
+                                val emailIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("mailto:support@bpscnotes.in")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "BPSCNotes App Support")
+                                    putExtra(android.content.Intent.EXTRA_TEXT,
+                                        "App Version: ${str.version}\nDevice: ${android.os.Build.MODEL}\n\nDescribe your issue:\n")
+                                }
+                                try {
+                                    context.startActivity(emailIntent)
+                                } catch (e: android.content.ActivityNotFoundException) {
+                                    // Fallback — open WhatsApp or browser support page
+                                    context.startActivity(
+                                        android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("https://bpscnotes.in/support"))
+                                    )
+                                }
+                            }
                         )
                     }
                 }

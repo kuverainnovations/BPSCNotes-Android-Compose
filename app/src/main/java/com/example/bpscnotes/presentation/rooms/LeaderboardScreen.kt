@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
@@ -27,18 +28,18 @@ fun LeaderboardScreen(
     navController: NavHostController,
     viewModel: TierRoomsViewModel
 ) {
-    val cs  = MaterialTheme.colorScheme
-    val str = LocalStrings.current
+    val cs    = MaterialTheme.colorScheme
+    val str   = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
 
     var selectedPeriod by remember { mutableStateOf("weekly") }
-    val periods = listOf("weekly" to "📅 Weekly", "monthly" to "📆 Monthly", "alltime" to "🏆 All Time")
+    val periods = listOf("weekly" to "Weekly", "monthly" to "Monthly", "alltime" to "All time")
 
-    // Single effect — fires on open AND on period tab switch
-    LaunchedEffect(selectedPeriod) {
-        com.example.bpscnotes.core.analytics.Event.screenView("leaderboard")
-        // Use user's actual tier; "starter" is just the pre-load fallback
-        val tierKey = state.myTierData?.currentTier?.tierKey ?: "starter"
+    val tierKey = state.myTierData?.currentTier?.tierKey ?: "starter"
+    val tierName = state.myTierData?.currentTier?.name
+        ?: tierKey.replaceFirstChar { it.uppercase() }
+
+    LaunchedEffect(selectedPeriod, tierKey) {
         viewModel.loadLeaderboard(tierKey, selectedPeriod)
     }
 
@@ -47,119 +48,172 @@ fun LeaderboardScreen(
 
     Column(Modifier.fillMaxSize().background(cs.background)) {
 
-        // ── Header ──────────────────────────────────────────────
+        // ── Gradient header ──────────────────────────────────────
         Box(
             Modifier.fillMaxWidth()
                 .background(
                     Brush.linearGradient(
                         listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
-                        Offset(0f, 0f), Offset(500f, 300f)
+                        Offset(0f, 0f), Offset(500f, 350f)
                     )
                 )
         ) {
+            // Decorative circles
             androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
-                drawCircle(Color.White.copy(0.05f), 140.dp.toPx(), Offset(size.width + 10f, -40f))
+                drawCircle(Color.White.copy(0.04f), 200.dp.toPx(), Offset(size.width + 40f, -60f))
+                drawCircle(Color.White.copy(0.03f), 120.dp.toPx(), Offset(size.width - 60f, 30f))
             }
+
             Column(
-                Modifier
-                    .statusBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp)
+                Modifier.statusBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 0.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Top row: back + title + tier badge + refresh
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Box(
                         Modifier.size(36.dp).clip(CircleShape)
-                            .background(Color.White.copy(0.15f))
+                            .background(Color.White.copy(0.12f))
                             .clickable { navController.popBackStackSafe() },
                         Alignment.Center
-                    ) {
-                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                    Column {
+                    ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+
+                    Column(Modifier.weight(1f)) {
                         Text("🏆 Leaderboard", style = MaterialTheme.typography.titleLarge,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("Top studiers in your tier", style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.65f))
+                        Box(
+                            Modifier.clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(0.15f))
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Text(tierName, style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.85f))
+                        }
                     }
+
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .clickable { viewModel.loadLeaderboard(tierKey, selectedPeriod) },
+                        Alignment.Center
+                    ) { Icon(Icons.Rounded.Refresh, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
                 // Period tabs
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(0.1f)).padding(3.dp),
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(0.1f))
+                        .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     periods.forEach { (key, label) ->
                         val sel = selectedPeriod == key
                         Box(
-                            Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
+                            Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
                                 .background(if (sel) Color.White else Color.Transparent)
                                 .clickable { selectedPeriod = key }
                                 .padding(vertical = 8.dp),
                             Alignment.Center
                         ) {
-                            Text(label, style = MaterialTheme.typography.labelMedium,
-                                color = if (sel) BpscColors.Primary else Color.White.copy(0.8f),
+                            Text(label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (sel) BpscColors.Primary else Color.White.copy(0.75f),
                                 fontWeight = if (sel) FontWeight.ExtraBold else FontWeight.Normal)
                         }
                     }
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Podium (top 3) — shown inside header gradient
+                if (!state.isLoadingLeaderboard && leaderboard.size >= 2) {
+                    Podium(leaderboard.take(3), myUserId)
+                }
+
+                Spacer(Modifier.height(8.dp))
             }
         }
 
-        // ── Content ─────────────────────────────────────────────
-        when {
-            state.isLoadingLeaderboard -> {
-                Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                }
-            }
-            state.leaderboardError != null -> {
-                Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("😕", fontSize = 48.sp)
-                        Text("Could not load leaderboard", style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text(state.leaderboardError ?: "", style = MaterialTheme.typography.bodyMedium,
-                            color = cs.onSurfaceVariant)
-                        Button(
-                            onClick = { viewModel.loadLeaderboard(state.myTierData?.currentTier?.tierKey ?: "starter", selectedPeriod) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) { Text("Retry") }
+        // ── Content area ─────────────────────────────────────────
+        Box(
+            Modifier.fillMaxSize()
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                .background(cs.background)
+        ) {
+            when {
+                state.isLoadingLeaderboard -> {
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        CircularProgressIndicator(color = BpscColors.Primary)
                     }
                 }
-            }
-            leaderboard.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("📊", fontSize = 48.sp)
-                        Text("No data yet", style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text("Study sessions will appear here", style = MaterialTheme.typography.bodyMedium,
-                            color = cs.onSurfaceVariant)
+                state.leaderboardError != null -> {
+                    Box(Modifier.fillMaxSize().padding(32.dp), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("😕", fontSize = 48.sp)
+                            Text("Could not load", style = MaterialTheme.typography.titleMedium,
+                                color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(state.leaderboardError ?: "", style = MaterialTheme.typography.bodySmall,
+                                color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Button(
+                                onClick = { viewModel.loadLeaderboard(tierKey, selectedPeriod) },
+                                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                                shape = RoundedCornerShape(12.dp)
+                            ) { Text("Retry") }
+                        }
                     }
                 }
-            }
-            else -> {
-                LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-                    // Top 3 podium
-                    if (leaderboard.size >= 3) {
-                        item { Podium(leaderboard.take(3), myUserId) }
+                leaderboard.isEmpty() -> {
+                    Box(Modifier.fillMaxSize().padding(32.dp), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("📊", fontSize = 48.sp)
+                            Text("No data yet", style = MaterialTheme.typography.titleMedium,
+                                color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Study sessions will appear here",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant)
+                        }
                     }
-
-                    // Rest of the list
+                }
+                else -> {
                     val rest = if (leaderboard.size >= 3) leaderboard.drop(3) else leaderboard
-                    itemsIndexed(rest) { index, entry ->
-                        LeaderboardRow(
-                            entry    = entry,
-                            isMe     = entry.userId == myUserId,
-                            position = if (leaderboard.size >= 3) index + 4 else index + 1
-                        )
-                        if (index < rest.lastIndex) HorizontalDivider(
-                            Modifier.padding(horizontal = 16.dp), color = cs.outline.copy(0.4f)
-                        )
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        if (rest.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "RANKINGS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = cs.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                            itemsIndexed(rest) { index, entry ->
+                                val isMe = entry.userId == myUserId
+                                val position = if (leaderboard.size >= 3) index + 4 else index + 1
+                                LeaderboardRow(entry = entry, isMe = isMe, position = position)
+                                if (index < rest.lastIndex && !isMe) {
+                                    HorizontalDivider(
+                                        Modifier.padding(start = 72.dp),
+                                        color = cs.outline.copy(0.3f),
+                                        thickness = 0.5.dp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -170,96 +224,103 @@ fun LeaderboardScreen(
 // ── Podium (top 3) ────────────────────────────────────────────
 @Composable
 private fun Podium(top3: List<LeaderboardEntryDto>, myUserId: String) {
-    val cs = MaterialTheme.colorScheme
-    // Reorder: 2nd, 1st, 3rd
-    val ordered = listOf(top3.getOrNull(1), top3.getOrNull(0), top3.getOrNull(2))
-    val heights = listOf(100.dp, 130.dp, 80.dp)
-    val medals  = listOf("🥈", "🥇", "🥉")
-    val colors  = listOf(Color(0xFFB0BEC5), Color(0xFFFFD700), Color(0xFFCD7F32))
+    // Order: 2nd, 1st, 3rd
+    val ordered  = listOf(top3.getOrNull(1), top3.getOrNull(0), top3.getOrNull(2))
+    val heights  = listOf(70.dp, 92.dp, 55.dp)
+    val medals   = listOf("🥈", "🥇", "🥉")
+    val colors   = listOf(Color(0xFFC0C0C0), Color(0xFFFFD700), Color(0xFFCD7F32))
+    val alphas   = listOf(0.18f, 0.22f, 0.15f)
 
-    Box(
-        Modifier.fillMaxWidth()
-            .background(
-                Brush.verticalGradient(listOf(Color(0xFF1565C0).copy(0.08f), cs.background))
-            )
-            .padding(top = 24.dp, bottom = 8.dp)
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom
     ) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly, Alignment.Bottom) {
-            ordered.forEachIndexed { i, entry ->
-                val isMe = entry?.userId == myUserId
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.width(100.dp)
+        ordered.forEachIndexed { i, entry ->
+            val isMe = entry?.userId == myUserId
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.width(100.dp)
+            ) {
+                // Avatar
+                Box(
+                    Modifier.size(if (i == 1) 56.dp else 48.dp)
+                        .clip(CircleShape)
+                        .background(colors[i].copy(alphas[i]))
+                        .border(2.dp, colors[i], CircleShape),
+                    Alignment.Center
                 ) {
-                    // Avatar circle
-                    Box(
-                        Modifier.size(52.dp).clip(CircleShape)
-                            .background(
-                                if (isMe) BpscColors.Primary.copy(0.15f)
-                                else cs.surface
-                            )
-                            .border(2.dp, colors[i], CircleShape),
-                        Alignment.Center
-                    ) {
-                        Text(
-                            entry?.userName?.take(1)?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colors[i],
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                    Text(medals[i], fontSize = 18.sp)
                     Text(
-                        entry?.userName ?: "-",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isMe) BpscColors.Primary else cs.onSurface,
-                        fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        entry?.userName?.take(1)?.uppercase() ?: "?",
+                        style = if (i == 1) MaterialTheme.typography.titleLarge
+                        else MaterialTheme.typography.titleMedium,
+                        color = colors[i],
+                        fontWeight = FontWeight.ExtraBold
                     )
-                    // Podium block
-                    Box(
-                        Modifier.fillMaxWidth().height(heights[i])
-                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                            .background(
-                                Brush.verticalGradient(listOf(colors[i].copy(0.7f), colors[i].copy(0.3f)))
-                            ),
-                        Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "${entry?.studyMinutes ?: 0}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text("min", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
-                        }
-                    }
+                }
+                Text(medals[i], fontSize = if (i == 1) 20.sp else 16.sp)
+                Text(
+                    entry?.userName ?: "-",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isMe) Color(0xFFFFD700) else Color.White.copy(0.9f),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${entry?.studyMinutes ?: 0} min",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(0.5f)
+                )
+                // Podium block
+                Box(
+                    Modifier.fillMaxWidth().height(heights[i])
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                        .background(colors[i].copy(alphas[i])),
+                    Alignment.Center
+                ) {
+                    Text(
+                        "${i + 1}${if (i == 0) listOf("st","nd","rd")[1] else if (i == 1) "st" else "rd"}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors[i],
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
         }
     }
 }
 
-// ── Single row (rank 4+) ──────────────────────────────────────
+// ── Rank row (4th+) ───────────────────────────────────────────
 @Composable
-private fun LeaderboardRow(entry: LeaderboardEntryDto, isMe: Boolean, position: Int) {
+private fun LeaderboardRow(
+    entry: LeaderboardEntryDto,
+    isMe: Boolean,
+    position: Int
+) {
     val cs = MaterialTheme.colorScheme
     Row(
         Modifier
             .fillMaxWidth()
-            .background(if (isMe) BpscColors.Primary.copy(0.06f) else Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .then(
+                if (isMe) Modifier.clip(RoundedCornerShape(12.dp))
+                    .background(BpscColors.Primary.copy(0.08f))
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
+                else Modifier.padding(vertical = 10.dp)
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Rank
+        // Rank badge
         Box(
-            Modifier.size(32.dp).clip(CircleShape)
-                .background(if (isMe) BpscColors.Primary else cs.surface)
-                .border(1.dp, if (isMe) BpscColors.Primary else cs.outline, CircleShape),
+            Modifier.size(30.dp).clip(CircleShape)
+                .background(if (isMe) BpscColors.Primary else cs.secondaryContainer)
+                .border(
+                    width = if (isMe) 0.dp else 0.5.dp,
+                    color = if (isMe) Color.Transparent else cs.outline,
+                    shape = CircleShape
+                ),
             Alignment.Center
         ) {
             Text(
@@ -273,22 +334,28 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, isMe: Boolean, position: 
 
         // Avatar
         Box(
-            Modifier.size(40.dp).clip(CircleShape)
-                .background(if (isMe) BpscColors.Primary.copy(0.15f) else cs.surface)
-                .border(1.dp, if (isMe) BpscColors.Primary else cs.outline, CircleShape),
+            Modifier.size(42.dp).clip(CircleShape)
+                .background(
+                    if (isMe) BpscColors.Primary
+                    else BpscColors.PrimaryLight
+                )
+                .border(0.5.dp, if (isMe) BpscColors.Primary else cs.outline, CircleShape),
             Alignment.Center
         ) {
             Text(
                 entry.userName.take(1).uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isMe) BpscColors.Primary else cs.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (isMe) Color.White else BpscColors.Primary,
                 fontWeight = FontWeight.ExtraBold
             )
         }
 
         // Name + stats
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text(
                     entry.userName,
                     style = MaterialTheme.typography.titleSmall,
@@ -296,32 +363,35 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, isMe: Boolean, position: 
                     fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                if (isMe) Text(
-                    "YOU",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = BpscColors.Primary,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 9.sp,
-                    modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                if (isMe) Box(
+                    Modifier.clip(RoundedCornerShape(4.dp))
                         .background(BpscColors.Primary.copy(0.12f))
                         .padding(horizontal = 5.dp, vertical = 2.dp)
-                )
+                ) {
+                    Text("YOU", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
+                        fontSize = 9.sp)
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("⏱ ${entry.studyMinutes}m", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
-                Text("🪙 ${entry.coinsEarned}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
-                if (entry.streakDays > 0) Text("🔥 ${entry.streakDays}d", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF6F00))
+                Text("⏱ ${entry.studyMinutes}m",
+                    style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                Text("🪙 ${entry.coinsEarned}",
+                    style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF8F00))
+                if (entry.streakDays > 0) Text("🔥 ${entry.streakDays}d",
+                    style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF6F00))
             }
         }
 
-        // XP level badge
+        // XP badge
         Box(
             Modifier.clip(RoundedCornerShape(8.dp))
-                .background(BpscColors.Primary.copy(0.1f))
+                .background(Color(0xFFF3E5F5))
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Text("Lv.${entry.xpLevel}", style = MaterialTheme.typography.labelSmall,
-                color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+            Text("Lv.${entry.xpLevel}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF7B1FA2), fontWeight = FontWeight.ExtraBold)
         }
     }
 }
