@@ -263,9 +263,7 @@ fun CurrentAffairsScreen(
             when {
                 // Loading
                 state.isLoading && articles.isNullOrEmpty() -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = BpscColors.Primary)
-                    }
+                    com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 150.dp, itemCount = 5, itemHeight = 100.dp)
                 }
 
                 // Error

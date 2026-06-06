@@ -155,9 +155,7 @@ fun MockTestsScreen(
     }
 
     if (state.isLoading && allTests.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 160.dp, itemCount = 4, itemHeight = 90.dp)
         return
     }
 

@@ -288,7 +288,7 @@ private fun formatCertDate(raw: String?): String {
 fun MyLearningScreen(
     navController: NavHostController,
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
-    startTab: Int = 0,
+    startTab: Int = 1,   // default to My Courses tab — Marketplace accessible by switching
     viewModel: MyLearningViewModel = hiltViewModel(),
     fromScreen: String=""
 ) {
@@ -319,13 +319,10 @@ fun MyLearningScreen(
             .map { it.toLearningCourse() }
     }
 
-    // ✅ Loading
-    if (state.isLoading && storeItems.isEmpty()) {
-        Box(Modifier
-            .fillMaxSize()
-            .background(cs.background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
+    // ✅ Loading — show skeleton instead of white screen
+    // Use state.storeCourses directly (not storeItems which is a remember derivative)
+    if (state.isLoading && state.storeCourses.isEmpty() && state.enrolledCourses.isEmpty()) {
+        com.example.bpscnotes.core.ui.MyLearningSkeleton()
         return
     }
 

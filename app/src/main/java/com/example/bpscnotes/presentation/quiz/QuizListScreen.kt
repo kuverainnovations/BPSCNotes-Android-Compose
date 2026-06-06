@@ -131,9 +131,7 @@ fun QuizListScreen(
         // ── Content ────────────────────────────────────────────
         when {
             state.isLoadingList -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                }
+                com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 140.dp, itemCount = 5, itemHeight = 85.dp)
             }
             state.listError != null -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

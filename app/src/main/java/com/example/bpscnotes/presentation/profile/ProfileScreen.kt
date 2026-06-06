@@ -73,7 +73,7 @@ fun ProfileScreen(
     val uiWeekDays = state.weekDays.map { WeekDay(it.label, it.status) }
 
     if (state.isLoading && user == null) {
-        com.example.bpscnotes.core.ui.AppLoader(message = "Loading profile…")
+        com.example.bpscnotes.core.ui.ProfileSkeleton()
         return
     }
     state.error?.let { err ->

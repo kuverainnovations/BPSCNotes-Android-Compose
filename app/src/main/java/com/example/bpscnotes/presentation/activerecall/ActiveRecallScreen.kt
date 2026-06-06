@@ -78,12 +78,7 @@ fun ActiveRecallScreen(
 
     when {
         state.isLoading && state.allCards.isEmpty() -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.recallLoading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                }
-            }
+            com.example.bpscnotes.core.ui.ActiveRecallSkeleton()
         }
 
         state.error != null && state.allCards.isEmpty() -> {

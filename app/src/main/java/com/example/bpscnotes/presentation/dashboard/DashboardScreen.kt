@@ -151,6 +151,9 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .background(cs.background)
             ) {
+                // Offline banner — shows automatically when no internet
+                com.example.bpscnotes.core.network.OfflineBanner()
+
                 // ── STICKY HEADER — never scrolls ──────────────────────────
                 val notifCount = state.unreadNotifCount
                 DashboardHeader(
