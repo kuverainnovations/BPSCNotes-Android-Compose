@@ -3,10 +3,11 @@ package com.example.bpscnotes.presentation.mylearning
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bpscnotes.data.remote.api.AuthApiService
+import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
+import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -35,9 +36,10 @@ data class MyLearningUiState(
 @HiltViewModel
 class MyLearningViewModel @Inject constructor(
     private val coursesApi: CoursesApiService,
-    private val authApi:    AuthApiService,
+    private val authApi: AuthApiService,
     private val statsApi:   com.example.bpscnotes.data.remote.api.UserStatsApiService,
-    private val bus: RefreshEventBus
+    private val bus:        RefreshEventBus,
+    private val cacheInvalidator: CacheInvalidator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyLearningUiState())
@@ -123,8 +125,8 @@ class MyLearningViewModel @Inject constructor(
             _uiState.update { it.copy(isEnrolling = true) }
             try {
                 coursesApi.enrollCourse(courseId)
-                load() // refresh so enrolled tab shows the new course & store removes it
-                // justEnrolledId is set AFTER load() — ensures Courses tab has fresh data before switching
+                cacheInvalidator.evict()           // stale enrollment data must not be served
+                load()
                 _uiState.update { s ->
                     s.copy(
                         isEnrolling    = false,

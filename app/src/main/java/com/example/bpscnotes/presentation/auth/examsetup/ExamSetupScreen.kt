@@ -53,7 +53,7 @@ fun ExamSetupScreen(
     LaunchedEffect(state.isDone) {
         if (state.isDone) {
             navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.ExamSetup.route) { inclusive = true }
+                popUpTo(0) { inclusive = true }
             }
         }
     }

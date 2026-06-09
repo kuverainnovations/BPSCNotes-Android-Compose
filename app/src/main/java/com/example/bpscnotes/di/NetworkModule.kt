@@ -102,6 +102,12 @@ object NetworkModule {
         response
     }
 
+    // Exposed so CacheInvalidator can evict entries by URL pattern
+    @Provides
+    @Singleton
+    fun provideHttpCache(@ApplicationContext context: Context): Cache =
+        Cache(File(context.cacheDir, "http_cache"), 10L * 1024 * 1024)
+
     private fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
                 as? android.net.ConnectivityManager ?: return true
@@ -119,11 +125,9 @@ object NetworkModule {
     @Singleton
     fun provideOkHttp(
         authInterceptor: AuthInterceptor,
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        cache: Cache
     ): OkHttpClient {
-        // 10 MB disk cache for offline support
-        val cache = Cache(File(context.cacheDir, "http_cache"), 10L * 1024 * 1024)
-
         return OkHttpClient.Builder()
             .cache(cache)
             .addInterceptor(authInterceptor)

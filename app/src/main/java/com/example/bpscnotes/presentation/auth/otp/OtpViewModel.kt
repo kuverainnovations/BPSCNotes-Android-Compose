@@ -7,6 +7,7 @@ import com.example.bpscnotes.core.base.BaseViewModel
 import com.example.bpscnotes.core.notifications.FcmTokenManager
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.domain.repository.AuthRepository
+import com.example.bpscnotes.core.network.CacheInvalidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -14,7 +15,8 @@ import javax.inject.Inject
 class OtpViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val tokenStore: TokenStore,
-    private val fcmTokenManager: FcmTokenManager
+    private val fcmTokenManager: FcmTokenManager,
+    private val cacheInvalidator: CacheInvalidator
 ) : BaseViewModel() {
 
     /** Existing user → Main */
@@ -72,6 +74,10 @@ class OtpViewModel @Inject constructor(
                             e
                         )
                     }
+
+                    // Clear any cached responses from the previous user session
+                    // so the new user never sees Suresh's courses/profile
+                    cacheInvalidator.evict()
 
                     _navigateToMain.postValue(true)
                 }

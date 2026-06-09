@@ -9,6 +9,7 @@ import com.example.bpscnotes.data.remote.api.CourseDetailResponse
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
+import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.google.gson.Gson
@@ -38,9 +39,9 @@ data class CourseDetailUiState(
 
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
-    private val api: CoursesApiService
-    ,
-    private val bus: RefreshEventBus
+    private val api: CoursesApiService,
+    private val bus: RefreshEventBus,
+    private val cacheInvalidator: CacheInvalidator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CourseDetailUiState())
@@ -116,6 +117,8 @@ class CourseDetailViewModel @Inject constructor(
             try {
                 api.enrollCourse(courseId)
                 _uiState.update { it.copy(isEnrolling = false, enrollSuccess = true) }
+                bus.emit(RefreshEvent.CourseEnrolled)
+                cacheInvalidator.evict()           // stale enrollment data must not be served
                 load(courseId)
             } catch (e: retrofit2.HttpException) {
                 if (e.code() == 402) {

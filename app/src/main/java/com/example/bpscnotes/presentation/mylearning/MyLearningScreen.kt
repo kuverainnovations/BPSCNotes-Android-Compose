@@ -296,6 +296,7 @@ fun MyLearningScreen(
     val str = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("my_learning") }
+
     var selectedTab by rememberSaveable { mutableIntStateOf(startTab) }
 
     // Switch to My Courses tab (index 1) when enrollment succeeds

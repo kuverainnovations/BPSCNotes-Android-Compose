@@ -72,7 +72,10 @@ fun OtpScreen(
         if (verifySuccess) {
             viewModel.onNavigationConsumed()
             navController.navigate(Screen.Main.route) {
-                popUpTo(Screen.Login.route) { inclusive = true }
+                // popUpTo(0) clears the ENTIRE back stack including any previous Screen.Main entry.
+                // Without this, the old Screen.Main with Suresh's ViewModels stays alive and
+                // the new login just layers on top — user sees stale data until restart.
+                popUpTo(0) { inclusive = true }
             }
         }
     }

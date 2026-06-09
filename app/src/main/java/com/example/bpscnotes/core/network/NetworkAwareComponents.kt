@@ -109,6 +109,7 @@ fun OfflineBanner() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(if (isBack) Color(0xFF2E7D32) else Color(0xFFB71C1C))
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
