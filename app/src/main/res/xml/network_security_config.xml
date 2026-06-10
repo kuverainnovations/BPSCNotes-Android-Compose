@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  network_security_config.xml
+  Replaces the blanket android:usesCleartextTraffic="true" that was in AndroidManifest.
+  - Production: all traffic must be HTTPS.
+  - Debug/dev: allow cleartext only to localhost and the staging API so
+    devs can test locally without HTTPS certificates.
+-->
+<network-security-config>
+
+    <!-- Production (release builds) — HTTPS only, no exceptions -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug builds only — allow cleartext to known local/staging hosts -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />  <!-- trust user-installed CAs for Charles/Proxyman -->
+        </trust-anchors>
+    </debug-overrides>
+
+    <!-- Localhost is always allowed cleartext (emulator + local backend) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>     <!-- Android emulator host -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+
+</network-security-config>
