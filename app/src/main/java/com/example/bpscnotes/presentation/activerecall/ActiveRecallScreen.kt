@@ -433,18 +433,27 @@ private fun FlashcardSessionScreen(
             }
             if (rating != CardRating.Skipped) offsetX.animateTo(targetX, tween(300))
 
-            val nextIndex = currentIndex + 1
+            // ── Navigation logic ─────────────────────────────────
+            // Got it / Skipped → go to NEXT card
+            // Revise Again (Weak) → go to PREVIOUS card (so user re-studies it)
+            val targetIndex = when (rating) {
+                CardRating.Weak    -> (currentIndex - 1).coerceAtLeast(0)
+                else               -> currentIndex + 1
+            }
+
             cardsCompleted++
 
             // ── Check if we've hit the ad break threshold ────────
-            if (cardsCompleted % ADS_EVERY_N_CARDS == 0 && nextIndex < cards.size) {
-                // Save where to resume, trigger ad break
-                resumeIndex = nextIndex
+            if (rating != CardRating.Weak &&
+                cardsCompleted % ADS_EVERY_N_CARDS == 0 &&
+                targetIndex < cards.size
+            ) {
+                resumeIndex = targetIndex
                 isFlipped   = false
                 offsetX.snapTo(0f)
                 showAdBreak = true
-            } else if (nextIndex < cards.size) {
-                currentIndex = nextIndex
+            } else if (targetIndex < cards.size) {
+                currentIndex = targetIndex
                 isFlipped    = false
                 offsetX.snapTo(0f)
             } else {

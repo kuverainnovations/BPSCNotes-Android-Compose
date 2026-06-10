@@ -120,7 +120,8 @@ data class QuizUiState(
 class QuizViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
     private val bus: RefreshEventBus,
-    private val authApi: AuthApiService
+    private val authApi: AuthApiService,
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuizUiState())
@@ -345,6 +346,10 @@ class QuizViewModel @Inject constructor(
                         }
                     )
                 }
+                // Evict cached /auth/me and /coins so header coin count
+                // refreshes immediately when loadLobby() re-fetches the profile
+                cacheInvalidator.evict(com.example.bpscnotes.core.network.CacheInvalidator.QUIZ_ENDPOINTS)
+
                 // Broadcast so QuizListScreen's VM (separate hiltViewModel instance)
                 // picks up the event and reloads the list with fresh scores + solved count
                 bus.emit(RefreshEvent.QuizCompleted)

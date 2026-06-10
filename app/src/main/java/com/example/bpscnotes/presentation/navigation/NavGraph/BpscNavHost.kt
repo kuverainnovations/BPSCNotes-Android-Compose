@@ -209,7 +209,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
             // FCM Debug screen — only available in debug builds
             val isDebug = (android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE and
-                    context.applicationInfo.flags) != 0
+                context.applicationInfo.flags) != 0
             if (isDebug) {
                 composable("fcm_debug") {
                     FcmDebugScreen(navController)
@@ -490,7 +490,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 ChangeMpinScreen(navController = navController)
             }
 
-            // Live Class Viewer — in-app WebView
+                        // Live Class Viewer — in-app WebView
             composable(
                 Screen.LiveClassViewer.route,
                 arguments = listOf(
