@@ -26,6 +26,15 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.profile.ProfileViewModel
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.graphics.Color
+
 
 // ════════════════════════════════════════════════════════════
 // SettingsScreen — fully dynamic
@@ -127,6 +136,80 @@ fun SettingsScreen(
                     coins  = user?.coins,
                     onEdit = { navController.navigate(Screen.EditProfile.route) }
                 )
+
+                // ── Security ──────────────────────────────────────
+                SettingsSectionLabel("Security")
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    shape    = RoundedCornerShape(20.dp),
+                    colors   = CardDefaults.cardColors(containerColor = cs.surface)
+                ) {
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        // Change MPIN
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate(Screen.ChangeMpin.route) }
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Lock,
+                                contentDescription = null,
+                                tint = BpscColors.Primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Change MPIN", style = MaterialTheme.typography.titleSmall,
+                                    color = cs.onSurface)
+                                Text("Update your 6-digit login MPIN",
+                                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp))
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), thickness = 0.5.dp)
+
+                        // Biometric toggle
+                        // LocalContext.current must be called at composable scope, not inside remember {}
+                        val biometricContext = androidx.compose.ui.platform.LocalContext.current
+                        val biometricAvailable = remember(biometricContext) {
+                            com.example.bpscnotes.core.auth.AppBiometricManager.isAvailable(biometricContext)
+                        }
+                        if (biometricAvailable) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Fingerprint,
+                                    contentDescription = null,
+                                    tint = BpscColors.Primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Biometric Login", style = MaterialTheme.typography.titleSmall,
+                                        color = cs.onSurface)
+                                    Text("Use fingerprint or face to login",
+                                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                                }
+                                Switch(
+                                    checked = settingsState.biometricEnabled,
+                                    onCheckedChange = { settingsViewModel.setBiometricEnabled(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor  = Color.White,
+                                        checkedTrackColor  = BpscColors.Primary
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
 
                 // ── Appearance ────────────────────────────────────
                 SettingsSectionLabel(str.settingsAppearance)

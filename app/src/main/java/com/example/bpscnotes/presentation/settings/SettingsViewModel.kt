@@ -42,7 +42,8 @@ data class SettingsUiState(
     // Feedback
     val successMessage:     String? = null,
     val error:              String? = null,
-    val loggedOut:          Boolean = false   // triggers navigation to Login
+    val loggedOut:          Boolean = false,   // triggers navigation to Login
+    val biometricEnabled:   Boolean = false,
 )
 
 @HiltViewModel
@@ -66,11 +67,12 @@ class SettingsViewModel @Inject constructor(
     private fun loadPersistedPreferences() {
         _state.update {
             it.copy(
-                darkMode      = tokenStore.getBoolPref("dark_mode",      false),
-                studyReminder = tokenStore.getBoolPref("study_reminder", true),
-                autoPlay      = tokenStore.getBoolPref("auto_play",      true),
-                sound         = tokenStore.getBoolPref("sound",          true),
-                haptics       = tokenStore.getBoolPref("haptics",        true),
+                darkMode        = tokenStore.getBoolPref("dark_mode",      false),
+                studyReminder   = tokenStore.getBoolPref("study_reminder", true),
+                autoPlay        = tokenStore.getBoolPref("auto_play",      true),
+                sound           = tokenStore.getBoolPref("sound",          true),
+                haptics         = tokenStore.getBoolPref("haptics",        true),
+                biometricEnabled = tokenStore.isBiometricEnabled(),
             )
         }
     }
@@ -81,6 +83,11 @@ class SettingsViewModel @Inject constructor(
     fun setAutoPlay(v: Boolean)      { _state.update { it.copy(autoPlay = v) };      tokenStore.setBoolPref("auto_play", v) }
     fun setSound(v: Boolean)         { _state.update { it.copy(sound = v) };         tokenStore.setBoolPref("sound", v);         Event.settingsChanged("sound", v.toString()) }
     fun setHaptics(v: Boolean)       { _state.update { it.copy(haptics = v) };       tokenStore.setBoolPref("haptics", v) }
+    fun setBiometricEnabled(v: Boolean) {
+        tokenStore.setBiometricEnabled(v)
+        _state.update { it.copy(biometricEnabled = v) }
+        Event.settingsChanged("biometric_enabled", v.toString())
+    }
 
     // ── Real storage sizes ────────────────────────────────────
     fun computeStorageSizes() {
@@ -144,7 +151,7 @@ class SettingsViewModel @Inject constructor(
             _state.update { it.copy(isLoggingOut = true) }
             // Best-effort server logout — don't block UI on network errors
             runCatching { authApi.logOut() }
-            tokenStore.clearAll()
+            tokenStore.clearSessionOnly()   // keeps mobile + hasMpin for next login
             _state.update { it.copy(isLoggingOut = false, loggedOut = true) }
         }
     }
@@ -158,7 +165,7 @@ class SettingsViewModel @Inject constructor(
             _state.update { it.copy(isDeletingAccount = true, showDeleteConfirm = false) }
             try {
                 authApi.deleteAccount()
-                tokenStore.clearAll()
+                tokenStore.clearSessionOnly()   // keeps mobile + hasMpin for next login
                 _state.update { it.copy(isDeletingAccount = false, loggedOut = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteAccount: ${e.message}", e)

@@ -74,11 +74,20 @@ fun SplashScreen(navController: NavHostController) {
         // 2. Logged in (token exists) → Main directly (skip ExamSetup on reinstall)
         // 3. Not logged in + onboarded → Login
         // 4. Not logged in + never onboarded → Onboarding
+        // Navigation decision tree:
+        // 1. First launch                → Language selection
+        // 2. Has JWT token               → Main (already authenticated)
+        // 3. Has saved mobile + hasMpin  → MPIN Login screen (skip mobile entry)
+        // 4. Onboarded, no MPIN          → Login screen
+        // 5. Never onboarded             → Onboarding
+        val savedMobile = tokenStore.getUserMobile()
         val destination = when {
-            LanguageManager.isFirstLaunch(context)  -> Screen.LanguageSelection.route
-            !token.isNullOrEmpty()                  -> Screen.Main.route   // already authenticated
-            tokenStore.isOnboarded()                -> Screen.Login.route
-            else                                    -> Screen.Onboarding.route
+            LanguageManager.isFirstLaunch(context) -> Screen.LanguageSelection.route
+            !token.isNullOrEmpty()                 -> Screen.Main.route
+            !savedMobile.isNullOrBlank() && tokenStore.hasMpin() ->
+                Screen.MpinLogin.createRoute(savedMobile)
+            tokenStore.isOnboarded()               -> Screen.Login.route
+            else                                   -> Screen.Onboarding.route
         }
         navController.navigate(destination) {
             popUpTo(Screen.Splash.route) { inclusive = true }

@@ -44,11 +44,16 @@ fun CoursePaymentScreen(
         viewModel.initCoursePurchase(courseId, courseTitle, price, razorpayOrderId, razorpayKeyId)
     }
 
-    // Launch Razorpay when order is ready
+    // Launch Razorpay when order is ready.
+    // We consume the orderId immediately after launching so rotation/recompose
+    // does NOT re-trigger Razorpay on the same (already-used) order.
     LaunchedEffect(state.razorpayOrderId) {
         val orderId = state.razorpayOrderId ?: return@LaunchedEffect
         val keyId   = state.razorpayKeyId   ?: return@LaunchedEffect
         if (orderId.isBlank() || keyId.isBlank()) return@LaunchedEffect
+
+        // Consume immediately — prevents a second launch if state recomposes
+        viewModel.consumeRazorpayOrderId()
 
         launchRazorpay(
             context     = context,

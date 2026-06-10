@@ -45,7 +45,13 @@ class MarketplaceViewModel @Inject constructor(
                     search  = s.searchQuery.takeIf { it.isNotEmpty() },
                     sort    = s.selectedSort
                 )
-                _state.update { it.copy(items = resp.data?.items ?: emptyList(), isLoading = false) }
+                // Backend returns comingSoon=true while feature is not live
+                val comingSoon = resp.data?.items?.isEmpty() == true && resp.message?.contains("soon", ignoreCase = true) == true
+                _state.update { it.copy(
+                    items       = resp.data?.items ?: emptyList(),
+                    isLoading   = false,
+                    isComingSoon = comingSoon
+                )}
             } catch (e: Exception) {
                 Log.e("MarketplaceVM", e.message ?: "", e)
                 _state.update { it.copy(isLoading = false, error = e.message) }

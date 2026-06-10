@@ -154,6 +154,20 @@ fun DashboardScreen(
                 // Offline banner — shows automatically when no internet
                 com.example.bpscnotes.core.network.OfflineBanner()
 
+                // Auto-refresh when coming back online — evict stale cache first
+                val isOnline = com.example.bpscnotes.core.network.rememberIsOnline()
+                var wasOffline by remember { mutableStateOf(false) }
+                LaunchedEffect(isOnline) {
+                    if (!isOnline) {
+                        wasOffline = true
+                    } else if (wasOffline) {
+                        wasOffline = false
+                        // Small delay so network is stable before hitting server
+                        kotlinx.coroutines.delay(500)
+                        dashboardViewModel.refresh()
+                    }
+                }
+
                 // ── STICKY HEADER — never scrolls ──────────────────────────
                 val notifCount = state.unreadNotifCount
                 DashboardHeader(

@@ -3,10 +3,14 @@ package com.example.bpscnotes.presentation.navigation.NavGraph
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
+import dagger.hilt.android.EntryPointAccessors
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.EnterTransition
@@ -70,10 +74,32 @@ import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
 import com.example.bpscnotes.presentation.studymaterials.VideoPlayerScreen
 import com.example.bpscnotes.presentation.studymaterials.ImageViewerScreen
 import com.example.bpscnotes.presentation.wallet.CoinWalletScreen
+import com.example.bpscnotes.presentation.auth.mpin.MpinLoginScreen
+import com.example.bpscnotes.presentation.auth.mpin.CreateMpinScreen
+import com.example.bpscnotes.presentation.auth.mpin.ResetMpinScreen
+import com.example.bpscnotes.presentation.settings.ChangeMpinScreen
 
 @Composable
 fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
     val context = LocalContext.current
+
+    // ── Session expired (401) → redirect to Login ───────────────────────
+    // AuthInterceptor fires this whenever the server returns 401.
+    // Handles mid-session expiry without each screen needing its own check.
+    val authEventBus = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            com.example.bpscnotes.core.network.AuthEventBusEntryPoint::class.java
+        ).authEventBus()
+    }
+    LaunchedEffect(Unit) {
+        authEventBus.sessionExpired.collect {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     // ── Root-level safety net ──────────────────────────────────────────────
     // Registered FIRST = LOWEST priority. Only fires when every inner
@@ -127,11 +153,17 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
             composable(
                 Screen.Otp.route,
-                arguments = listOf(navArgument("mobile") { type = NavType.StringType })
-            ) {
+                arguments = listOf(
+                    navArgument("mobile")  { type = NavType.StringType },
+                    navArgument("context") { type = NavType.StringType; defaultValue = "registration" }
+                )
+            ) { back ->
+                val mobile  = java.net.URLDecoder.decode(back.arguments?.getString("mobile") ?: "", "UTF-8")
+                val ctx     = java.net.URLDecoder.decode(back.arguments?.getString("context") ?: "registration", "UTF-8")
                 OtpScreen(
                     navController = navController,
-                    mobile        = it.arguments?.getString("mobile") ?: ""
+                    mobile        = mobile,
+                    otpContext    = ctx
                 )
             }
 
@@ -175,9 +207,13 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 SubscriptionPaymentScreen(navController)
             }
 
-            // Debug screen — remove before production release
-            composable("fcm_debug") {
-                FcmDebugScreen(navController)
+            // FCM Debug screen — only available in debug builds
+            val isDebug = (android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE and
+                    context.applicationInfo.flags) != 0
+            if (isDebug) {
+                composable("fcm_debug") {
+                    FcmDebugScreen(navController)
+                }
             }
 
             composable(
@@ -413,6 +449,47 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             composable(Screen.Settings.route)      { SettingsScreen(navController) }
             composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
 
+            // ── MPIN Auth ────────────────────────────────────────────
+            composable(
+                Screen.MpinLogin.route,
+                arguments = listOf(navArgument("mobile") { type = NavType.StringType })
+            ) { back ->
+                val mobile = java.net.URLDecoder.decode(
+                    back.arguments?.getString("mobile") ?: "", "UTF-8"
+                )
+                MpinLoginScreen(navController = navController, mobile = mobile)
+            }
+
+            composable(Screen.CreateMpin.route) {
+                CreateMpinScreen(navController = navController)
+            }
+
+            composable(
+                Screen.ForgotMpin.route,
+                arguments = listOf(navArgument("mobile") { type = NavType.StringType })
+            ) { back ->
+                val mobile = java.net.URLDecoder.decode(
+                    back.arguments?.getString("mobile") ?: "", "UTF-8"
+                )
+                ForgotMpinRedirectScreen(navController = navController, mobile = mobile)
+            }
+
+            composable(
+                Screen.ResetMpin.route,
+                arguments = listOf(
+                    navArgument("mobile") { type = NavType.StringType },
+                    navArgument("otp")    { type = NavType.StringType }
+                )
+            ) { back ->
+                val mobile = java.net.URLDecoder.decode(back.arguments?.getString("mobile") ?: "", "UTF-8")
+                val otp    = java.net.URLDecoder.decode(back.arguments?.getString("otp")    ?: "", "UTF-8")
+                ResetMpinScreen(navController = navController, mobile = mobile, otp = otp)
+            }
+
+            composable(Screen.ChangeMpin.route) {
+                ChangeMpinScreen(navController = navController)
+            }
+
             // Live Class Viewer — in-app WebView
             composable(
                 Screen.LiveClassViewer.route,
@@ -457,5 +534,28 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Lightweight composable that immediately navigates to OtpScreen with forgot_mpin context.
+ * Exists as a named @Composable so LaunchedEffect + Modifier work correctly.
+ */
+@Composable
+private fun ForgotMpinRedirectScreen(
+    navController: androidx.navigation.NavHostController,
+    mobile: String
+) {
+    LaunchedEffect(Unit) {
+        navController.navigate(
+            Screen.Otp.createRouteWithContext(mobile, "forgot_mpin")
+        ) {
+            popUpTo(Screen.ForgotMpin.createRoute(mobile)) { inclusive = true }
+        }
+    }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        androidx.compose.material3.CircularProgressIndicator(
+            color = com.example.bpscnotes.core.ui.t.BpscColors.Primary
+        )
     }
 }

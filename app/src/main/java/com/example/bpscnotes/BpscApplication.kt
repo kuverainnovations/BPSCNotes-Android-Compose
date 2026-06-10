@@ -68,9 +68,13 @@ class BpscApplication : Application() {
         }
 
         // ── PostHog ───────────────────────────────────────────
+        // PostHog — replace with real key before release.
+        // Once you add buildConfigField entries to app/build.gradle, switch these back to:
+        //   apiKey = BuildConfig.POSTHOG_API_KEY
+        //   host   = BuildConfig.POSTHOG_HOST
         val config = PostHogAndroidConfig(
-            apiKey = POSTHOG_API_KEY,
-            host   = POSTHOG_HOST,
+            apiKey = "phc_REPLACE_WITH_YOUR_POSTHOG_KEY",
+            host   = "https://app.posthog.com",
         ).apply {
             captureScreenViews = false
             captureDeepLinks   = true
@@ -85,7 +89,9 @@ class BpscApplication : Application() {
     }
 
     companion object {
-        const val POSTHOG_API_KEY = "phc_REPLACE_WITH_YOUR_POSTHOG_KEY"
-        const val POSTHOG_HOST    = "https://app.posthog.com"
+        // PostHog keys are injected via BuildConfig fields in app/build.gradle:
+        //   buildConfigField("String", "POSTHOG_API_KEY", '"phc_YOUR_KEY_HERE"')
+        //   buildConfigField("String", "POSTHOG_HOST",    '"https://app.posthog.com"')
+        // This keeps secrets out of source control.
     }
 }

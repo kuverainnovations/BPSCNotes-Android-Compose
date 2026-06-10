@@ -6,7 +6,6 @@ import com.example.bpscnotes.data.remote.dto.RegisterRequest
 import com.example.bpscnotes.data.remote.dto.UserDto
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.*
-
 // ════════════════════════════════════════════════════════════
 // AuthApiService — auth + profile management
 // ════════════════════════════════════════════════════════════
@@ -57,7 +56,60 @@ interface AuthApiService {
 
     @POST("auth/fcm-token")
     suspend fun updateFcmToken(@Body dto: Map<String, String>): ApiResponse<Any>
+
+    // ── MPIN endpoints ─────────────────────────────────────────
+
+    /** GET /auth/check-mpin?mobile=+91XXXXXXXXXX */
+    @GET("auth/check-mpin")
+    suspend fun checkMpin(@Query("mobile") mobile: String): ApiResponse<CheckMpinData>
+
+    /** POST /auth/login-mpin — primary login for returning users */
+    @POST("auth/login-mpin")
+    suspend fun loginMpin(@Body dto: LoginMpinRequest): VerifyOtpResponse
+
+    /** POST /auth/create-mpin — after registration (JWT required) */
+    @POST("auth/create-mpin")
+    suspend fun createMpin(@Body dto: CreateMpinRequest): ApiResponse<CreateMpinData>
+
+    /** POST /auth/forgot-mpin — triggers OTP (public) */
+    @POST("auth/forgot-mpin")
+    suspend fun forgotMpin(@Body dto: ForgotMpinRequest): ApiResponse<Any>
+
+    /** POST /auth/reset-mpin — OTP + new MPIN, returns JWT (public) */
+    @POST("auth/reset-mpin")
+    suspend fun resetMpin(@Body dto: ResetMpinRequest): VerifyOtpResponse
+
+    /** POST /auth/change-mpin — current + new MPIN (JWT required) */
+    @POST("auth/change-mpin")
+    suspend fun changeMpin(@Body dto: ChangeMpinRequest): ApiResponse<Any>
 }
+
+// ── MPIN DTOs ──────────────────────────────────────────────────
+
+data class CheckMpinData(
+    val hasMpin: Boolean = false,
+    val isLocked: Boolean = false,
+    val lockedUntilSeconds: Int = 0
+)
+
+data class LoginMpinRequest(val mobile: String, val mpin: String)
+
+data class CreateMpinRequest(val mpin: String)
+
+data class CreateMpinData(val mpinCreated: Boolean = false)
+
+data class ForgotMpinRequest(val mobile: String)
+
+data class ResetMpinRequest(
+    val mobile: String,
+    val otp: String,
+    val newMpin: String
+)
+
+data class ChangeMpinRequest(
+    val currentMpin: String,
+    val newMpin: String
+)
 
 // ── DTOs ──────────────────────────────────────────────────────
 data class UpdateProfileRequest(
@@ -85,7 +137,8 @@ data class VerifyOtpData(
     val isNewUser: Boolean    = false,
     val tempToken: String?    = null,
     val accessToken: String?  = null,
-    val refreshToken: String? = null
+    val refreshToken: String? = null,
+    val hasMpin: Boolean      = false,   // true = user already has MPIN set
 )
 
 data class RegisterResponse(

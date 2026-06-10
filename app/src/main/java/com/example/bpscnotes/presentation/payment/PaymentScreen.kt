@@ -44,10 +44,12 @@ fun SubscriptionPaymentScreen(
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    // Launch Razorpay when order is ready
+    // Launch Razorpay when order is ready.
+    // Consume orderId immediately so rotation/recompose doesn't re-trigger.
     LaunchedEffect(state.razorpayOrderId) {
         val orderId = state.razorpayOrderId ?: return@LaunchedEffect
         val keyId   = state.razorpayKeyId   ?: return@LaunchedEffect
+        viewModel.consumeRazorpayOrderId()
         launchRazorpay(
             context     = context,
             orderId     = orderId,

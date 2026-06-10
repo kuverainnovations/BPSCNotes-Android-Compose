@@ -23,7 +23,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-//    private const val BASE_URL = "https://api.bpscnotes.in/api/v1/"
+    // Switch to BuildConfig.BASE_URL once you add buildConfigField to app/build.gradle.
+    // See BUILDCONFIG_INSTRUCTIONS.md for the exact lines to add.
+    // For now, use the staging URL directly to unblock the build.
     private const val BASE_URL = "https://api-stg.bpscnotes.in/api/v1/"
 
     // ── Retry GET requests only — never POST/auth ─────────────
@@ -77,12 +79,36 @@ object NetworkModule {
     }
 
     // ── Online interceptor: cache successful GET responses for 5 min ──
-    // ONLY caches 200 responses — never caches errors
-    private val onlineInterceptor = Interceptor { chain ->
+    // ONLY caches 200 responses — never caches errors.
+    // After any successful mutation (POST/PUT/PATCH/DELETE), evicts related
+    // GET cache entries so the next load always hits the server fresh.
+    private fun onlineInterceptor(cache: Cache) = Interceptor { chain ->
         val request  = chain.request()
         val response = chain.proceed(request)
 
-        // Only cache successful GET responses
+        // After successful mutation — evict related cached GETs
+        if (request.method != "GET" && response.isSuccessful) {
+            val url = request.url.toString()
+            // Evict GET caches for the same base path and user-level aggregates
+            val toEvict = mutableListOf<String>()
+            // Always evict the base path of the mutated resource
+            val basePath = request.url.encodedPath
+                .substringBefore("/:").split("/")
+                .take(5).joinToString("/")
+            toEvict.add(basePath)
+            // Always evict user stats and profile since most mutations affect them
+            toEvict.addAll(listOf("/api/v1/users", "/api/v1/auth/me", "/api/v1/coins"))
+            // Evict by pattern
+            try {
+                val iter = cache.urls()
+                while (iter.hasNext()) {
+                    val cached = iter.next()
+                    if (toEvict.any { cached.contains(it) }) iter.remove()
+                }
+            } catch (_: Exception) {}
+        }
+
+        // Cache successful GET responses for 5 minutes
         if (request.method == "GET" && response.code == 200) {
             val maxAge = 5 * 60 // 5 minutes
             return@Interceptor response.newBuilder()
@@ -135,7 +161,7 @@ object NetworkModule {
             // offlineInterceptor goes as application interceptor (before network)
             .addInterceptor(offlineInterceptor(context))
             // onlineInterceptor goes as network interceptor (sees real response)
-            .addNetworkInterceptor(onlineInterceptor)
+            .addNetworkInterceptor(onlineInterceptor(cache))
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })

@@ -71,15 +71,16 @@ data class FileAccessData(@SerializedName("file_url") val fileUrl: String? = nul
 // ─────────────────────────────────────────────────────────────
 
 data class MarketplaceUiState(
-    val items:        List<MarketplaceItem> = emptyList(),
-    val isLoading:    Boolean               = true,
-    val error:        String?               = null,
-    val searchQuery:  String                = "",
-    val selectedSubject: String             = "",
-    val selectedSort: String               = "popular",
-    val purchasing:   String?              = null,   // item id being purchased
-    val purchaseSuccess: String?           = null,
-    val purchaseError: String?             = null,
+    val items:           List<MarketplaceItem> = emptyList(),
+    val isLoading:       Boolean               = true,
+    val error:           String?               = null,
+    val isComingSoon:    Boolean               = false,   // backend not live yet
+    val searchQuery:     String                = "",
+    val selectedSubject: String                = "",
+    val selectedSort:    String                = "popular",
+    val purchasing:      String?               = null,
+    val purchaseSuccess: String?               = null,
+    val purchaseError:   String?               = null,
 )
 
 
@@ -112,6 +113,33 @@ fun MarketplaceScreen(
         contentWindowInsets = WindowInsets(0)
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
+
+            // ── Coming Soon banner (while marketplace feature is not live) ──
+            if (state.isComingSoon) {
+                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Column(
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text("🛍️", style = MaterialTheme.typography.displayMedium)
+                        Text(
+                            "Marketplace Coming Soon",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = cs.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Text(
+                            "Buy and sell study materials created by fellow BPSC aspirants.\nLaunching soon!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+                return@Scaffold
+            }
 
             // ── Header ────────────────────────────────────────────
             Box(

@@ -6,8 +6,11 @@ sealed class Screen(val route: String) {
     object LanguageSelection   : Screen("language_selection")
     object Onboarding          : Screen("onboarding")
     object Login        : Screen("login")
-    object Otp          : Screen("otp/{mobile}") {
+    object Otp : Screen("otp/{mobile}?context={context}") {
         fun createRoute(mobile: String) = "otp/$mobile"
+        /** context: "registration" (default) or "forgot_mpin" */
+        fun createRouteWithContext(mobile: String, context: String = "registration") =
+            "otp/${mobile.encodeUrl()}?context=${context.encodeUrl()}"
     }
     object Register     : Screen("register/{tempToken}") {
         fun createRoute(tempToken: String) = "register/${tempToken.encodeUrl()}"
@@ -115,6 +118,21 @@ sealed class Screen(val route: String) {
     object NotificationSettings : Screen("notification_settings")
     object Settings             : Screen("settings")
     object EditProfile          : Screen("edit_profile")
+    object ChangeMpin           : Screen("change_mpin")
+
+    // ── MPIN Auth ─────────────────────────────────────────────
+    object MpinLogin  : Screen("mpin_login/{mobile}") {
+        fun createRoute(mobile: String) = "mpin_login/${mobile.encodeUrl()}"
+    }
+    object CreateMpin : Screen("create_mpin")
+    object ForgotMpin : Screen("forgot_mpin/{mobile}") {
+        fun createRoute(mobile: String) = "forgot_mpin/${mobile.encodeUrl()}"
+    }
+    // OTP verified for forgot-mpin; otp is passed so ResetMpin can call backend
+    object ResetMpin  : Screen("reset_mpin/{mobile}/{otp}") {
+        fun createRoute(mobile: String, otp: String) =
+            "reset_mpin/${mobile.encodeUrl()}/${otp.encodeUrl()}"
+    }
 
     // Live Class Viewer — in-app WebView for live meetings
     object LiveClassViewer : Screen("live_class/{url}/{title}/{instructor}/{durationMins}") {

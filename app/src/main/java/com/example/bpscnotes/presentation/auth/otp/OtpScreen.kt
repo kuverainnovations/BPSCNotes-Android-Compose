@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 fun OtpScreen(
     navController: NavHostController,
     mobile: String,
+    otpContext: String = "registration",   // "registration" | "forgot_mpin"
     viewModel: OtpViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -50,10 +51,7 @@ fun OtpScreen(
     val isLoading       by viewModel.isLoading.observeAsState(false)
     val error           by viewModel.error.observeAsState()
 
-    // Existing user → go to Main
-    val verifySuccess   by viewModel.verifySuccess.observeAsState(false)
-    // New user → go to Register
-    val goToRegister    by viewModel.navigateToRegister.observeAsState()
+    val result by viewModel.result.observeAsState()
 
     val resendSuccess   by viewModel.resendSuccess.observeAsState(false)
 
@@ -67,33 +65,35 @@ fun OtpScreen(
         viewModel.onResendConsumed()
     }
 
-    // Navigate: existing user
-    LaunchedEffect(verifySuccess) {
-        if (verifySuccess) {
-            viewModel.onNavigationConsumed()
-            navController.navigate(Screen.Main.route) {
-                // popUpTo(0) clears the ENTIRE back stack including any previous Screen.Main entry.
-                // Without this, the old Screen.Main with Suresh's ViewModels stays alive and
-                // the new login just layers on top — user sees stale data until restart.
-                popUpTo(0) { inclusive = true }
+    // Navigate based on OTP verification result
+    LaunchedEffect(result) {
+        when (val r = result) {
+            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToMain -> {
+                viewModel.onResultConsumed()
+                navController.navigate(Screen.Main.route) { popUpTo(0) { inclusive = true } }
             }
-        }
-    }
-
-    // Navigate: new user
-    LaunchedEffect(goToRegister) {
-        goToRegister?.let { tempToken ->
-            viewModel.onNavigationConsumed()
-            navController.navigate(Screen.Register.createRoute(tempToken)) {
-                // Keep OTP screen in back stack so user can return and re-enter OTP
+            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToRegister -> {
+                viewModel.onResultConsumed()
+                navController.navigate(Screen.Register.createRoute(r.tempToken))
             }
+            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToCreateMpin -> {
+                viewModel.onResultConsumed()
+                navController.navigate(Screen.CreateMpin.route) { popUpTo(0) { inclusive = true } }
+            }
+            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToResetMpin -> {
+                viewModel.onResultConsumed()
+                navController.navigate(Screen.ResetMpin.createRoute(r.mobile, r.otp)) {
+                    popUpTo(Screen.Login.route) { inclusive = false }
+                }
+            }
+            null -> {}
         }
     }
 
     // Auto-submit when 6 digits entered
     val fullOtp = otpValues.joinToString("") { it.value }
     LaunchedEffect(fullOtp) {
-        if (fullOtp.length == 6) viewModel.verifyOtp(mobile, fullOtp)
+        if (fullOtp.length == 6) viewModel.verifyOtp(mobile, fullOtp, otpContext)
     }
 
     Column(
@@ -207,7 +207,7 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick  = { viewModel.verifyOtp(mobile, fullOtp) },
+            onClick  = { viewModel.verifyOtp(mobile, fullOtp, otpContext) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(54.dp),
             enabled  = fullOtp.length == 6 && !isLoading,
             shape    = RoundedCornerShape(16.dp),

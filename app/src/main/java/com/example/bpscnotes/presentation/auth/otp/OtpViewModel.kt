@@ -4,12 +4,20 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.bpscnotes.core.base.BaseViewModel
+import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.core.notifications.FcmTokenManager
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.domain.repository.AuthRepository
-import com.example.bpscnotes.core.network.CacheInvalidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+
+// What the OTP screen should do after successful verification
+sealed class OtpResult {
+    object NavigateToMain          : OtpResult()     // existing user via registration context (edge case)
+    data class NavigateToRegister(val tempToken: String) : OtpResult()  // new user
+    data class NavigateToResetMpin(val mobile: String, val otp: String) : OtpResult()  // forgot_mpin context
+    data class NavigateToCreateMpin(val mobile: String) : OtpResult()   // existing user with no MPIN
+}
 
 @HiltViewModel
 class OtpViewModel @Inject constructor(
@@ -19,108 +27,70 @@ class OtpViewModel @Inject constructor(
     private val cacheInvalidator: CacheInvalidator
 ) : BaseViewModel() {
 
-    /** Existing user → Main */
-    private val _navigateToMain = MutableLiveData(false)
-    val verifySuccess: LiveData<Boolean> = _navigateToMain
-
-    /** New user → Register */
-    private val _navigateToRegister = MutableLiveData<String?>()
-    val navigateToRegister: LiveData<String?> = _navigateToRegister
+    private val _result = MutableLiveData<OtpResult?>()
+    val result: LiveData<OtpResult?> = _result
 
     private val _resendSuccess = MutableLiveData(false)
     val resendSuccess: LiveData<Boolean> = _resendSuccess
 
-    fun verifyOtp(mobile: String, otp: String) {
-
+    /**
+     * context: "registration" — normal OTP after new-user mobile entry
+     *          "forgot_mpin" — OTP for resetting MPIN
+     */
+    fun verifyOtp(mobile: String, otp: String, context: String = "registration") {
         launchWithLoading {
-
-            val response = authRepository.verifyOtp(mobile, otp)
-
-            Log.d("OTP_VERIFY", "RESPONSE = $response")
-
-            if (!response.success) {
+            if (context == "forgot_mpin") {
+                // For forgot_mpin: we don't call verifyOtp backend endpoint.
+                // We pass the mobile+otp to ResetMpinScreen which calls /auth/reset-mpin.
+                // This way the OTP is consumed exactly once by the reset endpoint.
+                _result.postValue(OtpResult.NavigateToResetMpin(mobile, otp))
                 return@launchWithLoading
             }
+
+            // context == "registration"
+            val response = authRepository.verifyOtp(mobile, otp)
+            Log.d("OTP_VERIFY", "RESPONSE = $response")
+
+            if (!response.success) return@launchWithLoading
 
             val data = response.data
 
             when {
-
-                // EXISTING USER
-                data != null &&
-                        !data.isNewUser &&
-                        data.accessToken != null -> {
-
-                    Log.d("OTP_VERIFY", "LOGIN SUCCESS")
-
-                    // Save mobile
+                // Existing user login via OTP (fallback — normally they use MPIN)
+                data != null && !data.isNewUser && data.accessToken != null -> {
+                    Log.d("OTP_VERIFY", "EXISTING USER LOGIN")
                     tokenStore.saveUserMobile(mobile)
-
-                    // IMPORTANT
-                    // Sync FCM token AFTER login success
-                    try {
-
-                        Log.d("OTP_VERIFY", "SYNCING FCM TOKEN")
-
-                        fcmTokenManager.syncTokenIfNeeded()
-
-                        Log.d("OTP_VERIFY", "FCM TOKEN SYNC DONE")
-
-                    } catch (e: Exception) {
-
-                        Log.e(
-                            "OTP_VERIFY",
-                            "FCM SYNC FAILED",
-                            e
-                        )
+                    try { fcmTokenManager.syncTokenIfNeeded() } catch (e: Exception) {
+                        Log.e("OTP_VERIFY", "FCM sync failed", e)
                     }
-
-                    // Clear any cached responses from the previous user session
-                    // so the new user never sees Suresh's courses/profile
                     cacheInvalidator.evict()
-
-                    _navigateToMain.postValue(true)
+                    if (!data.hasMpin) {
+                        // Existing user with no MPIN yet → send to CreateMpin
+                        _result.postValue(OtpResult.NavigateToCreateMpin(mobile))
+                    } else {
+                        _result.postValue(OtpResult.NavigateToMain)
+                    }
                 }
 
-                // NEW USER
-                data != null &&
-                        data.isNewUser &&
-                        data.tempToken != null -> {
-
-                    _navigateToRegister.postValue(data.tempToken)
+                // New user — go to register
+                data != null && data.isNewUser && data.tempToken != null -> {
+                    _result.postValue(OtpResult.NavigateToRegister(data.tempToken))
                 }
 
                 else -> {
-
-                    Log.e(
-                        "OTP_VERIFY",
-                        "INVALID RESPONSE"
-                    )
-
-                    _navigateToMain.postValue(false)
+                    Log.e("OTP_VERIFY", "INVALID RESPONSE")
                 }
             }
         }
     }
 
     fun resendOtp(mobile: String) {
-
         launchWithLoading {
-
             val response = authRepository.sendOtp(mobile)
-
             _resendSuccess.postValue(response.success)
         }
     }
 
-    fun onNavigationConsumed() {
-
-        _navigateToMain.value = false
-        _navigateToRegister.value = null
-    }
-
-    fun onResendConsumed() {
-
-        _resendSuccess.value = false
-    }
+    fun onResultConsumed() { _result.value = null }
+    fun onResendConsumed() { _resendSuccess.value = false }
 }

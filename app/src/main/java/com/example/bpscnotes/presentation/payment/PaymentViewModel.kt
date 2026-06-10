@@ -322,6 +322,11 @@ class PaymentViewModel @Inject constructor(
 
     fun clearError() { _state.update { it.copy(error = null) } }
 
+    /** Called immediately after Razorpay launches — prevents double-launch on recompose. */
+    fun consumeRazorpayOrderId() {
+        _state.update { it.copy(razorpayOrderId = null) }
+    }
+
     private fun parseError(msg: String?): String {
         if (msg == null) return "Something went wrong. Please try again."
         return when {

@@ -72,16 +72,22 @@ fun LoginScreen(navController: NavHostController) {
     var agreed by remember { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
     val error by viewModel.error.observeAsState()
-    val sendOtpSuccess by viewModel.sendOtpSuccess.observeAsState()
+    val destination by viewModel.destination.observeAsState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Navigate on success
-    LaunchedEffect(sendOtpSuccess) {
-        sendOtpSuccess?.let { mob ->
-            viewModel.onOtpNavigationConsumed()
-
-            navController.navigate(Screen.Otp.createRoute(mob))
+    // Navigate based on MPIN check result
+    LaunchedEffect(destination) {
+        when (val dest = destination) {
+            is com.example.bpscnotes.presentation.auth.login.LoginDestination.Otp -> {
+                viewModel.onDestinationConsumed()
+                navController.navigate(Screen.Otp.createRouteWithContext(dest.mobile, "registration"))
+            }
+            is com.example.bpscnotes.presentation.auth.login.LoginDestination.MpinLogin -> {
+                viewModel.onDestinationConsumed()
+                navController.navigate(Screen.MpinLogin.createRoute(dest.mobile))
+            }
+            null -> {}
         }
     }
 
@@ -258,7 +264,7 @@ fun LoginScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.sendOtp(mobile) },
+                onClick = { viewModel.proceed(mobile) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
