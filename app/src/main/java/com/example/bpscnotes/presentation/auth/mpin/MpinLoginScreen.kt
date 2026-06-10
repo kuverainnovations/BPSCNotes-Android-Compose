@@ -10,23 +10,21 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.auth.AppBiometricManager
-import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
-import com.example.bpscnotes.presentation.navigation.Routes.Screen
-import androidx.compose.ui.platform.LocalContext
-import dagger.hilt.android.EntryPointAccessors
 import com.example.bpscnotes.di.TokenStoreEntryPoint
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import dagger.hilt.android.EntryPointAccessors
 
 @Composable
 fun MpinLoginScreen(
@@ -36,7 +34,6 @@ fun MpinLoginScreen(
     viewModel: MpinViewModel = hiltViewModel()
 ) {
     val state   by viewModel.state.collectAsState()
-    val haptic  = LocalHapticFeedback.current
     val context = LocalContext.current
     val tokenStore = remember {
         EntryPointAccessors.fromApplication(
@@ -46,12 +43,39 @@ fun MpinLoginScreen(
     }
     val biometricEnabled = remember { tokenStore.isBiometricEnabled() }
 
-    // Init lockout if passed from LoginViewModel
+    // Blue status bar to match header
+    val systemUiController = rememberSystemUiController()
+    SideEffect {
+        systemUiController.setStatusBarColor(
+            color = Color(0xFF0A2472),
+            darkIcons = false
+        )
+    }
+
     LaunchedEffect(lockedSecondsInit) {
         if (lockedSecondsInit > 0) viewModel.initLockout(lockedSecondsInit)
     }
 
-    // Navigate to Main on success
+    // Single LaunchedEffect(Unit) — reset stale state, then trigger biometric
+    LaunchedEffect(Unit) {
+        // Reset any stale navigation flags from previous session FIRST
+        viewModel.resetState()
+        // Small delay so resetState() takes effect before biometric fires
+        kotlinx.coroutines.delay(100)
+        if (biometricEnabled && !state.isLocked) {
+            kotlinx.coroutines.delay(200)
+            AppBiometricManager.authenticate(
+                context   = context,
+                title     = "BPSCNotes",
+                subtitle  = "Use fingerprint to login",
+                onSuccess = { viewModel.loginWithMpinViaBiometric(mobile) },
+                onError    = {},
+                onFallback = {}
+            )
+        }
+    }
+
+    // Navigate to Main only after successful login (navigateToMain set by ViewModel)
     LaunchedEffect(state.navigateToMain) {
         if (state.navigateToMain) {
             viewModel.consumeNavigateToMain()
@@ -61,174 +85,177 @@ fun MpinLoginScreen(
         }
     }
 
-    // Auto-submit when 6 digits entered
+    // Auto-submit when 4 digits entered
     val pin = state.mpinDigits.joinToString("")
     LaunchedEffect(pin) {
-        if (pin.length == 6 && !state.isLocked) viewModel.loginWithMpin(mobile)
+        if (pin.length == 4 && !state.isLocked) viewModel.loginWithMpin(mobile)
     }
 
-    // Show biometric on screen entry if enabled
-    LaunchedEffect(Unit) {
-        if (biometricEnabled && !state.isLocked) {
-            AppBiometricManager.authenticate(
-                context = context,
-                title = "BPSCNotes",
-                subtitle = "Login with your fingerprint",
-                onSuccess = { viewModel.loginWithMpin(mobile) },
-                onError   = { /* fallback to MPIN — already showing */ },
-                onFallback = { /* user tapped cancel — show MPIN */ }
-            )
-        }
-    }
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-            .imePadding(),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Brush.verticalGradient(
+                listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E3A8A))
+            ))
     ) {
-        // ── Header ─────────────────────────────────────────────
-        Box(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(BpscColors.Primary, Color(0xFF1557C0))))
-                .padding(horizontal = 20.dp, vertical = 28.dp),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .systemBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(40.dp))
+
+            // App logo / icon
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White.copy(0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                "Welcome Back",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "+91 ${mobile.removePrefix("+91")}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(0.7f)
+            )
+            TextButton(onClick = {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = false }
+                }
+            }) {
+                Text(
+                    "Not you? Change number",
+                    color = Color.White.copy(0.5f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(40.dp))
+
+            // Title above dots
+            Text(
+                when {
+                    state.isLocked -> "Account Locked"
+                    else           -> "Enter your 4-digit MPIN"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(0.85f),
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // MPIN dots
+            MpinDots(
+                digits   = state.mpinDigits,
+                hasError = state.error != null && !state.isLocked
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // Error / Lockout message
+            AnimatedVisibility(
+                visible = state.error != null || state.isLocked,
+                enter   = fadeIn() + slideInVertically(),
+                exit    = fadeOut() + slideOutVertically()
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(0.15f)),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 32.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE74C3C).copy(0.2f))
+                        .border(1.dp, Color(0xFFE74C3C).copy(0.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(32.dp))
-                }
-                Spacer(Modifier.height(12.dp))
-                Text("Welcome Back", style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White, fontWeight = FontWeight.Bold)
-                Text("+91 $mobile", style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(0.75f))
-                TextButton(onClick = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = false }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            if (state.isLocked) Icons.Rounded.Lock else Icons.Rounded.Warning,
+                            null,
+                            tint = Color(0xFFFF6B6B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = when {
+                                state.isLocked -> {
+                                    val m = state.lockedSecondsLeft / 60
+                                    val s = state.lockedSecondsLeft % 60
+                                    "Too many attempts. Try again in ${if (m > 0) "${m}m " else ""}${s}s"
+                                }
+                                else -> state.error ?: ""
+                            },
+                            color = Color(0xFFFF6B6B),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
                     }
-                }) {
-                    Text("Change number", color = Color.White.copy(0.6f),
-                        style = MaterialTheme.typography.bodySmall)
                 }
             }
-        }
 
-        Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.weight(1f))
 
-        // ── Biometric button ───────────────────────────────────
-        if (biometricEnabled && !state.isLocked) {
-            OutlinedButton(
-                onClick = {
+            // Loading indicator
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.5.dp
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Numpad with biometric key
+            MpinNumpad(
+                enabled        = !state.isLocked && !state.isLoading,
+                onDigit        = { viewModel.onMpinDigit(it) },
+                onBackspace    = { viewModel.onMpinBackspace() },
+                showBiometric  = biometricEnabled,
+                onBiometric    = if (biometricEnabled) {{
                     AppBiometricManager.authenticate(
-                        context   = context,
-                        title     = "BPSCNotes",
-                        subtitle  = "Login with your fingerprint",
-                        onSuccess = { viewModel.loginWithMpin(mobile) },
-                        onError   = {},
+                        context    = context,
+                        title      = "BPSCNotes",
+                        subtitle   = "Use fingerprint to login",
+                        onSuccess  = { viewModel.loginWithMpinViaBiometric(mobile) },
+                        onError    = {},
                         onFallback = {}
                     )
-                },
-                modifier = Modifier.padding(horizontal = 48.dp).fillMaxWidth(),
-                shape    = RoundedCornerShape(14.dp),
-                border   = BorderStroke(1.5.dp, BpscColors.Primary)
-            ) {
-                Icon(Icons.Rounded.Fingerprint, null, tint = BpscColors.Primary,
-                    modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Login with Biometric", color = BpscColors.Primary,
-                    style = MaterialTheme.typography.titleSmall)
-            }
-            Spacer(Modifier.height(16.dp))
-            Text("— or enter MPIN —", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(20.dp))
-        } else {
-            Text("Enter your MPIN", style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(24.dp))
-        }
-
-        // ── Lockout message ────────────────────────────────────
-        AnimatedVisibility(visible = state.isLocked) {
-            Card(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3F3))
-            ) {
-                Row(Modifier.padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Lock, null, tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp))
-                    Text(
-                        buildString {
-                            append("Too many attempts. Try again in ")
-                            val m = state.lockedSecondsLeft / 60
-                            val s = state.lockedSecondsLeft % 60
-                            if (m > 0) append("${m}m ")
-                            append("${s}s")
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-
-        // ── MPIN dots ──────────────────────────────────────────
-        MpinDots(digits = state.mpinDigits, hasError = state.error != null && !state.isLocked)
-        Spacer(Modifier.height(8.dp))
-
-        // ── Error message ──────────────────────────────────────
-        AnimatedVisibility(visible = state.error != null && !state.isLocked) {
-            Text(
-                state.error ?: "",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                }} else null
             )
-        }
 
-        Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(8.dp))
 
-        // ── Numpad ─────────────────────────────────────────────
-        MpinNumpad(
-            enabled = !state.isLocked && !state.isLoading,
-            onDigit = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                viewModel.onMpinDigit(it)
-            },
-            onBackspace = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                viewModel.onMpinBackspace()
+            // Forgot MPIN
+            TextButton(
+                onClick = { navController.navigate(Screen.ForgotMpin.createRoute(mobile)) },
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Text(
+                    "Forgot MPIN?",
+                    color = Color.White.copy(0.6f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
-        )
-
-        // ── Forgot MPIN ────────────────────────────────────────
-        TextButton(
-            onClick = { navController.navigate(Screen.ForgotMpin.createRoute(mobile)) },
-            modifier = Modifier.padding(bottom = 8.dp)
-        ) {
-            Text("Forgot MPIN?", color = BpscColors.Primary,
-                style = MaterialTheme.typography.bodyMedium)
-        }
-
-        if (state.isLoading) {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(),
-                color = BpscColors.Primary
-            )
         }
     }
 }

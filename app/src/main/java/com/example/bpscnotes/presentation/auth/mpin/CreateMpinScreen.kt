@@ -1,156 +1,168 @@
 package com.example.bpscnotes.presentation.auth.mpin
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 @Composable
 fun CreateMpinScreen(
     navController: NavHostController,
     viewModel: MpinViewModel = hiltViewModel()
 ) {
-    val state  by viewModel.state.collectAsState()
-    val haptic = LocalHapticFeedback.current
-    val cs     = MaterialTheme.colorScheme
+    val state by viewModel.state.collectAsState()
 
-    // After MPIN created → show biometric opt-in dialog then navigate to Main
+    val systemUiController = rememberSystemUiController()
+    SideEffect {
+        systemUiController.setStatusBarColor(color = Color(0xFF0A2472), darkIcons = false)
+    }
+
     var showBiometricDialog by remember { mutableStateOf(false) }
     LaunchedEffect(state.mpinCreated) {
-        if (state.mpinCreated) {
-            viewModel.consumeMpinCreated()
-            showBiometricDialog = true
-        }
+        if (state.mpinCreated) { viewModel.consumeMpinCreated(); showBiometricDialog = true }
     }
 
     if (showBiometricDialog) {
         BiometricOptInDialog(
-            onEnable = {
-                showBiometricDialog = false
-                // Enable biometric in TokenStore via EntryPoint (see BiometricOptInDialog)
-                navController.navigate(Screen.Main.route) {
-                    popUpTo(0) { inclusive = true }
-                }
-            },
-            onSkip = {
-                showBiometricDialog = false
-                navController.navigate(Screen.Main.route) {
-                    popUpTo(0) { inclusive = true }
-                }
-            }
+            onEnable = { showBiometricDialog = false; navController.navigate(Screen.Main.route) { popUpTo(0) { inclusive = true } } },
+            onSkip   = { showBiometricDialog = false; navController.navigate(Screen.Main.route) { popUpTo(0) { inclusive = true } } }
         )
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(cs.background).statusBarsPadding(),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val pin            = state.mpinDigits.joinToString("")
+    val confirm        = state.confirmDigits.joinToString("")
+    val enteringConfirm = pin.length == 4
+    val bothFilled     = pin.length == 4 && confirm.length == 4
+
+    // Auto-submit when confirm is filled
+    LaunchedEffect(bothFilled) {
+        if (bothFilled) viewModel.createMpin()
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E3A8A))))
     ) {
-        // Header
-        Box(
-            Modifier.fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(BpscColors.Primary, Color(0xFF1557C0))))
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.fillMaxSize().systemBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Rounded.Lock, null, tint = Color.White,
-                    modifier = Modifier.size(40.dp))
-                Text("Create MPIN", style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White, fontWeight = FontWeight.Bold)
-                Text("Set a 6-digit MPIN for faster logins",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(0.75f))
-            }
-        }
+            Spacer(Modifier.height(40.dp))
 
-        Spacer(Modifier.height(32.dp))
-
-        // MPIN entry
-        Text("Enter MPIN", style = MaterialTheme.typography.titleSmall,
-            color = cs.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
-        MpinDots(digits = state.mpinDigits, hasError = state.error != null)
-
-        Spacer(Modifier.height(24.dp))
-
-        // Confirm entry
-        Text("Confirm MPIN", style = MaterialTheme.typography.titleSmall,
-            color = cs.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
-        MpinDots(digits = state.confirmDigits, hasError = state.confirmError != null)
-
-        // Errors
-        AnimatedVisibility(state.error != null) {
-            Text(state.error ?: "", color = cs.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp))
-        }
-        AnimatedVisibility(state.confirmError != null) {
-            Text(state.confirmError ?: "", color = cs.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp))
-        }
-
-        // Which field is active
-        val pin     = state.mpinDigits.joinToString("")
-        val confirm = state.confirmDigits.joinToString("")
-        val enteringConfirm = pin.length == 6
-
-        Text(
-            if (enteringConfirm) "Now enter confirm MPIN" else "Enter 6 digits",
-            style = MaterialTheme.typography.bodySmall,
-            color = cs.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        Spacer(Modifier.weight(1f))
-
-        // Numpad — routes digits to correct field
-        MpinNumpad(
-            enabled = !state.isLoading,
-            onDigit = { d ->
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (!enteringConfirm) viewModel.onMpinDigit(d)
-                else viewModel.onConfirmDigit(d)
-            },
-            onBackspace = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (confirm.isNotEmpty()) viewModel.onConfirmBackspace()
-                else viewModel.onMpinBackspace()
-            }
-        )
-
-        // Submit button — shows after both fields filled
-        AnimatedVisibility(visible = pin.length == 6 && confirm.length == 6) {
-            Button(
-                onClick = { viewModel.createMpin() },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 12.dp).height(52.dp),
-                enabled = !state.isLoading,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+            // Icon
+            Box(
+                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(24.dp))
+                    .background(Color.White.copy(0.15f)),
+                contentAlignment = Alignment.Center
             ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(color = Color.White,
-                        modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Set MPIN", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(40.dp))
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Create MPIN", style = MaterialTheme.typography.headlineMedium,
+                color = Color.White, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text("Set a 4-digit MPIN for faster logins",
+                style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.65f))
+
+            Spacer(Modifier.height(40.dp))
+
+            // Step indicator
+            MpinStepIndicator(step = if (!enteringConfirm) 1 else 2)
+
+            Spacer(Modifier.height(20.dp))
+
+            // Label
+            Text(
+                if (!enteringConfirm) "Enter your MPIN" else "Confirm your MPIN",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(0.85f), fontWeight = FontWeight.Medium
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // Active dots
+            MpinDots(
+                digits   = if (!enteringConfirm) state.mpinDigits else state.confirmDigits,
+                hasError = state.error != null || state.confirmError != null
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // Error message
+            val errMsg = state.confirmError ?: state.error
+            AnimatedVisibility(
+                visible = errMsg != null,
+                enter = fadeIn() + slideInVertically(),
+                exit  = fadeOut() + slideOutVertically()
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE74C3C).copy(0.2f))
+                        .border(1.dp, Color(0xFFE74C3C).copy(0.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Rounded.Warning, null, tint = Color(0xFFFF6B6B),
+                            modifier = Modifier.size(16.dp))
+                        Text(errMsg ?: "", color = Color(0xFFFF6B6B),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    }
                 }
             }
+
+            Spacer(Modifier.weight(1f))
+
+            if (state.isLoading) {
+                CircularProgressIndicator(color = Color.White,
+                    modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
+                Spacer(Modifier.height(16.dp))
+            }
+
+            MpinNumpad(
+                enabled     = !state.isLoading,
+                onDigit     = { d -> if (!enteringConfirm) viewModel.onMpinDigit(d) else viewModel.onConfirmDigit(d) },
+                onBackspace = { if (confirm.isNotEmpty()) viewModel.onConfirmBackspace() else viewModel.onMpinBackspace() }
+            )
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun MpinStepIndicator(step: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        repeat(2) { i ->
+            val active = i + 1 == step
+            val done   = i + 1 < step
+            Box(
+                modifier = Modifier
+                    .height(4.dp)
+                    .width(if (active) 24.dp else 16.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        when { done -> Color(0xFF2ECC71); active -> Color.White; else -> Color.White.copy(0.3f) }
+                    )
+            )
         }
     }
 }

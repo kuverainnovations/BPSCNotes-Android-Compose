@@ -35,9 +35,20 @@ class AuthInterceptor @Inject constructor(
         val response = chain.proceed(request)
 
         if (response.code == 401) {
-            tokenStore.clearToken()
-            // Notify all active screens that the session has expired
-            authEventBus.notifyExpired()
+            val path = request.url.encodedPath
+            // Don't fire sessionExpired for auth endpoints — 401 there means
+            // wrong credentials (wrong MPIN, wrong OTP), not an expired session
+            val isAuthEndpoint = path.contains("login-mpin") ||
+                    path.contains("verify-otp") ||
+                    path.contains("send-otp") ||
+                    path.contains("forgot-mpin") ||
+                    path.contains("reset-mpin") ||
+                    path.contains("register") ||
+                    path.contains("refresh")
+            if (!isAuthEndpoint) {
+                tokenStore.clearToken()
+                authEventBus.notifyExpired()
+            }
         }
 
         return response

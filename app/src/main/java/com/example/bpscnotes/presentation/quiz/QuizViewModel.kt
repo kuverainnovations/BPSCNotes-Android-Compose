@@ -307,14 +307,34 @@ class QuizViewModel @Inject constructor(
                 }
 
                 val answerDetails = updatedQuestions.map { q ->
-                    val r = resultMap[q.id]
+                    val r            = resultMap[q.id]
+                    val isSkipped    = q.id in skippedIds
+                    val selectedLtr  = answers[q.id] ?: ""
+
+                    // For submitted questions: use backend's correctAnswer + isCorrect verdict
+                    // For skipped questions: correctAnswer comes from q.correctOptionLetter
+                    // which was set by updatedQuestions above (backend reveals it for all questions
+                    // via the correctAnswer field in evaluated results)
+                    // If backend didn't return it (skipped), fall back to the question's own field
+                    val correctLtr   = when {
+                        r != null        -> r.correctAnswer.lowercase()
+                        !q.correctOptionLetter.isNullOrBlank() -> q.correctOptionLetter.lowercase()
+                        else             -> ""
+                    }
+                    // isCorrect: trust backend for submitted, derive locally for skipped
+                    val correct      = when {
+                        r != null    -> r.isCorrect
+                        isSkipped    -> false   // skipped = not correct
+                        else         -> selectedLtr.isNotBlank() && selectedLtr == correctLtr
+                    }
+
                     QuizAnswerDetail(
                         question       = q,
-                        selectedLetter = answers[q.id] ?: "",
-                        correctLetter  = r?.correctAnswer ?: "",
-                        isCorrect      = r?.isCorrect ?: false,
-                        isSkipped      = q.id in skippedIds,
-                        explanation    = r?.explanation ?: ""
+                        selectedLetter = selectedLtr,
+                        correctLetter  = correctLtr,
+                        isCorrect      = correct,
+                        isSkipped      = isSkipped,
+                        explanation    = r?.explanation ?: q.explanation ?: ""
                     )
                 }
 

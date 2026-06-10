@@ -17,9 +17,9 @@ data class ChangeMpinUiState(
     val confirmError: String?= null,
     val success: Boolean     = false,
     // Digit arrays
-    val currentDigits: List<String> = List(6) { "" },
-    val newDigits:     List<String> = List(6) { "" },
-    val confirmDigits: List<String> = List(6) { "" },
+    val currentDigits: List<String> = List(4) { "" },
+    val newDigits:     List<String> = List(4) { "" },
+    val confirmDigits: List<String> = List(4) { "" },
 )
 
 @HiltViewModel
@@ -34,8 +34,8 @@ class ChangeMpinViewModel @Inject constructor(
     val activeField: Int get() {
         val s = _state.value
         return when {
-            s.currentDigits.joinToString("").length < 6 -> 0
-            s.newDigits.joinToString("").length < 6     -> 1
+            s.currentDigits.joinToString("").length < 4 -> 0
+            s.newDigits.joinToString("").length < 4     -> 1
             else                                         -> 2
         }
     }
@@ -84,12 +84,12 @@ class ChangeMpinViewModel @Inject constructor(
         val new     = s.newDigits.joinToString("")
         val confirm = s.confirmDigits.joinToString("")
 
-        if (current.length < 6 || new.length < 6) {
+        if (current.length < 4 || new.length < 4) {
             _state.update { it.copy(error = "Fill all fields") }; return
         }
         if (new != confirm) {
             _state.update { it.copy(confirmError = "New MPINs do not match") }
-            _state.update { it.copy(newDigits = List(6) { "" }, confirmDigits = List(6) { "" }) }
+            _state.update { it.copy(newDigits = List(4) { "" }, confirmDigits = List(4) { "" }) }
             return
         }
 
@@ -117,9 +117,9 @@ class ChangeMpinViewModel @Inject constructor(
 
     private fun resetFields() {
         _state.update { it.copy(
-            currentDigits = List(6) { "" },
-            newDigits     = List(6) { "" },
-            confirmDigits = List(6) { "" }
+            currentDigits = List(4) { "" },
+            newDigits     = List(4) { "" },
+            confirmDigits = List(4) { "" }
         )}
     }
 

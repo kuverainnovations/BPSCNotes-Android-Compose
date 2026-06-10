@@ -63,7 +63,7 @@ class OtpViewModel @Inject constructor(
                     try { fcmTokenManager.syncTokenIfNeeded() } catch (e: Exception) {
                         Log.e("OTP_VERIFY", "FCM sync failed", e)
                     }
-                    cacheInvalidator.evict()
+                    cacheInvalidator.evictAll()
                     if (!data.hasMpin) {
                         // Existing user with no MPIN yet → send to CreateMpin
                         _result.postValue(OtpResult.NavigateToCreateMpin(mobile))
@@ -83,7 +83,6 @@ class OtpViewModel @Inject constructor(
             }
         }
     }
-
     fun resendOtp(mobile: String) {
         launchWithLoading {
             val response = authRepository.sendOtp(mobile)
@@ -91,6 +90,13 @@ class OtpViewModel @Inject constructor(
         }
     }
 
+    /** Called on OtpScreen entry when context == "forgot_mpin" to trigger OTP send */
+    fun sendForgotMpinOtp(mobile: String) {
+        launchWithLoading {
+            authRepository.forgotMpin(mobile)
+            _resendSuccess.postValue(true)
+        }
+    }
+
     fun onResultConsumed() { _result.value = null }
-    fun onResendConsumed() { _resendSuccess.value = false }
-}
+    fun onResendConsumed() { _resendSuccess.value = false }}

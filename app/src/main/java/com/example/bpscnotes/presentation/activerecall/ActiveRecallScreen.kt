@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.activerecall
 
 import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
@@ -37,6 +38,7 @@ import kotlin.math.abs
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import androidx.activity.compose.BackHandler
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -102,10 +104,11 @@ fun ActiveRecallScreen(
             }
 
             val sessionCards = run {
+                // Weak cards first (need most review), then unseen, then mastered
                 val weak   = baseCards.filter { weakIds.contains(it.id) }
                 val normal = baseCards.filter { !weakIds.contains(it.id) && !masteredIds.contains(it.id) }
                 val master = baseCards.filter { masteredIds.contains(it.id) }
-                (weak + weak + normal + master).distinctBy { it.id }
+                weak + normal + master
             }
 
             if (sessionCards.isEmpty()) {
@@ -115,9 +118,9 @@ fun ActiveRecallScreen(
                     cards       = sessionCards,
                     masteredIds = masteredIds,
                     weakIds     = weakIds,
-                    onRate      = { card, rating ->
+                    onRate      = { card, rating, currentStreak ->
                         when (rating) {
-                            CardRating.Mastered -> viewModel.markMastered(card.id)
+                            CardRating.Mastered -> viewModel.markMastered(card.id, currentStreak)
                             CardRating.Weak     -> viewModel.markWeak(card.id)
                             CardRating.Skipped  -> Unit
                         }
@@ -170,6 +173,11 @@ fun FlashcardAdBreakScreen(
         } else {
             onAdBreakComplete()
         }
+    }
+
+    // Block back press during ad break — user cannot skip ads by pressing back
+    androidx.activity.compose.BackHandler(enabled = true) {
+        // Do nothing — back press blocked during ad
     }
 
     Box(
@@ -364,18 +372,21 @@ private fun FlashcardSessionScreen(
     cards: List<CoinsApiService.FlashcardDto>,
     masteredIds: Set<String>,
     weakIds: Set<String>,
-    onRate: (CoinsApiService.FlashcardDto, CardRating) -> Unit,
+    onRate: (CoinsApiService.FlashcardDto, CardRating, Int) -> Unit,
     onExit: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
 
-    // How many cards have been completed (rated/skipped) total this session
+    // ── State hoisted above ad break so it survives when showAdBreak=true causes early return ──
     var cardsCompleted  by remember { mutableIntStateOf(0) }
-    // Whether we're currently showing an ad break
     var showAdBreak     by remember { mutableStateOf(false) }
-    // The card index we'll resume at after the ad break
     var resumeIndex     by remember { mutableIntStateOf(0) }
+    // Streak and ratings MUST be here (not inside the ad-break guard) so they
+    // survive the early return — otherwise streak resets to 0 after every ad break
+    var streak          by remember { mutableIntStateOf(0) }
+    val sessionRatings   = remember { mutableStateMapOf<String, CardRating>() }
+    var isComplete      by remember { mutableStateOf(false) }
 
     // ── AD BREAK ────────────────────────────────────────────
     if (showAdBreak) {
@@ -389,16 +400,13 @@ private fun FlashcardSessionScreen(
     // ── FLASHCARD SESSION ────────────────────────────────────
     var currentIndex    by remember(resumeIndex) { mutableIntStateOf(resumeIndex) }
     var isFlipped       by remember { mutableStateOf(false) }
-    var streak          by remember { mutableIntStateOf(0) }
-    val sessionRatings   = remember { mutableStateMapOf<String, CardRating>() }
-    var isComplete      by remember { mutableStateOf(false) }
     val current          = cards.getOrNull(currentIndex)
     val scope            = rememberCoroutineScope()
     val offsetX          = remember { Animatable(0f) }
 
     val flipAngle by animateFloatAsState(
         targetValue   = if (isFlipped) 180f else 0f,
-        animationSpec = tween(400, easing = FastOutSlowInEasing),
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
         label         = "flip",
     )
 
@@ -422,14 +430,15 @@ private fun FlashcardSessionScreen(
 
     // Called every time a card is rated or skipped
     fun rateAndNext(rating: CardRating) {
-        onRate(current, rating)
         sessionRatings[current.id] = rating
+        // Increment streak BEFORE onRate so backend receives the updated value
         if (rating == CardRating.Mastered) streak++ else if (rating == CardRating.Weak) streak = 0
+        onRate(current, rating, streak)
 
         scope.launch {
             // Swipe-off animation
             val targetX = when (rating) {
-                CardRating.Mastered -> 600f; CardRating.Weak -> -600f; else -> 0f
+                CardRating.Mastered -> -600f; CardRating.Weak -> 600f; else -> 0f
             }
             if (rating != CardRating.Skipped) offsetX.animateTo(targetX, tween(300))
 
@@ -460,6 +469,11 @@ private fun FlashcardSessionScreen(
                 isComplete = true
             }
         }
+    }
+
+    // Intercept back press — go back to lobby, not navigate up to home
+    androidx.activity.compose.BackHandler(enabled = true) {
+        onExit()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
@@ -509,21 +523,71 @@ private fun FlashcardSessionScreen(
                 }
             }
 
-            // Swipe hints
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                    Text(str.recallReviseAgain, style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+            // Navigation arrows
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left arrow — previous card (Revise Again)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (currentIndex > 0) Color(0xFFF59E0B).copy(0.15f)
+                            else Color.Transparent
+                        )
+                        .clickable(enabled = currentIndex > 0) {
+                            scope.launch {
+                                offsetX.animateTo(600f, tween(200))
+                                rateAndNext(CardRating.Weak)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowLeft,
+                        contentDescription = "Previous",
+                        tint = if (currentIndex > 0) Color(0xFFF59E0B) else Color.Transparent,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
-                Text(str.recallSwipeRate, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(str.recallGotIt, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                    Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
+
+                Text(
+                    str.recallSwipeRate,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.TextHint
+                )
+
+                // Right arrow — next card (Got it / Mastered)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(BpscColors.Success.copy(0.15f))
+                        .clickable {
+                            scope.launch {
+                                offsetX.animateTo(-600f, tween(200))
+                                rateAndNext(CardRating.Mastered)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowRight,
+                        contentDescription = "Next",
+                        tint = BpscColors.Success,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
 
             // Flip card
             Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+
+                // Swipe container — handles horizontal drag for card navigation
+                // Separated from flip so swipe and tap don't interfere
                 Box(
                     modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f)
                         .offset(x = offsetX.value.dp)
@@ -533,30 +597,70 @@ private fun FlashcardSessionScreen(
                                 onDragEnd = {
                                     scope.launch {
                                         when {
-                                            offsetX.value > 120f  -> rateAndNext(CardRating.Mastered)
-                                            offsetX.value < -120f -> rateAndNext(CardRating.Weak)
-                                            else                  -> offsetX.animateTo(0f, spring())
+                                            // Front face: swipe flips card, doesn't rate
+                                            !isFlipped -> {
+                                                if (kotlin.math.abs(offsetX.value) > 60f) {
+                                                    isFlipped = true
+                                                }
+                                                offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                                            }
+                                            offsetX.value < -80f -> rateAndNext(CardRating.Mastered)
+                                            offsetX.value > 80f && currentIndex > 0 -> rateAndNext(CardRating.Weak)
+                                            else -> offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
                                         }
                                     }
                                 },
-                                onHorizontalDrag = { _, d -> scope.launch { offsetX.snapTo(offsetX.value + d * 0.4f) } },
+                                onHorizontalDrag = { _, d ->
+                                    scope.launch {
+                                        val newVal = offsetX.value + d * 0.85f
+                                        // Resist right drag on first card — dampen heavily
+                                        if (newVal > 0f && currentIndex == 0) {
+                                            offsetX.snapTo((newVal * 0.2f).coerceAtMost(30f))
+                                        } else {
+                                            offsetX.snapTo(newVal)
+                                        }
+                                    }
+                                },
                             )
-                        }
-                        .clickable { isFlipped = !isFlipped },
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (offsetX.value > 60f) {
-                        Box(modifier = Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(BpscColors.Success).padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text(str.recallMastered, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        }
-                    }
-                    if (offsetX.value < -60f) {
-                        Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF59E0B)).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    // Rating overlays shown during swipe
+                    if (offsetX.value > 50f && isFlipped) {
+                        Box(modifier = Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF59E0B)).padding(horizontal = 14.dp, vertical = 8.dp)) {
                             Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
                     }
+                    if (offsetX.value < -50f && isFlipped) {
+                        Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(BpscColors.Success).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            Text(str.recallMastered, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
 
-                    if (flipAngle <= 90f) CardFrontFace(card = current)
-                    if (flipAngle > 90f)  CardBackFace(card = current, onRate = ::rateAndNext)
+                    // Card with proper 3D flip — rotationY from 0→180
+                    // Front: rotationY 0..90 visible, 90..180 hidden (cameraDistance prevents clipping)
+                    // Back:  rotationY 90..180 visible (mirrored with scaleX=-1)
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .graphicsLayer {
+                                rotationY = flipAngle
+                                cameraDistance = 12f * density
+                                // Hide back of front card and front of back card at 90°
+                                alpha = if (flipAngle > 85f && flipAngle < 95f) 0f else 1f
+                            }
+                            .clickable { isFlipped = !isFlipped },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (flipAngle <= 90f) {
+                            // Front face — normal orientation
+                            CardFrontFace(card = current)
+                        } else {
+                            // Back face — counter-rotate to un-mirror the Y flip
+                            Box(modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = -1f }) {
+                                CardBackFace(card = current, onRate = ::rateAndNext)
+                            }
+                        }
+                    }
                 }
 
                 if (!isFlipped) {
@@ -627,9 +731,11 @@ private fun FlashcardLobbyScreen(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    // Filter progress IDs against actual loaded cards to prevent stale/deleted IDs inflating counts
+    val allCardIds    = allCards.map { it.id }.toSet()
     val totalCards    = allCards.size
-    val masteredCount = masteredIds.size
-    val weakCount     = weakIds.size
+    val masteredCount = masteredIds.count { it in allCardIds }
+    val weakCount     = weakIds.count { it in allCardIds }
     val progress      = if (totalCards > 0) masteredCount.toFloat() / totalCards else 0f
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
@@ -701,9 +807,9 @@ private fun FlashcardLobbyScreen(
                 item {
                     // ── Start Session Card ────────────────────────────
                     val totalCards   = allCards.size
-                    val masteredCount2 = masteredIds.size
-                    val weakCount2   = weakIds.size
-                    val unseenCount  = totalCards - masteredCount2 - weakCount2
+                    val masteredCount2 = masteredIds.count { it in allCardIds }
+                    val weakCount2   = weakIds.count { it in allCardIds }
+                    val unseenCount  = (totalCards - masteredCount2 - weakCount2).coerceAtLeast(0)
                     val progress2    = if (totalCards > 0) masteredCount2.toFloat() / totalCards else 0f
                     val animProg by animateFloatAsState(progress2, tween(900), label = "lobby_prog")
 

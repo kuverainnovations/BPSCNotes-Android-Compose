@@ -55,6 +55,12 @@ fun OtpScreen(
 
     val resendSuccess   by viewModel.resendSuccess.observeAsState(false)
 
+    // For forgot_mpin: send OTP on screen entry (no one sent it before navigating here)
+    LaunchedEffect(Unit) {
+        if (otpContext == "forgot_mpin") {
+            viewModel.sendForgotMpinOtp(mobile)
+        }
+    }
     // Countdown timer
     var secondsLeft by remember { mutableIntStateOf(30) }
     var canResend   by remember { mutableStateOf(false) }

@@ -1,135 +1,160 @@
 package com.example.bpscnotes.presentation.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.LockReset
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.auth.mpin.MpinDots
 import com.example.bpscnotes.presentation.auth.mpin.MpinNumpad
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
-
-@OptIn(ExperimentalMaterial3Api::class)
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 @Composable
 fun ChangeMpinScreen(
     navController: NavHostController,
     viewModel: ChangeMpinViewModel = hiltViewModel()
 ) {
-    val state  by viewModel.state.collectAsState()
-    val haptic = LocalHapticFeedback.current
-    val cs     = MaterialTheme.colorScheme
+    val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(state.success) {
-        if (state.success) {
-            viewModel.consumeSuccess()
-            navController.popBackStackSafe()
-        }
+    val systemUiController = rememberSystemUiController()
+    SideEffect {
+        systemUiController.setStatusBarColor(color = Color(0xFF0A2472), darkIcons = false)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Change MPIN", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStackSafe() }) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
-        snackbarHost = {}
-    ) { pad ->
+    LaunchedEffect(state.success) {
+        if (state.success) navController.popBackStackSafe()
+    }
+
+    // activeField: 0=current, 1=new, 2=confirm
+    val activeField     = viewModel.activeField
+    val current         = state.currentDigits.joinToString("")
+    val new             = state.newDigits.joinToString("")
+    val confirm         = state.confirmDigits.joinToString("")
+    val allFilled       = current.length == 4 && new.length == 4 && confirm.length == 4
+
+    LaunchedEffect(allFilled) {
+        if (allFilled) viewModel.changeMpin()
+    }
+
+    // Active dots to show
+    val activeDots = when (activeField) {
+        0    -> state.currentDigits
+        1    -> state.newDigits
+        else -> state.confirmDigits
+    }
+    val stepLabel = when (activeField) {
+        0    -> "Enter current MPIN"
+        1    -> "Enter new MPIN"
+        else -> "Confirm new MPIN"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E3A8A))))
+    ) {
         Column(
-            Modifier.fillMaxSize().padding(pad).background(cs.background),
+            modifier = Modifier.fillMaxSize().systemBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(24.dp))
-            Icon(Icons.Rounded.LockReset, null, tint = BpscColors.Primary,
-                modifier = Modifier.size(48.dp))
-            Spacer(Modifier.height(8.dp))
-            Text("Update your MPIN", style = MaterialTheme.typography.titleMedium,
-                color = cs.onSurface)
+            // Back button
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape)
+                        .background(Color.White.copy(0.15f))
+                        .clickable { navController.popBackStackSafe() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier.size(80.dp).clip(RoundedCornerShape(24.dp))
+                    .background(Color.White.copy(0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.LockReset, null, tint = Color.White, modifier = Modifier.size(40.dp))
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Change MPIN", style = MaterialTheme.typography.headlineMedium,
+                color = Color.White, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text("Update your 4-digit MPIN",
+                style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.65f))
+
             Spacer(Modifier.height(32.dp))
 
-            // Current MPIN
-            Text("Current MPIN", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            MpinDots(digits = state.currentDigits, hasError = state.error != null)
+            // 3-step indicator
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                repeat(3) { i ->
+                    val done   = i < activeField
+                    val active = i == activeField
+                    Box(modifier = Modifier.height(4.dp).width(if (active) 24.dp else 16.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(when { done -> Color(0xFF2ECC71); active -> Color.White; else -> Color.White.copy(0.3f) }))
+                }
+            }
 
             Spacer(Modifier.height(20.dp))
 
-            // New MPIN
-            Text("New MPIN", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            MpinDots(digits = state.newDigits)
+            Text(stepLabel, style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(0.85f), fontWeight = FontWeight.Medium)
 
             Spacer(Modifier.height(20.dp))
 
-            // Confirm
-            Text("Confirm New MPIN", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            MpinDots(digits = state.confirmDigits, hasError = state.confirmError != null)
+            MpinDots(
+                digits   = activeDots,
+                hasError = state.error != null || state.confirmError != null
+            )
 
-            AnimatedVisibility(state.error != null) {
-                Text(state.error ?: "", color = cs.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp, start = 24.dp, end = 24.dp))
-            }
-            AnimatedVisibility(state.confirmError != null) {
-                Text(state.confirmError ?: "", color = cs.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp))
-            }
+            Spacer(Modifier.height(16.dp))
 
-            val all3Filled = state.currentDigits.all { it.isNotEmpty() } &&
-                             state.newDigits.all { it.isNotEmpty() } &&
-                             state.confirmDigits.all { it.isNotEmpty() }
-
-            val hint = when (viewModel.activeField) {
-                0 -> "Enter current MPIN"
-                1 -> "Enter new MPIN"
-                2 -> "Confirm new MPIN"
-                else -> ""
+            val errMsg = state.confirmError ?: state.error
+            AnimatedVisibility(visible = errMsg != null, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) {
+                Box(modifier = Modifier.padding(horizontal = 32.dp).clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFE74C3C).copy(0.2f))
+                    .border(1.dp, Color(0xFFE74C3C).copy(0.5f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Rounded.Warning, null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                        Text(errMsg ?: "", color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                    }
+                }
             }
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp))
 
             Spacer(Modifier.weight(1f))
 
+            if (state.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
+                Spacer(Modifier.height(16.dp))
+            }
+
             MpinNumpad(
-                enabled   = !state.isLoading,
-                onDigit   = { d -> haptic.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.onDigit(d) },
-                onBackspace = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.onBackspace() }
+                enabled     = !state.isLoading,
+                onDigit     = { d -> viewModel.onDigit(d) },
+                onBackspace = { viewModel.onBackspace() }
             )
 
-            AnimatedVisibility(all3Filled) {
-                Button(
-                    onClick  = { viewModel.changeMpin() },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 12.dp).height(52.dp),
-                    enabled  = !state.isLoading,
-                    shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) {
-                    if (state.isLoading)
-                        CircularProgressIndicator(color = Color.White,
-                            modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else Text("Update MPIN", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                }
-            }
+            Spacer(Modifier.height(32.dp))
         }
     }
 }

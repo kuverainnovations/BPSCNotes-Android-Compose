@@ -17,21 +17,18 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class MpinUiState(
-    val isLoading: Boolean         = false,
-    val error: String?             = null,
-    // Navigation signals
-    val navigateToMain: Boolean    = false,
-    val navigateToRegister: String? = null,   // tempToken for new user (shouldn't occur in MPIN flow)
-    val navigateToCreateMpin: Boolean = false, // after OTP verify for existing user without MPIN
-    // Lockout countdown
-    val isLocked: Boolean          = false,
-    val lockedSecondsLeft: Int     = 0,
-    // MPIN entry state (6 digits, tracked as index cursor)
-    val mpinDigits: List<String>   = List(6) { "" },
-    // Confirm MPIN (for create / reset screens)
-    val confirmDigits: List<String> = List(6) { "" },
-    val confirmError: String?      = null,
-    val mpinCreated: Boolean       = false,
+    val isLoading: Boolean          = false,
+    val error: String?              = null,
+    val navigateToMain: Boolean     = false,
+    val navigateToRegister: String? = null,
+    val navigateToCreateMpin: Boolean = false,
+    val isLocked: Boolean           = false,
+    val lockedSecondsLeft: Int      = 0,
+    // 4-digit MPIN
+    val mpinDigits: List<String>    = List(4) { "" },
+    val confirmDigits: List<String> = List(4) { "" },
+    val confirmError: String?       = null,
+    val mpinCreated: Boolean        = false,
 )
 
 @HiltViewModel
@@ -47,7 +44,6 @@ class MpinViewModel @Inject constructor(
 
     private var countdownJob: Job? = null
 
-    // ── Numpad input helpers ────────────────────────────────────
     fun onMpinDigit(digit: String) {
         val current = _state.value.mpinDigits.toMutableList()
         val nextEmpty = current.indexOfFirst { it.isEmpty() }
@@ -81,41 +77,79 @@ class MpinViewModel @Inject constructor(
     }
 
     fun clearMpin() {
-        _state.update { it.copy(mpinDigits = List(6) { "" }, confirmDigits = List(6) { "" }, error = null, confirmError = null) }
+        _state.update { it.copy(mpinDigits = List(4) { "" }, confirmDigits = List(4) { "" }) }
     }
 
-    private fun mpin() = _state.value.mpinDigits.joinToString("")
+    private fun mpin()        = _state.value.mpinDigits.joinToString("")
     private fun confirmMpin() = _state.value.confirmDigits.joinToString("")
 
+    // ── Login via biometric ────────────────────────────────────
+    // Biometric proves local identity. If user has a valid JWT token,
+    // navigate directly to Main without re-authenticating with backend.
+    // If no token, fall back to MPIN entry.
+    fun loginWithMpinViaBiometric(mobile: String) {
+        viewModelScope.launch {
+            val token = tokenStore.getToken()
+            val savedMobile = tokenStore.getUserMobile()
+
+            // Token must exist AND belong to the same mobile number
+            val tokenBelongsToThisUser = !token.isNullOrBlank() &&
+                    (savedMobile == mobile || savedMobile == "+91$mobile" ||
+                            "+91$savedMobile" == mobile || savedMobile == mobile.removePrefix("+91"))
+
+            if (!tokenBelongsToThisUser) {
+                // No token or different user — must enter MPIN
+                _state.update { it.copy(error = "Please enter your MPIN to continue.") }
+                return@launch
+            }
+
+            // Validate token is still alive by calling /auth/me
+            _state.update { it.copy(isLoading = true) }
+            try {
+                val user = authRepository.getMe()
+                if (user != null) {
+                    // Token is valid — proceed to Main
+                    try { fcmTokenManager.syncTokenIfNeeded() } catch (_: Exception) {}
+                    cacheInvalidator.evictAll()
+                    _state.update { it.copy(isLoading = false, navigateToMain = true) }
+                } else {
+                    // Token invalid — clear it and ask for MPIN
+                    tokenStore.clearAll()
+                    _state.update { it.copy(isLoading = false, error = "Session expired. Please enter your MPIN.") }
+                }
+            } catch (_: Exception) {
+                // Network error or 401 — token expired, clear and ask for MPIN
+                tokenStore.clearAll()
+                _state.update { it.copy(isLoading = false, error = "Session expired. Please enter your MPIN.") }
+            }
+        }
+    }
+
     // ── Login with MPIN ────────────────────────────────────────
-    fun loginWithMpin(mobile: String) {
-        val pin = mpin()
-        if (pin.length < 6) return
+    fun loginWithMpin(mobile: String, pin: String? = null) {
+        val actualPin = pin ?: mpin()
+        if (actualPin.length < 4) return
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                val response = authRepository.loginMpin(mobile, pin)
+                val response = authRepository.loginMpin(mobile, actualPin)
                 if (response.success) {
                     tokenStore.saveUserMobile(mobile)
                     try { fcmTokenManager.syncTokenIfNeeded() } catch (_: Exception) {}
-                    cacheInvalidator.evict()
+                    cacheInvalidator.evictAll()
                     _state.update { it.copy(isLoading = false, navigateToMain = true) }
                 } else {
                     val msg = response.message
-                    // Parse lockout from message
                     val locked = msg.contains("locked", ignoreCase = true) ||
-                                 msg.contains("Too many", ignoreCase = true)
+                            msg.contains("Too many", ignoreCase = true)
                     _state.update { it.copy(isLoading = false, error = msg, isLocked = locked) }
                     if (locked) startCountdown()
                     clearMpin()
                 }
             } catch (e: retrofit2.HttpException) {
                 val body = e.response()?.errorBody()?.string() ?: ""
-                val msg = try {
-                    org.json.JSONObject(body).optString("message", "Login failed")
-                } catch (_: Exception) { "Login failed" }
-                val locked = msg.contains("locked", ignoreCase = true) ||
-                             msg.contains("Too many", ignoreCase = true)
+                val msg = try { org.json.JSONObject(body).optString("message", "Incorrect MPIN") } catch (_: Exception) { "Incorrect MPIN" }
+                val locked = msg.contains("locked", ignoreCase = true) || msg.contains("Too many", ignoreCase = true)
                 _state.update { it.copy(isLoading = false, error = msg, isLocked = locked) }
                 if (locked) startCountdown()
                 clearMpin()
@@ -126,11 +160,10 @@ class MpinViewModel @Inject constructor(
         }
     }
 
-    // ── Create MPIN (after registration) ──────────────────────
     fun createMpin() {
         val pin     = mpin()
         val confirm = confirmMpin()
-        if (pin.length < 6) { _state.update { it.copy(error = "Enter all 6 digits") }; return }
+        if (pin.length < 4) { _state.update { it.copy(error = "Enter all 4 digits") }; return }
         if (pin != confirm)  { _state.update { it.copy(confirmError = "MPINs do not match") }; clearMpin(); return }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -154,11 +187,10 @@ class MpinViewModel @Inject constructor(
         }
     }
 
-    // ── Reset MPIN (after OTP verify — forgot flow) ───────────
     fun resetMpin(mobile: String, otp: String) {
         val pin     = mpin()
         val confirm = confirmMpin()
-        if (pin.length < 6) { _state.update { it.copy(error = "Enter all 6 digits") }; return }
+        if (pin.length < 4) { _state.update { it.copy(error = "Enter all 4 digits") }; return }
         if (pin != confirm)  { _state.update { it.copy(confirmError = "MPINs do not match") }; clearMpin(); return }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -166,7 +198,7 @@ class MpinViewModel @Inject constructor(
                 val response = authRepository.resetMpin(mobile, otp, pin)
                 if (response.success) {
                     try { fcmTokenManager.syncTokenIfNeeded() } catch (_: Exception) {}
-                    cacheInvalidator.evict()
+                    cacheInvalidator.evictAll()
                     _state.update { it.copy(isLoading = false, mpinCreated = true) }
                 } else {
                     _state.update { it.copy(isLoading = false, error = response.message) }
@@ -179,7 +211,6 @@ class MpinViewModel @Inject constructor(
         }
     }
 
-    // ── Lockout countdown ─────────────────────────────────────
     fun initLockout(secondsLeft: Int) {
         _state.update { it.copy(isLocked = true, lockedSecondsLeft = secondsLeft) }
         startCountdown()
@@ -199,6 +230,8 @@ class MpinViewModel @Inject constructor(
     fun consumeNavigateToMain()  { _state.update { it.copy(navigateToMain = false) } }
     fun consumeMpinCreated()     { _state.update { it.copy(mpinCreated = false) } }
     fun clearError()             { _state.update { it.copy(error = null, confirmError = null) } }
+    /** Called on screen entry to wipe any stale navigation flags from previous session */
+    fun resetState()             { _state.update { MpinUiState() } }
 
     override fun onCleared() { super.onCleared(); countdownJob?.cancel() }
 }

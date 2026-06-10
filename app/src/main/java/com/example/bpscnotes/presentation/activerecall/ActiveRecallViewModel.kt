@@ -20,9 +20,7 @@ data class ActiveRecallUiState(
     val error:       String?           = null,
     // Persisted mastery — loaded from backend on init, saved on every rating
     val masteredIds: Set<String>       = emptySet(),
-    val weakIds:     Set<String>       = emptySet(),
-    // Session streak (in-memory)
-    val sessionStreak: Int             = 0
+    val weakIds:     Set<String>       = emptySet()
 )
 
 @HiltViewModel
@@ -93,20 +91,18 @@ class ActiveRecallViewModel @Inject constructor(
 
     // ── Mastery — optimistic update + backend persist ──────────────
 
-    fun markMastered(id: String) {
+    fun markMastered(id: String, streak: Int = 0) {
         _uiState.update { it.copy(
-            masteredIds   = it.masteredIds + id,
-            weakIds       = it.weakIds - id,
-            sessionStreak = it.sessionStreak + 1
+            masteredIds = it.masteredIds + id,
+            weakIds     = it.weakIds - id
         )}
-        saveProgressToBackend(id, "mastered", _uiState.value.sessionStreak)
+        saveProgressToBackend(id, "mastered", streak)
     }
 
     fun markWeak(id: String) {
         _uiState.update { it.copy(
-            weakIds       = it.weakIds + id,
-            masteredIds   = it.masteredIds - id,
-            sessionStreak = 0   // streak resets on weak
+            weakIds     = it.weakIds + id,
+            masteredIds = it.masteredIds - id
         )}
         saveProgressToBackend(id, "weak", 0)
     }

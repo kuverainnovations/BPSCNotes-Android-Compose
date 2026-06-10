@@ -50,6 +50,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val authApi:    AuthApiService,
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -149,9 +150,9 @@ class SettingsViewModel @Inject constructor(
     fun logOut() {
         viewModelScope.launch {
             _state.update { it.copy(isLoggingOut = true) }
-            // Best-effort server logout — don't block UI on network errors
             runCatching { authApi.logOut() }
-            tokenStore.clearSessionOnly()   // keeps mobile + hasMpin for next login
+            tokenStore.clearAll()           // full wipe — clears all user data
+            cacheInvalidator.evictAll()     // clear OkHttp cache — no stale API responses
             _state.update { it.copy(isLoggingOut = false, loggedOut = true) }
         }
     }
@@ -165,7 +166,7 @@ class SettingsViewModel @Inject constructor(
             _state.update { it.copy(isDeletingAccount = true, showDeleteConfirm = false) }
             try {
                 authApi.deleteAccount()
-                tokenStore.clearSessionOnly()   // keeps mobile + hasMpin for next login
+                tokenStore.clearAll()   // full wipe on account deletion
                 _state.update { it.copy(isDeletingAccount = false, loggedOut = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteAccount: ${e.message}", e)

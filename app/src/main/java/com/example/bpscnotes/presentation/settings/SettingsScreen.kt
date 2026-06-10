@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,12 +61,22 @@ fun SettingsScreen(
 
     val snackbarHost = remember { SnackbarHostState() }
 
-    // Navigate to Login when logged out or account deleted
+    // Full restart on logout — kills all ViewModels and clears nav stack
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(settingsState.loggedOut) {
         if (settingsState.loggedOut) {
-            navController.navigate(Screen.Login.route) {
-                popUpTo(0) { inclusive = true }
+            val activity = context as? android.app.Activity ?: return@LaunchedEffect
+            // Navigate to Login and clear entire back stack
+            // FLAG_ACTIVITY_CLEAR_TASK ensures the Activity is re-created fresh
+            // so ALL Hilt ViewModels are destroyed (they're tied to NavBackStackEntries)
+            val intent = android.content.Intent(activity, activity::class.java).apply {
+                addFlags(
+                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                )
             }
+            activity.startActivity(intent)
+            activity.overridePendingTransition(0, 0)  // no animation — instant switch
         }
     }
 
