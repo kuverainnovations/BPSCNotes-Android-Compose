@@ -110,7 +110,7 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
             Triple(CHANNEL_GENERAL,         "General",           "App announcements and updates"),
             Triple(CHANNEL_STUDY_ROOMS,     "Study Rooms",       "Tier promotions, rank reveals, challenges"),
             Triple(CHANNEL_COURSES,         "Courses",           "New courses and course updates"),
-            Triple(CHANNEL_MATERIALS,       "Study Materials",   "Approved uploads and new materials"),
+            Triple(CHANNEL_MATERIALS,       "Student Hub",   "Approved uploads and new materials"),
             Triple(CHANNEL_QUIZZES,         "Quizzes",           "Quiz results and mock test scores"),
             Triple(CHANNEL_PAYMENTS,        "Payments",          "Payment confirmations and subscription alerts"),
             Triple(CHANNEL_JOBS,            "Job Alerts",        "New government job vacancies"),

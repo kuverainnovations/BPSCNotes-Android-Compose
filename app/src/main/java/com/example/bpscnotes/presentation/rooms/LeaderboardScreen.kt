@@ -268,10 +268,12 @@ private fun Podium(top3: List<LeaderboardEntryDto>, myUserId: String) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                val mins = entry?.studyMinutes ?: 0
+                val timeStr = if (mins >= 60) "${mins/60}h ${mins%60}m" else "${mins}m"
                 Text(
-                    "${entry?.studyMinutes ?: 0} min",
+                    "⏱ $timeStr",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(0.5f)
+                    color = Color.White.copy(0.7f)
                 )
                 // Podium block
                 Box(
@@ -280,8 +282,11 @@ private fun Podium(top3: List<LeaderboardEntryDto>, myUserId: String) {
                         .background(colors[i].copy(alphas[i])),
                     Alignment.Center
                 ) {
+                    // positions: left=2nd(i=0), center=1st(i=1), right=3rd(i=2)
+                    val pos = listOf(2, 1, 3)[i]
+                    val suffix = listOf("nd","st","rd")[i]
                     Text(
-                        "${i + 1}${if (i == 0) listOf("st","nd","rd")[1] else if (i == 1) "st" else "rd"}",
+                        "$pos$suffix",
                         style = MaterialTheme.typography.labelLarge,
                         color = colors[i],
                         fontWeight = FontWeight.ExtraBold
@@ -303,43 +308,30 @@ private fun LeaderboardRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .then(
-                if (isMe) Modifier.clip(RoundedCornerShape(12.dp))
-                    .background(BpscColors.Primary.copy(0.08f))
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
-                else Modifier.padding(vertical = 10.dp)
-            ),
+                if (isMe) Modifier.background(BpscColors.Primary.copy(0.10f))
+                    .border(1.dp, BpscColors.Primary.copy(0.3f), RoundedCornerShape(12.dp))
+                else Modifier.background(cs.surface)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Rank badge
-        Box(
-            Modifier.size(30.dp).clip(CircleShape)
-                .background(if (isMe) BpscColors.Primary else cs.secondaryContainer)
-                .border(
-                    width = if (isMe) 0.dp else 0.5.dp,
-                    color = if (isMe) Color.Transparent else cs.outline,
-                    shape = CircleShape
-                ),
-            Alignment.Center
-        ) {
-            Text(
-                "#$position",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isMe) Color.White else cs.onSurface,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 10.sp
-            )
-        }
+        Text(
+            "#$position",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isMe) BpscColors.Primary else cs.onSurfaceVariant,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.width(32.dp),
+            textAlign = TextAlign.Center
+        )
 
         // Avatar
         Box(
-            Modifier.size(42.dp).clip(CircleShape)
-                .background(
-                    if (isMe) BpscColors.Primary
-                    else BpscColors.PrimaryLight
-                )
-                .border(0.5.dp, if (isMe) BpscColors.Primary else cs.outline, CircleShape),
+            Modifier.size(38.dp).clip(CircleShape)
+                .background(if (isMe) BpscColors.Primary else BpscColors.PrimaryLight),
             Alignment.Center
         ) {
             Text(
@@ -351,47 +343,38 @@ private fun LeaderboardRow(
         }
 
         // Name + stats
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     entry.userName,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (isMe) BpscColors.Primary else cs.onSurface,
                     fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                if (isMe) Box(
-                    Modifier.clip(RoundedCornerShape(4.dp))
+                if (isMe) Text("YOU",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
+                    fontSize = 9.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp))
                         .background(BpscColors.Primary.copy(0.12f))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                ) {
-                    Text("YOU", style = MaterialTheme.typography.labelSmall,
-                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
-                        fontSize = 9.sp)
-                }
+                        .padding(horizontal = 5.dp, vertical = 1.dp))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("⏱ ${entry.studyMinutes}m",
-                    style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
-                Text("🪙 ${entry.coinsEarned}",
-                    style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF8F00))
-                if (entry.streakDays > 0) Text("🔥 ${entry.streakDays}d",
-                    style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF6F00))
+            // Only show non-zero stats to avoid clutter
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val mins = entry.studyMinutes
+                val timeStr = if (mins >= 60) "${mins/60}h ${mins%60}m" else "${mins}m"
+                Text("⏱ $timeStr",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (mins > 0) cs.onSurfaceVariant else cs.onSurfaceVariant.copy(0.4f))
+                if (entry.coinsEarned > 0)
+                    Text("🪙 ${entry.coinsEarned}",
+                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF8F00))
+                if (entry.streakDays > 0)
+                    Text("🔥 ${entry.streakDays}d",
+                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF6F00))
             }
-        }
-
-        // XP badge
-        Box(
-            Modifier.clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF3E5F5))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Text("Lv.${entry.xpLevel}",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF7B1FA2), fontWeight = FontWeight.ExtraBold)
         }
     }
 }

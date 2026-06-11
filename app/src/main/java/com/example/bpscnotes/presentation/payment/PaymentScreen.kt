@@ -82,19 +82,35 @@ fun SubscriptionPaymentScreen(
                 Box(modifier = Modifier.fillMaxWidth()
                     .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
                     .statusBarsPadding().padding(20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                             .background(Color.White.copy(0.15f))
                             .clickable { navController.popBackStackSafe() },
                             contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(str.paymentGetPro, style = MaterialTheme.typography.headlineSmall,
                                 color = Color.White, fontWeight = FontWeight.ExtraBold)
                             Text(str.paymentUnlockAll, style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(0.7f))
+                        }
+                        // Pro badge in header
+                        Box(
+                            modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                .background(Color(0xFFFFD700).copy(0.25f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            androidx.compose.material3.Text(
+                                "⭐ PRO",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFFFFD700),
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                            )
                         }
                     }
                 }
@@ -264,14 +280,27 @@ private fun PlanCard(plan: SubscriptionPlanDto, isSelected: Boolean, onSelect: (
                         color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
                 }
             }
-            Column(horizontalAlignment = Alignment.End) {
+            // Price column — fixed width to prevent wrapping
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.widthIn(min = 80.dp)
+            ) {
                 if ((plan.originalPrice ?: 0) > (plan.price ?: 0)) {
-                    Text("₹${plan.originalPrice}", style = MaterialTheme.typography.bodySmall,
-                        color = BpscColors.TextHint, textDecoration = TextDecoration.LineThrough)
+                    Text("₹${plan.originalPrice}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BpscColors.TextHint,
+                        textDecoration = TextDecoration.LineThrough,
+                        maxLines = 1)
                 }
-                Text("₹${plan.price}", style = MaterialTheme.typography.titleLarge,
+                Text("₹${plan.price}",
+                    style = MaterialTheme.typography.titleLarge,
                     color = if (isSelected) BpscColors.Primary else BpscColors.TextPrimary,
-                    fontWeight = FontWeight.ExtraBold)
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1)
+                Text("/ ${plan.billingCycle?.replace("Billed ", "") ?: "month"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cs.onSurfaceVariant,
+                    maxLines = 1)
             }
         }
     }

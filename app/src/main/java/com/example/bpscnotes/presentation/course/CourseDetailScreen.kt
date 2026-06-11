@@ -177,9 +177,10 @@ fun CourseDetailScreen(
                         }
                     }
 
-                    if (course.instructor != null) {
-                        item { InstructorSection(course, accent) }
-                    }
+                    // Instructor section hidden per request
+                    // if (course.instructor != null) {
+                    //     item { InstructorSection(course, accent) }
+                    // }
 
                     // Rate banner: only when all done AND not yet submitted (persistent)
                     if (canReview) {
@@ -748,7 +749,8 @@ private fun HeroHeader(
             }
             Text(course.title, style = MaterialTheme.typography.titleLarge, color = Color.White,
                 fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
-            course.instructor?.let {
+            // Instructor chip hidden per request
+            if (false) course.instructor?.let {
                 Text("${str.courseByAuthor} $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
             }
             val ratingFloat = course.rating.toFloatOrNull() ?: 0f

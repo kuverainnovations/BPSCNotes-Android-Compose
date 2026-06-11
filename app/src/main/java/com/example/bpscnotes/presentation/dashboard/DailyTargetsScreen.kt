@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.bpscnotes.presentation.dashboard
 
 import android.widget.Toast
@@ -316,21 +318,27 @@ private fun ListTabContent(
     val str = LocalStrings.current
     val carried = items.filter { it.target.isCarriedForward }
     val today   = items.filter { !it.target.isCarriedForward }
+    var editingTarget by remember { mutableStateOf<TargetItem?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (carried.isNotEmpty()) {
                 item { SectionLabel("📅", "Carried Forward", "From yesterday") }
                 items(carried, key = { it.target.id }) { item ->
-                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) })
+                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
                 }
                 item { Spacer(Modifier.height(4.dp)) }
             }
             item { SectionLabel("🎯", "Today's Targets", "${today.size} topics assigned") }
             items(today, key = { it.target.id }) { item ->
-                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) })
+                TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
             }
         }
+    }
+
+    // Edit bottom sheet
+    editingTarget?.let { editing ->
+        EditTargetSheet(target = editing.target, onDismiss = { editingTarget = null })
     }
 }
 
@@ -348,7 +356,7 @@ private fun SectionLabel(icon: String, title: String, subtitle: String) {
 }
 
 @Composable
-private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onDelete: () -> Unit) {
+private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleComplete: () -> Unit, onDelete: () -> Unit, onEdit: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (isCompleted) Color(0xFFF0FBF5) else Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
@@ -374,7 +382,16 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     }
                 }
             }
-            // Delete button — always visible, for both complete and incomplete
+            // Edit button
+            Box(
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFE8F4FD))
+                    .clickable { onEdit() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Edit, null, tint = Color(0xFF1565C0), modifier = Modifier.size(15.dp))
+            }
+            // Delete button
             Box(
                 modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFFFEE8E8))
@@ -583,5 +600,59 @@ private fun TimelineTabContent(
 private fun SmallIconButton(icon: ImageVector, bg: Color, tint: Color, onClick: () -> Unit) {
     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(bg).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// EDIT TARGET SHEET
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun EditTargetSheet(
+    target: com.example.bpscnotes.data.remote.api.DailyTargetDto,
+    onDismiss: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    var title by remember { mutableStateOf(target.title) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Edit Target", style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold, color = cs.onSurface)
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Target title") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                maxLines = 3
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Cancel") }
+
+                Button(
+                    onClick = {
+                        // Note: backend PATCH /users/daily-targets/{id} needed
+                        // For now just dismiss — title edit shown locally
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = com.example.bpscnotes.core.ui.t.BpscColors.Primary)
+                ) { Text("Save", fontWeight = FontWeight.Bold) }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }

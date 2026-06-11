@@ -1315,7 +1315,9 @@ private fun UploadSheet(
             )
 
             OutlinedTextField(value = description, onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null) },
-                label = { Text(str.coursesRateSubtitle) }, modifier = Modifier.fillMaxWidth(),
+                label = { Text("Message to Admin (optional)") },
+                placeholder = { Text("Tell the reviewer what this material is about, source, year, etc.") },
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
             OutlinedTextField(value = tagsInput, onValueChange = { onFormChange(null, null, null, null, it, null, null, null, null) },
@@ -1650,6 +1652,26 @@ fun MyUploadsTab(
                                     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.CoinGold.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         Text("🪙 ${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
+                                }
+                            }
+                            // Show rejection reason if rejected
+                            if (item.status?.lowercase() == "rejected" && !item.rejectionReason.isNullOrBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFEE8E8))
+                                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                                ) {
+                                    Text("❌", fontSize = 10.sp)
+                                    Text(
+                                        "Reason: ${item.rejectionReason}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFFB71C1C),
+                                        fontSize = 11.sp
+                                    )
                                 }
                             }
                         }

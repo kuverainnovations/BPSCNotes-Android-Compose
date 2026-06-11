@@ -117,9 +117,11 @@ fun AchievementsScreen(
     }
 }
 
-// ── Redesigned achievement display — matches profile screenshot ──────────
-// Earned: circle badges in a row with name + date
-// In Progress: card with progress bar + percentage
+// ── Clear achievement card layout ─────────────────────────────
+// Each achievement shows status clearly:
+// ✅ Earned: green check, title, description, earned date
+// 🔄 In Progress: progress bar with exact count (e.g. 3/10 quizzes)
+// 🔒 Locked: locked icon, what you need to do
 
 @Composable
 private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
@@ -128,49 +130,61 @@ private fun AchievementGrid(items: List<AchievementDto>, accentColor: Color) {
     val earned     = items.filter { it.isEarned }
     val inProgress = items.filter { !it.isEarned }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Earned badges — circle icons in a row
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Earned achievements — clear green cards
         if (earned.isNotEmpty()) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(earned) { ach ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.width(72.dp)
+            earned.forEach { ach ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FBF5)),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
-                            Modifier.size(64.dp).clip(CircleShape)
+                            Modifier.size(52.dp).clip(CircleShape)
                                 .border(2.dp, accentColor, CircleShape)
-                                .background(accentColor.copy(0.1f)),
+                                .background(accentColor.copy(0.12f)),
                             Alignment.Center
-                        ) { Text(ach.emoji, fontSize = 28.sp) }
-                        Text(
-                            ach.title, style = MaterialTheme.typography.labelSmall,
-                            color = cs.onSurface, fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center, maxLines = 2, fontSize = 9.sp,
-                            lineHeight = 12.sp, overflow = TextOverflow.Ellipsis
-                        )
-                        ach.earnedAt?.let { at ->
-                            Text(at.take(10), style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.TextHint, fontSize = 8.sp)
+                        ) { Text(ach.emoji, fontSize = 24.sp) }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(ach.title, style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold, color = cs.onSurface)
+                            ach.description?.let { desc ->
+                                Text(desc, style = MaterialTheme.typography.bodySmall,
+                                    color = cs.onSurfaceVariant, maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis)
+                            }
+                            ach.earnedAt?.let { at ->
+                                Text("✅ Earned on ${at.take(10)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                            }
                         }
+                        Icon(Icons.Rounded.CheckCircle, null,
+                            tint = BpscColors.Success, modifier = Modifier.size(22.dp))
                     }
                 }
             }
         }
 
-        // In Progress — cards with progress bars
+        // In Progress — clear progress cards
         if (inProgress.isNotEmpty()) {
+            if (earned.isNotEmpty()) Spacer(Modifier.height(4.dp))
             Text(
-                str.achievementsInProgress,
+                "🔄 " + str.achievementsInProgress,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = cs.onSurface
             )
             inProgress.forEach { ach ->
-                val pct = if ((ach.goalTarget ?: 0) > 0)
-                    ((ach.currentValue ?: 0).toFloat() / ach.goalTarget!!).coerceIn(0f, 1f)
-                else 0f
+                val current = ach.currentValue ?: 0
+                val target = ach.goalTarget ?: 0
+                val pct = if (target > 0) (current.toFloat() / target).coerceIn(0f, 1f) else 0f
                 val animPct by animateFloatAsState(pct, tween(800), label = "ach_pct_${ach.id}")
                 Card(
                     modifier = Modifier.fillMaxWidth(),

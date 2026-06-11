@@ -152,6 +152,7 @@ fun ActiveRecallScreen(
 @Composable
 fun FlashcardAdBreakScreen(
     cardsSeenSoFar: Int,
+    totalCards: Int = 0,
     onAdBreakComplete: () -> Unit,
 ) {
     var currentAdIndex by remember { mutableIntStateOf(0) }   // 0 or 1
@@ -326,12 +327,6 @@ fun FlashcardAdBreakScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "✅ $cardsSeenSoFar flashcards completed",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF4CAF50),
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
                             if (currentAdIndex < ADS_PER_BREAK - 1)
                                 "Next ad in %d:%02d".format(secondsLeft / 60, secondsLeft % 60)
                             else
@@ -380,6 +375,7 @@ private fun FlashcardSessionScreen(
 
     // ── State hoisted above ad break so it survives when showAdBreak=true causes early return ──
     var cardsCompleted  by remember { mutableIntStateOf(0) }
+    var totalCardsInSession by remember { mutableIntStateOf(0) }
     var showAdBreak     by remember { mutableStateOf(false) }
     var resumeIndex     by remember { mutableIntStateOf(0) }
     // Streak and ratings MUST be here (not inside the ad-break guard) so they
@@ -392,6 +388,7 @@ private fun FlashcardSessionScreen(
     if (showAdBreak) {
         FlashcardAdBreakScreen(
             cardsSeenSoFar    = cardsCompleted,
+            totalCards        = totalCardsInSession,
             onAdBreakComplete = { showAdBreak = false },
         )
         return
@@ -450,7 +447,11 @@ private fun FlashcardSessionScreen(
                 else               -> currentIndex + 1
             }
 
-            cardsCompleted++
+            // Only count as "completed" when advancing FORWARD to a new card
+            // Weak (go back) and staying on same index do NOT increment the count
+            if (rating != CardRating.Weak && targetIndex > currentIndex) {
+                cardsCompleted++
+            }
 
             // ── Check if we've hit the ad break threshold ────────
             if (rating != CardRating.Weak &&
@@ -460,6 +461,7 @@ private fun FlashcardSessionScreen(
                 resumeIndex = targetIndex
                 isFlipped   = false
                 offsetX.snapTo(0f)
+                totalCardsInSession = cards.size
                 showAdBreak = true
             } else if (targetIndex < cards.size) {
                 currentIndex = targetIndex

@@ -266,8 +266,46 @@ fun PdfViewerScreen(
                                     contentScale        = ContentScale.FillWidth
                                 )
 
-                                // ── Page number badge (top-left) ─────────────
+                                // ── Watermark overlay (unlocked pages only) ──
                                 if (!isLocked) {
+                                    // Diagonal watermark across the full page
+                                    Canvas(modifier = Modifier.matchParentSize()) {
+                                        val paint = androidx.compose.ui.graphics.Paint().apply {
+                                            alpha = 0.13f
+                                        }
+                                        drawIntoCanvas { canvas ->
+                                            canvas.save()
+                                            canvas.translate(size.width / 2f, size.height / 2f)
+                                            canvas.rotate(-35f)
+                                            val textPaint = android.graphics.Paint().apply {
+                                                color = android.graphics.Color.parseColor("#1565C0")
+                                                textSize = size.width * 0.055f
+                                                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                                alpha = 35
+                                            }
+                                            val wText = "BPSCNotes"
+                                            val textW = textPaint.measureText(wText)
+                                            val rows = 5
+                                            val colSpacing = size.width * 0.85f
+                                            val rowSpacing = size.height * 0.22f
+                                            for (row in -rows..rows) {
+                                                canvas.nativeCanvas.drawText(
+                                                    wText,
+                                                    -textW / 2f,
+                                                    row * rowSpacing,
+                                                    textPaint
+                                                )
+                                                canvas.nativeCanvas.drawText(
+                                                    wText,
+                                                    colSpacing - textW / 2f,
+                                                    row * rowSpacing + rowSpacing / 2f,
+                                                    textPaint
+                                                )
+                                            }
+                                            canvas.restore()
+                                        }
+                                    }
+                                    // Page number badge
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopStart)

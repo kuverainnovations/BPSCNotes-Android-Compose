@@ -375,10 +375,19 @@ private fun JobCard(
     val isClosing = daysLeft in 4..7
     val isPassed  = daysLeft < 0 && endMs > 0
 
+    // Card border turns red when deadline is urgent (≤3 days)
+    val cardBorderColor = when {
+        isUrgent  -> Color(0xFFE74C3C)
+        isClosing -> Color(0xFFE67E22)
+        else      -> Color.Transparent
+    }
     Card(
-        modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .then(if (isUrgent || isClosing)
+                Modifier.border(1.5.dp, cardBorderColor, RoundedCornerShape(18.dp))
+            else Modifier),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+        colors    = CardDefaults.cardColors(containerColor = if (isUrgent) Color(0xFFFFF5F5) else cs.surface),
         elevation = CardDefaults.cardElevation(if (job.isFeatured) 4.dp else 1.dp)
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
