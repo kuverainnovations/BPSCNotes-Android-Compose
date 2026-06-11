@@ -244,13 +244,14 @@ data class AtRiskData(
     @SerializedName("demotionGraceUntil") val demotionGraceUntil: String? = null
 )
 
+data class ClaimPromotionTier(
+    @SerializedName("key")   val key: String?   = null,
+    @SerializedName("name")  val name: String?  = null,
+    @SerializedName("emoji") val emoji: String? = null,
+)
+
 data class ClaimPromotionData(
-    val success: Boolean,
-    val message: String,
-    @SerializedName("newTierKey")   val newTierKey: String?   = null,
-    @SerializedName("newTierName")  val newTierName: String?  = null,
-    @SerializedName("newTierEmoji") val newTierEmoji: String? = null,
-    val missing: List<String>       = emptyList()
+    @SerializedName("promotedTo") val promotedTo: ClaimPromotionTier? = null,
 )
 
 interface TierRoomsApiService {

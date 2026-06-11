@@ -597,13 +597,7 @@ private fun FlashcardSessionScreen(
                                 onDragEnd = {
                                     scope.launch {
                                         when {
-                                            // Front face: swipe flips card, doesn't rate
-                                            !isFlipped -> {
-                                                if (kotlin.math.abs(offsetX.value) > 60f) {
-                                                    isFlipped = true
-                                                }
-                                                offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-                                            }
+                                            // Swipe ALWAYS navigates — tap is for flipping
                                             offsetX.value < -80f -> rateAndNext(CardRating.Mastered)
                                             offsetX.value > 80f && currentIndex > 0 -> rateAndNext(CardRating.Weak)
                                             else -> offsetX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
@@ -626,12 +620,12 @@ private fun FlashcardSessionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     // Rating overlays shown during swipe
-                    if (offsetX.value > 50f && isFlipped) {
+                    if (offsetX.value > 50f) {
                         Box(modifier = Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF59E0B)).padding(horizontal = 14.dp, vertical = 8.dp)) {
                             Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
                     }
-                    if (offsetX.value < -50f && isFlipped) {
+                    if (offsetX.value < -50f) {
                         Box(modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).clip(RoundedCornerShape(10.dp)).background(BpscColors.Success).padding(horizontal = 14.dp, vertical = 8.dp)) {
                             Text(str.recallMastered, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }

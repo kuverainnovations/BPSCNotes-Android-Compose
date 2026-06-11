@@ -382,14 +382,19 @@ class TierRoomsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val res  = api.claimPromotion()
-                val data = res.data ?: return@launch
-                if (data.success) {
-                    // Refresh tier data — user is now in Serious/Consistent/Achiever
+                val data = res.data
+                val promoted = data?.promotedTo
+                if (promoted != null) {
+                    // Refresh tier data — user is now in new tier
                     loadAll()
-                    onSuccess(data.newTierEmoji ?: "🥇", data.newTierName ?: "Serious")
+                    onSuccess(promoted.emoji ?: "🥇", promoted.name ?: "")
                 } else {
-                    onFail(data.missing.joinToString("\n") { "• $it" }.ifEmpty { data.message })
+                    onFail(res.message ?: "Promotion failed. Please try again.")
                 }
+            } catch (e: retrofit2.HttpException) {
+                val body = e.response()?.errorBody()?.string() ?: ""
+                val msg = try { org.json.JSONObject(body).optString("message", "Not yet eligible") } catch (_: Exception) { "Not yet eligible" }
+                onFail(msg)
             } catch (e: Exception) {
                 Log.e(TAG, "claimPromotion: ${e.message}", e)
                 onFail(e.message ?: "Promotion failed. Please try again.")
