@@ -57,6 +57,20 @@ data class StudyMaterialsUiState(
     val purchasingId:      String? = null,
     val purchaseSuccess:   String? = null,
     val purchaseError:     String? = null,
+    // Razorpay payment for marketplace purchase (Phase 3)
+    val pendingPurchase:   InitPurchaseData? = null,  // set when requiresPayment=true — triggers Razorpay launch
+    val pendingPurchaseMaterialId: String? = null,
+    val pendingPurchaseTitle: String? = null,
+    // Retained separately from pendingPurchase so confirmMaterialPurchase()
+    // still has the order ID after consumePendingPurchase() clears pendingPurchase
+    // (consume happens immediately on Razorpay launch to avoid double-launch on recompose).
+    val pendingPurchaseOrderId: String? = null,
+    val isConfirmingPurchase: Boolean = false,
+    // Prefill data for Razorpay checkout
+    val userName: String = "",
+    val userEmail: String = "",
+    val userPhone: String = "",
+    val userCoins: Int = 0,
     // List
     val materials:          List<StudyMaterialDto> = emptyList(),
     val isLoadingList:      Boolean                = true,
@@ -114,11 +128,35 @@ data class StudyMaterialsUiState(
 
     // Toast
     val toastMessage:       String?                = null,
+
+    // Marketplace rules popup — shown on first visit, or via (i) button
+    val showRulesSheet:     Boolean                = false,
+
+    // Negotiation (Phase 2)
+    val negotiationSheet:   StudyMaterialDto?       = null,   // material whose negotiation sheet is open
+    val negotiationHistory: NegotiationHistoryData? = null,
+    val isLoadingNegotiation: Boolean               = false,
+    val isRespondingNegotiation: Boolean            = false,
+
+    // Seller wallet (Phase 3)
+    val showWalletSheet: Boolean = false,
+    val wallet: WalletData? = null,
+    val isLoadingWallet: Boolean = false,
+
+    // Social proof (Phase 4)
+    val buyers: BuyersData? = null,
+    val isLoadingBuyers: Boolean = false,
+
+    // Phase 5: navigation event for "Chat with uploader"
+    val pendingChatId: String? = null,
+    val isOpeningChat: Boolean = false,
 )
 
 @HiltViewModel
 class StudyMaterialsViewModel @Inject constructor(
     private val api:        StudyMaterialsApiService,
+    private val chatApi:    com.example.bpscnotes.data.remote.api.MaterialChatApiService,
+    private val authApi:    com.example.bpscnotes.data.remote.api.AuthApiService,
     private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
     @ApplicationContext private val context: Context,
     private val bus: RefreshEventBus) : ViewModel() {
@@ -126,7 +164,10 @@ class StudyMaterialsViewModel @Inject constructor(
     private val _state = MutableStateFlow(StudyMaterialsUiState())
     val state: StateFlow<StudyMaterialsUiState> = _state.asStateFlow()
 
-    companion object { private const val TAG = "StudyMaterialsVM" }
+    companion object {
+        private const val TAG = "StudyMaterialsVM"
+        private const val SEEN_MARKETPLACE_RULES_KEY = "seen_marketplace_rules"
+    }
 
     private var searchJob:  Job? = null
     private var uploadJob:  Job? = null  // tracked so user can cancel mid-upload
@@ -139,13 +180,17 @@ class StudyMaterialsViewModel @Inject constructor(
             purchasedIds  = tokenStore.getPurchasedIds(),
             localPaths    = downloadedIds.mapNotNull { id ->
                 tokenStore.getLocalPath(id)?.let { id to it }
-            }.toMap()
+            }.toMap(),
+            // Show marketplace rules popup automatically on first-ever visit
+            // to Study Materials. Persisted so it only appears once.
+            showRulesSheet = !tokenStore.getBoolPref(SEEN_MARKETPLACE_RULES_KEY, false),
         )}
         loadSubjects()
         loadStats()
         loadMaterials(reset = true)
         loadDownloadHistory()
         loadMyUploads()
+        loadUserInfo()
 
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
@@ -247,17 +292,51 @@ class StudyMaterialsViewModel @Inject constructor(
     // ── Detail sheet ──────────────────────────────────────────
     fun openDetail(materialId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingDetail = true) }
+            _state.update { it.copy(isLoadingDetail = true, buyers = null) }
             try {
                 val res = api.getMaterial(materialId)
                 _state.update { it.copy(selectedMaterial = res.data, isLoadingDetail = false) }
+
+                // Fetch anonymized buyer list for social proof — only if
+                // someone has actually purchased this material.
+                if ((res.data?.buyerCount ?: 0) > 0) {
+                    _state.update { it.copy(isLoadingBuyers = true) }
+                    try {
+                        val buyersRes = api.getBuyers(materialId)
+                        _state.update { it.copy(buyers = buyersRes.data, isLoadingBuyers = false) }
+                    } catch (_: Exception) {
+                        _state.update { it.copy(isLoadingBuyers = false) }
+                    }
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoadingDetail = false, toastMessage = e.message ?: "Failed to load") }
             }
         }
     }
 
-    fun closeDetail() = _state.update { it.copy(selectedMaterial = null) }
+    fun closeDetail() = _state.update { it.copy(selectedMaterial = null, buyers = null) }
+
+    // ── Phase 5: Chat with uploader ─────────────────────────────
+    // Gets or creates the buyer's chat thread for this material, then
+    // signals the screen to navigate via pendingChatId.
+    fun openChatWithUploader(materialId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isOpeningChat = true) }
+            try {
+                val res = chatApi.getOrCreateThread(materialId)
+                val chatId = res.data?.id
+                if (chatId != null) {
+                    _state.update { it.copy(isOpeningChat = false, pendingChatId = chatId) }
+                } else {
+                    _state.update { it.copy(isOpeningChat = false, toastMessage = "Could not open chat") }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isOpeningChat = false, toastMessage = e.message ?: "Could not open chat") }
+            }
+        }
+    }
+
+    fun consumePendingChat() = _state.update { it.copy(pendingChatId = null) }
 
     // ── Bookmark ──────────────────────────────────────────────
     fun toggleBookmark(materialId: String) {
@@ -307,8 +386,8 @@ class StudyMaterialsViewModel @Inject constructor(
                 val url = res.data?.downloadUrl ?: throw Exception("No download URL")
 
                 val ext = when {
-                   // material.type == MaterialType.VIDEO -> "mp4"
-                  //  url.contains(".mp4")  -> "mp4"
+                    // material.type == MaterialType.VIDEO -> "mp4"
+                    //  url.contains(".mp4")  -> "mp4"
                     url.contains(".png")  -> "png"
                     url.contains(".jpg") || url.contains(".jpeg") -> "jpg"
                     else -> "pdf"
@@ -355,6 +434,19 @@ class StudyMaterialsViewModel @Inject constructor(
 
     // ── Upload ────────────────────────────────────────────────
     fun showUpload() = _state.update { it.copy(showUploadSheet = true, uploadSuccess = null, uploadError = null) }
+
+    // ── Marketplace rules popup ────────────────────────────────
+    // Opens the rules sheet on demand — used by the (i) info button
+    // so users can revisit the rules anytime, even after dismissing
+    // the first-time popup.
+    fun showRules() = _state.update { it.copy(showRulesSheet = true) }
+
+    // Dismiss the rules sheet and persist the "seen" flag so it never
+    // auto-shows again (the (i) button can still re-open it).
+    fun dismissRules() {
+        tokenStore.setBoolPref(SEEN_MARKETPLACE_RULES_KEY, true)
+        _state.update { it.copy(showRulesSheet = false) }
+    }
 
     fun hideUpload() {
         // If upload is in progress, show confirmation dialog instead of closing
@@ -787,6 +879,118 @@ class StudyMaterialsViewModel @Inject constructor(
         }
     }
 
+    // ── User info for Razorpay prefill ─────────────────────────
+    private fun loadUserInfo() {
+        viewModelScope.launch {
+            try {
+                val user = authApi.getMe().data?.user
+                _state.update { it.copy(
+                    userName  = user?.name ?: tokenStore.getUserName() ?: "",
+                    userEmail = user?.email ?: "",
+                    userCoins = user?.coins ?: 0,
+                    userPhone = user?.mobile ?: tokenStore.getUserMobile() ?: "",
+                )}
+            } catch (_: Exception) { /* non-blocking — Razorpay still works with empty prefill */ }
+        }
+    }
+
+    // ── Negotiation (Phase 2) ──────────────────────────────────
+    // Opens the negotiation sheet for an uploaded material and loads
+    // its full offer history. Called when tapping the "Respond" banner
+    // on a "negotiating" item in My Uploads.
+    fun openNegotiation(material: StudyMaterialDto) {
+        _state.update { it.copy(negotiationSheet = material, negotiationHistory = null, isLoadingNegotiation = true) }
+        viewModelScope.launch {
+            try {
+                val res = api.getNegotiationHistory(material.id)
+                _state.update { it.copy(negotiationHistory = res.data, isLoadingNegotiation = false) }
+            } catch (e: Exception) {
+                Log.e(TAG, "openNegotiation: ${e.message}")
+                _state.update { it.copy(
+                    isLoadingNegotiation = false,
+                    toastMessage = "Could not load negotiation details"
+                )}
+            }
+        }
+    }
+
+    fun closeNegotiation() = _state.update { it.copy(negotiationSheet = null, negotiationHistory = null) }
+
+    // Accept the admin's current counter-offer — material goes live
+    // immediately at that price.
+    fun acceptNegotiationOffer() {
+        val materialId = _state.value.negotiationSheet?.id ?: return
+        _state.update { it.copy(isRespondingNegotiation = true) }
+        viewModelScope.launch {
+            try {
+                val res = api.acceptNegotiation(materialId)
+                _state.update { it.copy(
+                    isRespondingNegotiation = false,
+                    negotiationSheet = null,
+                    negotiationHistory = null,
+                    toastMessage = res.message ?: "Accepted! Your material is now live 🎉"
+                )}
+                loadMyUploads()
+            } catch (e: Exception) {
+                Log.e(TAG, "acceptNegotiationOffer: ${e.message}")
+                _state.update { it.copy(
+                    isRespondingNegotiation = false,
+                    toastMessage = e.message ?: "Failed to accept offer"
+                )}
+            }
+        }
+    }
+
+    // Send a counter-offer back to admin — increments the round.
+    fun counterNegotiationOffer(price: Int, message: String?) {
+        val materialId = _state.value.negotiationSheet?.id ?: return
+        if (price < 0) {
+            _state.update { it.copy(toastMessage = "Enter a valid price") }
+            return
+        }
+        _state.update { it.copy(isRespondingNegotiation = true) }
+        viewModelScope.launch {
+            try {
+                val res = api.counterNegotiation(materialId, CounterOfferRequest(price, message))
+                _state.update { it.copy(
+                    isRespondingNegotiation = false,
+                    negotiationSheet = null,
+                    negotiationHistory = null,
+                    toastMessage = res.message ?: "Counter-offer sent"
+                )}
+                loadMyUploads()
+            } catch (e: Exception) {
+                Log.e(TAG, "counterNegotiationOffer: ${e.message}")
+                _state.update { it.copy(
+                    isRespondingNegotiation = false,
+                    toastMessage = e.message ?: "Failed to send counter-offer"
+                )}
+            }
+        }
+    }
+
+    // ── Seller wallet (Phase 3) ────────────────────────────────
+    fun openWallet() {
+        _state.update { it.copy(showWalletSheet = true) }
+        loadWallet()
+    }
+
+    fun closeWallet() = _state.update { it.copy(showWalletSheet = false) }
+
+    fun loadWallet() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingWallet = true) }
+            try {
+                val res = api.getWallet()
+                _state.update { it.copy(wallet = res.data, isLoadingWallet = false) }
+            } catch (e: Exception) {
+                Log.e(TAG, "loadWallet: ${e.message}")
+                _state.update { it.copy(isLoadingWallet = false, toastMessage = "Could not load wallet") }
+            }
+        }
+    }
+
+
     // ── Downloads history ─────────────────────────────────────
     fun loadDownloadHistory() {
         viewModelScope.launch {
@@ -799,32 +1003,49 @@ class StudyMaterialsViewModel @Inject constructor(
                 )}
             } catch (e: Exception) {
                 _state.update { it.copy(isLoadingHistory = false) }
-                Log.e(TAG, "loadDownloadHistory: \${e.message}")
+                Log.e(TAG, "loadDownloadHistory: ${e.message}")
             }
         }
     }
 
-    // ── Purchase locked material ───────────────────────────────
-    fun purchaseMaterial(materialId: String, price: Int, title: String) {
+    // ── Purchase locked material (Phase 3: hybrid coins + Razorpay) ──
+    // coinsToApply: how many coins the user chose to apply as a discount
+    // (capped server-side by max_coins_per_purchase).
+    fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply: Int = 0) {
         viewModelScope.launch {
             _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
             try {
-                val res = api.purchaseMaterial(materialId)
+                val res = api.initPurchase(materialId, InitPurchaseRequest(coinsToApply))
                 val data = res.data
-                if (data?.alreadyPurchased == true) {
-                    _state.update { it.copy(
-                        purchasingId    = null,
-                        purchaseSuccess = "You already own \"$title\"",
-                        purchasedIds    = it.purchasedIds + materialId
-                    )}
-                } else {
-                    tokenStore.addPurchasedId(materialId)
-                    _state.update { it.copy(
-                        purchasingId    = null,
-                        purchaseSuccess = "🎉 Unlocked! \"$title\" — full PDF now available",
-                        purchasedIds    = it.purchasedIds + materialId
-                    )}
-                    loadStats()
+
+                when {
+                    data?.alreadyPurchased == true -> {
+                        _state.update { it.copy(
+                            purchasingId    = null,
+                            purchaseSuccess = "You already own \"$title\"",
+                            purchasedIds    = it.purchasedIds + materialId
+                        )}
+                    }
+                    // Free or fully covered by coins — already completed by initPurchase
+                    data?.requiresPayment != true -> {
+                        tokenStore.addPurchasedId(materialId)
+                        _state.update { it.copy(
+                            purchasingId    = null,
+                            purchaseSuccess = "🎉 Unlocked! \"$title\" — full PDF now available",
+                            purchasedIds    = it.purchasedIds + materialId
+                        )}
+                        loadStats()
+                    }
+                    // Remaining ₹ balance needs Razorpay — hand off to UI to launch checkout
+                    else -> {
+                        _state.update { it.copy(
+                            purchasingId = null,
+                            pendingPurchase = data,
+                            pendingPurchaseMaterialId = materialId,
+                            pendingPurchaseTitle = title,
+                            pendingPurchaseOrderId = data.purchaseOrderId,
+                        )}
+                    }
                 }
             } catch (e: Exception) {
                 val msg = e.message ?: "Purchase failed"
@@ -838,6 +1059,55 @@ class StudyMaterialsViewModel @Inject constructor(
                 )}
             }
         }
+    }
+
+    // Called by the screen once Razorpay has consumed the order (prevents
+    // re-launching on recomposition) — mirrors consumeRazorpayOrderId() pattern.
+    fun consumePendingPurchase() {
+        _state.update { it.copy(pendingPurchase = null) }
+    }
+
+    // Called by the screen's Razorpay onSuccess callback.
+    fun confirmMaterialPurchase(paymentId: String, signature: String) {
+        val materialId = _state.value.pendingPurchaseMaterialId ?: return
+        val purchaseOrderId = _state.value.pendingPurchaseOrderId ?: return
+        val title = _state.value.pendingPurchaseTitle ?: ""
+        viewModelScope.launch {
+            _state.update { it.copy(isConfirmingPurchase = true) }
+            try {
+                val res = api.confirmPurchase(materialId, ConfirmPurchaseRequest(
+                    purchaseOrderId   = purchaseOrderId,
+                    razorpayPaymentId = paymentId,
+                    razorpaySignature = signature,
+                ))
+                tokenStore.addPurchasedId(materialId)
+                _state.update { it.copy(
+                    isConfirmingPurchase = false,
+                    purchaseSuccess = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
+                    purchasedIds = it.purchasedIds + materialId,
+                    pendingPurchaseMaterialId = null,
+                    pendingPurchaseTitle = null,
+                    pendingPurchaseOrderId = null,
+                )}
+                loadStats()
+            } catch (e: Exception) {
+                _state.update { it.copy(
+                    isConfirmingPurchase = false,
+                    purchaseError = "Payment received but unlock failed. Contact support — payment ID: $paymentId",
+                    pendingPurchaseOrderId = null,
+                )}
+            }
+        }
+    }
+
+    // Called by the screen's Razorpay onFailure callback.
+    fun handleMaterialPaymentFailure(code: Int, message: String) {
+        _state.update { it.copy(
+            purchaseError = "Payment failed: $message",
+            pendingPurchaseMaterialId = null,
+            pendingPurchaseTitle = null,
+            pendingPurchaseOrderId = null,
+        )}
     }
 
     fun clearPurchaseMessages() {

@@ -44,6 +44,7 @@ import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
+import com.example.bpscnotes.presentation.payment.launchRazorpay
 
 // ════════════════════════════════════════════════════════════
 // FILE: presentation/studymaterials/StudyMaterialsScreen.kt
@@ -142,6 +143,7 @@ fun StudyMaterialsScreen(
 
     // Purchase dialog
     var showPurchaseDialog by remember { mutableStateOf<StudyMaterialDto?>(null) }
+    var coinsToApply by remember { mutableStateOf(0) }
     LaunchedEffect(state.purchaseSuccess) {
         state.purchaseSuccess?.let {
             snackbarHost.showSnackbar(it)
@@ -153,12 +155,80 @@ fun StudyMaterialsScreen(
         state.purchaseError?.let { snackbarHost.showSnackbar(it) }
     }
 
+    // Phase 5: navigate to chat screen once a thread is ready
+    LaunchedEffect(state.pendingChatId) {
+        val chatId = state.pendingChatId ?: return@LaunchedEffect
+        viewModel.consumePendingChat()
+        navController.navigate(Screen.MaterialChat.createRoute(chatId))
+    }
+
+    // Launch Razorpay when a purchase requires payment for the remaining ₹ balance.
+    // Consume the pending purchase immediately to avoid re-launching on recompose
+    // (same pattern as CoursePaymentScreen).
+    LaunchedEffect(state.pendingPurchase) {
+        val pending = state.pendingPurchase ?: return@LaunchedEffect
+        val orderId = pending.razorpayOrderId ?: return@LaunchedEffect
+        val keyId   = pending.razorpayKeyId ?: return@LaunchedEffect
+        if (orderId.isBlank() || keyId.isBlank()) return@LaunchedEffect
+
+        viewModel.consumePendingPurchase()
+        showPurchaseDialog = null
+
+        launchRazorpay(
+            context     = context,
+            orderId     = orderId,
+            keyId       = keyId,
+            amount      = pending.amountDueInr,
+            description = "Study material: ${pending.materialTitle ?: ""}",
+            userName    = state.userName,
+            userEmail   = state.userEmail,
+            userPhone   = state.userPhone,
+            onSuccess   = { paymentId, signature ->
+                viewModel.confirmMaterialPurchase(paymentId, signature)
+            },
+            onFailure   = { code, msg ->
+                viewModel.handleMaterialPaymentFailure(code, msg)
+            },
+            str
+        )
+    }
+
     showPurchaseDialog?.let { item ->
         PurchaseConfirmDialog(
             item      = item,
-            isPurchasing = state.purchasingId == item.id,
-            onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title) },
-            onDismiss = { showPurchaseDialog = null; viewModel.clearPurchaseMessages() }
+            isPurchasing = state.purchasingId == item.id || state.isConfirmingPurchase,
+            coinsToApply = coinsToApply,
+            onCoinsToApplyChange = { coinsToApply = it },
+            userCoins = state.userCoins,
+            onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, coinsToApply) },
+            onDismiss = { showPurchaseDialog = null; coinsToApply = 0; viewModel.clearPurchaseMessages() }
+        )
+    }
+
+    // Marketplace rules — auto-shows on first visit, or via (i) info button
+    if (state.showRulesSheet) {
+        MarketplaceRulesSheet(onDismiss = viewModel::dismissRules)
+    }
+
+    // Negotiation sheet — accept/counter an admin's price offer
+    state.negotiationSheet?.let { material ->
+        NegotiationSheet(
+            material = material,
+            history = state.negotiationHistory,
+            isLoading = state.isLoadingNegotiation,
+            isResponding = state.isRespondingNegotiation,
+            onAccept = viewModel::acceptNegotiationOffer,
+            onCounter = viewModel::counterNegotiationOffer,
+            onDismiss = viewModel::closeNegotiation
+        )
+    }
+
+    // Seller wallet sheet — real-money marketplace earnings
+    if (state.showWalletSheet) {
+        WalletSheet(
+            wallet = state.wallet,
+            isLoading = state.isLoadingWallet,
+            onDismiss = viewModel::closeWallet
         )
     }
 
@@ -182,7 +252,8 @@ fun StudyMaterialsScreen(
                 bookmarkedCount = state.bookmarkedIds.size,
                 showBookmarksOnly = state.showBookmarksOnly,
                 onToggleBookmarks = viewModel::toggleBookmarksOnly,
-                onUpload = viewModel::showUpload
+                onUpload = viewModel::showUpload,
+                onShowRules = viewModel::showRules
             )
 
             // Unified filter bar — type + sort in ONE row (subjects on demand)
@@ -301,7 +372,10 @@ fun StudyMaterialsScreen(
                     onOpenPdf = { url, title, freePages, _ ->
                         openMaterial(context, navController, url, title, freePages, isPurchased = true, adManager = adManager)
                     },
-                    onRefresh = { viewModel.refresh() }
+                    onRefresh = { viewModel.refresh() },
+                    onRespondNegotiation = { material -> viewModel.openNegotiation(material) },
+                    onOpenWallet = { viewModel.openWallet() },
+                    onOpenChats = { navController.navigate(Screen.ChatInbox.route) }
                 )
             }
         }
@@ -325,6 +399,9 @@ fun StudyMaterialsScreen(
             isDownloaded   = state.downloadedIds.contains(detail.id),
             isDownloading  = state.downloadingId == detail.id,
             isPurchased    = isDetailPurchased,
+            buyers         = state.buyers,
+            currentUserId  = currentUserId,
+            onChatWithUploader = { viewModel.openChatWithUploader(detail.id) },
             onBookmark     = { viewModel.toggleBookmark(detail.id) },
             onDownload     = {
                 val dto = StudyMaterialDto(
@@ -430,7 +507,8 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
 private fun SearchAndStats(
     query: String, onQueryChange: (String) -> Unit,
     stats: StatsData?, bookmarkedCount: Int,
-    showBookmarksOnly: Boolean, onToggleBookmarks: () -> Unit, onUpload: () -> Unit
+    showBookmarksOnly: Boolean, onToggleBookmarks: () -> Unit, onUpload: () -> Unit,
+    onShowRules: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -474,12 +552,32 @@ private fun SearchAndStats(
                     LibSmallStat("🔖", "$bookmarkedCount", "Saved")
                 }
             }
-            Box(modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(BpscColors.PrimaryLight)
-                .clickable(onClick = onUpload).padding(horizontal = 10.dp, vertical = 6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Rounded.Upload, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
-                    Text(str.materialsUpload, style = MaterialTheme.typography.labelSmall,
-                        color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // (i) Rules info button — re-opens the marketplace rules sheet anytime
+                Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape)
+                        .background(BpscColors.PrimaryLight)
+                        .clickable(onClick = onShowRules),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.Info, contentDescription = LocalStrings.current.marketRulesInfoTooltip,
+                        tint = BpscColors.Primary, modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Upload button — highlighted (filled, prominent) per marketplace rules
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                        .background(Brush.linearGradient(listOf(BpscColors.Primary, Color(0xFF1E88E5))))
+                        .clickable(onClick = onUpload)
+                        .padding(horizontal = 16.dp, vertical = 9.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Rounded.Upload, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Text(str.materialsUpload, style = MaterialTheme.typography.labelLarge,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
         }
@@ -908,6 +1006,21 @@ private fun LibraryItemCard(
                             color = Color(0xFF856404), fontWeight = FontWeight.Bold)
                     }
                 }
+                // Social proof: "12 students bought this" — only for paid materials with sales
+                if ((item.price ?: 0) > 0 && item.buyerCount > 0) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF0FDF4))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.People, null, tint = BpscColors.Success, modifier = Modifier.size(11.dp))
+                        Text("${item.buyerCount} bought", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold, modifier = Modifier.size(12.dp))
@@ -975,8 +1088,420 @@ private fun LibraryItemCard(
 }
 
 // ════════════════════════════════════════════════════════════
-// DETAIL SHEET
+// MARKETPLACE RULES SHEET
+// Shown automatically on first visit to Study Materials, and any
+// time via the (i) info button next to Upload. Persisted via
+// TokenStore.setBoolPref so the auto-show only happens once.
 // ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MarketplaceRulesSheet(onDismiss: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal = 24.dp).padding(bottom = 24.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header icon
+            Box(
+                modifier = Modifier.size(64.dp).clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Color(0xFF1565C0), Color(0xFF42A5F5)))),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🏪", fontSize = 30.sp)
+            }
+
+            Text(
+                str.marketRulesTitle,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = cs.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                str.marketRulesSubtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            HorizontalDivider(color = cs.outline, modifier = Modifier.padding(vertical = 4.dp))
+
+            // Rule bullets
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                listOf(
+                    str.marketRule1,
+                    str.marketRule2,
+                    str.marketRule3,
+                    str.marketRule4,
+                    str.marketRule5,
+                ).forEach { rule ->
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(cs.background)
+                            .padding(14.dp)
+                    ) {
+                        Text(
+                            rule,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurface,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+            ) {
+                Text(
+                    str.marketRulesGotIt,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// NEGOTIATION SHEET
+// Shown when the uploader taps the "respond" banner on a material
+// that has an admin counter-offer pending. Shows the full offer
+// history and lets the user Accept or send a Counter-offer.
+// ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NegotiationSheet(
+    material: StudyMaterialDto,
+    history: NegotiationHistoryData?,
+    isLoading: Boolean,
+    isResponding: Boolean,
+    onAccept: () -> Unit,
+    onCounter: (price: Int, message: String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var counterPriceText by remember { mutableStateOf("") }
+    var counterMessage by remember { mutableStateOf("") }
+    var showCounterForm by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                "💬 Price Negotiation",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = cs.onSurface
+            )
+            Text(
+                material.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (isLoading || history == null) {
+                Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = BpscColors.Primary)
+                }
+            } else {
+                // Current offer summary
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFEEF2FF))
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Text("Your price", style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
+                        Text("₹${history.originalPrice}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    }
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Text("Admin's offer", style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
+                        Text("₹${history.currentOfferPrice}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3730A3))
+                    }
+                    Text(
+                        "Negotiation round ${history.negotiationRound}/3" + if (history.isFinalRound) " — final round" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF6366F1)
+                    )
+                }
+
+                // Offer history
+                if (history.history.isNotEmpty()) {
+                    Text("History", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        history.history.forEach { offer ->
+                            val isAdmin = offer.offeredBy == "admin"
+                            Row(
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isAdmin) Color(0xFFF8FAFC) else Color(0xFFF0FDF4))
+                                    .padding(10.dp)
+                            ) {
+                                Text(if (isAdmin) "🛡️" else "🙋", fontSize = 14.sp)
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "${if (isAdmin) "Admin" else "You"} · Round ${offer.round} · ₹${offer.offerPrice}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = cs.onSurface
+                                    )
+                                    if (!offer.message.isNullOrBlank()) {
+                                        Text(offer.message, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (history.canRespond) {
+                    if (!showCounterForm) {
+                        // Accept / Counter buttons
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onAccept,
+                                enabled = !isResponding,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success)
+                            ) {
+                                if (isResponding) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                else Text("Accept ₹${history.currentOfferPrice}", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    counterPriceText = (history.currentOfferPrice ?: history.originalPrice).toString()
+                                    showCounterForm = true
+                                },
+                                enabled = !isResponding && !history.isFinalRound,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Counter")
+                            }
+                        }
+                        if (history.isFinalRound) {
+                            Text(
+                                "This is the final round — you can only Accept or wait for our team's final decision.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextHint
+                            )
+                        }
+                    } else {
+                        // Counter-offer form
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = counterPriceText,
+                                onValueChange = { counterPriceText = it.filter { c -> c.isDigit() } },
+                                label = { Text("Your counter price (₹)") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = counterMessage,
+                                onValueChange = { counterMessage = it },
+                                label = { Text("Message (optional)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2, maxLines = 3
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(
+                                    onClick = { showCounterForm = false },
+                                    enabled = !isResponding,
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) { Text("Cancel") }
+                                Button(
+                                    onClick = {
+                                        val price = counterPriceText.toIntOrNull() ?: return@Button
+                                        onCounter(price, counterMessage.ifBlank { null })
+                                    },
+                                    enabled = !isResponding && counterPriceText.toIntOrNull() != null,
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                                ) {
+                                    if (isResponding) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    else Text("Send Counter-Offer", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        "Waiting for our team to review your response.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// WALLET SHEET
+// Shows the seller's ₹ wallet balance (real-money marketplace
+// earnings, separate from coins) and transaction history with
+// pending/disbursed/failed status per the marketplace spec.
+// ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WalletSheet(
+    wallet: WalletData?,
+    isLoading: Boolean,
+    onDismiss: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(20.dp)
+                .heightIn(max = 560.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "💰 Seller Wallet",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = cs.onSurface
+            )
+            Text(
+                "Real-money earnings from your marketplace sales — separate from your coins.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant
+            )
+
+            if (isLoading || wallet == null) {
+                Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = BpscColors.Primary)
+                }
+            } else {
+                // Balance card
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Available Balance", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
+                    Text("₹${wallet.balance}", style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    HorizontalDivider(color = Color.White.copy(0.2f))
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                        Text("Total earned", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(0.7f))
+                        Text("₹${wallet.totalEarned}", style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+
+                Text("Transaction History", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+
+                if (wallet.transactions.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                        Text("No transactions yet — sell a material to earn your first payout!",
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
+                            textAlign = TextAlign.Center)
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
+                        items(wallet.transactions, key = { it.id }) { txn ->
+                            val (statusEmoji, statusColor) = when (txn.status) {
+                                "disbursed" -> "✅" to BpscColors.Success
+                                "pending"   -> "⏳" to Color(0xFFF59E0B)
+                                "failed"    -> "❌" to Color(0xFFE74C3C)
+                                else        -> "•" to BpscColors.TextHint
+                            }
+                            val isCredit = txn.type == "sale_credit"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(cs.background)
+                                    .padding(12.dp)
+                            ) {
+                                Text(statusEmoji, fontSize = 16.sp)
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        txn.materialTitle ?: txn.description ?: (if (isCredit) "Sale credit" else txn.type),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = cs.onSurface,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "${txn.status.replaceFirstChar { it.uppercase() }}" +
+                                                (txn.createdAt?.take(10)?.let { " · $it" } ?: ""),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = statusColor
+                                    )
+                                }
+                                Text(
+                                    "${if (isCredit) "+" else "−"}₹${txn.amount}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isCredit) BpscColors.Success else Color(0xFFE74C3C)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MaterialDetailSheet(
@@ -985,6 +1510,9 @@ private fun MaterialDetailSheet(
     isDownloaded: Boolean,
     isDownloading: Boolean,
     isPurchased:  Boolean = false,   // FIX: true if user has purchased this session
+    buyers:       BuyersData? = null,   // Phase 4: anonymized buyer names for social proof
+    currentUserId: String = "",         // Phase 5: to hide chat button on own uploads
+    onChatWithUploader: () -> Unit = {}, // Phase 5: opens chat thread with uploader
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
     onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
@@ -1044,6 +1572,32 @@ private fun MaterialDetailSheet(
                     }
                 }
 
+                // Social proof: "Rahul K. and 11 others bought this" — only for paid
+                // materials with at least one purchase.
+                if (material.price > 0 && material.buyerCount > 0) {
+                    val names = buyers?.buyers ?: emptyList()
+                    val totalBuyers = buyers?.totalBuyers ?: material.buyerCount
+                    val label = when {
+                        names.isEmpty() -> "$totalBuyers ${if (totalBuyers == 1) "student" else "students"} bought this"
+                        names.size == 1 && totalBuyers == 1 -> "${names[0]} bought this"
+                        totalBuyers > names.size -> "${names[0]} and ${totalBuyers - 1} other${if (totalBuyers - 1 != 1) "s" else ""} bought this"
+                        names.size == 1 -> "${names[0]} bought this"
+                        else -> "${names[0]} and ${names.size - 1} other${if (names.size - 1 != 1) "s" else ""} bought this"
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF0FDF4))
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Icon(Icons.Rounded.People, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp))
+                        Text(label, style = MaterialTheme.typography.bodyMedium,
+                            color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 // Preview area / open PDF button
                 val downloadUrl = material.resolvedUrl
                 Box(modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))
@@ -1100,6 +1654,29 @@ private fun MaterialDetailSheet(
                         !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                         else -> str.materialsDownloadFree
                     }, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            // Phase 5: Chat with uploader — only after purchase, and not for own uploads
+            // FEATURE FLAG: hidden for now, planned for a later phase (Phase 2 round 2)
+            val CHAT_FEATURE_ENABLED = false
+            val canChatWithUploader = CHAT_FEATURE_ENABLED && isPurchased &&
+                    !material.uploaderId.isNullOrBlank() &&
+                    material.uploaderId != currentUserId
+            if (canChatWithUploader) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 0.dp)
+                    .padding(bottom = 16.dp)) {
+                    OutlinedButton(
+                        onClick = onChatWithUploader,
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, BpscColors.Primary)
+                    ) {
+                        Icon(Icons.Rounded.ChatBubbleOutline, null, modifier = Modifier.size(16.dp), tint = BpscColors.Primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Chat with uploader", style = MaterialTheme.typography.titleMedium,
+                            color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -1600,7 +2177,10 @@ fun MyUploadsTab(
     uploads:   List<StudyMaterialDto>,
     isLoading: Boolean,
     onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onRespondNegotiation: (StudyMaterialDto) -> Unit = {},
+    onOpenWallet: () -> Unit = {},
+    onOpenChats: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -1623,9 +2203,41 @@ fun MyUploadsTab(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Text("${uploads.size} uploaded material${if (uploads.size != 1) "s" else ""}",
-                    style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("${uploads.size} uploaded material${if (uploads.size != 1) "s" else ""}",
+                        style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Phase 5 "Chats" inbox — hidden for now, planned for a later phase
+                        if (false) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                    .background(BpscColors.PrimaryLight)
+                                    .clickable(onClick = onOpenChats)
+                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                            ) {
+                                Text("💬", fontSize = 13.sp)
+                                Text("Chats", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                                .clickable(onClick = onOpenWallet)
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) {
+                            Text("💰", fontSize = 13.sp)
+                            Text("Wallet", style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
             items(uploads, key = { it.id }) { item ->
                 Card(
@@ -1643,8 +2255,8 @@ fun MyUploadsTab(
                             Text(item.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 // Status badge
-                                val statusColor = when (item.status?.lowercase()) { "approved" -> BpscColors.Success; "rejected" -> Color(0xFFE74C3C); else -> BpscColors.TextHint }
-                                val statusLabel = when (item.status?.lowercase()) { "approved" -> str.materialsPublished; "rejected" -> str.materialsRejected; else -> "⏳ Under Review" }
+                                val statusColor = when (item.status?.lowercase()) { "approved" -> BpscColors.Success; "rejected" -> Color(0xFFE74C3C); "negotiating" -> Color(0xFF6366F1); else -> BpscColors.TextHint }
+                                val statusLabel = when (item.status?.lowercase()) { "approved" -> str.materialsPublished; "rejected" -> str.materialsRejected; "negotiating" -> "💬 Negotiating"; else -> "⏳ Under Review" }
                                 Box(Modifier.clip(RoundedCornerShape(6.dp)).background(statusColor.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                     Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
@@ -1671,6 +2283,57 @@ fun MyUploadsTab(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color(0xFFB71C1C),
                                         fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            // Negotiation banner — admin sent a counter-offer, tap to respond
+                            if (item.hasNegotiationOffer) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFEEF2FF))
+                                        .clickable { onRespondNegotiation(item) }
+                                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                                ) {
+                                    Text("💬", fontSize = 12.sp)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            "Offer: ₹${item.currentOfferPrice} (you asked ₹${item.price})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF3730A3),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Text(
+                                            "Round ${item.negotiationRound}/3 · Tap to respond",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF6366F1),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                    Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFF6366F1), modifier = Modifier.size(16.dp))
+                                }
+                            } else if (item.status == "negotiating" && item.negotiationStatus == "awaiting_admin") {
+                                // User already responded (counter sent) — waiting on admin
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFF1F5F9))
+                                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                                ) {
+                                    Text("⏳", fontSize = 12.sp)
+                                    Text(
+                                        "Your offer of ₹${item.currentOfferPrice} sent · awaiting review (round ${item.negotiationRound}/3)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF64748B),
+                                        fontSize = 10.sp
                                     )
                                 }
                             }
@@ -1813,11 +2476,18 @@ fun DownloadsTab(
 fun PurchaseConfirmDialog(
     item:         StudyMaterialDto,
     isPurchasing: Boolean,
+    coinsToApply: Int = 0,
+    onCoinsToApplyChange: (Int) -> Unit = {},
+    userCoins:    Int = 0,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+
+    val price = item.price ?: 0
+    val maxApplicable = remember(price, userCoins) { minOf(50, userCoins, price) }
+    val amountDue = (price - coinsToApply).coerceAtLeast(0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1851,7 +2521,9 @@ fun PurchaseConfirmDialog(
                         }
                     }
                 }
-                // Price
+                // Price + coin discount slider
+                val coinDiscount = coinsToApply  // 1 coin = ₹1 by default (server is source of truth)
+
                 Row(
                     Modifier.fillMaxWidth(),
                     Arrangement.SpaceBetween,
@@ -1859,16 +2531,48 @@ fun PurchaseConfirmDialog(
                 ) {
                     Text(str.materialPrice, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("🪙", fontSize = 20.sp)
-                        Text("${item.price ?: 0} coins",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    Text("₹$price",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                }
+
+                if (maxApplicable > 0) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Text("Use coins for discount", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("🪙", fontSize = 14.sp)
+                                Text("$coinsToApply / $maxApplicable", style = MaterialTheme.typography.labelLarge,
+                                    color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Slider(
+                            value = coinsToApply.toFloat(),
+                            onValueChange = { onCoinsToApplyChange(it.toInt()) },
+                            valueRange = 0f..maxApplicable.toFloat(),
+                            steps = if (maxApplicable > 1) maxApplicable - 1 else 0,
+                            colors = SliderDefaults.colors(thumbColor = BpscColors.CoinGold, activeTrackColor = BpscColors.CoinGold)
+                        )
                     }
                 }
-                Text("Creator earns 70% • BPSCNotes keeps 30%",
-                    style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+
+                HorizontalDivider(color = cs.outline)
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
+                    Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("₹$amountDue", style = MaterialTheme.typography.titleLarge,
+                            color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                        if (coinDiscount > 0) {
+                            Text("🪙 $coinDiscount coins applied (−₹$coinDiscount)",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -1884,8 +2588,11 @@ fun PurchaseConfirmDialog(
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(str.courseProcessing)
+                } else if (amountDue == 0) {
+                    Text(if (coinsToApply > 0) "🪙 Pay with $coinsToApply coins" else "Unlock for free",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 } else {
-                    Text("🪙 Buy for ${item.price ?: 0} Coins",
+                    Text("Pay ₹$amountDue",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }

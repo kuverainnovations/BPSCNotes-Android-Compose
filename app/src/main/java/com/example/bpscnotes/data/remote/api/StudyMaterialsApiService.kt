@@ -104,7 +104,23 @@ data class StudyMaterialDto(
     val isMarketplace: Boolean = false,
 
     @SerializedName("is_purchased")
-    val isPurchased: Boolean = false          // true if current user has purchased this premium material
+    val isPurchased: Boolean = false,          // true if current user has purchased this premium material
+
+    // ── Negotiation (Phase 2) ────────────────────────────────
+    @SerializedName("negotiation_round")
+    val negotiationRound: Int = 0,
+
+    @SerializedName("current_offer_price")
+    val currentOfferPrice: Int? = null,
+
+    @SerializedName("proposed_by")
+    val proposedBy: String? = null,            // "admin" | "user"
+
+    @SerializedName("negotiation_status")
+    val negotiationStatus: String = "none",    // "none" | "awaiting_user" | "awaiting_admin" | "resolved"
+
+    @SerializedName("buyer_count")
+    val buyerCount: Int = 0,                   // social proof: "12 students bought this"
 ) {
     val type: MaterialType
         get() = MaterialType.fromKey(materialType)
@@ -116,6 +132,10 @@ data class StudyMaterialDto(
         get() = price == 0
 
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
+
+    /** True when there's an admin counter-offer awaiting this uploader's response */
+    val hasNegotiationOffer: Boolean
+        get() = status == "negotiating" && negotiationStatus == "awaiting_user"
 }
 
 data class PaginationMeta(
@@ -164,6 +184,7 @@ data class MaterialDetailData(
     @SerializedName("free_pages")    val freePages: Int = 3,
     @SerializedName("is_premium")    val isPremium2: Boolean = false,
     @SerializedName("is_purchased")  val isPurchased: Boolean = false,
+    @SerializedName("buyer_count")   val buyerCount: Int = 0,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
@@ -184,6 +205,41 @@ data class DownloadData(val downloadUrl: String)
 data class BookmarkData(val bookmarked: Boolean)
 
 data class MyUploadsData(val uploads: List<StudyMaterialDto>)
+
+// ── Negotiation (Phase 2) ────────────────────────────────────
+data class NegotiationOfferDto(
+    val round: Int,
+    @SerializedName("offered_by") val offeredBy: String,   // "admin" | "user"
+    @SerializedName("offer_price") val offerPrice: Int,
+    val message: String? = null,
+    val action: String,    // "counter" | "accept" | "final_approve" | "final_reject"
+    @SerializedName("created_at") val createdAt: String? = null,
+)
+
+data class NegotiationHistoryData(
+    val materialId: String,
+    val title: String,
+    val status: String,
+    val originalPrice: Int,
+    val negotiationRound: Int,
+    val currentOfferPrice: Int? = null,
+    val proposedBy: String? = null,
+    val negotiationStatus: String,
+    val canRespond: Boolean = false,
+    val isFinalRound: Boolean = false,
+    val history: List<NegotiationOfferDto> = emptyList(),
+)
+
+data class NegotiationActionResultData(
+    val status: String? = null,
+    val finalPrice: Int? = null,
+    val negotiationRound: Int? = null,
+    val currentOfferPrice: Int? = null,
+    val isFinalRound: Boolean = false,
+)
+
+data class CounterOfferRequest(val price: Int, val message: String? = null)
+
 
 // ── Create DTO ────────────────────────────────────────────────
 data class CreateMaterialRequest(
@@ -218,12 +274,63 @@ data class DownloadHistoryItem(
 
 data class MyDownloadsData(val downloads: List<DownloadHistoryItem> = emptyList())
 
+// ── Marketplace purchase — hybrid coins + Razorpay (Phase 3) ──
+data class InitPurchaseRequest(val coinsToApply: Int = 0)
+
+data class InitPurchaseData(
+    val purchased:        Boolean = false,
+    val alreadyPurchased: Boolean = false,
+    val requiresPayment:  Boolean = false,
+    val purchaseOrderId:  String? = null,
+    val materialPrice:    Int     = 0,
+    val coinsApplied:     Int     = 0,
+    val coinDiscountInr:  Int     = 0,
+    val amountDueInr:     Int     = 0,
+    val razorpayOrderId:  String? = null,
+    val razorpayKeyId:    String? = null,
+    val materialTitle:    String? = null,
+    // present when purchase completed immediately (free or fully coin-covered)
+    val coinsSpent:       Int     = 0,
+    val coinsBalance:     Int?    = null,
+    val amountPaidInr:    Int     = 0,
+    val fileUrl:          String? = null,
+)
+
+data class ConfirmPurchaseRequest(
+    val purchaseOrderId:    String,
+    val razorpayPaymentId:  String,
+    val razorpaySignature:  String,
+    val paymentMethod:      String? = null,
+)
+
 data class PurchaseResultData(
     val purchased:        Boolean = false,
     val alreadyPurchased: Boolean = false,
     val coinsSpent:       Int     = 0,
-    val coinsBalance:     Int     = 0,
+    val coinsBalance:     Int?    = 0,
+    val coinDiscountInr:  Int     = 0,
+    val amountPaidInr:    Int     = 0,
     val fileUrl:          String? = null
+)
+
+// ── Seller wallet (Phase 3) ───────────────────────────────────
+data class WalletTransactionDto(
+    val id: String,
+    val type: String,           // "sale_credit" | "withdrawal" | "adjustment"
+    val amount: Int,             // ₹
+    val status: String,          // "pending" | "disbursed" | "failed"
+    val description: String? = null,
+    @SerializedName("balance_after") val balanceAfter: Int = 0,
+    @SerializedName("material_title") val materialTitle: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("disbursed_at") val disbursedAt: String? = null,
+)
+
+data class WalletData(
+    val balance: Int = 0,
+    val totalEarned: Int = 0,
+    val transactions: List<WalletTransactionDto> = emptyList(),
+    val meta: PaginationMeta? = null,
 )
 
 data class PreviewData(
@@ -231,6 +338,12 @@ data class PreviewData(
     val totalPages:  Int      = 0,
     val freePages:   Int      = 3,
     val isPurchased: Boolean  = false
+)
+
+// ── Social proof (Phase 4) ─────────────────────────────────────
+data class BuyersData(
+    val buyers: List<String> = emptyList(),   // anonymized e.g. "Rahul K."
+    val totalBuyers: Int = 0,
 )
 
 // ════════════════════════════════════════════════════════════
@@ -266,6 +379,19 @@ interface StudyMaterialsApiService {
     /** GET /study-materials/my-uploads */
     @GET("study-materials/my-uploads")
     suspend fun myUploads(): ApiResponse<MyUploadsData>
+
+    // ── Negotiation (Phase 2) ────────────────────────────────────
+    /** GET /study-materials/my-uploads/:id/negotiation — full offer history */
+    @GET("study-materials/my-uploads/{id}/negotiation")
+    suspend fun getNegotiationHistory(@Path("id") id: String): ApiResponse<NegotiationHistoryData>
+
+    /** POST /study-materials/my-uploads/:id/negotiation/accept — accept admin's counter-offer */
+    @POST("study-materials/my-uploads/{id}/negotiation/accept")
+    suspend fun acceptNegotiation(@Path("id") id: String): ApiResponse<NegotiationActionResultData>
+
+    /** POST /study-materials/my-uploads/:id/negotiation/counter — send a counter-offer back */
+    @POST("study-materials/my-uploads/{id}/negotiation/counter")
+    suspend fun counterNegotiation(@Path("id") id: String, @Body body: CounterOfferRequest): ApiResponse<NegotiationActionResultData>
 
     /**
      * GET /study-materials/upload-url?fileName=notes.pdf&mimeType=application/pdf
@@ -304,13 +430,35 @@ interface StudyMaterialsApiService {
     @DELETE("study-materials/my-downloads/{materialId}")
     suspend fun removeDownload(@Path("materialId") materialId: String): ApiResponse<Unit>
 
-    /** POST /study-materials/:id/purchase — buy a paid material with coins */
-    @POST("study-materials/{id}/purchase")
-    suspend fun purchaseMaterial(@Path("id") id: String): ApiResponse<PurchaseResultData>
+    /**
+     * POST /study-materials/:id/purchase/init — start a marketplace purchase.
+     * Buyer may apply up to `max_coins_per_purchase` coins as a discount;
+     * remaining ₹ balance (if any) must be paid via Razorpay using the
+     * returned razorpayOrderId. If amountDueInr is 0, purchased=true
+     * immediately (free or fully coin-covered).
+     */
+    @POST("study-materials/{id}/purchase/init")
+    suspend fun initPurchase(@Path("id") id: String, @Body body: InitPurchaseRequest): ApiResponse<InitPurchaseData>
+
+    /** POST /study-materials/:id/purchase/confirm — finalize after Razorpay payment succeeds */
+    @POST("study-materials/{id}/purchase/confirm")
+    suspend fun confirmPurchase(@Path("id") id: String, @Body body: ConfirmPurchaseRequest): ApiResponse<PurchaseResultData>
+
+    /** GET /study-materials/wallet — seller's ₹ wallet balance + transaction history */
+    @GET("study-materials/wallet")
+    suspend fun getWallet(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 30
+    ): ApiResponse<WalletData>
 
     /** GET /study-materials/:id/preview — get signed preview (free pages only) */
     @GET("study-materials/{id}/preview")
     suspend fun getPreview(@Path("id") id: String): ApiResponse<PreviewData>
+
+    /** GET /study-materials/:id/buyers — anonymized buyer list for social proof */
+    @GET("study-materials/{id}/buyers")
+    suspend fun getBuyers(@Path("id") id: String, @Query("limit") limit: Int = 5): ApiResponse<BuyersData>
+
 
     /**
      * POST /study-materials/upload  (multipart/form-data)

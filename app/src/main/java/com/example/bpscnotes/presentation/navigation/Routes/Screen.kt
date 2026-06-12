@@ -94,6 +94,14 @@ sealed class Screen(val route: String) {
 
     object StudyMaterials : Screen("study_materials")
 
+    // Phase 5: Chat with uploader for a purchased material
+    object MaterialChat : Screen("material_chat/{chatId}") {
+        fun createRoute(chatId: String) = "material_chat/$chatId"
+    }
+
+    // Phase 5: Inbox of all chat threads (buyer + uploader roles)
+    object ChatInbox : Screen("chat_inbox")
+
     // PDF Viewer with page locking
     object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}") {
         fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean) =

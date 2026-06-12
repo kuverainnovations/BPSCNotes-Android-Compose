@@ -70,6 +70,8 @@ import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
+import com.example.bpscnotes.presentation.studymaterials.MaterialChatScreen
+import com.example.bpscnotes.presentation.studymaterials.ChatInboxScreen
 import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
 import com.example.bpscnotes.presentation.studymaterials.VideoPlayerScreen
 import com.example.bpscnotes.presentation.studymaterials.ImageViewerScreen
@@ -209,7 +211,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
             // FCM Debug screen — only available in debug builds
             val isDebug = (android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE and
-                context.applicationInfo.flags) != 0
+                    context.applicationInfo.flags) != 0
             if (isDebug) {
                 composable("fcm_debug") {
                     FcmDebugScreen(navController)
@@ -363,6 +365,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
             composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
 
+            // Phase 5: Chat with uploader for a purchased material
+            composable(
+                route = Screen.MaterialChat.route,
+                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            ) { back ->
+                val chatId = back.arguments?.getString("chatId") ?: ""
+                MaterialChatScreen(navController = navController, chatId = chatId)
+            }
+
+            // Phase 5: Inbox of all chat threads
+            composable(Screen.ChatInbox.route) { ChatInboxScreen(navController = navController) }
+
+
             // PDF Viewer — custom in-app renderer with page locking
             composable(
                 route     = Screen.PdfViewer.route,
@@ -490,7 +505,7 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 ChangeMpinScreen(navController = navController)
             }
 
-                        // Live Class Viewer — in-app WebView
+            // Live Class Viewer — in-app WebView
             composable(
                 Screen.LiveClassViewer.route,
                 arguments = listOf(

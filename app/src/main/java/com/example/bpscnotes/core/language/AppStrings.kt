@@ -454,6 +454,16 @@ data class MiscStrings5(
     val quizDailyAccuracy: String,
     // Close generic
     val closeLabel: String,
+    // Marketplace Rules popup
+    val marketRulesTitle: String,
+    val marketRulesSubtitle: String,
+    val marketRule1: String,
+    val marketRule2: String,
+    val marketRule3: String,
+    val marketRule4: String,
+    val marketRule5: String,
+    val marketRulesGotIt: String,
+    val marketRulesInfoTooltip: String,
 )
 
 data class MiscStrings6(
@@ -944,6 +954,15 @@ data class AppStrings(
     val quizDailyScore          get() = _m5.quizDailyScore
     val quizDailyAccuracy       get() = _m5.quizDailyAccuracy
     val closeLabel              get() = _m5.closeLabel
+    val marketRulesTitle        get() = _m5.marketRulesTitle
+    val marketRulesSubtitle     get() = _m5.marketRulesSubtitle
+    val marketRule1             get() = _m5.marketRule1
+    val marketRule2             get() = _m5.marketRule2
+    val marketRule3             get() = _m5.marketRule3
+    val marketRule4             get() = _m5.marketRule4
+    val marketRule5             get() = _m5.marketRule5
+    val marketRulesGotIt        get() = _m5.marketRulesGotIt
+    val marketRulesInfoTooltip  get() = _m5.marketRulesInfoTooltip
     // ── Auto-restored getters ──────────────────────
     val quizSubmit                   get() = _qz.quizSubmit
     val quizResult                   get() = _qz.quizResult
@@ -1492,6 +1511,15 @@ val EnglishStrings: AppStrings = mkAppStrings(
         quizDailyScore="Score",
         quizDailyAccuracy="Accuracy",
         closeLabel="Close",
+        marketRulesTitle="Sell Your Notes — Marketplace Rules",
+        marketRulesSubtitle="Earn coins by sharing your study materials with other students",
+        marketRule1="📤 Upload your notes, PDFs, or guides and set your own price (e.g. ₹500 in coins)",
+        marketRule2="✅ Our team reviews every submission before it goes live for other students",
+        marketRule3="💬 If the price seems too high, we may suggest a fairer price — you can negotiate up to 3 rounds",
+        marketRule4="🚀 Once approved, your material goes live and other students can buy it",
+        marketRule5="💰 You earn 60% of every sale — we keep 40% to run and maintain the platform",
+        marketRulesGotIt="Got it, let's go!",
+        marketRulesInfoTooltip="Marketplace rules",
     ),
 
     m6 = MiscStrings6(
@@ -2038,6 +2066,15 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizDailyScore="स्कोर",
         quizDailyAccuracy="सटीकता",
         closeLabel="बंद करें",
+        marketRulesTitle="अपने नोट्स बेचें — मार्केटप्लेस नियम",
+        marketRulesSubtitle="अपनी स्टडी मैटेरियल अन्य छात्रों के साथ शेयर करके कॉइन कमाएं",
+        marketRule1="📤 अपने नोट्स, PDF या गाइड अपलोड करें और अपनी कीमत खुद तय करें (जैसे ₹500 कॉइन में)",
+        marketRule2="✅ लाइव होने से पहले हमारी टीम हर सबमिशन की जांच करती है",
+        marketRule3="💬 अगर कीमत ज्यादा लगे, तो हम उचित कीमत सुझा सकते हैं — आप अधिकतम 3 राउंड तक बातचीत कर सकते हैं",
+        marketRule4="🚀 अप्रूव होने के बाद आपकी मैटेरियल लाइव हो जाती है और अन्य छात्र उसे खरीद सकते हैं",
+        marketRule5="💰 हर बिक्री पर आपको 60% मिलता है — बाकी 40% प्लेटफ़ॉर्म चलाने के लिए रखा जाता है",
+        marketRulesGotIt="समझ गया, चलिए शुरू करें!",
+        marketRulesInfoTooltip="मार्केटप्लेस नियम",
     ),
     m6 = MiscStrings6(
         permStayUpdated="सूचनाओं के साथ अपडेट रहें",
