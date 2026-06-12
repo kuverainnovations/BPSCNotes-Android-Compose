@@ -87,43 +87,24 @@ fun DashboardScreen(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state    by dashboardViewModel.uiState.collectAsState()
-    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
     val context = LocalContext.current
-
-    // FIX: Refresh coins + user data when dashboard becomes visible
-    // This keeps side nav coins and profile coins always up-to-date
-    androidx.compose.runtime.DisposableEffect(lifecycle) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                dashboardViewModel.refresh()
-            }
-        }
-        lifecycle.lifecycle.addObserver(observer)
-        onDispose { lifecycle.lifecycle.removeObserver(observer) }
-    }
-//    val isProUser = state.user?.subscription != null  // Pro users see no ads
     val bookmarkedIds by bookmarkViewModel.bookmarkedIds.collectAsState()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showTargetSheet by remember { mutableStateOf(false) }
 
-    // Pull-to-refresh support
     val pullRefreshState = rememberPullToRefreshState()
 
-    /*LaunchedEffect(Unit) {
-        com.example.bpscnotes.core.analytics.Event.screenView("dashboard")
-    }
-    LaunchedEffect(Unit) {
-        dashboardViewModel.refresh()
-    }*/
-
+    // Single resume observer — no full refresh race condition
     val lifecycleOwner = LocalLifecycleOwner.current
-
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            // Re-fetch targets every time Dashboard resumes (e.g. after DailyTargets back-navigate)
-            dashboardViewModel.refreshTargets()
+            // Run in parallel — notif count must never wait for targets
+            kotlinx.coroutines.coroutineScope {
+                launch { dashboardViewModel.refreshTargets() }
+                launch { dashboardViewModel.refreshNotifCount() }
+            }
         }
     }
     PullToRefreshBox(
@@ -171,12 +152,13 @@ fun DashboardScreen(
                 // ── STICKY HEADER — never scrolls ──────────────────────────
                 val notifCount = state.unreadNotifCount
                 DashboardHeader(
-                    user = state.user,
-                    stats = state.stats,
-                    greeting = dashboardViewModel.getGreeting(),
-                    targets = state.dailyTargets,
-                    notifCount = notifCount,
-                    onMenuClick = { scope.launch { drawerState.open() } },
+                    user          = state.user,
+                    stats         = state.stats,
+                    greeting      = dashboardViewModel.getGreeting(),
+                    targets       = state.dailyTargets,
+                    notifCount    = notifCount,
+                    onMenuClick   = { scope.launch { drawerState.open() } },
+                    onNotifClick  = { dashboardViewModel.clearUnreadNotifCount() },
                     navController = navController
                 )
 
@@ -667,6 +649,7 @@ private fun DashboardHeader(
     targets: List<DailyTargetDto>,
     notifCount: Int = 0,
     onMenuClick: () -> Unit,
+    onNotifClick: () -> Unit = {},
     navController: NavHostController
 ) {
     // Computed values — all from API, never hardcoded
@@ -793,7 +776,10 @@ private fun DashboardHeader(
                             .clip(CircleShape)
                             .background(Color.White.copy(0.12f))
                             .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                            .clickable { navController.navigate(Screen.NotificationSettings.route) }, contentAlignment = Alignment.Center) {
+                            .clickable {
+                                onNotifClick()
+                                navController.navigate(Screen.NotificationSettings.route)
+                            }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }

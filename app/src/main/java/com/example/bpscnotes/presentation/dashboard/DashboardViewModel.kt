@@ -5,6 +5,9 @@ import com.example.bpscnotes.data.remote.api.BannersApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.DailyTargetsApiService
 import com.example.bpscnotes.data.remote.api.LiveClassesApiService
+import com.example.bpscnotes.data.remote.api.UpdateTargetRequest
+import com.example.bpscnotes.core.network.NotifCountBus
+import kotlinx.coroutines.flow.collectLatest
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
 
@@ -80,6 +83,11 @@ class DashboardViewModel @Inject constructor(
         loadDashboard()
         viewModelScope.launch {
             bus.events.collect { event ->
+                if (event is RefreshEvent.NotificationReceived) {
+                    // Increment immediately on push arrival, then sync with server
+                    _uiState.update { it.copy(unreadNotifCount = it.unreadNotifCount + 1) }
+                    refreshNotifCount()
+                }
                 when (event) {
                     is RefreshEvent.QuizCompleted,
                     is RefreshEvent.LessonCompleted,
@@ -389,6 +397,21 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    // ── Update target (title + subject) ───────────────────────
+    fun updateTarget(targetId: String, title: String, subject: String) {
+        viewModelScope.launch {
+            try {
+                targetsApi.updateTarget(targetId, UpdateTargetRequest(title = title, subject = subject))
+                val freshData = safeGet("targets-update") { targetsApi.getDailyTargets().data }
+                if (freshData != null) {
+                    _uiState.update { it.copy(dailyTargets = freshData.targets, targetSummary = freshData.summary) }
+                }
+            } catch (e: Exception) {
+                Log.e("DASHBOARD", "updateTarget failed: ${e.message}", e)
+            }
+        }
+    }
+
     // ── Delete target ─────────────────────────────────────────
     fun deleteTarget(targetId: String) {
         // Optimistic remove
@@ -458,6 +481,13 @@ class DashboardViewModel @Inject constructor(
     /** Called directly from composable for instant toast without an API call */
     fun setScheduleToast(msg: String) { _uiState.update { it.copy(scheduleToast = msg) } }
 
+    init {
+        // Listen for notif count refresh signals from NotificationSettingsScreen
+        viewModelScope.launch {
+            NotifCountBus.refresh.collectLatest { refreshNotifCount() }
+        }
+    }
+
     fun refresh() = loadDashboard()
 
     /**
@@ -484,6 +514,25 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun clearUnreadNotifCount() { _uiState.update { it.copy(unreadNotifCount = 0) } }
+
+    fun refreshNotifCount() {
+        viewModelScope.launch {
+            try {
+                // Use dedicated lightweight endpoint — no list fetch, just a COUNT query
+                val count = try {
+                    statsApi.getUnreadCount().data?.count ?: 0
+                } catch (_: Exception) {
+                    // Fallback to full notifications call if endpoint missing
+                    safeGet("notif-count-refresh") {
+                        statsApi.getNotifications(limit = 1).data?.unreadCount
+                    } ?: 0
+                }
+                _uiState.update { it.copy(unreadNotifCount = count) }
+            } catch (e: Exception) {
+                Log.e("DASHBOARD", "refreshNotifCount failed: ${e.message}")
+            }
+        }
+    }
     fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearTargetSuccess() { _uiState.update { it.copy(targetSuccess = null) } }
 

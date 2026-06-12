@@ -12,8 +12,9 @@ sealed class RefreshEvent {
     object CoinsChanged      : RefreshEvent()
     object QuizCompleted     : RefreshEvent()
     object TargetUpdated     : RefreshEvent()
+    object NotificationReceived : RefreshEvent()   // fires when push arrives → update badge
     data class CourseProgressChanged(val courseId: String) : RefreshEvent()
-    data class AvatarUpdated(val avatarUrl: String) : RefreshEvent()  // carries new URL directly
+    data class AvatarUpdated(val avatarUrl: String) : RefreshEvent()
 }
 
 @Singleton

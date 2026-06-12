@@ -23,6 +23,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.network.NotifCountBus
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.google.gson.annotations.SerializedName
@@ -131,6 +132,7 @@ class NotificationsViewModel @Inject constructor(
     }
 
     fun markAllRead() {
+        NotifCountBus.emit()  // tell Dashboard to refresh badge immediately
         // Optimistic update
         _state.update { s ->
             s.copy(

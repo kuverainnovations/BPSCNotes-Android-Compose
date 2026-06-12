@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.bpscnotes.presentation.dashboard
 
 import android.widget.Toast
@@ -289,7 +287,8 @@ fun DailyTargetsScreen(
                 ListTabContent(
                     items            = allTargets,
                     onToggleComplete = { id -> viewModel.toggleTargetComplete(id) },
-                    onDelete         = { id -> viewModel.deleteTarget(id) }
+                    onDelete         = { id -> viewModel.deleteTarget(id) },
+                    onUpdate         = { id, title, subject -> viewModel.updateTarget(id, title, subject) }
                 )
             }
         }
@@ -312,7 +311,8 @@ fun DailyTargetsScreen(
 private fun ListTabContent(
     items: List<TargetItem>,
     onToggleComplete: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onUpdate: (id: String, title: String, subject: String) -> Unit = { _, _, _ -> }
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -338,7 +338,9 @@ private fun ListTabContent(
 
     // Edit bottom sheet
     editingTarget?.let { editing ->
-        EditTargetSheet(target = editing.target, onDismiss = { editingTarget = null })
+        EditTargetSheet(target = editing.target, onDismiss = { editingTarget = null }, onSave = { title, subject ->
+            onUpdate(editing.target.id, title, subject)
+        })
     }
 }
 
@@ -382,14 +384,16 @@ private fun TargetListCard(item: TargetItem, isCompleted: Boolean, onToggleCompl
                     }
                 }
             }
-            // Edit button
-            Box(
-                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE8F4FD))
-                    .clickable { onEdit() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.Edit, null, tint = Color(0xFF1565C0), modifier = Modifier.size(15.dp))
+            // Edit button — only for incomplete targets
+            if (!isCompleted) {
+                Box(
+                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE8F4FD))
+                        .clickable { onEdit() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.Edit, null, tint = Color(0xFF1565C0), modifier = Modifier.size(15.dp))
+                }
             }
             // Delete button
             Box(
@@ -606,15 +610,24 @@ private fun SmallIconButton(icon: ImageVector, bg: Color, tint: Color, onClick: 
 // ─────────────────────────────────────────────────────────────
 // EDIT TARGET SHEET
 // ─────────────────────────────────────────────────────────────
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun EditTargetSheet(
     target: com.example.bpscnotes.data.remote.api.DailyTargetDto,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSave: (title: String, subject: String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     var title by remember { mutableStateOf(target.title) }
+    var selectedSubject by remember { mutableStateOf(target.subject.ifBlank { "General Studies" }) }
+    var subjectExpanded by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
+    val subjects = listOf(
+        "Polity", "History", "Geography", "Economy", "Bihar GK",
+        "Science & Tech", "General Studies", "Environment", "Maths", "English", "Current Affairs"
+    )
+
+    androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
@@ -625,6 +638,7 @@ private fun EditTargetSheet(
             Text("Edit Target", style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, color = cs.onSurface)
 
+            // Title field
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -633,6 +647,33 @@ private fun EditTargetSheet(
                 shape = RoundedCornerShape(12.dp),
                 maxLines = 3
             )
+
+            // Subject dropdown
+            ExposedDropdownMenuBox(
+                expanded = subjectExpanded,
+                onExpandedChange = { subjectExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedSubject,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Subject") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(
+                    expanded = subjectExpanded,
+                    onDismissRequest = { subjectExpanded = false }
+                ) {
+                    subjects.forEach { subject ->
+                        DropdownMenuItem(
+                            text = { Text(subject) },
+                            onClick = { selectedSubject = subject; subjectExpanded = false }
+                        )
+                    }
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
@@ -643,9 +684,10 @@ private fun EditTargetSheet(
 
                 Button(
                     onClick = {
-                        // Note: backend PATCH /users/daily-targets/{id} needed
-                        // For now just dismiss — title edit shown locally
-                        onDismiss()
+                        if (title.isNotBlank()) {
+                            onSave(title.trim(), selectedSubject)
+                            onDismiss()
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),

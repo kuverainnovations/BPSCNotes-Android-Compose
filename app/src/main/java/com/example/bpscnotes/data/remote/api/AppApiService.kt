@@ -400,6 +400,10 @@ data class SubjectAccuracyDto(
     @SerializedName("avg_accuracy") val avgAccuracy: String? = null  // percentage 0-100, or null
 )
 
+data class UnreadCountDto(
+    @SerializedName("count") val count: Int = 0
+)
+
 data class NotificationsResponseData(
     val notifications: List<Any> = emptyList(),
     @SerializedName("unreadCount") val unreadCount: Int = 0
@@ -468,6 +472,11 @@ data class CreateTargetRequest(
     @SerializedName("time_slot")           val timeSlot: String = "morning",
     @SerializedName("estimated_minutes")   val estimatedMinutes: Int = 25,
     @SerializedName("total_questions")     val totalQuestions: Int = 10
+)
+
+data class UpdateTargetRequest(
+    val title: String,
+    val subject: String,
 )
 
 data class CompleteTargetResponse(
@@ -635,8 +644,11 @@ interface UserStatsApiService {
     @GET("notifications")
     suspend fun getNotifications(
         @Query("page")  page:  Int = 1,
-        @Query("limit") limit: Int = 1   // only need unreadCount, not full list
+        @Query("limit") limit: Int = 1
     ): ApiResponse<NotificationsResponseData>
+
+    @GET("notifications/unread-count")
+    suspend fun getUnreadCount(): ApiResponse<UnreadCountDto>
 }
 
 interface DailyTargetsApiService {
@@ -651,6 +663,9 @@ interface DailyTargetsApiService {
 
     @DELETE("users/daily-targets/{id}")
     suspend fun deleteTarget(@Path("id") id: String): ApiResponse<DeleteTargetResponseData>
+
+    @PATCH("users/daily-targets/{id}")
+    suspend fun updateTarget(@Path("id") id: String, @Body body: UpdateTargetRequest): ApiResponse<DailyTargetsResponseData>
 }
 
 

@@ -54,3 +54,11 @@ class AuthInterceptor @Inject constructor(
         return response
     }
 }
+// ── Notif count refresh bus ──────────────────────────────────
+// Emitted by NotificationSettingsScreen when user reads/marks-all-read
+// Consumed by DashboardViewModel to update badge immediately
+object NotifCountBus {
+    private val _refresh = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val refresh = _refresh.asSharedFlow()
+    fun emit() { _refresh.tryEmit(Unit) }
+}
