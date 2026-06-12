@@ -210,6 +210,7 @@ object NetworkModule {
     @Provides @Singleton fun provideUserStatsApi(r: Retrofit): UserStatsApiService = r.create(UserStatsApiService::class.java)
     @Provides @Singleton fun provideDailyTargetsApi(r: Retrofit): DailyTargetsApiService = r.create(DailyTargetsApiService::class.java)
     @Provides @Singleton fun provideLiveClassesApi(r: Retrofit): LiveClassesApiService = r.create(LiveClassesApiService::class.java)
+    @Provides @Singleton fun provideCertificatesApi(r: Retrofit): CertificatesApiService = r.create(CertificatesApiService::class.java)
     @Provides @Singleton fun provideJobsApi(r: Retrofit): JobsApiService = r.create(JobsApiService::class.java)
     @Provides @Singleton fun provideStudyRoomsApi(r: Retrofit): StudyRoomsApiService = r.create(StudyRoomsApiService::class.java)
     @Provides @Singleton fun provideCoinsApi(r: Retrofit): CoinsApiService = r.create(CoinsApiService::class.java)

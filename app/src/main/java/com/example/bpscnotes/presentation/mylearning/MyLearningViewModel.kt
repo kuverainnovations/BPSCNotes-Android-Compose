@@ -25,6 +25,7 @@ data class MyLearningUiState(
     val savedCourseIds:  Set<String>     = emptySet(),   // for quick O(1) lookup in UI
     val userCoins:       Int             = 0,
     val subjects:        List<String>    = emptyList(),
+    val certificateUrls: Map<String, String> = emptyMap(), // courseId -> certificate_url (only present once generated)
     val isLoading:       Boolean         = true,
     val isEnrolling:     Boolean         = false,
     val enrollSuccess:   String?         = null,
@@ -38,6 +39,7 @@ class MyLearningViewModel @Inject constructor(
     private val coursesApi: CoursesApiService,
     private val authApi: AuthApiService,
     private val statsApi:   com.example.bpscnotes.data.remote.api.UserStatsApiService,
+    private val certificatesApi: com.example.bpscnotes.data.remote.api.CertificatesApiService,
     private val bus:        RefreshEventBus,
     private val cacheInvalidator: CacheInvalidator
 ) : ViewModel() {
@@ -99,6 +101,21 @@ class MyLearningViewModel @Inject constructor(
                         listOf("All", "Polity", "History", "Geography", "Economy", "Bihar GK", "Science")
                     }
                 }
+
+                // Fetch issued certificates — only courses with a generated
+                // certificate_url will show the Download button (others
+                // show "Completed" but no download until ready)
+                val certUrls = kotlinx.coroutines.supervisorScope {
+                    try {
+                        certificatesApi.getCertificates().data?.certificates
+                            ?.filter { !it.certificateUrl.isNullOrBlank() }
+                            ?.associate { it.courseId to it.certificateUrl!! }
+                            ?: emptyMap()
+                    } catch (e: Exception) {
+                        Log.w("MyLearningVM", "getCertificates failed: \${e.message}")
+                        emptyMap()
+                    }
+                }
                 _uiState.update {
                     it.copy(
                         storeCourses    = storeCourses,
@@ -107,6 +124,7 @@ class MyLearningViewModel @Inject constructor(
                         savedCourseIds  = savedIds,
                         userCoins       = userCoinsVal,
                         subjects        = subjectNames,
+                        certificateUrls = certUrls,
                         isLoading       = false
                     )
                 }

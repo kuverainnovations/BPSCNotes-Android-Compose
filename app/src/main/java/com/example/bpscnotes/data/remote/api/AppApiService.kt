@@ -707,6 +707,27 @@ interface LiveClassesApiService {
 }
 
 // ══════════════════════════════════════════════════════════════
+// CERTIFICATES DTOs — GET /users/certificates
+// Powers: MyLearningScreen → CertificateCard download/share
+// ══════════════════════════════════════════════════════════════
+data class CertificateDto(
+    val id: String,
+    @SerializedName("course_id")      val courseId: String,
+    @SerializedName("course_title")   val courseTitle: String? = null,
+    @SerializedName("certificate_url") val certificateUrl: String? = null,
+    @SerializedName("issued_at")      val issuedAt: String? = null
+)
+
+data class CertificatesResponseData(
+    @SerializedName("certificates") val certificates: List<CertificateDto> = emptyList()
+)
+
+interface CertificatesApiService {
+    @GET("users/certificates")
+    suspend fun getCertificates(): ApiResponse<CertificatesResponseData>
+}
+
+// ══════════════════════════════════════════════════════════════
 // JOB VACANCIES DTOs  — GET /jobs
 // Powers: JobVacanciesScreen
 // ══════════════════════════════════════════════════════════════
