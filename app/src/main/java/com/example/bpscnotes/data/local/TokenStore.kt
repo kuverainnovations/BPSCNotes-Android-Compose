@@ -27,7 +27,15 @@ class TokenStore @Inject constructor(
 
     // ── Auth token ─────────────────────────────────────────────
     fun getToken(): String? = prefs.getString("auth_token", null)
-    fun saveToken(token: String) = prefs.edit().putString("auth_token", token).apply()
+    fun saveToken(token: String) {
+        prefs.edit().putString("auth_token", token).apply()
+        // Keep cached user_id in sync with whatever account this token
+        // belongs to. Without this, switching accounts (or a fresh login
+        // before the Profile screen has loaded) leaves a stale/absent
+        // user_id, causing isMine()-style checks (chat "is this my own
+        // message?") to misfire across the whole app.
+        decodeUserIdFromJwt(token)?.let { saveUserId(it) }
+    }
     fun clearToken() = prefs.edit().remove("auth_token").apply()
     val isLoggedIn: Boolean get() = !getToken().isNullOrEmpty()
 
@@ -37,7 +45,44 @@ class TokenStore @Inject constructor(
     fun saveUserName(name: String) = prefs.edit().putString("user_name", name).apply()
     fun getUserName(): String? = prefs.getString("user_name", null)
     fun saveUserId(id: String) = prefs.edit().putString("user_id", id).apply()
-    fun getUserId(): String? = prefs.getString("user_id", null)
+
+    /**
+     * Returns the current user's ID, derived from the active auth token
+     * if the cached value is missing or doesn't match the current token's
+     * subject. This is the source-of-truth fix: previously "user_id" was
+     * only saved when ProfileViewModel happened to load, so a fresh login
+     * (or switching test accounts) could leave getUserId() returning null
+     * or a STALE id from a previous account — silently breaking any
+     * "is this message/action mine?" check (e.g. room chat alignment).
+     */
+    fun getUserId(): String? {
+        val token = getToken()
+        val tokenUserId = token?.let { decodeUserIdFromJwt(it) }
+        val cached = prefs.getString("user_id", null)
+        if (tokenUserId != null && tokenUserId != cached) {
+            saveUserId(tokenUserId)
+            return tokenUserId
+        }
+        return cached ?: tokenUserId
+    }
+
+    /**
+     * Decodes the `userId` claim from a JWT's payload (base64url, no
+     * signature verification needed — we only need to read the claim
+     * the server already issued and will independently verify itself).
+     */
+    private fun decodeUserIdFromJwt(token: String): String? {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) return null
+            val payloadJson = String(
+                android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            )
+            org.json.JSONObject(payloadJson).optString("userId").takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     // ── Onboarding ─────────────────────────────────────────────
     fun isOnboarded(): Boolean = prefs.getBoolean("is_onboarded", false)

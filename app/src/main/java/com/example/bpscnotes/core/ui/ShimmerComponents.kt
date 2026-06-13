@@ -20,10 +20,16 @@ import androidx.compose.ui.unit.dp
 // ── Shimmer brush ─────────────────────────────────────────────
 @Composable
 fun shimmerBrush(): Brush {
+    // surfaceVariant is nearly identical to background in the light theme
+    // (#EEF2F7 vs #F2F4F8), making the shimmer effectively invisible.
+    // onSurface (the text color) always has strong contrast against
+    // background in both light and dark themes, so a low-alpha overlay
+    // of it gives a visible shimmer regardless of theme.
+    val base = MaterialTheme.colorScheme.onSurface
     val shimmerColors = listOf(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        base.copy(alpha = 0.10f),
+        base.copy(alpha = 0.04f),
+        base.copy(alpha = 0.10f),
     )
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(

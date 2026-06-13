@@ -245,8 +245,15 @@ private fun ActiveRoomScreen(
     }
 
     var showRoomChat by remember { mutableStateOf(false) }
+    // The tier ROOM this session is in (e.g. "starter") — must match what
+    // the socket joined via joinTierRoom(), so chat messages broadcast to
+    // tier:{tierKey} are received by this screen's listener too. Falls
+    // back to the user's home tier if the session didn't specify one
+    // (e.g. older sessions before room_tier_id existed).
     val tierKey =
-        tiersState.myTierData?.currentTier?.tierKey ?: "starter"
+        state.roomTierKey
+            ?: tiersState.myTierData?.currentTier?.tierKey
+            ?: "starter"
 
 
 

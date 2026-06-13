@@ -71,7 +71,8 @@ data class TierRoomsUiState(
 class TierRoomsViewModel @Inject constructor(
     private val api:        TierRoomsApiService,
     private val socket:     TierRoomsSocketManager,
-    private val tokenStore: com.example.bpscnotes.data.local.TokenStore
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TierRoomsUiState())
@@ -104,9 +105,17 @@ class TierRoomsViewModel @Inject constructor(
                     // Join user's tier room. myTierData may not be loaded yet on first connect,
                     // so fall back to selectedTierKey (default "starter").
                     // loadMyTier() calls joinTierRoom again once real tier is known.
-                    val tierKey = _uiState.value.myTierData?.currentTier?.tierKey
-                        ?: _uiState.value.selectedTierKey
-                    socket.joinTierRoom(tierKey)
+                    // BUG FIX: If a study session is currently active in a
+                    // different (non-home) room — e.g. user joined "starter"
+                    // while their home tier is "consistent" — don't clobber
+                    // that join on reconnect. The socket already rejoins
+                    // currentTierKey itself via EVENT_CONNECT; only set a
+                    // tier here if nothing is currently joined.
+                    if (socket.getCurrentTierKey() == null) {
+                        val tierKey = _uiState.value.myTierData?.currentTier?.tierKey
+                            ?: _uiState.value.selectedTierKey
+                        socket.joinTierRoom(tierKey)
+                    }
                 }
             }
         }
@@ -121,8 +130,13 @@ class TierRoomsViewModel @Inject constructor(
                         else tier
                     })
                 }
-                // If it's the currently viewed tier, refresh members immediately
-                if (event.tierKey == _uiState.value.selectedTierKey) {
+                // If it's the room the user is actually sitting in (which
+                // may differ from their home tier — e.g. studying in a
+                // lower unlocked tier), refresh the member list immediately.
+                // Using selectedTierKey (home tier) here meant a user
+                // studying in a non-home room never saw new joiners.
+                val viewedTierKey = socket.getCurrentTierKey() ?: _uiState.value.selectedTierKey
+                if (event.tierKey == viewedTierKey) {
                     loadMembers(event.tierKey)
                 }
             }
@@ -216,7 +230,12 @@ class TierRoomsViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 kotlinx.coroutines.delay(5_000L)
-                val tierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: continue
+                // The room the user is physically sitting in (socket-joined),
+                // which may differ from their home tier if they joined a
+                // lower unlocked tier's room.
+                val tierKey = socket.getCurrentTierKey()
+                    ?: _uiState.value.myTierData?.currentTier?.tierKey
+                    ?: continue
                 // Only refresh if user is actually in session (saves API calls on lobby)
                 if (_uiState.value.isSocketConnected) {
                     loadMembers(tierKey)
@@ -280,6 +299,26 @@ class TierRoomsViewModel @Inject constructor(
         _uiState.update { it.copy(showDemotionBanner = false) }
     }
 
+    /**
+     * Lightweight refresh of just the "my tier" member/active counts,
+     * bypassing the 5-minute HTTP cache. Used by RoomsHubScreen's
+     * periodic poll so the hero card's "X members · Y online now" stays
+     * current without re-fetching the leaderboard/members list or
+     * rejoining the socket room on every tick.
+     */
+    fun refreshMyTierCounts() {
+        viewModelScope.launch {
+            try {
+                cacheInvalidator.evict(listOf("/api/v1/rooms"))
+                val response = api.getMyTier()
+                val data = response.data ?: return@launch
+                _uiState.update { it.copy(myTierData = data) }
+            } catch (e: Exception) {
+                Log.w(TAG, "refreshMyTierCounts: ${e.message}")
+            }
+        }
+    }
+
     fun loadMyTier() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMyTier = true, myTierError = null) }
@@ -302,8 +341,13 @@ class TierRoomsViewModel @Inject constructor(
                 loadLeaderboard(tierKey)
                 // Load members for the tab
                 loadMembers(tierKey)
-                // Join the correct socket room now that we know the user's actual tier
-                socket.joinTierRoom(tierKey)
+                // Join the correct socket room now that we know the user's actual tier —
+                // but don't clobber an active session's join to a different room
+                // (e.g. user started a session in a lower unlocked tier).
+                val joined = socket.getCurrentTierKey()
+                if (joined == null || joined == tierKey) {
+                    socket.joinTierRoom(tierKey)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "loadMyTier: ${e.message}", e)
                 _uiState.update { it.copy(isLoadingMyTier = false, myTierError = e.message ?: "Failed to load your tier") }
@@ -338,6 +382,12 @@ class TierRoomsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMembers = true, membersError = null) }
             try {
+                // This is called from both periodic polls and socket-triggered
+                // refreshes (room:member_joined etc.) — both want live data,
+                // but GET /rooms/tiers/{tierKey}/members is cached for 5
+                // minutes by the network layer. Evict first so we don't keep
+                // serving the same snapshot for up to 5 minutes.
+                cacheInvalidator.evict(listOf("/api/v1/rooms"))
                 val response = api.getTierMembers(tierKey)
                 _uiState.update { s ->
                     s.copy(
@@ -394,6 +444,13 @@ class TierRoomsViewModel @Inject constructor(
             } catch (e: retrofit2.HttpException) {
                 val body = e.response()?.errorBody()?.string() ?: ""
                 val msg = try { org.json.JSONObject(body).optString("message", "Not yet eligible") } catch (_: Exception) { "Not yet eligible" }
+                // The claim was rejected as "not yet eligible" despite the UI
+                // showing "Claim Now" — myTierData/progressItems are stale
+                // (e.g. a cached snapshot from before/after a recent
+                // promotion). Refresh so isClaimReady recomputes from live
+                // data and the user doesn't keep tapping a claim that will
+                // never succeed.
+                loadMyTier()
                 onFail(msg)
             } catch (e: Exception) {
                 Log.e(TAG, "claimPromotion: ${e.message}", e)

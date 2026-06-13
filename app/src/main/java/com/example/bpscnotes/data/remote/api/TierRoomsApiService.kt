@@ -146,7 +146,11 @@ data class TierMembersResponseData(
  */
 data class StartSessionRequest(
     @SerializedName("roomId") val roomId: String? = null,
-    val mode: String = "study"   // "study" | "pomodoro" | "silent"
+    val mode: String = "study",   // "study" | "pomodoro" | "silent"
+    // The tier ROOM the user tapped to start this session (may differ
+    // from their reward tier if they joined a lower unlocked room).
+    // Backend uses this for presence/active counts and session display.
+    val tierKey: String? = null
 )
 
 /**
@@ -208,6 +212,7 @@ data class EndSessionResponseData(
  * Null session means no active session exists.
  */
 data class ActiveSessionTierDto(
+    @SerializedName("tierKey") val tierKey: String? = null,
     val name: String,
     @SerializedName("iconEmoji") val iconEmoji: String,
     @SerializedName("colorHex")  val colorHex: String

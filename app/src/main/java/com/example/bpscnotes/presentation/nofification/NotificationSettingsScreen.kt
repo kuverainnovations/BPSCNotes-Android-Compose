@@ -1,6 +1,7 @@
 package com.example.bpscnotes.presentation.nofification
 
 import android.util.Log
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -47,7 +48,8 @@ data class NotificationDto(
     val body:      String,
     @SerializedName("created_at") val createdAt: String = "",
     val type:      String = "system",
-    @SerializedName("is_read") val isRead: Boolean = false
+    @SerializedName("is_read") val isRead: Boolean = false,
+    val data:      Map<String, String>? = null
 )
 
 data class NotificationsResponseData(
@@ -82,7 +84,8 @@ data class NotificationsUiState(
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    private val api: NotificationsApiService
+    private val api: NotificationsApiService,
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator
 ) : ViewModel() {
     private val _state = MutableStateFlow(NotificationsUiState())
     val state: StateFlow<NotificationsUiState> = _state.asStateFlow()
@@ -94,11 +97,15 @@ class NotificationsViewModel @Inject constructor(
             _state.update { it.copy(isLoading = !refresh && it.notifications.isEmpty(), isRefreshing = refresh) }
             try {
                 val res = api.getNotifications()
+                val unread = res.data?.unreadCount ?: 0
                 _state.update {
                     it.copy(notifications = res.data?.notifications ?: emptyList(),
-                        unreadCount = res.data?.unreadCount ?: 0,
+                        unreadCount = unread,
                         isLoading = false, isRefreshing = false, error = null)
                 }
+                // Opening the notifications screen marks everything as read —
+                // a single bulk call, not one-by-one as the user taps items.
+                if (unread > 0) markAllRead(showToast = false)
             } catch (e: Exception) {
                 Log.e("NotifVM", e.message ?: "", e)
                 _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
@@ -118,6 +125,8 @@ class NotificationsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 api.markRead(MarkReadRequest(ids = listOf(id)))
+                cacheInvalidator.evict(listOf("/api/v1/notifications"))
+                NotifCountBus.emit()
             } catch (e: Exception) {
                 android.util.Log.e("NotifVM", "markRead failed: ${e.message}", e)
                 // Revert optimistic update on failure
@@ -131,19 +140,28 @@ class NotificationsViewModel @Inject constructor(
         }
     }
 
-    fun markAllRead() {
-        NotifCountBus.emit()  // tell Dashboard to refresh badge immediately
+    fun markAllRead(showToast: Boolean = true) {
         // Optimistic update
         _state.update { s ->
             s.copy(
                 notifications = s.notifications.map { it.copy(isRead = true) },
                 unreadCount   = 0,
-                toastMessage  = "All notifications marked as read ✓"
+                toastMessage  = if (showToast) "All notifications marked as read ✓" else s.toastMessage
             )
         }
         viewModelScope.launch {
             try {
                 api.markAllRead(MarkReadRequest())
+                // Server state now reflects all-read — evict the cached
+                // GET /notifications and /notifications/unread-count
+                // responses so reopening the screen / refreshing the
+                // dashboard badge doesn't serve stale "20 unread" data.
+                cacheInvalidator.evict(listOf("/api/v1/notifications"))
+                // Only now tell Dashboard to refresh its badge — if this
+                // fired before the server call completed, the dashboard's
+                // GET /notifications/unread-count could race ahead and
+                // cache the still-stale count.
+                NotifCountBus.emit()
             } catch (e: Exception) {
                 android.util.Log.e("NotifVM", "markAllRead failed: ${e.message}", e)
             }
@@ -232,7 +250,10 @@ fun NotificationSettingsScreen(
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         }
                         items(items, key = { it.id }) { notif ->
-                            NotifCard(notif,str) { if (!notif.isRead) viewModel.markRead(notif.id) }
+                            NotifCard(notif, str) {
+                                if (!notif.isRead) viewModel.markRead(notif.id)
+                                navigateForNotification(navController, notif)
+                            }
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
                                 color = BpscColors.Divider, thickness = 0.5.dp)
                         }
@@ -246,9 +267,17 @@ fun NotificationSettingsScreen(
 @Composable
 private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) {
     val (icon, iconBg, iconTint) = notifStyle(n.type,str)
+    // If this notification doesn't deep-link anywhere, tapping it should at
+    // least let the user read the full message instead of just toggling
+    // its read state with no visible effect.
+    val hasDestination = n.data?.get("screen") != null
+    var expanded by remember(n.id) { mutableStateOf(false) }
     Row(modifier = Modifier.fillMaxWidth()
         .background(if (!n.isRead) BpscColors.Primary.copy(0.03f) else Color.White)
-        .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        .clickable {
+            onClick()
+            if (!hasDestination) expanded = !expanded
+        }.padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(iconBg),
             contentAlignment = Alignment.Center) {
@@ -263,9 +292,43 @@ private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) 
                 if (!n.isRead) Box(Modifier.size(8.dp).clip(CircleShape).background(BpscColors.Primary))
             }
             Text(n.body, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
+                overflow = if (expanded) TextOverflow.Visible else TextOverflow.Ellipsis)
             Text(formatRelTime(n.createdAt,str), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
         }
+    }
+}
+
+// Resolve a notification's `data` payload (screen + optional id fields,
+// as attached by the backend when the notification was created) into an
+// actual in-app navigation. Falls back to doing nothing if the screen is
+// unrecognized — the notification still gets marked read either way.
+private fun navigateForNotification(nav: NavHostController, notif: NotificationDto) {
+    val data = notif.data ?: return
+    val screen = data["screen"] ?: return
+    when (screen) {
+        "my_courses" -> nav.navigate(Screen.MyLearningCourses.route)
+        "courses"    -> {
+            val courseId = data["courseId"]
+            if (courseId != null) nav.navigate(Screen.CourseDetail.createRoute(courseId))
+            else nav.navigate(Screen.MyLearning.route)
+        }
+        "study_materials" -> nav.navigate(Screen.ELibrary.route)
+        "library"         -> {
+            val noteId = data["noteId"]
+            if (noteId != null) nav.navigate(Screen.NotesReader.createRoute(noteId))
+            else nav.navigate(Screen.ELibrary.route)
+        }
+        "quiz_list" -> {
+            val quizId = data["quizId"]
+            if (quizId != null) nav.navigate(Screen.QuizDetail.createRoute(quizId))
+            else nav.navigate(Screen.QuizList.route)
+        }
+        "daily_targets"     -> nav.navigate(Screen.DailyTargets.route)
+        "jobs"              -> nav.navigate(Screen.JobVacancies.route)
+        "rooms_hub"         -> { /* Tier rooms hub — no dedicated Screen route yet */ }
+        "weekly_challenges" -> { /* No dedicated Screen route yet */ }
+        else -> { /* Unrecognized screen — no-op, notification still marked read */ }
     }
 }
 

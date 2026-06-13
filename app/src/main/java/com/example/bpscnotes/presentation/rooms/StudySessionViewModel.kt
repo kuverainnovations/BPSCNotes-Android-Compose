@@ -48,6 +48,10 @@ data class StudySessionUiState(
     val sessionId: String?                  = null,
     val startedAt: String?                  = null,
     val mode: String                        = "study",
+    // The tier-room KEY this session is in (e.g. "starter") — distinct
+    // from the user's home/reward tier. Used to join the correct chat
+    // room (must match the socket's joined tier:* room).
+    val roomTierKey: String?                = null,
     val tierName: String?                   = null,
     val tierEmoji: String?                  = null,
     val tierColorHex: String?               = null,
@@ -81,12 +85,18 @@ data class StudySessionUiState(
 @HiltViewModel
 class StudySessionViewModel @Inject constructor(
     private val tierRoomsApi: TierRoomsApiService,
+    private val socket: com.example.bpscnotes.data.remote.TierRoomsSocketManager,
     private val bus: RefreshEventBus) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StudySessionUiState())
     val uiState: StateFlow<StudySessionUiState> = _uiState.asStateFlow()
 
     private var heartbeatJob: Job? = null
+    // Remembers the user's home-tier room key so socket presence can be
+    // moved back there when a session started in a different (lower)
+    // tier room ends. Set by startSession's caller via homeTierKey param.
+    // Named differently from the startSession parameter to avoid shadowing.
+    private var activeSessionHomeTierKey: String? = null
 
     companion object {
         private const val TAG = "StudySessionVM"
@@ -111,6 +121,7 @@ class StudySessionViewModel @Inject constructor(
                             coinsThisSession = session.coinsEarned,
                             xpThisSession = session.xpEarned,
                             afkCount      = session.afkCount,
+                            roomTierKey   = session.tier?.tierKey,
                             tierName      = session.tier?.name,
                             tierEmoji     = session.tier?.iconEmoji,
                             tierColorHex  = session.tier?.colorHex,
@@ -131,6 +142,8 @@ class StudySessionViewModel @Inject constructor(
     fun startSession(
         roomId: String? = null,
         mode: String = "study",
+        tierKey: String? = null,
+        homeTierKey: String? = null,
         tierName: String? = null,
         tierEmoji: String? = null,
         tierColorHex: String? = null
@@ -140,19 +153,30 @@ class StudySessionViewModel @Inject constructor(
             return
         }
 
+        // The user's socket presence defaults to their HOME tier room
+        // (joined by TierRoomsViewModel on connect). If they start a
+        // session in a different room (e.g. a lower unlocked tier), move
+        // the socket presence to that room so the "X studying" live count
+        // appears on the room they're actually sitting in, not their home tier.
+        if (!tierKey.isNullOrBlank()) {
+            activeSessionHomeTierKey = homeTierKey?.takeIf { it != tierKey }
+            socket.joinTierRoom(tierKey)
+        }
+
         viewModelScope.launch {
             // FIX: Set tier info immediately so room header shows correct tier name
             // instead of defaulting to "Silver Room" while the session is starting
             _uiState.update { it.copy(
                 status       = SessionStatus.STARTING,
                 error        = null,
+                roomTierKey  = tierKey,
                 tierName     = tierName,
                 tierEmoji    = tierEmoji,
                 tierColorHex = tierColorHex
             ) }
             try {
                 val response = tierRoomsApi.startSession(
-                    StartSessionRequest(roomId = roomId, mode = mode)
+                    StartSessionRequest(roomId = roomId, mode = mode, tierKey = tierKey)
                 )
                 val data = response.data ?: throw Exception("Empty response from /start")
 
@@ -180,7 +204,22 @@ class StudySessionViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e(TAG, "startSession failed: ${e.message}", e)
+                // Session never started — undo the presence-room switch we
+                // did before this try block, so the user doesn't appear
+                // "studying" in a room they failed to join.
+                if (!tierKey.isNullOrBlank() && !activeSessionHomeTierKey.isNullOrBlank()) {
+                    socket.joinTierRoom(activeSessionHomeTierKey!!)
+                    activeSessionHomeTierKey = null
+                }
                 val msg = when {
+                    e is retrofit2.HttpException -> {
+                        val body = e.response()?.errorBody()?.string() ?: ""
+                        try {
+                            org.json.JSONObject(body).optString("message", "Failed to start session")
+                        } catch (_: Exception) {
+                            "Failed to start session"
+                        }
+                    }
                     e.message?.contains("Active session exists") == true ->
                         "You already have an active session. End it first."
                     else -> e.message ?: "Failed to start session"
@@ -304,6 +343,11 @@ class StudySessionViewModel @Inject constructor(
 
         heartbeatJob?.cancel()
         heartbeatJob = null
+
+        // Move socket presence back to the user's home tier room, if the
+        // session was started in a different (lower) tier room.
+        activeSessionHomeTierKey?.let { socket.joinTierRoom(it) }
+        activeSessionHomeTierKey = null
 
         viewModelScope.launch {
             _uiState.update { it.copy(status = SessionStatus.ENDING, error = null) }

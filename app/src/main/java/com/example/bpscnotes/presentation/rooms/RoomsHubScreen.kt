@@ -1,6 +1,7 @@
 package com.example.bpscnotes.presentation.rooms
 
 import android.util.Log
+import kotlinx.coroutines.delay
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -117,6 +118,22 @@ fun RoomsHubScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             sessionViewModel.checkForExistingSession()
+        }
+    }
+
+    // BUG FIX: "X members · Y online now" on the hero card comes from
+    // myTierData.currentTier (activeNow/memberCount), which socket events
+    // (presenceUpdates/presenceSnapshot) do NOT update — those only patch
+    // allTiers[]. Without this, the hero counts only ever reflect the
+    // single load on first entry and never change while browsing.
+    // Poll every 15s while the screen is visible, as a safety net
+    // alongside the socket-driven updates to allTiers[].
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(15_000L)
+                tiersViewModel.refreshMyTierCounts()
+            }
         }
     }
 
@@ -331,6 +348,8 @@ fun RoomsHubScreen(
                                             // are determined server-side by current_tier_id.
                                             else -> sessionViewModel.startSession(
                                                 mode         = "study",
+                                                tierKey      = tier.tierKey,
+                                                homeTierKey  = myTierKey,
                                                 tierName     = tier.name,
                                                 tierEmoji    = tier.iconEmoji,
                                                 tierColorHex = tier.colorHex

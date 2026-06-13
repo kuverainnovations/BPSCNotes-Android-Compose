@@ -1834,10 +1834,17 @@ private fun CourseDetailSheet(
                                 color = cs.onSurface
                             )
                             Text(
-                                "$coinsToUse / $userCoins",
+                                "$coinsToUse / $maxCoins",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = BpscColors.CoinGold,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (maxCoins < userCoins) {
+                            Text(
+                                "Max $maxCoins coins redeemable on this course (you have $userCoins)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextHint
                             )
                         }
                         Slider(
