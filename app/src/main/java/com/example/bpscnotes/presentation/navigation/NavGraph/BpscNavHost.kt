@@ -228,11 +228,11 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                     navArgument("keyId")       { type = NavType.StringType }
                 )
             ) { back ->
-                val courseId    = back.arguments?.getString("courseId")    ?: return@composable
-                val courseTitle = back.arguments?.getString("courseTitle") ?: ""
+                val courseId    = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
+                val courseTitle = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
                 val price       = back.arguments?.getInt("price")          ?: 0
-                val orderId     = back.arguments?.getString("orderId")?.takeIf { it != "none" }
-                val keyId       = back.arguments?.getString("keyId")?.takeIf   { it != "none" }
+                val orderId     = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
+                val keyId       = java.net.URLDecoder.decode(back.arguments?.getString("keyId") ?: "none", "UTF-8").takeIf   { it != "none" }
                 CoursePaymentScreen(navController, courseId, courseTitle, price, orderId, keyId)
             }
 

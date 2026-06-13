@@ -32,12 +32,12 @@ sealed class Screen(val route: String) {
     object DailyTargets   : Screen("daily_targets")
     object CurrentAffairs   : Screen("current_affairs")
     object Payment          : Screen("payment")
-    data class CoursePayment(val placeholder: String = "") : Screen(
+    object CoursePayment : Screen(
         "course_payment/{courseId}/{courseTitle}/{price}/{orderId}/{keyId}"
     ) {
         fun createRoute(courseId: String, courseTitle: String, price: Int,
                         orderId: String?, keyId: String?) =
-            "course_payment/$courseId/${courseTitle.take(50)}/$price/${orderId ?: "none"}/${keyId ?: "none"}"
+            "course_payment/${courseId.encodeUrl()}/${courseTitle.take(50).encodeUrl()}/$price/${(orderId ?: "none").encodeUrl()}/${(keyId ?: "none").encodeUrl()}"
     }
     data class CaMcqQuiz(val affairId: String = "") : Screen("ca_mcq_quiz/{affairId}") {
         fun createRoute(id: String) = "ca_mcq_quiz/$id"

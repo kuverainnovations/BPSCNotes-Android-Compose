@@ -77,7 +77,8 @@ data class CourseDto(
 
     @SerializedName("has_reviewed")
     val hasReviewed: Boolean = false,
-    val reviews: List<CourseReview>? = null
+    val reviews: List<CourseReview>? = null,
+    @SerializedName("max_coins_redeemable") val maxCoinsRedeemable: Int? = null,
 )
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
@@ -129,6 +130,10 @@ data class CoursePurchaseRequiredData(
     val courseTitle: String?,
     val courseId: String?,
     val code: String?
+)
+
+data class EnrollCourseRequest(
+    @SerializedName("coinsToApply") val coinsToApply: Int = 0
 )
 
 data class ConfirmCoursePurchaseRequest(
@@ -310,7 +315,10 @@ data class Lesson(
 )
 
 // ── Lesson detail response ────────────────────────────────────
-data class LessonDetailResponseData(val lesson: Lesson)
+data class LessonDetailResponseData(
+    val lesson: Lesson,
+    @SerializedName("isEnrolled") val isEnrolled: Boolean = false
+)
 
 // ── Complete lesson request / response ───────────────────────
 data class CompleteLessonRequest(
@@ -546,7 +554,7 @@ interface CoursesApiService {
     ): ApiResponse<Any>
 
     @POST("courses/{id}/enroll")
-    suspend fun enrollCourse(@Path("id") id: String): ApiResponse<Any>
+    suspend fun enrollCourse(@Path("id") id: String, @Body dto: EnrollCourseRequest = EnrollCourseRequest()): ApiResponse<Any>
 
     @POST("courses/{id}/save")
     suspend fun saveCourse(@Path("id") id: String): ApiResponse<Any>

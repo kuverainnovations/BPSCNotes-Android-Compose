@@ -130,6 +130,7 @@ data class StoreItem(
     val offerEndsHours: Int = 0, val tags: List<String> = emptyList(),
     val trialLessonTitle: String = "", val description: String = "",
     val reviews: List<CourseReview> = emptyList(), val syllabus: List<String> = emptyList(),
+    val maxCoinsRedeemable: Int? = null,
 )
 
 data class CourseReview(val name: String, val rating: Float, val comment: String, val date: String)
@@ -168,6 +169,7 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     bpscRelevance     = bpsc_relevance,
     syllabusCoverage  = syllabus_coverage,
     isPaid            = isPaid,
+    maxCoinsRedeemable = maxCoinsRedeemable,
     isFeatured        = is_featured,
     isLimitedOffer    = is_limited_offer,
     // API can send explicit null for list fields — orEmpty() guards every one
@@ -656,15 +658,12 @@ private fun StoreTab(
 
     selectedCourse?.let { course ->
         CourseDetailSheet(
+            navController = navController,
             course       = course,
             userCoins    = userCoins,
             isWishlisted = savedCourseIds.contains(course.id),
+            viewModel    = viewModel,
             onWishlist   = { viewModel.toggleSave(course.id) },
-            // FIX 2: actually call enroll API for free courses
-            onEnroll     = { courseId ->
-                viewModel.enroll(courseId)
-                selectedCourse = null
-            },
             onDismiss    = { selectedCourse = null }
         )
     }
@@ -1569,30 +1568,38 @@ private fun StoreCourseCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CourseDetailSheet(
+    navController: NavHostController,
     course: StoreItem,
     userCoins: Int,
     isWishlisted: Boolean,
+    viewModel: MyLearningViewModel,
     onWishlist: () -> Unit,
-    onEnroll: (courseId: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showPayment by remember { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsState()
     var coinsToUse by remember { mutableIntStateOf(0) }
-    var couponCode by remember { mutableStateOf("") }
-    var couponApplied by remember { mutableStateOf(false) }
-    var couponDiscount by remember { mutableIntStateOf(0) }
-    var expandSyllabus by remember { mutableStateOf(false) }
+
+    // Paid course: enroll() hit a 402 -> navigate to real Razorpay payment screen
+    LaunchedEffect(state.purchaseRequired) {
+        if (state.purchaseRequired && state.purchaseCourseId == course.id) {
+            onDismiss()
+            navController.navigate(
+                Screen.CoursePayment.createRoute(
+                    state.purchaseCourseId!!, state.purchaseCourseTitle, state.purchasePrice,
+                    state.purchaseOrderId, state.purchaseKeyId
+                )
+            )
+            viewModel.clearPurchaseRequired()
+        }
+    }
 
     val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
         BpscColors.Primary,
         BpscColors.PrimaryLight
     )
-    val maxCoins = minOf(userCoins, (course.price * 0.5).toInt())
-    val coinDiscount = (coinsToUse * 0.10).toInt()
-    val finalPrice = maxOf(0, course.price - coinDiscount - couponDiscount)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1603,259 +1610,268 @@ private fun CourseDetailSheet(
         Column(modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()) {
-            if (!showPayment) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    accent.copy(
-                                        red = accent.red * 0.6f,
-                                        green = accent.green * 0.6f,
-                                        blue = accent.blue * 0.6f
-                                    ), accent
-                                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                accent.copy(
+                                    red = accent.red * 0.6f,
+                                    green = accent.green * 0.6f,
+                                    blue = accent.blue * 0.6f
+                                ), accent
                             )
                         )
-                        .padding(20.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(subjectEmoji(course.subject), fontSize = 18.sp)
-                            course.tags.take(2).forEach { tag ->
-                                Text(
-                                    tag,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(0.85f),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color.White.copy(0.2f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            course.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            lineHeight = 26.sp
-                        )
-                        Text(
-                            "By ${course.instructor}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.8f)
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
-                            SheetStatWhite(
-                                "👥",
-                                "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
-                            )
-                            SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
-                        }
-                    }
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                    )
+                    .padding(20.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
-                        "⏱️",
-                        "${course.totalHours}h",
-                        "Duration"
-                    )
-                        DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
-                        "🎯",
-                        "${course.bpscRelevance}%",
-                        "BPSC Rel."
-                    )
+                        Text(subjectEmoji(course.subject), fontSize = 18.sp)
+                        course.tags.take(2).forEach { tag ->
+                            Text(
+                                tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.85f),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                     }
                     Text(
-                        str.courseAbout,
+                        course.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 26.sp
+                    )
+                    Text(
+                        "By ${course.instructor}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(0.8f)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
+                        SheetStatWhite(
+                            "👥",
+                            "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
+                        )
+                        SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
+                    }
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
+                    "⏱️",
+                    "${course.totalHours}h",
+                    "Duration"
+                )
+                    DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
+                    "🎯",
+                    "${course.bpscRelevance}%",
+                    "BPSC Rel."
+                )
+                }
+                Text(
+                    str.courseAbout,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cs.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    course.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = cs.onSurfaceVariant,
+                    lineHeight = 24.sp
+                )
+                if (course.trialLessonTitle.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(BpscColors.PrimaryLight)
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(BpscColors.Primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.PlayArrow,
+                                null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                str.courseFreeTrial,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                course.trialLessonTitle,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = cs.onSurface,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            str.courseWatch,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = BpscColors.Primary,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                // Reviews
+                if (course.reviews.isNotEmpty()) {
+                    Text(
+                        str.courseStudentReviews,
                         style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        course.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = cs.onSurfaceVariant,
-                        lineHeight = 24.sp
-                    )
-                    if (course.trialLessonTitle.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(BpscColors.PrimaryLight)
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    course.reviews.forEach { review ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = cs.background),
+                            elevation = CardDefaults.cardElevation(0.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(BpscColors.Primary),
-                                contentAlignment = Alignment.Center
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    Icons.Rounded.PlayArrow,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    str.courseFreeTrial,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.Primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    course.trialLessonTitle,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = cs.onSurface,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Text(
-                                str.courseWatch,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.Primary,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-                    // Syllabus
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (course.syllabus.size > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    str.courseSyllabus,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = cs.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    if (expandSyllabus) str.courseShowLess else str.courseShowAll,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = BpscColors.Primary,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.clickable {
-                                        expandSyllabus = !expandSyllabus
-                                    })
-                            }
-                        }
-                        (if (expandSyllabus) course.syllabus else course.syllabus.take(3)).forEachIndexed { i, item ->
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(BpscColors.PrimaryLight),
-                                    contentAlignment = Alignment.Center
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        "${i + 1}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.Primary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 9.sp
+                                        review.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = cs.onSurface,
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                }
-                                Text(
-                                    item,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = cs.onSurface
-                                )
-                            }
-                        }
-                    }
-                    // Reviews
-                    if (course.reviews.isNotEmpty()) {
-                        Text(
-                            str.courseStudentReviews,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        course.reviews.forEach { review ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = cs.background),
-                                elevation = CardDefaults.cardElevation(0.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            review.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = cs.onSurface,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Row {
-                                            repeat(5) { i ->
-                                                Icon(
-                                                    Icons.Rounded.Star,
-                                                    null,
-                                                    tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                            }
+                                    Row {
+                                        repeat(5) { i ->
+                                            Icon(
+                                                Icons.Rounded.Star,
+                                                null,
+                                                tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
+                                                modifier = Modifier.size(12.dp)
+                                            )
                                         }
                                     }
-                                    Text(
-                                        review.comment,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = cs.onSurfaceVariant
-                                    )
-                                    Text(
-                                        review.date,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.TextHint
-                                    )
                                 }
+                                Text(
+                                    review.comment,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = cs.onSurfaceVariant
+                                )
+                                Text(
+                                    review.date,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.TextHint
+                                )
                             }
                         }
                     }
                 }
-                HorizontalDivider(color = cs.outline)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+            }
+            HorizontalDivider(color = cs.outline)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (course.isPaid && userCoins > 0) {
+                    // Server resolves this to either the per-course
+                    // override or the global default — always a concrete
+                    // number, no client-side guessing.
+                    val maxCoins = minOf(course.maxCoinsRedeemable ?: 50, userCoins, course.price)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(BpscColors.CoinGold.copy(0.08f))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "🪙 Use coins for discount",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = cs.onSurface
+                            )
+                            Text(
+                                "$coinsToUse / $userCoins",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = BpscColors.CoinGold,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Slider(
+                            value = coinsToUse.toFloat(),
+                            onValueChange = { coinsToUse = it.toInt() },
+                            valueRange = 0f..maxCoins.toFloat(),
+                            colors = SliderDefaults.colors(
+                                thumbColor = BpscColors.CoinGold,
+                                activeTrackColor = BpscColors.CoinGold
+                            )
+                        )
+                        if (coinsToUse > 0) {
+                            Text(
+                                "−₹$coinsToUse discount · You'll pay ₹${course.price - coinsToUse}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = BpscColors.Success,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        navController.navigate(Screen.CourseDetail.createRoute(course.id))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
+                    Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = onWishlist,
                         modifier = Modifier
@@ -1875,359 +1891,39 @@ private fun CourseDetailSheet(
                         )
                     }
                     Button(
-                        onClick = { if (course.isPaid) showPayment = true else onEnroll(course.id) },
+                        onClick = {
+                            if (course.isPaid) {
+                                // enroll() will hit 402 -> purchaseRequired -> LaunchedEffect
+                                // above navigates to CoursePaymentScreen with real price/order.
+                                viewModel.enroll(course.id, course.title, coinsToUse)
+                            } else {
+                                viewModel.enroll(course.id, course.title)
+                                onDismiss()
+                            }
+                        },
+                        enabled = !state.isEnrolling,
                         modifier = Modifier
                             .weight(3f)
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = if (!course.isPaid) BpscColors.Success else BpscColors.Primary)
                     ) {
-                        Icon(
-                            if (!course.isPaid) Icons.Rounded.PlayArrow else Icons.Rounded.ShoppingCart,
-                            null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (!course.isPaid) str.courseEnrollFree else "Buy Now — ₹${course.price}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-            } else {
-                // Payment screen
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    Color(0xFF0A2472),
-                                    Color(0xFF1565C0)
-                                )
+                        if (state.isEnrolling) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                if (!course.isPaid) Icons.Rounded.PlayArrow else Icons.Rounded.ShoppingCart,
+                                null,
+                                modifier = Modifier.size(18.dp)
                             )
-                        )
-                        .padding(20.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(0.15f))
-                                    .clickable { showPayment = false },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.ArrowBack,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                str.coursePurchaseComplete,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        Text(
-                            course.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White.copy(0.8f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Price summary
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = cs.background),
-                        elevation = CardDefaults.cardElevation(0.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                str.coursePriceSummary,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = cs.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            PriceRow(str.coursePrice, "₹${course.price}", false)
-                            if (coinDiscount > 0) PriceRow(
-                                "Coins Discount ($coinsToUse 🪙)",
-                                "- ₹$coinDiscount",
-                                true
-                            )
-                            if (couponApplied && couponDiscount > 0) PriceRow(
-                                "Coupon ($couponCode)",
-                                "- ₹$couponDiscount",
-                                true
-                            )
-                            HorizontalDivider(color = cs.outline)
-                            PriceRow(str.courseTotalPayable, "₹$finalPrice", false, isTotal = true)
-                        }
-                    }
-                    // Coins slider
-                    if (userCoins > 0) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = cs.surface),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            str.courseUseCoins,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = cs.onSurface,
-                                            fontWeight = FontWeight.Bold
-                                        ); Text(
-                                        "1 coin = ₹0.10 · Max 50% via coins",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = cs.onSurfaceVariant
-                                    )
-                                    }
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            "🪙 $coinsToUse",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = BpscColors.CoinGold,
-                                            fontWeight = FontWeight.ExtraBold
-                                        ); Text(
-                                        "= ₹$coinDiscount off",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = BpscColors.Success,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    }
-                                }
-                                Slider(
-                                    value = coinsToUse.toFloat(),
-                                    onValueChange = { coinsToUse = it.toInt() },
-                                    valueRange = 0f..maxCoins.toFloat(),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = BpscColors.CoinGold,
-                                        activeTrackColor = BpscColors.CoinGold
-                                    )
-                                )
-                                Text(
-                                    "You have $userCoins coins available",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = cs.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                    // Coupon
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                str.courseCouponCode,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = cs.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = couponCode,
-                                    onValueChange = {
-                                        couponCode = it.uppercase(); couponApplied =
-                                        false; couponDiscount = 0
-                                    },
-                                    placeholder = { Text(str.paymentEnterCoupon) },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    singleLine = true,
-                                    enabled = !couponApplied
-                                )
-                                Button(
-                                    onClick = {
-                                        when (couponCode) {
-                                            "BPSC50" -> {
-                                                couponApplied = true; couponDiscount =
-                                                    (course.price * 0.05).toInt()
-                                            }
-
-                                            "SAVE100" -> {
-                                                couponApplied = true; couponDiscount = 100
-                                            }
-
-                                            "FIRST" -> {
-                                                couponApplied = true; couponDiscount = 50
-                                            }
-
-                                            else -> {
-                                                couponApplied = false; couponDiscount = 0
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.height(56.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    enabled = couponCode.isNotBlank() && !couponApplied,
-                                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                                ) { Text(if (couponApplied) "✓" else "Apply") }
-                            }
-                            if (couponApplied && couponDiscount > 0) Text(
-                                "${str.courseCouponApplied} ${str.courseCouponSaved}₹$couponDiscount",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.Success,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            else if (couponCode.isNotEmpty() && !couponApplied) Text(
-                                "❌ Invalid code. Try: BPSC50, SAVE100, FIRST",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFFE74C3C)
-                            )
-                            Text(
-                                "💡 Try: BPSC50 · SAVE100 · FIRST",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.TextHint
+                                if (!course.isPaid) str.courseEnrollFree
+                                else "Buy Now — ₹${maxOf(0, course.price - coinsToUse)}",
+                                style = MaterialTheme.typography.titleMedium
                             )
                         }
                     }
-                    // UPI
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                "Pay via UPI",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = cs.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                listOf(
-                                    "GPay" to "G",
-                                    "PhonePe" to "P",
-                                    "Paytm" to "₹",
-                                    "BHIM" to "B"
-                                ).forEach { (app, letter) ->
-                                    Column(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(cs.background)
-                                            .border(
-                                                1.dp,
-                                                cs.outline,
-                                                RoundedCornerShape(10.dp)
-                                            )
-                                            .clickable { }
-                                            .padding(10.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            letter,
-                                            style = MaterialTheme.typography.titleLarge,
-                                            color = BpscColors.Primary,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                        Text(
-                                            app,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = cs.onSurfaceVariant,
-                                            fontSize = 9.sp
-                                        )
-                                    }
-                                }
-                            }
-                            Text(
-                                "Or enter UPI ID manually:",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = cs.onSurfaceVariant
-                            )
-                            OutlinedTextField(
-                                value = "",
-                                onValueChange = {},
-                                placeholder = { Text(str.myLearningUpiHint) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                            )
-                        }
-                    }
-                }
-                HorizontalDivider(color = cs.outline)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    if (coinsToUse > 0) Text(
-                        "🪙 Using $coinsToUse coins = ₹$coinDiscount discount applied",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.CoinGold,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                    ) {
-                        Icon(
-                            Icons.Rounded.CurrencyRupee,
-                            null,
-                            modifier = Modifier.size(18.dp)
-                        ); Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Pay ₹$finalPrice via UPI",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                    Text(
-                        str.courseSecurePayment,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = BpscColors.TextHint,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
@@ -2681,23 +2377,6 @@ private fun SheetStatWhite(icon: String, value: String) {
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(0.85f),
             fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun PriceRow(label: String, value: String, isDiscount: Boolean, isTotal: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (isTotal) BpscColors.TextPrimary else BpscColors.TextSecondary,
-            fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal
-        )
-        Text(
-            value, style = MaterialTheme.typography.bodyLarge, color = when {
-                isTotal -> BpscColors.Primary; isDiscount -> BpscColors.Success; else -> BpscColors.TextPrimary
-            }, fontWeight = if (isTotal) FontWeight.ExtraBold else FontWeight.SemiBold
         )
     }
 }

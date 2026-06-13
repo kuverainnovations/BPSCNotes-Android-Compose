@@ -69,7 +69,10 @@ fun LessonViewerScreen(
             )
         },
         bottomBar    = {
-            if (state.lesson != null) {
+            // Free-preview lessons are viewable without enrollment, but
+            // "Mark as Read" / progress tracking only makes sense once the
+            // user has actually enrolled in the course.
+            if (state.lesson != null && state.isEnrolled) {
                 LessonBottomBar(
                     isCompleted   = state.lesson?.is_completed == true,
                     isMarking     = state.isMarking,

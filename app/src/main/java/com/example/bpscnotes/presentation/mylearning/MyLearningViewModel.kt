@@ -31,7 +31,15 @@ data class MyLearningUiState(
     val enrollSuccess:   String?         = null,
     val justEnrolledId:  String?         = null,   // triggers tab switch in Screen
     val saveToast:       String?         = null,
-    val error:           String?         = null
+    val error:           String?         = null,
+    // Set when enroll() hits a 402 for a paid course — sheet should
+    // navigate to CoursePaymentScreen with these details.
+    val purchaseRequired: Boolean = false,
+    val purchasePrice:    Int     = 0,
+    val purchaseOrderId:  String? = null,
+    val purchaseKeyId:    String? = null,
+    val purchaseCourseId: String? = null,
+    val purchaseCourseTitle: String = "",
 )
 
 @HiltViewModel
@@ -138,11 +146,11 @@ class MyLearningViewModel @Inject constructor(
     fun retry() = load()
 
     // ── Enroll ─────────────────────────────────────────────────
-    fun enroll(courseId: String) {
+    fun enroll(courseId: String, courseTitle: String = "", coinsToApply: Int = 0) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isEnrolling = true) }
+            _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
-                coursesApi.enrollCourse(courseId)
+                coursesApi.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply))
                 cacheInvalidator.evict()           // stale enrollment data must not be served
                 load()
                 _uiState.update { s ->
@@ -152,11 +160,40 @@ class MyLearningViewModel @Inject constructor(
                         justEnrolledId = courseId
                     )
                 }
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 402) {
+                    try {
+                        val body = e.response()?.errorBody()?.string() ?: ""
+                        val json = org.json.JSONObject(body)
+                        val data = json.optJSONObject("data") ?: json
+                        val price   = data.optInt("price", 0)
+                        val orderId = data.optString("razorpayOrderId").takeIf { it.isNotBlank() }
+                        val keyId   = data.optString("razorpayKeyId").takeIf { it.isNotBlank() }
+                        _uiState.update { it.copy(
+                            isEnrolling         = false,
+                            purchaseRequired    = true,
+                            purchasePrice       = price,
+                            purchaseOrderId     = orderId,
+                            purchaseKeyId       = keyId,
+                            purchaseCourseId    = courseId,
+                            purchaseCourseTitle = courseTitle
+                        )}
+                    } catch (_: Exception) {
+                        _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }
+                    }
+                } else {
+                    Log.e("MyLearningVM", "enroll: ${e.message}", e)
+                    _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
+                }
             } catch (e: Exception) {
                 Log.e("MyLearningVM", "enroll: ${e.message}", e)
                 _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
             }
         }
+    }
+
+    fun clearPurchaseRequired() {
+        _uiState.update { it.copy(purchaseRequired = false) }
     }
 
     // ── Save / Unsave (Wishlist) ────────────────────────────────

@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
@@ -56,6 +58,21 @@ fun CourseDetailScreen(
 
     LaunchedEffect(state.enrollSuccess) {
         if (state.enrollSuccess) viewModel.clearMessages()
+    }
+
+    // If the course is paid and the user hasn't purchased it, the backend
+    // responds with a Razorpay order — navigate to the real payment screen.
+    LaunchedEffect(state.purchaseRequired) {
+        if (state.purchaseRequired) {
+            val title = state.course?.title ?: ""
+            nav.navigate(
+                Screen.CoursePayment.createRoute(
+                    courseId, title, state.purchasePrice,
+                    state.purchaseOrderId, state.purchaseKeyId
+                )
+            )
+            viewModel.clearPurchaseRequired()
+        }
     }
 
     // ── Rating bottom sheet ───────────────────────────────────
@@ -107,12 +124,17 @@ fun CourseDetailScreen(
 
             // FIX 4: Preserve scroll position when returning from LessonViewer
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            // Hero header height is content-driven (no fixed size), so we
+            // measure it and use that as the LazyColumn's top padding —
+            // avoids a hardcoded guess leaving a gap above "What You'll Learn".
+            val density = LocalDensity.current
+            var heroHeightDp by remember { mutableStateOf(340.dp) }
             // HeroHeader is pinned — only the content below it scrolls
             Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
                 // Content column with top padding matching hero header height
                 LazyColumn(
                     modifier       = Modifier.fillMaxSize().background(cs.background),
-                    contentPadding = PaddingValues(top = 340.dp, bottom = 110.dp),
+                    contentPadding = PaddingValues(top = heroHeightDp, bottom = 110.dp),
                     state          = listState
                 ) {
 
@@ -205,9 +227,16 @@ fun CourseDetailScreen(
                 }
 
                 // ── Pinned HeroHeader overlaid on top ──────────────
-                HeroHeader(
-                    course, accent, totalLessons, completedLessons, animProg, isEnrolled
-                ) { nav.popBackStackSafe() }
+                Box(
+                    Modifier.onGloballyPositioned { coords ->
+                        val measuredDp = with(density) { coords.size.height.toDp() }
+                        if (measuredDp != heroHeightDp) heroHeightDp = measuredDp
+                    }
+                ) {
+                    HeroHeader(
+                        course, accent, totalLessons, completedLessons, animProg, isEnrolled
+                    ) { nav.popBackStackSafe() }
+                }
             } // end pinned-header Box
 
             // Bottom bar
@@ -218,7 +247,8 @@ fun CourseDetailScreen(
                     isEnrolled  = isEnrolled,
                     allDone     = allDone,
                     isEnrolling = state.isEnrolling,
-                    onEnroll    = { viewModel.enroll(courseId) },
+                    userCoins   = state.userCoins,
+                    onEnroll    = { coins -> viewModel.enroll(courseId, coins) },
                     // FIX 3: Correct route — same LessonViewer used by lesson tap
                     onContinue  = {
                         val next = chapters
@@ -996,11 +1026,13 @@ private fun BottomCta(
     isEnrolled:  Boolean,
     allDone:     Boolean,            // NEW param
     isEnrolling: Boolean,
-    onEnroll:    () -> Unit,
+    userCoins:   Int,
+    onEnroll:    (coinsToApply: Int) -> Unit,
     onContinue:  () -> Unit,
     completedLessons: Int
 ) {
     val str = LocalStrings.current
+    var coinsToUse by remember { mutableIntStateOf(0) }
     Surface(Modifier.fillMaxWidth(), shadowElevation = 16.dp, color = Color.White) {
         Box(
             Modifier.fillMaxWidth()
@@ -1055,22 +1087,73 @@ private fun BottomCta(
 
                 // ── Not enrolled: Enroll button ──
                 else -> {
-                    Button(
-                        onClick  = onEnroll,
-                        enabled  = !isEnrolling,
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
-                        shape    = RoundedCornerShape(14.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = accent)
-                    ) {
-                        if (isEnrolling) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                if (course.isPaid) "Enroll — ₹${course.price}" else str.courseEnrollFree,
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (course.isPaid && userCoins > 0) {
+                            // Server resolves this to either the per-course
+                            // override or the global default — always a
+                            // concrete number, no client-side guessing.
+                            val maxCoins = minOf(course.maxCoinsRedeemable ?: 50, userCoins, course.price)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(BpscColors.CoinGold.copy(0.08f))
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "🪙 Use coins for discount",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        "$coinsToUse / $userCoins",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = BpscColors.CoinGold,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Slider(
+                                    value = coinsToUse.toFloat(),
+                                    onValueChange = { coinsToUse = it.toInt() },
+                                    valueRange = 0f..maxCoins.toFloat(),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = BpscColors.CoinGold,
+                                        activeTrackColor = BpscColors.CoinGold
+                                    )
+                                )
+                                if (coinsToUse > 0) {
+                                    Text(
+                                        "−₹$coinsToUse discount · You'll pay ₹${course.price - coinsToUse}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = BpscColors.Success,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                        Button(
+                            onClick  = { onEnroll(coinsToUse) },
+                            enabled  = !isEnrolling,
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            shape    = RoundedCornerShape(14.dp),
+                            colors   = ButtonDefaults.buttonColors(containerColor = accent)
+                        ) {
+                            if (isEnrolling) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (course.isPaid) "Enroll — ₹${maxOf(0, course.price - coinsToUse)}" else str.courseEnrollFree,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
                         }
                     }
                 }

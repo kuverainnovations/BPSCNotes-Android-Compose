@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.course
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
 import com.example.bpscnotes.data.remote.api.CourseDetailResponse
@@ -34,12 +35,14 @@ data class CourseDetailUiState(
     val showRatingSheet: Boolean = false,
     val isSubmittingRating: Boolean = false,
     val isRatingSubmitted: Boolean = false,
-    val ratingError: String? = null
+    val ratingError: String? = null,
+    val userCoins: Int = 0,
 )
 
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
     private val api: CoursesApiService,
+    private val authApi: AuthApiService,
     private val bus: RefreshEventBus,
     private val cacheInvalidator: CacheInvalidator
 ) : ViewModel() {
@@ -93,11 +96,16 @@ class CourseDetailViewModel @Inject constructor(
                     .sortedBy { it.sortOrder }
                     .map { ch -> ch.copy(lessons = ch.lessons?.sortedBy { it.sort_order } ?: emptyList()) }
 
+                val userCoinsVal = kotlinx.coroutines.supervisorScope {
+                    try { authApi.getMe().data?.user?.coins ?: 0 } catch (_: Exception) { 0 }
+                }
+
                 _uiState.update {
                     it.copy(
                         course            = detail.course,
                         chapters          = sortedChapters,
                         isLoading         = false,
+                        userCoins         = userCoinsVal,
                         // Restore submitted state if user already reviewed this course
                         isRatingSubmitted = reviewedCourseIds.contains(courseId)
                     )
@@ -111,11 +119,11 @@ class CourseDetailViewModel @Inject constructor(
 
     // ── Enroll ────────────────────────────────────────────────
 
-    fun enroll(courseId: String) {
+    fun enroll(courseId: String, coinsToApply: Int = 0) {
         viewModelScope.launch {
             _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
-                api.enrollCourse(courseId)
+                api.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply))
                 _uiState.update { it.copy(isEnrolling = false, enrollSuccess = true) }
                 bus.emit(RefreshEvent.CourseEnrolled)
                 cacheInvalidator.evict()           // stale enrollment data must not be served
@@ -209,5 +217,9 @@ class CourseDetailViewModel @Inject constructor(
 
     fun clearMessages() {
         _uiState.update { it.copy(enrollSuccess = false, error = null) }
+    }
+
+    fun clearPurchaseRequired() {
+        _uiState.update { it.copy(purchaseRequired = false) }
     }
 }
