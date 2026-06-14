@@ -21,9 +21,14 @@ import kotlin.collections.toMutableList
 enum class ExamSetupStep {
     SELECT_PRIMARY,     // Step 1: Choose your primary exam
     SELECT_SECONDARY,   // Step 2: Add more exams (optional)
-    SELECT_PREP_LEVEL,  // Step 3: Your preparation level
+    REVIEW_PLAN,        // Step 2: Confirm exam selection before finishing setup
     ALL_SET             // Final: Ready to go! (triggers navigation)
 }
+
+// Maximum number of secondary exams a user can add alongside their
+// primary exam. Surfaced in the UI (counter + limit message) so the
+// limit isn't a silent no-op when tapping a 4th exam.
+const val MAX_SECONDARY_EXAMS = 3
 
 data class ExamSetupUiState(
     val exams: List<ExamDto>         = emptyList(),
@@ -33,7 +38,10 @@ data class ExamSetupUiState(
     val currentStep: ExamSetupStep   = ExamSetupStep.SELECT_PRIMARY,
     val selectedPrimary: ExamDto?    = null,
     val selectedSecondary: List<ExamDto> = emptyList(),
-    // Prep level removed — not used
+    // One-shot message shown via Snackbar when the user tries to add
+    // more than MAX_SECONDARY_EXAMS secondary exams. Cleared by the
+    // UI after showing (see clearSecondaryLimitMessage()).
+    val secondaryLimitMessage: String? = null,
 
     val isSaving: Boolean            = false,
     val saveError: String?           = null,
@@ -84,12 +92,28 @@ class ExamSetupViewModel @Inject constructor(
     fun proceedFromPrimary() {
         if (_uiState.value.selectedPrimary == null) return
         // FIX: Skip SELECT_SECONDARY (merged into same screen) → go straight to target year
-        _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_PREP_LEVEL) }
+        _uiState.update { it.copy(currentStep = ExamSetupStep.REVIEW_PLAN) }
     }
 
     fun deselectPrimaryExam() {
-        // Allow user to deselect primary and re-choose
-        _uiState.update { it.copy(selectedPrimary = null) }
+        // Allow user to deselect their primary and re-choose. If they
+        // already have secondary exams selected, promote the first one
+        // to primary instead of leaving "no primary" — this keeps the
+        // selection summary and the Next button in a sensible state,
+        // and matches what most users expect ("my #1 choice just
+        // changed, not 'I have no exam at all now'"). The user can
+        // still tap the newly-promoted primary to deselect it too.
+        _uiState.update { state ->
+            val promoted = state.selectedSecondary.firstOrNull()
+            if (promoted != null) {
+                state.copy(
+                    selectedPrimary   = promoted,
+                    selectedSecondary = state.selectedSecondary.drop(1)
+                )
+            } else {
+                state.copy(selectedPrimary = null)
+            }
+        }
     }
 
     fun toggleSecondaryExam(exam: ExamDto) {
@@ -99,16 +123,27 @@ class ExamSetupViewModel @Inject constructor(
             if (exam.name == state.selectedPrimary?.name) return@update state
             if (current.any { it.name == exam.name }) {
                 current.removeAll { it.name == exam.name }
-            } else if (current.size < 3) {   // max 3 secondary exams
+            } else if (current.size < MAX_SECONDARY_EXAMS) {
                 current.add(exam)
+            } else {
+                // Limit reached — let the UI show a Snackbar instead of
+                // silently ignoring the tap.
+                return@update state.copy(
+                    secondaryLimitMessage =
+                        "You can add up to $MAX_SECONDARY_EXAMS additional exams. Remove one to add a different exam."
+                )
             }
             state.copy(selectedSecondary = current)
         }
     }
 
+    fun clearSecondaryLimitMessage() {
+        _uiState.update { it.copy(secondaryLimitMessage = null) }
+    }
+
     fun proceedFromSecondary() {
         // Not used anymore — primary and secondary on same screen
-        _uiState.update { it.copy(currentStep = ExamSetupStep.SELECT_PREP_LEVEL) }
+        _uiState.update { it.copy(currentStep = ExamSetupStep.REVIEW_PLAN) }
     }
 
     fun goBackToExamSelection() {
@@ -117,7 +152,7 @@ class ExamSetupViewModel @Inject constructor(
 
     // ── Final save ───────────────────────────────────────────
 
-    fun saveAndFinish(targetYear: Int = 2026) {
+    fun saveAndFinish() {
         val state    = _uiState.value
         val primary  = state.selectedPrimary ?: return
 
@@ -127,8 +162,7 @@ class ExamSetupViewModel @Inject constructor(
                 authApi.saveExamTarget(
                     ExamTargetRequest(
                         primaryExam   = primary.name,
-                        secondaryExam = state.selectedSecondary.firstOrNull()?.name,
-                        targetYear    = targetYear
+                        secondaryExam = state.selectedSecondary.firstOrNull()?.name
                     )
                 )
                 // Save locally so SplashScreen knows setup is done

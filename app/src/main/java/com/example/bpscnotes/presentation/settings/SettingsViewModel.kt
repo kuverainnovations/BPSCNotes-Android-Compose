@@ -146,12 +146,13 @@ class SettingsViewModel @Inject constructor(
 
     // ── Log out ───────────────────────────────────────────────
     // Calls POST /auth/logout to invalidate server token.
-    // Then clears ALL local data regardless of server response.
+    // Then clears the local session (but not onboarding state —
+    // see TokenStore.logout()) regardless of server response.
     fun logOut() {
         viewModelScope.launch {
             _state.update { it.copy(isLoggingOut = true) }
             runCatching { authApi.logOut() }
-            tokenStore.clearAll()           // full wipe — clears all user data
+            tokenStore.logout()             // clears session — preserves is_onboarded
             cacheInvalidator.evictAll()     // clear OkHttp cache — no stale API responses
             _state.update { it.copy(isLoggingOut = false, loggedOut = true) }
         }

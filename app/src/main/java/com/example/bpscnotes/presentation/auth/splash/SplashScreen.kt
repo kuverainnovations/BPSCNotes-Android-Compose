@@ -38,7 +38,6 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
-import com.example.bpscnotes.core.language.LanguageManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -70,25 +69,34 @@ fun SplashScreen(navController: NavHostController) {
         }*/
 
         // Navigation decision tree:
-        // 1. First-ever launch → Language selection
-        // 2. Logged in (token exists) → Main directly (skip ExamSetup on reinstall)
-        // 3. Not logged in + onboarded → Login
-        // 4. Not logged in + never onboarded → Onboarding
-        // Navigation decision tree:
-        // 1. First launch                → Language selection
-        // 2. Has JWT token               → Main (already authenticated)
-        // 3. Has saved mobile + hasMpin  → MPIN Login screen (skip mobile entry)
-        // 4. Onboarded, no MPIN          → Login screen
-        // 5. Never onboarded             → Onboarding
+        // 1. Has JWT token               → Main (already authenticated)
+        // 2. Has saved mobile + hasMpin  → MPIN Login screen (skip mobile entry)
+        // 3. Onboarded, no MPIN          → Login screen
+        // 4. Never onboarded             → Onboarding (intro pages)
+        //
+        // NOTE: Language selection is not part of the first-launch flow for
+        // now — it was previously shown before Onboarding on a fresh
+        // install, but the screen isn't ready/used. The app defaults to
+        // English (LanguageManager.current defaults to ENGLISH when no
+        // language has been saved) and language can still be changed later
+        // from Settings.
         val savedMobile = tokenStore.getUserMobile()
         val destination = when {
-            LanguageManager.isFirstLaunch(context) -> Screen.LanguageSelection.route
             !token.isNullOrEmpty()                 -> Screen.Main.route
             !savedMobile.isNullOrBlank() && tokenStore.hasMpin() ->
                 Screen.MpinLogin.createRoute(savedMobile)
             tokenStore.isOnboarded()               -> Screen.Login.route
             else                                   -> Screen.Onboarding.route
         }
+        // TEMP DIAGNOSTIC — remove once the logout/reopen issue is confirmed fixed.
+        // Filter logcat by tag "SplashDecision" to see exactly what Splash
+        // reads from TokenStore on each cold start.
+        android.util.Log.d(
+            "SplashDecision",
+            "token=${if (token.isNullOrEmpty()) "null/empty" else "PRESENT"}, " +
+                    "savedMobile=$savedMobile, hasMpin=${tokenStore.hasMpin()}, " +
+                    "isOnboarded=${tokenStore.isOnboarded()}, destination=$destination"
+        )
         navController.navigate(destination) {
             popUpTo(Screen.Splash.route) { inclusive = true }
         }

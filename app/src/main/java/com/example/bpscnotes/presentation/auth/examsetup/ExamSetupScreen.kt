@@ -69,7 +69,7 @@ fun ExamSetupScreen(
             when (step) {
                 ExamSetupStep.SELECT_PRIMARY,
                 ExamSetupStep.SELECT_SECONDARY  -> StepSelectExams(state, viewModel)
-                ExamSetupStep.SELECT_PREP_LEVEL -> StepTargetYear(state, viewModel)
+                ExamSetupStep.REVIEW_PLAN -> StepReviewPlan(state, viewModel)
                 ExamSetupStep.ALL_SET           -> Unit
             }
         }
@@ -133,116 +133,143 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                 (category == "All" || e.category?.contains(category, true) == true)
     }
 
-    Column(Modifier.fillMaxSize()) {
-        SetupHeader(
-            step     = 1,
-            title    = str.examSetupChoose,
-            subtitle = str.examSetupTapHint,
-            emoji    = "🎯"
-        )
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.secondaryLimitMessage) {
+        state.secondaryLimitMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.clearSecondaryLimitMessage()
+        }
+    }
 
-        // Info banner explaining dual-tap behaviour
-        Row(
-            Modifier.fillMaxWidth().background(Color(0xFFE8F0FE))
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
-            Text("💡", fontSize = 14.sp)
-            Text(
-                str.examPrimaryTip,
-                style = MaterialTheme.typography.bodySmall,
-                color = BpscColors.Primary
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            SetupHeader(
+                step     = 1,
+                title    = str.examSetupChoose,
+                subtitle = str.examSetupTapHint,
+                emoji    = "🎯"
             )
-        }
 
-        // Search
-        OutlinedTextField(
-            value = search, onValueChange = { search = it },
-            placeholder = { Text(str.examSetupSearch, color = BpscColors.TextHint) },
-            leadingIcon  = { Icon(Icons.Rounded.Search, null, tint = BpscColors.TextHint) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color.White, focusedContainerColor = Color.White,
-                unfocusedBorderColor = Color.Transparent, focusedBorderColor = BpscColors.Primary
-            ), singleLine = true
-        )
-
-        // Category chips
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-            items(cats) { cat ->
-                val sel = cat == category
-                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White)
-                    .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                    .clickable { category = cat }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(cat, style = MaterialTheme.typography.bodyMedium,
-                        color = if (sel) Color.White else BpscColors.TextPrimary,
-                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
-                }
+            // Info banner explaining dual-tap behaviour
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFFE8F0FE))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Text("💡", fontSize = 14.sp)
+                Text(
+                    str.examPrimaryTip,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = BpscColors.Primary
+                )
             }
-        }
 
-        // Exam list
-        when {
-            state.isLoadingExams -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
-            state.examsError != null -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("⚠️", fontSize = 40.sp)
-                    Text(str.examLoadFailed, style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = vm::loadExams) { Text(str.retry) }
-                }
-            }
-            else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(filtered, key = { it.name }) { exam ->
-                    val isPrimary  = state.selectedPrimary?.name == exam.name
-                    val isSecondary = state.selectedSecondary.any { it.name == exam.name }
-                    ExamTile(
-                        exam        = exam,
-                        isPrimary   = isPrimary,
-                        isSecondary = isSecondary,
-                        onClick     = {
-                            when {
-                                // FIX: Clicking primary again deselects it so user can re-choose
-                                isPrimary   -> vm.deselectPrimaryExam()
-                                // Clicking secondary again deselects it
-                                isSecondary -> vm.toggleSecondaryExam(exam)
-                                // No primary yet → first tap sets primary
-                                state.selectedPrimary == null -> vm.selectPrimaryExam(exam)
-                                // Primary set, not secondary → add as secondary
-                                else        -> vm.toggleSecondaryExam(exam)
-                            }
-                        }
-                    )
-                }
-            }
-        }
+            // Search
+            OutlinedTextField(
+                value = search, onValueChange = { search = it },
+                placeholder = { Text(str.examSetupSearch, color = BpscColors.TextHint) },
+                leadingIcon  = { Icon(Icons.Rounded.Search, null, tint = BpscColors.TextHint) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.White, focusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color.Transparent, focusedBorderColor = BpscColors.Primary
+                ), singleLine = true
+            )
 
-        // Bottom bar — shows selection summary + Next button
-        Box(Modifier.fillMaxWidth().background(cs.surface).navigationBarsPadding()) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (state.selectedPrimary != null) {
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 14.dp, vertical = 10.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-                        Text(state.selectedPrimary!!.emoji, fontSize = 16.sp)
-                        Column(Modifier.weight(1f)) {
-                            Text(state.selectedPrimary!!.name, style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                            if (state.selectedSecondary.isNotEmpty())
-                                Text("+ ${state.selectedSecondary.joinToString(", ") { it.name }}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                        }
+            // Category chips
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                items(cats) { cat ->
+                    val sel = cat == category
+                    Box(Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White)
+                        .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                        .clickable { category = cat }.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(cat, style = MaterialTheme.typography.bodyMedium,
+                            color = if (sel) Color.White else BpscColors.TextPrimary,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                     }
                 }
-                Button(
-                    onClick  = { vm.proceedFromPrimary() },
-                    enabled  = state.selectedPrimary != null,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary, disabledContainerColor = cs.outline)
-                ) {
-                    Text(str.examSetupNext, style = MaterialTheme.typography.titleMedium,
-                        color = if (state.selectedPrimary != null) Color.White else BpscColors.TextHint)
+            }
+
+            // Exam list
+            when {
+                state.isLoadingExams -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+                state.examsError != null -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("⚠️", fontSize = 40.sp)
+                        Text(str.examLoadFailed, style = MaterialTheme.typography.titleMedium)
+                        Button(onClick = vm::loadExams) { Text(str.retry) }
+                    }
+                }
+                else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(filtered, key = { it.name }) { exam ->
+                        val isPrimary  = state.selectedPrimary?.name == exam.name
+                        val isSecondary = state.selectedSecondary.any { it.name == exam.name }
+                        ExamTile(
+                            exam        = exam,
+                            isPrimary   = isPrimary,
+                            isSecondary = isSecondary,
+                            onClick     = {
+                                when {
+                                    // FIX: Clicking primary again deselects it so user can re-choose
+                                    isPrimary   -> vm.deselectPrimaryExam()
+                                    // Clicking secondary again deselects it
+                                    isSecondary -> vm.toggleSecondaryExam(exam)
+                                    // No primary yet → first tap sets primary
+                                    state.selectedPrimary == null -> vm.selectPrimaryExam(exam)
+                                    // Primary set, not secondary → add as secondary
+                                    else        -> vm.toggleSecondaryExam(exam)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Bottom bar — shows selection summary + Next button
+            Box(Modifier.fillMaxWidth().background(cs.surface).navigationBarsPadding()) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (state.selectedPrimary != null) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 14.dp, vertical = 10.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
+                            Text(state.selectedPrimary!!.emoji, fontSize = 16.sp)
+                            Column(Modifier.weight(1f)) {
+                                Text(state.selectedPrimary!!.name, style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                                if (state.selectedSecondary.isNotEmpty())
+                                    Text("+ ${state.selectedSecondary.joinToString(", ") { it.name }}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            // Clear "X/N" counter so the limit is never a surprise.
+                            Box(Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(0.6f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                Text(
+                                    "${state.selectedSecondary.size}/$MAX_SECONDARY_EXAMS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick  = { vm.proceedFromPrimary() },
+                        enabled  = state.selectedPrimary != null,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape    = RoundedCornerShape(14.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary, disabledContainerColor = cs.outline)
+                    ) {
+                        Text(str.examSetupNext, style = MaterialTheme.typography.titleMedium,
+                            color = if (state.selectedPrimary != null) Color.White else BpscColors.TextHint)
+                    }
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+                .navigationBarsPadding()
+        )
     }
 }
 
@@ -250,14 +277,12 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
 // STEP 2: Target Year + Personalization (NO prep level)
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
+private fun StepReviewPlan(state: ExamSetupUiState, vm: ExamSetupViewModel) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    var targetYear by remember { mutableStateOf(2026) }
-    val years = listOf(2026 to str.thisYear, 2027 to str.nextYear, 2028 to str.longTerm)
 
     Column(Modifier.fillMaxSize()) {
-        SetupHeader(step = 2, title = str.examSetupTargetYear, subtitle = "We'll tailor your study plan accordingly", emoji = "📅")
+        SetupHeader(step = 2, title = str.examSetupTargetYear, subtitle = "We'll tailor your study plan accordingly", emoji = "✅")
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             // Exam Plan summary
@@ -292,23 +317,6 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
                 }
             }
 
-            // Year selector
-            Text(str.examSetupTargetYear, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                years.forEach { (year, label) ->
-                    val isSel = targetYear == year
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                        .background(if (isSel) BpscColors.Primary else Color.White)
-                        .border(1.dp, if (isSel) BpscColors.Primary else cs.outline, RoundedCornerShape(14.dp))
-                        .clickable { targetYear = year }.padding(vertical = 14.dp), Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("$year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = if (isSel) Color.White else BpscColors.TextPrimary)
-                            Text(label, style = MaterialTheme.typography.labelSmall, color = if (isSel) Color.White.copy(0.8f) else BpscColors.TextSecondary)
-                        }
-                    }
-                }
-            }
-
             // Personalization preview
             Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(Color(0xFFEEF2FF)), elevation = CardDefaults.cardElevation(0.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -331,7 +339,7 @@ private fun StepTargetYear(state: ExamSetupUiState, vm: ExamSetupViewModel) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = { vm.goBackToExamSelection() }, modifier = Modifier.height(52.dp), shape = RoundedCornerShape(14.dp)) { Text(str.examBack) }
                 Button(
-                    onClick  = { vm.saveAndFinish(/*targetYear = targetYear*/) },
+                    onClick  = { vm.saveAndFinish() },
                     enabled  = !state.isSaving,
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape    = RoundedCornerShape(14.dp),

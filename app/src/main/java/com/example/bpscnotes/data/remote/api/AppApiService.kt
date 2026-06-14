@@ -1121,3 +1121,17 @@ data class ExamTargetRequest(
     @SerializedName("secondaryExam") val secondaryExam: String? = null,
     @SerializedName("targetYear")    val targetYear: Int? = null
 )
+
+// ── District DTOs ──────────────────────────────────────────────
+// Districts shown in the profile-creation dropdown. Previously a
+// hardcoded list of 38 Bihar districts in RegisterScreen.kt — now
+// fetched from the backend so admins can manage them.
+data class DistrictDto(
+    val id: String   = "",
+    val name: String = "",
+    val state: String = "Bihar"
+)
+
+data class DistrictsResponseData(
+    val districts: List<DistrictDto> = emptyList()
+)

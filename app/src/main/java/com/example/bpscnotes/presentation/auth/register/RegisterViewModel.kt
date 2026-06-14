@@ -1,19 +1,57 @@
 package com.example.bpscnotes.presentation.auth.register
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.core.base.BaseViewModel
+import com.example.bpscnotes.data.remote.api.AuthApiService
+import com.example.bpscnotes.data.remote.api.DistrictDto
 import com.example.bpscnotes.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val authApi: AuthApiService,
 ) : BaseViewModel() {
 
     private val _registerSuccess = MutableLiveData(false)
     val registerSuccess: LiveData<Boolean> = _registerSuccess
+
+    // ── Districts (for the profile-creation dropdown) ─────────
+    // Loaded from GET /districts. Falls back to an empty list on
+    // failure — the dropdown still works as a free-text field via
+    // ExposedDropdownMenuBox, the user just won't see suggestions.
+    private val _districts = MutableStateFlow<List<DistrictDto>>(emptyList())
+    val districts: StateFlow<List<DistrictDto>> = _districts.asStateFlow()
+
+    private val _districtsLoading = MutableStateFlow(true)
+    val districtsLoading: StateFlow<Boolean> = _districtsLoading.asStateFlow()
+
+    init {
+        loadDistricts()
+    }
+
+    private fun loadDistricts() {
+        viewModelScope.launch {
+            _districtsLoading.value = true
+            try {
+                val response = authApi.getDistricts()
+                _districts.value = response.data?.districts ?: emptyList()
+            } catch (e: Exception) {
+                Log.e("RegisterVM", "loadDistricts: ${e.message}", e)
+                // Non-fatal — district is optional, leave list empty
+            } finally {
+                _districtsLoading.value = false
+            }
+        }
+    }
 
     /**
      * Calls POST /auth/register with real user-entered data.

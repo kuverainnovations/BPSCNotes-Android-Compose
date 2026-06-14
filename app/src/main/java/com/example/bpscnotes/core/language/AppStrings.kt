@@ -297,6 +297,7 @@ data class MiscStrings(
     val loginIAgree: String, val editBio: String,
     val registerCreateProfile: String, val registerPersonalize: String,
     val registerContinue: String, val registerDataSecure: String,
+    val registerPersonalDetails: String,
     val examStartPreparing: String, val examPrimaryTip: String, val examPrimaryTapChange: String,
     val examBiharState: String,
     val marketGetFree: String,
@@ -838,6 +839,7 @@ data class AppStrings(
     val loginIAgree get() = _m.loginIAgree; val editBio get() = _m.editBio
     val registerCreateProfile get() = _m.registerCreateProfile; val registerPersonalize get() = _m.registerPersonalize
     val registerContinue get() = _m.registerContinue; val registerDataSecure get() = _m.registerDataSecure
+    val registerPersonalDetails get() = _m.registerPersonalDetails
     val examStartPreparing get() = _m.examStartPreparing; val examPrimaryTip get() = _m.examPrimaryTip
     val examPrimaryTapChange get() = _m.examPrimaryTapChange; val examBiharState get() = _m.examBiharState
     val marketGetFree get() = _m.marketGetFree
@@ -1037,7 +1039,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         examSetupChoose="Choose Your Exams",
         examSetupTapHint="Tap once to set primary · Tap again to add secondary",
         examSetupSearch="Search exam...", examSetupPrimary="PRIMARY", examSetupSecondary="SECONDARY",
-        examSetupTargetYear="Target Exam Year", examSetupPlan="Your Exam Plan",
+        examSetupTargetYear="Review Your Plan", examSetupPlan="Your Exam Plan",
         examSetupPersonalize="What we'll personalize for you", examSetupNext="Next →",
         thisYear="This year 🔥", nextYear="Next year", longTerm="Long term",
     ),
@@ -1351,8 +1353,9 @@ val EnglishStrings: AppStrings = mkAppStrings(
         editBio="Bio / About me",
         registerCreateProfile="Create Your Profile",
         registerPersonalize="Just a few details to personalise your experience",
-        registerContinue="Continue to Dashboard",
+        registerContinue="Continue",
         registerDataSecure="Your data is secure and never shared.",
+        registerPersonalDetails="PERSONAL DETAILS",
         examStartPreparing="Start Preparing 🚀",
         examPrimaryTip="First exam you tap becomes your PRIMARY.",
         examPrimaryTapChange="PRIMARY · tap to change",
@@ -1587,7 +1590,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         examSetupChoose="अपनी परीक्षाएं चुनें",
         examSetupTapHint="एक बार टैप = प्राथमिक · दोबारा टैप = द्वितीयक",
         examSetupSearch="परीक्षा खोजें...", examSetupPrimary="प्राथमिक", examSetupSecondary="द्वितीयक",
-        examSetupTargetYear="लक्ष्य परीक्षा वर्ष", examSetupPlan="आपकी परीक्षा योजना",
+        examSetupTargetYear="अपनी योजना देखें", examSetupPlan="आपकी परीक्षा योजना",
         examSetupPersonalize="हम क्या व्यक्तिगत बनाएंगे", examSetupNext="अगला →",
         thisYear="इस साल 🔥", nextYear="अगले साल", longTerm="दीर्घकालिक",
     ),
@@ -1905,8 +1908,9 @@ val HindiStrings: AppStrings = mkAppStrings(
         editBio="बायो / मेरे बारे में",
         registerCreateProfile="अपनी प्रोफ़ाइल बनाएं",
         registerPersonalize="आपका अनुभव व्यक्तिगत बनाने के लिए कुछ विवरण",
-        registerContinue="डैशबोर्ड पर जारी रखें",
+        registerContinue="जारी रखें",
         registerDataSecure="आपका डेटा सुरक्षित है और कभी साझा नहीं किया जाता।",
+        registerPersonalDetails="व्यक्तिगत विवरण",
         examStartPreparing="तैयारी शुरू करें 🚀",
         examPrimaryTip="पहले टैप की गई परीक्षा प्राथमिक बनती है।",
         examPrimaryTapChange="प्राथमिक · बदलने के लिए टैप करें",

@@ -31,6 +31,10 @@ interface AuthApiService {
     @GET("exams")
     suspend fun getExams(): ApiResponse<ExamsResponseData>
 
+    /** GET /districts — district list for the profile-creation dropdown */
+    @GET("districts")
+    suspend fun getDistricts(): ApiResponse<DistrictsResponseData>
+
     /** PUT /users/exam-target */
     @PUT("users/exam-target")
     suspend fun saveExamTarget(@Body body: ExamTargetRequest): ApiResponse<Any>

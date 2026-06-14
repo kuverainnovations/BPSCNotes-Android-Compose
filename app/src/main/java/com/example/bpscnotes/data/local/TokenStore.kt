@@ -168,9 +168,59 @@ class TokenStore @Inject constructor(
             .remove("prep_level")
             .remove("downloaded_material_ids")
             .remove("purchased_material_ids")
-            .apply()
+            .commit()
     }
 
-    /** Full wipe — used for account deletion or "switch account". */
-    fun clearAll() = prefs.edit().clear().apply()
+    /**
+     * Full logout — used by the "Log out" action in Settings.
+     *
+     * Clears EVERYTHING about the current session and account
+     * (auth token, user identity, exam setup, MPIN/biometric flags,
+     * saved mobile number) so the next reopen lands on the plain
+     * Login screen — NOT the MPIN quick-login screen, and NOT
+     * Dashboard.
+     *
+     * Deliberately PRESERVES:
+     *   - is_onboarded → so the onboarding/intro screens never
+     *     reappear for a device that has already seen them, even
+     *     after the user logs out. Per product requirement, only a
+     *     fresh install should show onboarding.
+     *   - language preference (stored separately in bpsc_lang_prefs)
+     *
+     * IMPORTANT: uses commit() (synchronous), not apply() (async).
+     * The Settings screen immediately restarts the Activity after
+     * calling this. apply() writes to disk on a background thread —
+     * if the process is killed (e.g. the user swipes the app away
+     * from Recents right after logging out) before that background
+     * write completes, the next cold start reads the STALE on-disk
+     * prefs file with the old auth_token still present, and Splash
+     * sends the user straight back into Dashboard with the previous
+     * session. commit() guarantees the clear is on disk before we
+     * return, so this can never happen.
+     */
+    fun logout() {
+        prefs.edit()
+            .remove("auth_token")
+            .remove("user_name")
+            .remove("user_id")
+            .remove("user_mobile")
+            .remove("has_mpin")
+            .remove("biometric_enabled")
+            .remove("exam_setup_done")
+            .remove("primary_exam")
+            .remove("prep_level")
+            .remove("downloaded_material_ids")
+            .remove("purchased_material_ids")
+            .commit()
+    }
+
+    /**
+     * Full wipe — used for account deletion ("delete my account
+     * entirely"), where even is_onboarded should be cleared since the
+     * account itself no longer exists. Uses commit() for the same
+     * reason as logout() above.
+     */
+    fun clearAll() {
+        prefs.edit().clear().commit()
+    }
 }

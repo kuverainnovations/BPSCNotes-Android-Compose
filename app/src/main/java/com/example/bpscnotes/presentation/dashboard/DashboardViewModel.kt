@@ -119,7 +119,9 @@ class DashboardViewModel @Inject constructor(
                     else coursesApi.getCourses(limit = courseLimit).data?.courses
                     params
                 } }
-                val quizzesJob = async { safeGet("quizzes") { quizzesApi.getQuizzes(type = "daily", limit = 3).data?.quizzes } }
+                val quizzesJob = async { safeGet("quizzes") {
+                    quizzesApi.getQuizzes(type = "daily", limit = 3, exam = userPrimaryExam).data?.quizzes
+                } }
                 val bannersJob = async { safeGet("banners") { bannersApi.getBanners().data?.banners } }
                 val statsJob   = async { safeGet("stats")   { statsApi.getStats().data } }
                 val targetsJob = async { safeGet("targets") { targetsApi.getDailyTargets().data } }
