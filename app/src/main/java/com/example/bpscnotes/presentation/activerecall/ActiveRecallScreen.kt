@@ -103,13 +103,39 @@ fun ActiveRecallScreen(
                 viewModel.cardsForSubject(activeSubject!!)
             }
 
-            val sessionCards = run {
-                // Weak cards first (need most review), then unseen, then mastered
-                val weak   = baseCards.filter { weakIds.contains(it.id) }
-                val normal = baseCards.filter { !weakIds.contains(it.id) && !masteredIds.contains(it.id) }
-                val master = baseCards.filter { masteredIds.contains(it.id) }
-                weak + normal + master
-            }
+            // FIX: "random question" on Next/Previous bug.
+            //
+            // sessionCards used to be recomputed on EVERY recomposition,
+            // re-sorting weak/normal/mastered cards based on the LIVE
+            // masteredIds/weakIds sets. But rating a card (Next → Mastered,
+            // Previous → Weak) updates those sets immediately, which
+            // triggered a recomposition that RE-SORTED the list — moving
+            // the just-rated card to a different bucket/position. Meanwhile
+            // currentIndex (just a plain Int) stayed the same number, so
+            // sessionCards[currentIndex] ended up pointing at a completely
+            // different card than the one the user expected as "next" or
+            // "previous".
+            //
+            // Fix: snapshot the weak/mastered ordering ONCE when the
+            // session starts (keyed on activeSubject/retryWeak so it's
+            // recomputed only when a NEW session begins), then keep that
+            // fixed order for the rest of the session. Ratings still
+            // update masteredIds/weakIds for persistence/progress tracking
+            // — they just no longer reshuffle the in-progress session.
+            // FIX (round 2): "I need sequence" — the previous fix stopped
+            // the deck from RESHUFFLING mid-session, but it still
+            // REORDERED the deck into weak-first/normal/mastered buckets
+            // at session start. If the user had any previously-rated
+            // cards (mastered/weak) from earlier sessions, those jumped
+            // to the front or back instead of staying in natural
+            // 1,2,3...N order. Just snapshot baseCards in its given
+            // (natural/backend) order — no reordering at all. Ratings
+            // still update masteredIds/weakIds for progress tracking;
+            // they just don't reorder or reshuffle this session's deck.
+            // "Retry Weak Cards" (retryWeak=true) is unaffected — it
+            // already filters baseCards to weak-only cards above, in
+            // their natural relative order.
+            val sessionCards = remember(activeSubject, retryWeak, baseCards) { baseCards }
 
             if (sessionCards.isEmpty()) {
                 LaunchedEffect(Unit) { activeSubject = null; retryWeak = false }

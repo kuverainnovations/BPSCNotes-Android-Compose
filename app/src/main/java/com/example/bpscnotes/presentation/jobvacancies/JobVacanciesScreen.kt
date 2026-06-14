@@ -185,7 +185,7 @@ fun JobVacanciesScreen(
                             }
                             Column {
                                 Text(str.jobsTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("${filtered.size} active openings", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                                Text("${allJobs.size} ${str.jobsOpeningsCountLabel}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         Box(
@@ -229,11 +229,11 @@ fun JobVacanciesScreen(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.1f)).padding(horizontal = 4.dp, vertical = 10.dp),
                         Arrangement.SpaceEvenly
                     ) {
-                        JobStatChip("📋", "${filtered.size}", "Total")
+                        JobStatChip("📋", "${allJobs.size}", "Total")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                         JobStatChip("🆕", "${allJobs.count { it.isNew }}", "New")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        JobStatChip("🔴", "${filtered.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
+                        JobStatChip("🔴", "${allJobs.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
                         Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
                         JobStatChip("🔖", "${savedJobs.size}", str.jobsSaved)
                     }

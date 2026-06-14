@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.launch
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.Chapter
@@ -165,8 +166,12 @@ fun CourseDetailScreen(
                     // Certificate banner — shown always; state changes based on completion
                     item {
                         CertificateBanner(
-                            isComplete  = allDone,
-                            courseName  = course.title
+                            isComplete    = allDone,
+                            courseName    = course.title,
+                            certificateUrl = state.certificateUrl,
+                            certificateId  = state.certificateId,
+                            isDownloading  = state.isDownloadingCert,
+                            viewModel      = viewModel
                         )
                     }
 
@@ -268,6 +273,19 @@ fun CourseDetailScreen(
 // ─────────────────────────────────────────────────────────────
 // RATING BOTTOM SHEET
 // ─────────────────────────────────────────────────────────────
+
+// FIX: enrollment_count is now a live count of real enrollments
+// (previously a static seeded vanity number like 3000-5000, always
+// showing "3k students" regardless of actual enrollment). For real
+// counts under 1000 — the common case — show the exact number with
+// proper singular/plural; only abbreviate to "Xk" for 1000+.
+private fun formatStudentCount(count: Int): String = when {
+    count <= 0   -> "No students yet"
+    count == 1   -> "1 student"
+    count < 1000 -> "$count students"
+    count < 10000 -> "%.1fk students".format(count / 1000f)
+    else         -> "${count / 1000}k students"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -521,10 +539,12 @@ private fun ReviewsSection(
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(
                 str.coursesReviews,
-                style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold
+                style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+                maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             if (reviewCount > 0) {
-                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                Text("$reviewCount ${str.coursesReviews}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, maxLines = 1)
             }
         }
 
@@ -796,7 +816,7 @@ private fun HeroHeader(
                         Text("(${course.review_count})", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                     }
                     Text("·", color = Color.White.copy(0.5f))
-                    Text("${(course.enrollmentCount / 1000f).toInt()}k students",
+                    Text(formatStudentCount(course.enrollmentCount),
                         style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
                 }
             }
@@ -857,10 +877,18 @@ private fun WhatYouLearnSection(items: List<String>, accent: Color) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun CertificateBanner(isComplete: Boolean = false, courseName: String = "") {
+private fun CertificateBanner(
+    isComplete: Boolean = false,
+    courseName: String = "",
+    certificateUrl: String? = null,
+    certificateId: String? = null,
+    isDownloading: Boolean = false,
+    viewModel: CourseDetailViewModel? = null,
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         RoundedCornerShape(16.dp), CardDefaults.cardColors(), CardDefaults.cardElevation(3.dp)) {
         Box(Modifier.fillMaxWidth().background(
@@ -868,7 +896,11 @@ private fun CertificateBanner(isComplete: Boolean = false, courseName: String = 
             else listOf(Color(0xFF0A2472), Color(0xFF1565C0)))
         )) {
             Row(Modifier.fillMaxWidth().padding(16.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(if (isComplete) "🎓" else "🏆", fontSize = 32.sp)
                     Column {
                         Text(if (isComplete) str.courseCertEarned else str.courseCertTitle,
@@ -881,19 +913,46 @@ private fun CertificateBanner(isComplete: Boolean = false, courseName: String = 
                 if (isComplete) {
                     Button(
                         onClick = {
-                            // Share/download certificate — open in browser or share as image
                             val shareText = "I just completed '$courseName' on BPSCNotes! 🎓"
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                            // FIX: previously this ALWAYS shared plain text only.
+                            // Now: if the certificate PDF has been generated,
+                            // download it and attach the real file. Falls back
+                            // to text-only sharing if no certificate yet or the
+                            // download fails.
+                            if (certificateUrl != null && certificateId != null && viewModel != null) {
+                                scope.launch {
+                                    val uri = viewModel.downloadCertificateForShare(certificateUrl, certificateId)
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        if (uri != null) {
+                                            type = "application/pdf"
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        } else {
+                                            type = "text/plain"
+                                        }
+                                        putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(intent, str.courseShareCert))
+                                }
+                            } else {
+                                // Certificate still being generated — share text for now
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(intent, str.courseShareCert))
                             }
-                            context.startActivity(android.content.Intent.createChooser(intent, str.courseShareCert))
                         },
+                        enabled = !isDownloading,
                         colors = ButtonDefaults.buttonColors(containerColor = cs.surface),
                         shape  = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(str.courseShareCertBtn, color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        if (isDownloading) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF1B5E20))
+                        } else {
+                            Text(str.courseShareCertBtn, color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1178,8 +1237,12 @@ private fun SectionHeader(title: String, subtitle: String, modifier: Modifier = 
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Row(modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+        Text(
+            title, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+            maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, maxLines = 1)
     }
 }
 

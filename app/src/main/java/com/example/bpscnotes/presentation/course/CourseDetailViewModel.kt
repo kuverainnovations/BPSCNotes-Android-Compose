@@ -1,6 +1,7 @@
 package com.example.bpscnotes.presentation.course
 
 import android.util.Log
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.AuthApiService
@@ -15,8 +16,14 @@ import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
 import javax.inject.Inject
 
 data class CourseDetailUiState(
@@ -37,14 +44,22 @@ data class CourseDetailUiState(
     val isRatingSubmitted: Boolean = false,
     val ratingError: String? = null,
     val userCoins: Int = 0,
+    // Certificate sharing — actual generated PDF, not just text
+    val certificateUrl: String? = null,
+    val certificateId: String? = null,
+    val isDownloadingCert: Boolean = false,
+    val certError: String? = null,
 )
 
 @HiltViewModel
 class CourseDetailViewModel @Inject constructor(
     private val api: CoursesApiService,
     private val authApi: AuthApiService,
+    private val certificatesApi: com.example.bpscnotes.data.remote.api.CertificatesApiService,
     private val bus: RefreshEventBus,
-    private val cacheInvalidator: CacheInvalidator
+    private val cacheInvalidator: CacheInvalidator,
+    private val okHttpClient: OkHttpClient,
+    @ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CourseDetailUiState())
@@ -100,12 +115,27 @@ class CourseDetailViewModel @Inject constructor(
                     try { authApi.getMe().data?.user?.coins ?: 0 } catch (_: Exception) { 0 }
                 }
 
+                // FIX: "Share Certificate" was always sharing plain text
+                // because the screen never had the actual certificate
+                // PDF URL. Look it up from GET /users/certificates.
+                val certUrl = kotlinx.coroutines.supervisorScope {
+                    try {
+                        certificatesApi.getCertificates().data?.certificates
+                            ?.firstOrNull { it.courseId == courseId }
+                    } catch (e: Exception) {
+                        Log.w("CourseDetailVM", "getCertificates: ${e.message}")
+                        null
+                    }
+                }
+
                 _uiState.update {
                     it.copy(
                         course            = detail.course,
                         chapters          = sortedChapters,
                         isLoading         = false,
                         userCoins         = userCoinsVal,
+                        certificateUrl    = certUrl?.certificateUrl,
+                        certificateId     = certUrl?.id,
                         // Restore submitted state if user already reviewed this course
                         isRatingSubmitted = reviewedCourseIds.contains(courseId)
                     )
@@ -221,5 +251,47 @@ class CourseDetailViewModel @Inject constructor(
 
     fun clearPurchaseRequired() {
         _uiState.update { it.copy(purchaseRequired = false) }
+    }
+
+    // ── Certificate sharing ─────────────────────────────────────
+    // FIX: previously "Share Certificate" only ever shared a plain text
+    // message ("I just completed '...' on BPSCNotes!") regardless of
+    // whether a certificate existed. Now download the actual generated
+    // PDF and hand back a content:// URI (via FileProvider) so the
+    // share sheet attaches the real certificate file.
+    //
+    // Returns null if there's no certificate URL yet, or the download
+    // fails — caller should fall back to text-only sharing in that case.
+    suspend fun downloadCertificateForShare(certUrl: String, certificateId: String): android.net.Uri? {
+        return withContext(Dispatchers.IO) {
+            try {
+                _uiState.update { it.copy(isDownloadingCert = true, certError = null) }
+                val dir = File(appContext.cacheDir, "certificates").apply { mkdirs() }
+                val file = File(dir, "certificate_$certificateId.pdf")
+
+                if (!file.exists() || file.length() == 0L) {
+                    val request = Request.Builder().url(certUrl).build()
+                    val response = okHttpClient.newCall(request).execute()
+                    if (!response.isSuccessful) {
+                        throw Exception("Download failed: HTTP ${response.code}")
+                    }
+                    response.body?.byteStream()?.use { input ->
+                        file.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw Exception("Empty certificate response")
+                }
+
+                FileProvider.getUriForFile(
+                    appContext,
+                    "${appContext.packageName}.fileprovider",
+                    file
+                )
+            } catch (e: Exception) {
+                Log.e("CourseDetailVM", "downloadCertificateForShare: ${e.message}", e)
+                _uiState.update { it.copy(certError = "Could not download certificate") }
+                null
+            } finally {
+                _uiState.update { it.copy(isDownloadingCert = false) }
+            }
+        }
     }
 }

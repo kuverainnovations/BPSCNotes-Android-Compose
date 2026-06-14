@@ -562,13 +562,20 @@ fun SubscriptionScreen(
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(
+                                modifier = Modifier.weight(1f).padding(end = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Text("BPSCNotes ${featuredPlan.name}",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    color = Color.White, fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(str.placeholdersAllPremium,
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                                ) {
                                     SubPill("📄 Premium PDFs")
                                     SubPill("📚 All Books")
                                     SubPill("🎬 Videos")

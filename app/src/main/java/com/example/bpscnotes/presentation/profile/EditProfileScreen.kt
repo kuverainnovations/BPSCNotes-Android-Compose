@@ -56,6 +56,9 @@ fun EditProfileScreen(
     var email    by remember(user?.email)    { mutableStateOf(user?.email ?: "") }
     var bio      by remember(user?.bio)      { mutableStateOf(user?.bio ?: "") }
     var district by remember(user?.district) { mutableStateOf(user?.district ?: "") }
+    var showDistrictMenu by remember { mutableStateOf(false) }
+    val districts        by viewModel.districts.collectAsState()
+    val districtsLoading by viewModel.districtsLoading.collectAsState()
     var selectedAvatarUri  by remember { mutableStateOf<Uri?>(null) }
     var showCropDialog     by remember { mutableStateOf(false) }
     var imageUriToCrop     by remember { mutableStateOf<Uri?>(null) }
@@ -224,12 +227,58 @@ fun EditProfileScreen(
                         icon = Icons.Rounded.Email, keyboardType = KeyboardType.Email,
                         onValueChange = { email = it })
                     Spacer(Modifier.height(10.dp))
-                    EditField(value = district, label = str.editDistrict,
-                        icon = Icons.Rounded.LocationOn, onValueChange = { district = it })
+                    // District dropdown — same source as registration screen
+                    ExposedDropdownMenuBox(
+                        expanded        = showDistrictMenu,
+                        onExpandedChange = { showDistrictMenu = it && districts.isNotEmpty() }
+                    ) {
+                        OutlinedTextField(
+                            value         = district,
+                            onValueChange = { district = it },
+                            modifier      = Modifier.fillMaxWidth().menuAnchor(),
+                            leadingIcon   = { Icon(Icons.Rounded.LocationOn, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)) },
+                            label         = { Text(str.editDistrict) },
+                            placeholder   = {
+                                Text(if (districtsLoading) "Loading districts…" else str.editDistrict)
+                            },
+                            shape         = RoundedCornerShape(12.dp),
+                            singleLine    = true,
+                            readOnly      = true,
+                            trailingIcon  = {
+                                if (districtsLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = BpscColors.Primary
+                                    )
+                                } else if (districts.isNotEmpty()) {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(showDistrictMenu)
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor   = BpscColors.Primary,
+                                unfocusedBorderColor = cs.outline,
+                                focusedLabelColor    = BpscColors.Primary,
+                            )
+                        )
+                        if (districts.isNotEmpty()) {
+                            ExposedDropdownMenu(
+                                expanded        = showDistrictMenu,
+                                onDismissRequest = { showDistrictMenu = false }
+                            ) {
+                                districts.forEach { d ->
+                                    DropdownMenuItem(
+                                        text    = { Text(d.name) },
+                                        onClick = { district = d.name; showDistrictMenu = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(10.dp))
                     EditField(value = bio, label = str.editBio,
                         icon = Icons.Rounded.Info, singleLine = false,
-                        minLines = 4, maxLines = 6, onValueChange = { bio = it })
+                        minLines = 1, maxLines = 6, onValueChange = { bio = it })
                 }
 
                 // ── Mobile (read-only) ─────────────────────────
@@ -249,14 +298,24 @@ fun EditProfileScreen(
                             Text(user?.mobile ?: str.noData, style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onBackground, fontWeight = FontWeight.SemiBold)
                         }
+                        val mobileVerified = user?.isVerified == true
                         Row(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF2E7D32).copy(0.1f))
+                            .background(
+                                if (mobileVerified) Color(0xFF2E7D32).copy(0.1f)
+                                else cs.onSurfaceVariant.copy(0.12f)
+                            )
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(12.dp))
-                            Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                            if (mobileVerified) {
+                                Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(12.dp))
+                                Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                            } else {
+                                Icon(Icons.Rounded.ErrorOutline, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                                Text(str.editNotVerified, style = MaterialTheme.typography.labelSmall,
+                                    color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -321,7 +380,7 @@ private fun EditField(
         shape         = RoundedCornerShape(12.dp),
         singleLine    = singleLine,
         minLines      = minLines,
-        maxLines      = if (singleLine) 1 else 5,
+        maxLines      = maxLines,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor   = BpscColors.Primary,
@@ -438,7 +497,7 @@ private fun ImageCropDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .pointerInput(Unit) {
-                               awaitPointerEventScope {
+                                awaitPointerEventScope {
                                     while (true) {
                                         val down = awaitPointerEvent()
                                         val pos  = down.changes.firstOrNull()?.position ?: continue

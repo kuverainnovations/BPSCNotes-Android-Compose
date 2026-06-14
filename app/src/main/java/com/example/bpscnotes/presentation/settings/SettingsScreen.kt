@@ -432,7 +432,7 @@ fun SettingsScreen(
                             title = str.settingsSupport, subtitle = str.settingsSupportSubtitle,
                             onClick = {
                                 val emailIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                    data = android.net.Uri.parse("mailto:support@bpscnotes.in")
+                                    data = android.net.Uri.parse("mailto:admin@bpscnotes.in")
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "BPSCNotes App Support")
                                     putExtra(android.content.Intent.EXTRA_TEXT,
                                         "App Version: ${str.version}\nDevice: ${android.os.Build.MODEL}\n\nDescribe your issue:\n")

@@ -30,7 +30,7 @@ data class ProfileEditStrings(
     val editPersonalInfo: String, val editFullName: String, val editEmail: String,
     val editDistrict: String, val editExamSettings: String, val editPrepLevel: String,
     val editTargetYear: String, val editSaveChanges: String, val editSaving: String,
-    val editMobile: String, val editVerified: String,
+    val editMobile: String, val editVerified: String, val editNotVerified: String,
     val prepBeginner: String, val prepIntermediate: String, val prepAdvanced: String,
     val examSetupChoose: String, val examSetupTapHint: String,
     val examSetupSearch: String, val examSetupPrimary: String, val examSetupSecondary: String,
@@ -172,6 +172,7 @@ data class ContentStrings2(
 data class JobRoomStrings(
     val jobsTitle: String, val jobsApplyNow: String, val jobsLastDate: String,
     val jobsPosts: String, val jobsSave: String, val jobsSaved: String,
+    val jobsOpeningsCountLabel: String,
     val jobsSearchHint: String, val jobsNoJobs: String, val jobsTryFilter: String,
     val jobsFeatured: String, val jobsAllJobs: String,
     val roomsTitle: String, val roomsChoose: String, val roomsChooseHint: String,
@@ -538,6 +539,7 @@ data class AppStrings(
     val editExamSettings get() = _pe.editExamSettings; val editPrepLevel get() = _pe.editPrepLevel
     val editTargetYear get() = _pe.editTargetYear; val editSaveChanges get() = _pe.editSaveChanges
     val editSaving get() = _pe.editSaving; val editMobile get() = _pe.editMobile; val editVerified get() = _pe.editVerified
+    val editNotVerified get() = _pe.editNotVerified
     val prepBeginner get() = _pe.prepBeginner; val prepIntermediate get() = _pe.prepIntermediate; val prepAdvanced get() = _pe.prepAdvanced
     val examSetupChoose get() = _pe.examSetupChoose; val examSetupTapHint get() = _pe.examSetupTapHint
     val examSetupSearch get() = _pe.examSetupSearch; val examSetupPrimary get() = _pe.examSetupPrimary; val examSetupSecondary get() = _pe.examSetupSecondary
@@ -613,6 +615,7 @@ data class AppStrings(
 
     val jobsTitle get() = _jr.jobsTitle; val jobsApplyNow get() = _jr.jobsApplyNow; val jobsLastDate get() = _jr.jobsLastDate
     val jobsPosts get() = _jr.jobsPosts; val jobsSave get() = _jr.jobsSave; val jobsSaved get() = _jr.jobsSaved
+    val jobsOpeningsCountLabel get() = _jr.jobsOpeningsCountLabel
     val jobsSearchHint get() = _jr.jobsSearchHint; val jobsNoJobs get() = _jr.jobsNoJobs; val jobsTryFilter get() = _jr.jobsTryFilter
     val jobsFeatured get() = _jr.jobsFeatured; val jobsAllJobs get() = _jr.jobsAllJobs
     val roomsTitle get() = _jr.roomsTitle; val roomsChoose get() = _jr.roomsChoose; val roomsChooseHint get() = _jr.roomsChooseHint
@@ -1034,7 +1037,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         editPersonalInfo="Personal Info", editFullName="Full Name *", editEmail="Email Address",
         editDistrict="District", editExamSettings="Exam Settings", editPrepLevel="Preparation Level",
         editTargetYear="Target Year", editSaveChanges="Save Changes", editSaving="Saving…",
-        editMobile="Mobile Number", editVerified="Verified ✓",
+        editMobile="Mobile Number", editVerified="Verified ✓", editNotVerified="Not Verified",
         prepBeginner="Beginner", prepIntermediate="Intermediate", prepAdvanced="Advanced",
         examSetupChoose="Choose Your Exams",
         examSetupTapHint="Tap once to set primary · Tap again to add secondary",
@@ -1200,6 +1203,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
     jr = JobRoomStrings(
         jobsTitle="Job Vacancies", jobsApplyNow="Apply Now", jobsLastDate="Last Date",
         jobsPosts="Posts", jobsSave="Save", jobsSaved="Saved",
+        jobsOpeningsCountLabel="Job Posts",
         jobsSearchHint="Search jobs, departments, location…",
         jobsNoJobs="No jobs found", jobsTryFilter="Try a different search or category",
         jobsFeatured="⭐ Featured", jobsAllJobs="All Jobs",
@@ -1585,7 +1589,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         editEmail="ईमेल पता", editDistrict="जिला", editExamSettings="परीक्षा सेटिंग",
         editPrepLevel="तैयारी स्तर", editTargetYear="लक्षित वर्ष",
         editSaveChanges="बदलाव सहेजें", editSaving="सहेजा जा रहा है…",
-        editMobile="मोबाइल नंबर", editVerified="सत्यापित ✓",
+        editMobile="मोबाइल नंबर", editVerified="सत्यापित ✓", editNotVerified="असत्यापित",
         prepBeginner="शुरुआती", prepIntermediate="मध्यम", prepAdvanced="उन्नत",
         examSetupChoose="अपनी परीक्षाएं चुनें",
         examSetupTapHint="एक बार टैप = प्राथमिक · दोबारा टैप = द्वितीयक",
@@ -1753,6 +1757,7 @@ val HindiStrings: AppStrings = mkAppStrings(
     jr = JobRoomStrings(
         jobsTitle="नौकरी रिक्तियां", jobsApplyNow="अभी आवेदन करें", jobsLastDate="अंतिम तारीख",
         jobsPosts="पद", jobsSave="सहेजें", jobsSaved="सहेजा गया",
+        jobsOpeningsCountLabel="जॉब पोस्ट",
         jobsSearchHint="नौकरी, विभाग, स्थान खोजें…",
         jobsNoJobs="कोई नौकरी नहीं मिली", jobsTryFilter="अलग खोज या श्रेणी आज़माएं",
         jobsFeatured="⭐ विशेष", jobsAllJobs="सभी नौकरियां",

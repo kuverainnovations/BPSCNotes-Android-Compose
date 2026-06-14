@@ -129,14 +129,17 @@ fun LeaderboardScreen(
                     }
                 }
 
-                Spacer(Modifier.height(20.dp))
-
-                // Podium (top 3) — shown inside header gradient
-                if (!state.isLoadingLeaderboard && leaderboard.size >= 2) {
+                // Podium (top 3) — shown inside header gradient.
+                // FIX: only render when there are 3+ real entries. For 1-2
+                // users this previously rendered 1-2 "ghost" placeholder
+                // slots ("-" name, "?" avatar, 0m) AND duplicated those
+                // same users again in the RANKINGS list below — looked
+                // like empty/duplicated blocks on small (staging) datasets.
+                if (!state.isLoadingLeaderboard && leaderboard.size >= 3) {
+                    Spacer(Modifier.height(20.dp))
                     Podium(leaderboard.take(3), myUserId)
+                    Spacer(Modifier.height(8.dp))
                 }
-
-                Spacer(Modifier.height(8.dp))
             }
         }
 

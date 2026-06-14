@@ -55,8 +55,33 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    // ── Districts (for the Edit Profile dropdown) ──────────────
+    // Loaded from GET /districts, same as the registration screen.
+    // Falls back to an empty list on failure — the dropdown still
+    // works as a free-text field, the user just won't see suggestions.
+    private val _districts = MutableStateFlow<List<com.example.bpscnotes.data.remote.api.DistrictDto>>(emptyList())
+    val districts: StateFlow<List<com.example.bpscnotes.data.remote.api.DistrictDto>> = _districts.asStateFlow()
+
+    private val _districtsLoading = MutableStateFlow(true)
+    val districtsLoading: StateFlow<Boolean> = _districtsLoading.asStateFlow()
+
+    private fun loadDistricts() {
+        viewModelScope.launch {
+            _districtsLoading.value = true
+            try {
+                val response = authApi.getDistricts()
+                _districts.value = response.data?.districts ?: emptyList()
+            } catch (e: Exception) {
+                Log.e("ProfileVM", "loadDistricts: ${e.message}", e)
+            } finally {
+                _districtsLoading.value = false
+            }
+        }
+    }
+
     init {
         load()
+        loadDistricts()
         viewModelScope.launch {
             bus.events.collect { event ->
                 when (event) {

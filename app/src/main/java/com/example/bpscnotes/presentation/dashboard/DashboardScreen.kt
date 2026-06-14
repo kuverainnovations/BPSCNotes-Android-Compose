@@ -415,10 +415,38 @@ private fun BannerSection(
                         drawCircle(Color.White.copy(0.06f), 100.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
                         drawCircle(Color.White.copy(0.04f), 60.dp.toPx(), Offset(size.width * 0.6f, size.height + 10.dp.toPx()))
                     }
-                    // Image if available
+                    // Image if available — FIX: this previously only drew a
+                    // dim overlay and never rendered the actual image.
                     if (!banner.imageUrl.isNullOrBlank()) {
-                        // Dim overlay for text readability
-                        Box(Modifier.fillMaxSize().background(Color.Black.copy(0.25f)))
+                        AsyncImage(
+                            model = banner.imageUrl,
+                            contentDescription = banner.title,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // FIX: a flat 25% black dim wasn't enough contrast
+                        // against busy images (e.g. a stock photo with its
+                        // own "SPECIAL DISCOUNT" text/graphics), so the
+                        // title/subtitle and the bottom-right CTA pill
+                        // visually clashed with the image content. Use a
+                        // directional scrim instead — darker on the left
+                        // (where the title sits) and at the bottom (where
+                        // the CTA pill sits), so both stay readable while
+                        // the image remains visible overall.
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(Color.Black.copy(0.55f), Color.Black.copy(0.15f))
+                                )
+                            )
+                        )
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(0.45f))
+                                )
+                            )
+                        )
                     }
                     Column(modifier = Modifier.align(Alignment.CenterStart)) {
                         Text(banner.title, style = MaterialTheme.typography.titleMedium,
@@ -488,6 +516,26 @@ fun parseGradientSafe(gradient: String?): List<Color> {
 
     if (gradient.isNullOrEmpty()) {
         return defaultGradient()
+    }
+
+    // FIX: admin's banner color picker sends a hex color (e.g. "#1565C0"),
+    // not one of the named "from-x to-y" gradient presets below. Parse hex
+    // as a solid color and build a 2-color gradient by darkening it
+    // slightly, so admin-selected colors actually show up in the app
+    // instead of always falling back to the default blue.
+    if (gradient.startsWith("#")) {
+        return try {
+            val solid = Color(android.graphics.Color.parseColor(gradient))
+            val darker = Color(
+                red   = (solid.red   * 0.75f),
+                green = (solid.green * 0.75f),
+                blue  = (solid.blue  * 0.75f),
+                alpha = solid.alpha
+            )
+            listOf(solid, darker)
+        } catch (e: IllegalArgumentException) {
+            defaultGradient()
+        }
     }
 
     val parts = gradient.split(" ")
@@ -865,7 +913,7 @@ private fun DashboardHeader(
                 .padding(horizontal = 4.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 HeaderStat("📚", topicsText, "Topics")
                 HeaderStatDivider()
-                HeaderStat("🏆", rankText,  "${str.profileRank}")
+                HeaderStat("🏆", rankText,  "Rank")
                 HeaderStatDivider()
                 HeaderStat("⏱️", hoursText,  str.profileStudy)
                 HeaderStatDivider()
