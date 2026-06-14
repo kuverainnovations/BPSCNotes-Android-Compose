@@ -113,13 +113,24 @@ class MpinViewModel @Inject constructor(
                     cacheInvalidator.evictAll()
                     _state.update { it.copy(isLoading = false, navigateToMain = true) }
                 } else {
-                    // Token invalid — clear it and ask for MPIN
-                    tokenStore.clearAll()
+                    // Token invalid — clear the session only and ask for MPIN.
+                    // FIX: previously called tokenStore.clearAll(), a FULL WIPE
+                    // (per TokenStore's own docs, intended for account
+                    // deletion) that also erased is_onboarded/user_mobile/
+                    // has_mpin/biometric_enabled. That made a transient
+                    // /auth/me failure (or a genuinely expired token) wipe
+                    // onboarding status too, so the NEXT cold start showed
+                    // Onboarding again even though this is a returning user.
+                    // clearSessionOnly() clears auth_token but preserves
+                    // user_mobile/has_mpin/is_onboarded/biometric_enabled.
+                    tokenStore.clearSessionOnly()
                     _state.update { it.copy(isLoading = false, error = "Session expired. Please enter your MPIN.") }
                 }
             } catch (_: Exception) {
-                // Network error or 401 — token expired, clear and ask for MPIN
-                tokenStore.clearAll()
+                // Network error or 401 — token expired (or request failed).
+                // FIX: see above — clearSessionOnly(), not clearAll(), so a
+                // transient network error doesn't wipe is_onboarded/has_mpin.
+                tokenStore.clearSessionOnly()
                 _state.update { it.copy(isLoading = false, error = "Session expired. Please enter your MPIN.") }
             }
         }

@@ -1,19 +1,29 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   FIX: "Fresh install shows Login instead of Onboarding" regression.
+
+   These rule files were the default Android Studio templates with EMPTY
+   <cloud-backup>/<full-backup-content> blocks. An empty block backs up
+   EVERYTHING by default (Android 12+ cloud backup, and Auto Backup on
+   older versions) — including our "bpsc_prefs" SharedPreferences file,
+   which stores is_onboarded, auth_token, user_mobile, has_mpin, etc.
+
+   On a device with Google account backup enabled, uninstalling and
+   reinstalling the app restores bpsc_prefs from the old backup, so
+   is_onboarded=true (and possibly a stale auth_token / user_mobile) is
+   present immediately on first launch — Splash then correctly (per its
+   own logic) skips Onboarding and goes straight to Login/MpinLogin/Main,
+   even though this is supposed to be a fresh install.
+
+   Excluding the "bpsc_prefs" shared-prefs file from cloud backup ensures
+   a real fresh install always starts with is_onboarded=false and no
+   token, so Splash correctly shows Onboarding.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="bpsc_prefs.xml"/>
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="bpsc_prefs.xml"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

@@ -391,7 +391,8 @@ data class BannerDto(
     val type: String = "promotion",
     @SerializedName("bg_gradient") val bgGradient: String? = null,
     val target: String = "all",
-    @SerializedName("is_active")   val isActive: Boolean = true
+    @SerializedName("is_active")   val isActive: Boolean = true,
+    @SerializedName("cta_label")   val ctaLabel: String? = null
 )
 
 data class BannersResponseData(val banners: List<BannerDto> = emptyList())

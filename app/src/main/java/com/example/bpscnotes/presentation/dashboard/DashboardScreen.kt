@@ -67,6 +67,7 @@ import com.example.bpscnotes.data.remote.api.UserStatsData
 import com.example.bpscnotes.data.remote.dto.UserDto
 import com.example.bpscnotes.domain.model.DayProgress
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import com.example.bpscnotes.presentation.settings.SettingsViewModel
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.shared.BookmarkViewModel
 import kotlinx.coroutines.launch
@@ -415,37 +416,22 @@ private fun BannerSection(
                         drawCircle(Color.White.copy(0.06f), 100.dp.toPx(), Offset(size.width + 10.dp.toPx(), -20.dp.toPx()))
                         drawCircle(Color.White.copy(0.04f), 60.dp.toPx(), Offset(size.width * 0.6f, size.height + 10.dp.toPx()))
                     }
-                    // Image if available — FIX: this previously only drew a
-                    // dim overlay and never rendered the actual image.
+                    // Image accent (optional) — matches admin list preview's
+                    // <img className="absolute right-0 top-0 h-full w-auto
+                    // object-cover opacity-30"/>: full-height, right-aligned,
+                    // 30% opacity, sitting ON TOP of the bg_gradient which
+                    // always fills the whole banner. No scrim needed — at
+                    // 30% opacity the image doesn't compete with the title/
+                    // subtitle/CTA text.
                     if (!banner.imageUrl.isNullOrBlank()) {
                         AsyncImage(
                             model = banner.imageUrl,
                             contentDescription = banner.title,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        // FIX: a flat 25% black dim wasn't enough contrast
-                        // against busy images (e.g. a stock photo with its
-                        // own "SPECIAL DISCOUNT" text/graphics), so the
-                        // title/subtitle and the bottom-right CTA pill
-                        // visually clashed with the image content. Use a
-                        // directional scrim instead — darker on the left
-                        // (where the title sits) and at the bottom (where
-                        // the CTA pill sits), so both stay readable while
-                        // the image remains visible overall.
-                        Box(
-                            Modifier.fillMaxSize().background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(Color.Black.copy(0.55f), Color.Black.copy(0.15f))
-                                )
-                            )
-                        )
-                        Box(
-                            Modifier.fillMaxSize().background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(0.45f))
-                                )
-                            )
+                            contentScale = androidx.compose.ui.layout.ContentScale.FillHeight,
+                            alpha = 0.3f,
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .align(Alignment.CenterEnd)
                         )
                     }
                     Column(modifier = Modifier.align(Alignment.CenterStart)) {
@@ -467,7 +453,9 @@ private fun BannerSection(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(if (!banner.actionLink.isNullOrBlank()) "Open →" else "View →", style = MaterialTheme.typography.labelSmall,
+                        val ctaText = banner.ctaLabel?.takeIf { it.isNotBlank() }
+                            ?: if (!banner.actionLink.isNullOrBlank()) "Open" else "View"
+                        Text("$ctaText →", style = MaterialTheme.typography.labelSmall,
                             color = Color.White, fontWeight = FontWeight.Bold)
                         Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(12.dp))
                     }
@@ -563,12 +551,30 @@ fun defaultGradient() = listOf(
 private fun navigateBanner(banner: BannerDto, nav: NavHostController) {
     val link = banner.actionLink
     when {
+        // Deep links to a specific course/quiz (not offered by the admin
+        // dropdown today, but kept for future direct-link banners)
         link != null && link.startsWith("/course/") ->
             nav.navigate(Screen.CourseDetail.createRoute(link.removePrefix("/course/")))
         link != null && link.startsWith("/quiz/") ->
             nav.navigate(Screen.QuizDetail.createRoute(link.removePrefix("/quiz/")))
-        link != null && link.startsWith("/current-affairs") ->
-            nav.navigate(Screen.CurrentAffairs.route)
+
+        // The 12 routes actually offered in the admin "CTA Route" dropdown
+        // (ROUTES array in banners/page.tsx) — map each to its real screen.
+        link == "/quizzes"         -> nav.navigate(Screen.QuizList.route)
+        link == "/current-affairs" -> nav.navigate(Screen.CurrentAffairs.route)
+        link == "/study-materials" -> nav.navigate(Screen.StudyMaterials.route)
+        link == "/wallet"          -> nav.navigate(Screen.CoinWallet.route)
+        link == "/subscription"    -> nav.navigate(Screen.Subscription.route)
+        link == "/rooms_hub"       -> nav.navigate(Screen.RoomsHub.route)
+        link == "/jobs"            -> nav.navigate(Screen.JobVacancies.route)
+        link == "/leaderboard"     -> nav.navigate(Screen.Leaderboard.route)
+        link == "/flashcards"      -> nav.navigate(Screen.ActiveRecall.route)
+        link == "/achievements"    -> nav.navigate(Screen.Achievements.route)
+        link == "/challenges"      -> nav.navigate(Screen.WeeklyChallenges.route)
+        link == "/courses"         -> nav.navigate(Screen.MyLearningCourses.route)
+
+        // No recognized route set — fall back to banner.type, then to
+        // My Learning as a last resort.
         banner.type == "course"       -> nav.navigate(Screen.MyLearning.route)
         banner.type == "quiz"         -> nav.navigate(Screen.QuizList.route)
         banner.type == "subscription" -> nav.navigate(Screen.Subscription.route)
@@ -1882,9 +1888,39 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 // DRAWER
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHostController) {
+private fun BpscDrawer(
+    user: UserDto?,
+    onClose: () -> Unit,
+    navController: NavHostController,
+    settingsViewModel: SettingsViewModel = hiltViewModel()
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+
+    // FIX: this drawer's Logout button previously only navigated to
+    // Login (popUpTo(0)) without ever calling tokenStore.logout() or
+    // POST /auth/logout — auth_token/user_mobile/has_mpin all stayed on
+    // disk. The Login screen LOOKED logged out, but killing and
+    // reopening the app sent Splash straight back to Main with the
+    // same account, since the token was still present. Reuse
+    // SettingsViewModel.logOut() (POST /auth/logout + tokenStore.logout()
+    // + cache eviction), then do the same full Activity restart Settings
+    // does so every Hilt ViewModel is actually destroyed.
+    val settingsState by settingsViewModel.state.collectAsState()
+    val drawerContext = LocalContext.current
+    LaunchedEffect(settingsState.loggedOut) {
+        if (settingsState.loggedOut) {
+            val activity = drawerContext as? android.app.Activity ?: return@LaunchedEffect
+            val intent = android.content.Intent(activity, activity::class.java).apply {
+                addFlags(
+                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                )
+            }
+            activity.startActivity(intent)
+            activity.overridePendingTransition(0, 0)
+        }
+    }
     val menuItems = listOf(
         // ── Study (0-4) ──────────────────────────────────────
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
@@ -2049,7 +2085,7 @@ private fun BpscDrawer(user: UserDto?, onClose: () -> Unit, navController: NavHo
                     Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                 }
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { onClose(); navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } } }, modifier = Modifier
+                OutlinedButton(onClick = { onClose(); settingsViewModel.logOut() }, modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
                     Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)

@@ -147,9 +147,14 @@ private fun QuizPlayerContent(
     val timerForCurrent = perQuestionSecs
     val timerMax        = perQuestionSecs
 
-    // FIX: When returning to a previous question, don't reset to full time
-    // Store remaining time per question index in a map
-    var timeLeft      by remember(currentIndex) { mutableIntStateOf(perQuestionSecs) }
+    // FIX: When returning to a previous question, don't reset to full time.
+    // Remember the remaining seconds for EACH question index across
+    // navigation — keyed by question index, NOT reset when currentIndex
+    // changes (that's the whole point: it needs to survive the switch).
+    val timeLeftByQuestion = remember { mutableStateMapOf<Int, Int>() }
+    var timeLeft      by remember(currentIndex) {
+        mutableIntStateOf(timeLeftByQuestion[currentIndex] ?: perQuestionSecs)
+    }
     var totalTimeSecs by remember { mutableIntStateOf(0) }
     var showReview    by remember { mutableStateOf(false) }
     var submitClicked by remember { mutableStateOf(false) }
@@ -160,12 +165,15 @@ private fun QuizPlayerContent(
     val answeredCount   = questions.count { q -> viewModel.getAnswer(q.id) != null }
     val progress       by animateFloatAsState((currentIndex + 1).toFloat() / questions.size, tween(400), label = "p")
 
-    // Per-question countdown — resets for each new question via remember(currentIndex)
+    // Per-question countdown — resumes from the saved remaining time for
+    // this question (see timeLeftByQuestion above) instead of restarting
+    // at perQuestionSecs every time the user navigates back to a
+    // previously-visited question.
     LaunchedEffect(currentIndex) {
-        timeLeft = perQuestionSecs
         while (timeLeft > 0 && !submitClicked) {
             delay(1000L)
             timeLeft--
+            timeLeftByQuestion[currentIndex] = timeLeft
             totalTimeSecs++
         }
         // Time ran out on this question — auto-advance or submit

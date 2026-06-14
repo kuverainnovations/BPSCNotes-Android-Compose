@@ -71,22 +71,75 @@ class TokenStore @Inject constructor(
      * signature verification needed — we only need to read the claim
      * the server already issued and will independently verify itself).
      */
-    private fun decodeUserIdFromJwt(token: String): String? {
+    private fun decodeUserIdFromJwt(token: String): String? =
+        decodeJwtPayload(token)?.optString("userId")?.takeIf { it.isNotBlank() }
+
+    /**
+     * Decodes the JWT payload (base64url, second segment) into a JSONObject,
+     * or null if the token is malformed. Shared by [decodeUserIdFromJwt] and
+     * [isTokenExpired] — no signature verification, we only read claims the
+     * server already issued and independently re-verifies on each request.
+     */
+    private fun decodeJwtPayload(token: String): org.json.JSONObject? {
         return try {
             val parts = token.split(".")
             if (parts.size < 2) return null
             val payloadJson = String(
                 android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
             )
-            org.json.JSONObject(payloadJson).optString("userId").takeIf { it.isNotBlank() }
+            org.json.JSONObject(payloadJson)
         } catch (e: Exception) {
             null
         }
     }
 
+    /**
+     * Returns true if the locally-stored access token is expired (or
+     * unreadable), based on its own `exp` claim — no network call.
+     *
+     * FIX: SplashScreen previously trusted `!getToken().isNullOrEmpty()`
+     * alone to mean "logged in" and routed straight to Main. If a STALE
+     * `bpsc_prefs` ever ends up on a device with an old, already-expired
+     * auth_token still present (e.g. restored from an old cloud backup
+     * snapshot predating the bpsc_prefs backup-exclusion fix, or any
+     * other restore/migration path), Splash would route to Main, the
+     * first authenticated API call would 401, AuthInterceptor would clear
+     * the token and fire sessionExpired, and BpscNavHost would then bounce
+     * the user to Login — a confusing Main-flash-then-Login sequence, and
+     * (since is_onboarded was also restored as true) never Onboarding.
+     *
+     * By checking expiry locally first, Splash can skip Main entirely for
+     * an already-dead token and fall through to MpinLogin/Login/Onboarding
+     * immediately and deterministically — independent of backup state,
+     * network conditions, or which backend endpoint happens to 401 first.
+     *
+     * A missing/unparseable `exp` claim is treated as expired (fail safe:
+     * forces re-auth rather than trusting an unverifiable token).
+     */
+    fun isTokenExpired(): Boolean {
+        val token = getToken() ?: return true
+        val exp = decodeJwtPayload(token)?.optLong("exp", -1L) ?: -1L
+        if (exp <= 0L) return true
+        val nowSeconds = System.currentTimeMillis() / 1000L
+        return nowSeconds >= exp
+    }
+
+    /** True if there's a token AND it hasn't expired yet (per its own `exp` claim). */
+    fun hasValidToken(): Boolean = !getToken().isNullOrEmpty() && !isTokenExpired()
+
     // ── Onboarding ─────────────────────────────────────────────
     fun isOnboarded(): Boolean = prefs.getBoolean("is_onboarded", false)
-    fun setOnboarded() = prefs.edit().putBoolean("is_onboarded", true).apply()
+
+    // FIX: was prefs.edit().putBoolean("is_onboarded", true).apply() — apply()
+    // writes to disk asynchronously. If the user finishes onboarding and
+    // then quickly backgrounds/kills the app (very common: onboarding ->
+    // Login screen -> user doesn't log in immediately), the process can
+    // die before that background write completes. The next cold start then
+    // reads the STALE on-disk value (is_onboarded=false) and shows
+    // Onboarding again. commit() is synchronous, so the flag is guaranteed
+    // to be on disk before this function returns — same reasoning as
+    // logout()'s use of commit() above.
+    fun setOnboarded() = prefs.edit().putBoolean("is_onboarded", true).commit()
 
     // ── Exam Setup ────────────────────────────────────────────
     fun isExamSetupDone(): Boolean = prefs.getBoolean("exam_setup_done", false)

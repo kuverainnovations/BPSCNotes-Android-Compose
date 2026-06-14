@@ -1,13 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   FIX: see data_extraction_rules.xml — this is the equivalent rule set
+   for Auto Backup on devices below Android 12 (API < 31), which use
+   fullBackupContent instead of data-extraction-rules. Without this
+   exclusion, "bpsc_prefs" (is_onboarded, auth_token, user_mobile, etc.)
+   gets restored on reinstall, making "fresh install" not actually fresh.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="bpsc_prefs.xml"/>
 </full-backup-content>

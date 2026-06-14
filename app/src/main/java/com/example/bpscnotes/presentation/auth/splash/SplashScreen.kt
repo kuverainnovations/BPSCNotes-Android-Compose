@@ -82,7 +82,7 @@ fun SplashScreen(navController: NavHostController) {
         // from Settings.
         val savedMobile = tokenStore.getUserMobile()
         val destination = when {
-            !token.isNullOrEmpty()                 -> Screen.Main.route
+            tokenStore.hasValidToken()              -> Screen.Main.route
             !savedMobile.isNullOrBlank() && tokenStore.hasMpin() ->
                 Screen.MpinLogin.createRoute(savedMobile)
             tokenStore.isOnboarded()               -> Screen.Login.route
@@ -94,6 +94,7 @@ fun SplashScreen(navController: NavHostController) {
         android.util.Log.d(
             "SplashDecision",
             "token=${if (token.isNullOrEmpty()) "null/empty" else "PRESENT"}, " +
+                    "tokenExpired=${if (token.isNullOrEmpty()) "n/a" else tokenStore.isTokenExpired()}, " +
                     "savedMobile=$savedMobile, hasMpin=${tokenStore.hasMpin()}, " +
                     "isOnboarded=${tokenStore.isOnboarded()}, destination=$destination"
         )

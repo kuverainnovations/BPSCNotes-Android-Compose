@@ -45,7 +45,13 @@ class AuthInterceptor @Inject constructor(
                     path.contains("reset-mpin") ||
                     path.contains("register") ||
                     path.contains("refresh")
-            if (!isAuthEndpoint) {
+            // Only treat this as a SESSION EXPIRY if we actually sent a
+            // token (i.e. the user was logged in) and the server rejected
+            // it. A 401 on a request sent with NO token at all just means
+            // "not logged in" — expected for a protected endpoint hit by
+            // a background task before login, not a session that expired.
+            val hadToken = !token.isNullOrEmpty()
+            if (!isAuthEndpoint && hadToken) {
                 tokenStore.clearToken()
                 authEventBus.notifyExpired()
             }
