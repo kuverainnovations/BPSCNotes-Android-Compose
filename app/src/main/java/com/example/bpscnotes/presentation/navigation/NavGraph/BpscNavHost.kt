@@ -157,15 +157,18 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 Screen.Otp.route,
                 arguments = listOf(
                     navArgument("mobile")  { type = NavType.StringType },
-                    navArgument("context") { type = NavType.StringType; defaultValue = "registration" }
+                    navArgument("context") { type = NavType.StringType; defaultValue = "registration" },
+                    navArgument("devOtp")  { type = NavType.StringType; nullable = true; defaultValue = null }
                 )
             ) { back ->
                 val mobile  = java.net.URLDecoder.decode(back.arguments?.getString("mobile") ?: "", "UTF-8")
                 val ctx     = java.net.URLDecoder.decode(back.arguments?.getString("context") ?: "registration", "UTF-8")
+                val devOtp  = back.arguments?.getString("devOtp")?.let { java.net.URLDecoder.decode(it, "UTF-8") }
                 OtpScreen(
                     navController = navController,
                     mobile        = mobile,
-                    otpContext    = ctx
+                    otpContext    = ctx,
+                    devOtp        = devOtp
                 )
             }
 

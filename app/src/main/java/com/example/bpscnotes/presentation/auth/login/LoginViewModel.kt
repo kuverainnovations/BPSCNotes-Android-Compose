@@ -8,7 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 sealed class LoginDestination {
-    data class Otp(val mobile: String) : LoginDestination()       // new user
+    data class Otp(val mobile: String, val devOtp: String? = null) : LoginDestination()       // new user
     data class MpinLogin(val mobile: String, val lockedSeconds: Int = 0) : LoginDestination()  // returning user with MPIN
 }
 
@@ -38,7 +38,7 @@ class LoginViewModel @Inject constructor(
                 // New user or no MPIN yet → OTP flow
                 val response = authRepository.sendOtp(mobile)
                 if (response.success) {
-                    _destination.postValue(LoginDestination.Otp(mobile))
+                    _destination.postValue(LoginDestination.Otp(mobile, response.data?.otp))
                 }
                 // If sendOtp fails, BaseViewModel surfaces the error automatically
             }

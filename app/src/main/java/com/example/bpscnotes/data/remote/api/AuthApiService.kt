@@ -128,7 +128,14 @@ data class UpdateProfileRequest(
 
 data class SendOtpRequest(val mobile: String)
 
-data class SendOtpResponse(val success: Boolean, val message: String)
+data class SendOtpResponse(val success: Boolean, val message: String, val data: SendOtpData? = null)
+
+data class SendOtpData(
+    val isNewUser: Boolean = false,
+    // TEMP: backend returns the real OTP while MSG91/DLT template approval is
+    // pending, so the app isn't blocked on SMS delivery. Remove once DLT is sorted.
+    val otp: String? = null,
+)
 
 data class VerifyOtpRequest(val mobile: String, val otp: String)
 

@@ -83,7 +83,7 @@ fun LoginScreen(navController: NavHostController) {
         when (val dest = destination) {
             is com.example.bpscnotes.presentation.auth.login.LoginDestination.Otp -> {
                 viewModel.onDestinationConsumed()
-                navController.navigate(Screen.Otp.createRouteWithContext(dest.mobile, "registration"))
+                navController.navigate(Screen.Otp.createRouteWithContext(dest.mobile, "registration", dest.devOtp))
             }
             is com.example.bpscnotes.presentation.auth.login.LoginDestination.MpinLogin -> {
                 viewModel.onDestinationConsumed()

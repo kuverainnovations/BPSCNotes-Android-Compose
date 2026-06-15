@@ -42,6 +42,7 @@ fun OtpScreen(
     navController: NavHostController,
     mobile: String,
     otpContext: String = "registration",   // "registration" | "forgot_mpin"
+    devOtp: String? = null,                 // TEMP: auto-fill while DLT template approval is pending
     viewModel: OtpViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -50,6 +51,31 @@ fun OtpScreen(
     val focusRequesters = remember { List(6) { FocusRequester() } }
     val isLoading       by viewModel.isLoading.observeAsState(false)
     val error           by viewModel.error.observeAsState()
+
+    // TEMP: SMS delivery is unreliable pending MSG91 DLT template approval -
+    // the backend returns the real OTP in the send-otp response so the user
+    // isn't blocked. Pre-fill it here. Remove once DLT is sorted.
+    /*LaunchedEffect(devOtp) {
+        if (devOtp?.length == 6 && devOtp.all(Char::isDigit)) {
+            devOtp.forEachIndexed { i, c -> otpValues[i].value = c.toString() }
+        }
+    }*/
+
+    LaunchedEffect(devOtp) {
+        if (devOtp?.length == 6 && devOtp.all(Char::isDigit)) {
+
+            delay(2000)
+
+            devOtp.forEachIndexed { index, c ->
+                otpValues[index].value = c.toString()
+                delay(120)
+            }
+
+            delay(1000)
+
+            viewModel.verifyOtp(mobile, devOtp, otpContext)
+        }
+    }
 
     val result by viewModel.result.observeAsState()
 
@@ -98,9 +124,9 @@ fun OtpScreen(
 
     // Auto-submit when 6 digits entered
     val fullOtp = otpValues.joinToString("") { it.value }
-    LaunchedEffect(fullOtp) {
+   /* LaunchedEffect(fullOtp) {
         if (fullOtp.length == 6) viewModel.verifyOtp(mobile, fullOtp, otpContext)
-    }
+    }*/
 
     Column(
         modifier            = Modifier.fillMaxSize().background(cs.background).statusBarsPadding().imePadding(),
@@ -144,6 +170,13 @@ fun OtpScreen(
         Text("OTP sent to +91 $mobile",
             style = MaterialTheme.typography.bodyMedium,
             color = cs.onSurfaceVariant)
+
+        if (devOtp?.length == 6) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Auto-filled for now — SMS delivery pending",
+                style = MaterialTheme.typography.labelMedium,
+                color = BpscColors.CoinGold)
+        }
 
         Spacer(modifier = Modifier.height(40.dp))
 
