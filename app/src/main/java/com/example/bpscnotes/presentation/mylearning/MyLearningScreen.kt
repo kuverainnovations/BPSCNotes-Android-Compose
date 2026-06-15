@@ -82,6 +82,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -1668,10 +1671,23 @@ private fun CourseDetailSheet(
                     }
                 }
             }
+            val sheetScrollState = rememberScrollState()
+            // The sheet's own drag-to-dismiss and this content's
+            // verticalScroll both react to a small downward drag while
+            // scrolled to the top - each nudges the content position,
+            // which is the vertical "flicker" on light drags. Absorb that
+            // boundary case here so only the sheet's drag/settle animates.
+            val sheetContentNestedScroll = remember(sheetScrollState) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                        if (sheetScrollState.value == 0 && available.y > 0f) available else Offset.Zero
+                }
+            }
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState())
+                    .nestedScroll(sheetContentNestedScroll)
+                    .verticalScroll(sheetScrollState)
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

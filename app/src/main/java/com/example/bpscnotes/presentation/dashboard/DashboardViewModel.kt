@@ -51,6 +51,7 @@ data class DashboardUiState(
     val isCreatingTarget: Boolean             = false,
     val error: String?                        = null,
     val targetSuccess: String?                = null,
+    val targetError: String?                  = null,
 )
 
 data class AchievementItem(
@@ -392,7 +393,8 @@ class DashboardViewModel @Inject constructor(
                         targetSummary = state.targetSummary.copy(
                             completed = completed,
                             pending = reverted.size - completed
-                        )
+                        ),
+                        targetError = e.toUserMessage("Could not update target. Please try again.")
                     )
                 }
 
@@ -540,6 +542,7 @@ class DashboardViewModel @Inject constructor(
     }
     fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearTargetSuccess() { _uiState.update { it.copy(targetSuccess = null) } }
+    fun clearTargetError()   { _uiState.update { it.copy(targetError = null) } }
 
     fun getGreeting(): String {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)

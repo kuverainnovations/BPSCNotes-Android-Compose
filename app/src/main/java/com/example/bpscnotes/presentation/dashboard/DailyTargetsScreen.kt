@@ -77,6 +77,20 @@ fun DailyTargetsScreen(
     val cs = MaterialTheme.colorScheme
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
+    val context = LocalContext.current
+
+    LaunchedEffect(state.targetSuccess) {
+        state.targetSuccess?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearTargetSuccess()
+        }
+    }
+    LaunchedEffect(state.targetError) {
+        state.targetError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearTargetError()
+        }
+    }
 
     // Map API DTOs → UI TargetItems once
     val allTargets = remember(state.dailyTargets) {
