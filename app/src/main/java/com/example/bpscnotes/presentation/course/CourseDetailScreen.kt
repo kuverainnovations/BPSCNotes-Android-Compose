@@ -253,6 +253,7 @@ fun CourseDetailScreen(
                     allDone     = allDone,
                     isEnrolling = state.isEnrolling,
                     userCoins   = state.userCoins,
+                    maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
                     onEnroll    = { coins -> viewModel.enroll(courseId, coins) },
                     // FIX 3: Correct route — same LessonViewer used by lesson tap
                     onContinue  = {
@@ -1086,6 +1087,7 @@ private fun BottomCta(
     allDone:     Boolean,            // NEW param
     isEnrolling: Boolean,
     userCoins:   Int,
+    maxCoinsPerPurchase: Int,
     onEnroll:    (coinsToApply: Int) -> Unit,
     onContinue:  () -> Unit,
     completedLessons: Int
@@ -1151,7 +1153,7 @@ private fun BottomCta(
                             // Server resolves this to either the per-course
                             // override or the global default — always a
                             // concrete number, no client-side guessing.
-                            val maxCoins = minOf(course.maxCoinsRedeemable ?: 50, userCoins, course.price)
+                            val maxCoins = minOf(course.maxCoinsRedeemable ?: maxCoinsPerPurchase, userCoins, course.price)
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()

@@ -2,11 +2,17 @@ package com.example.bpscnotes.data.remote.api
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Quiz
+import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.bpscnotes.data.remote.dto.ApiResponse
@@ -915,6 +921,27 @@ fun mapIcon(icon: String): ImageVector {
         "study"    -> Icons.Rounded.MenuBook
         "referral" -> Icons.Rounded.CardGiftcard
         "ad"       -> Icons.Rounded.PlayCircle
+
+        // ── Canonical coin_rules action keys (transaction history) ──
+        // Quizzes
+        "daily_quiz", "mock_quiz", "topic_quiz", "quiz_attempt" -> Icons.Rounded.Quiz
+        // Study & content
+        "study_session", "study_room", "active_recall", "material_upload" -> Icons.Rounded.MenuBook
+        // Referrals
+        "referral_signup", "referral_joined", "referral_engagement", "referral_active" -> Icons.Rounded.CardGiftcard
+        // Ads
+        "ad_watch", "watch_ad" -> Icons.Rounded.PlayCircle
+        // Engagement
+        "daily_login", "daily_checkin", "checkin" -> Icons.Rounded.CalendarToday
+        "profile_complete" -> Icons.Rounded.Person
+        // Achievements & milestones
+        "achievement", "leaderboard_reward", "tier_promotion", "weekly_challenge" -> Icons.Rounded.EmojiEvents
+        "streak_7", "streak_30", "mock_top10" -> Icons.Rounded.LocalFireDepartment
+        // Targets
+        "target_complete" -> Icons.Rounded.Flag
+        // Subscriptions / purchases
+        "subscription_bonus", "subscription_payment" -> Icons.Rounded.Verified
+
         else       -> Icons.Rounded.HelpOutline
     }
 }
@@ -957,6 +984,34 @@ data class AdRewardRequest(val source: String = "wallet")
 data class AdConfigDto(
     @com.google.gson.annotations.SerializedName("coinsPerAd") val coinsPerAd: Int = 10,
     @com.google.gson.annotations.SerializedName("minAdsPerSession") val minAdsPerSession: Int = 2
+)
+
+// ══════════════════════════════════════════════════════════════
+// COINS CONFIG DTOs — GET /coins/config
+// Single feed for every coin amount/cap and economy setting in the
+// app (Coins page on admin). See CoinsConfigRepository for defaults
+// and convenience accessors.
+// ══════════════════════════════════════════════════════════════
+data class CoinRuleConfigDto(
+    val coins: Int = 0,
+    val maxPerDay: Int = 1,
+    val active: Boolean = true,
+    val category: String? = null,
+    val icon: String? = null,
+    val unitLabel: String? = null,
+)
+
+data class CoinsEconomyDto(
+    val coinToInrRate: Double = 1.0,
+    val maxCoinsPerPurchase: Int = 50,
+    val maxCoinDiscountPctSubscription: Int = 30,
+)
+
+data class CoinsConfigDto(
+    val enabled: Boolean = true,
+    val rules: Map<String, CoinRuleConfigDto> = emptyMap(),
+    val economy: CoinsEconomyDto = CoinsEconomyDto(),
+    val checkInRewards: List<Int> = listOf(5, 5, 10, 10, 15, 15, 25),
 )
 
 // ── Referral milestone DTOs ─────────────────────────────────
@@ -1009,6 +1064,11 @@ interface CoinsApiService {
     /** GET /coins/ad-config — fetch admin-configured coins per ad */
     @GET("coins/ad-config")
     suspend fun getAdConfig(): ApiResponse<AdConfigDto>
+
+    /** GET /coins/config — every coin_rules amount/cap + economy settings,
+     *  the single source for any coin number shown anywhere in the app */
+    @GET("coins/config")
+    suspend fun getConfig(): ApiResponse<CoinsConfigDto>
 
     // ══════════════════════════════════════════════════════════════
 // FLASHCARD DTOs — GET /flashcards

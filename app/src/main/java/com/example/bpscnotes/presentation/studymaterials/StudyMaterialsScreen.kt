@@ -200,6 +200,7 @@ fun StudyMaterialsScreen(
             coinsToApply = coinsToApply,
             onCoinsToApplyChange = { coinsToApply = it },
             userCoins = state.userCoins,
+            maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
             onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, coinsToApply) },
             onDismiss = { showPurchaseDialog = null; coinsToApply = 0; viewModel.clearPurchaseMessages() }
         )
@@ -2479,6 +2480,7 @@ fun PurchaseConfirmDialog(
     coinsToApply: Int = 0,
     onCoinsToApplyChange: (Int) -> Unit = {},
     userCoins:    Int = 0,
+    maxCoinsPerPurchase: Int = 50,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
@@ -2486,7 +2488,7 @@ fun PurchaseConfirmDialog(
     val str = LocalStrings.current
 
     val price = item.price ?: 0
-    val maxApplicable = remember(price, userCoins) { minOf(50, userCoins, price) }
+    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase) { minOf(maxCoinsPerPurchase, userCoins, price) }
     val amountDue = (price - coinsToApply).coerceAtLeast(0)
 
     AlertDialog(

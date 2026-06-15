@@ -1813,7 +1813,7 @@ private fun CourseDetailSheet(
                     // Server resolves this to either the per-course
                     // override or the global default — always a concrete
                     // number, no client-side guessing.
-                    val maxCoins = minOf(course.maxCoinsRedeemable ?: 50, userCoins, course.price)
+                    val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, course.price)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

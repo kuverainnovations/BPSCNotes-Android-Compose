@@ -67,7 +67,8 @@ class PaymentViewModel @Inject constructor(
     private val api: CoursesApiService,
     private val authApi: AuthApiService,
     private val tokenStore: TokenStore,
-    private val bus: RefreshEventBus) : ViewModel() {
+    private val bus: RefreshEventBus,
+    private val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(PaymentState())
     val state: StateFlow<PaymentState> = _state.asStateFlow()
@@ -75,6 +76,22 @@ class PaymentViewModel @Inject constructor(
     init {
         loadPlans()
         loadUserInfo()
+    }
+
+    // Mirrors SubscriptionsService.initiate() on the backend: coins are
+    // worth coinToInrRate rupees each, capped so the coin discount never
+    // exceeds maxCoinDiscountPctSubscription% of the plan price. Both
+    // numbers are admin-configurable on the Coins page (Economy
+    // Settings) — keeping this in sync avoids the preview here ever
+    // disagreeing with what the backend actually charges.
+    private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Int> {
+        val rate   = coinsConfig.economy.coinToInrRate
+        val maxPct = coinsConfig.economy.maxCoinDiscountPctSubscription
+        val maxDiscountInr = base * maxPct / 100.0
+        val maxCoinsUsable = if (rate > 0) (maxDiscountInr / rate).toInt() else 0
+        val coinsToUse = minOf(requestedCoins, coinsAvailable, maxCoinsUsable).coerceAtLeast(0)
+        val discount   = minOf((coinsToUse * rate).toInt(), ceiling.coerceAtLeast(0))
+        return coinsToUse to discount
     }
 
     private fun loadPlans() {
@@ -111,10 +128,11 @@ class PaymentViewModel @Inject constructor(
 
     fun selectPlan(plan: SubscriptionPlanDto) {
         _state.update { s ->
-            val base    = plan.price ?: 0
-            val coinDis = if (s.coinsToUse > 0) minOf(s.coinsToUse / 10, base) else 0
+            val base = plan.price ?: 0
+            val (coinsToUse, coinDis) = coinDiscountFor(s.coinsToUse, s.coinsAvailable, base)
             s.copy(
                 selectedPlan   = plan,
+                coinsToUse     = coinsToUse,
                 coinDiscount   = coinDis,
                 couponDiscount = 0,   // reset coupon when plan changes
                 couponCode     = "",
@@ -167,10 +185,10 @@ class PaymentViewModel @Inject constructor(
         _state.update { s ->
             val plan = s.selectedPlan ?: return@update s
             val base = plan.price ?: 0
-            val newCoinsToUse = if (s.coinsToUse > 0) 0 else s.coinsAvailable
-            val coinDis       = if (newCoinsToUse > 0) minOf(newCoinsToUse / 10, base - s.couponDiscount) else 0
+            val requested = if (s.coinsToUse > 0) 0 else s.coinsAvailable
+            val (coinsToUse, coinDis) = coinDiscountFor(requested, s.coinsAvailable, base, ceiling = base - s.couponDiscount)
             s.copy(
-                coinsToUse   = newCoinsToUse,
+                coinsToUse   = coinsToUse,
                 coinDiscount = coinDis,
                 finalAmount  = maxOf(1, base - s.couponDiscount - coinDis)
             )

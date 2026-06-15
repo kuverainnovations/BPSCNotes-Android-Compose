@@ -101,6 +101,7 @@ fun StudyFocusScreen(
         PostSessionAdPrompt(
             studyMinutes       = state.activeMinutes,
             coinsEarned        = state.coinsLastBeat,
+            coinsPerAd         = adManager.rewardedCoins,
             adReady            = rewardedAdReady,
             adsRemainingToday  = adsRemaining,
             onWatchAd          = {

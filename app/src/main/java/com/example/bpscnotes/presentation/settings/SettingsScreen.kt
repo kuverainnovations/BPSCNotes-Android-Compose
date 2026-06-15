@@ -145,6 +145,7 @@ fun SettingsScreen(
                     name   = user?.name,
                     email  = user?.email ?: user?.mobile,
                     coins  = user?.coins,
+                    coinsEnabled = settingsViewModel.coinsConfig.config.collectAsState().value.enabled,
                     onEdit = { navController.navigate(Screen.EditProfile.route) }
                 )
 
@@ -392,7 +393,10 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.Share, iconBg = Color(0xFFE8F5E9), iconTint = Color(0xFF2E7D32),
-                            title = str.settingsShare, subtitle = str.settingsShareSubtitle,
+                            title = str.settingsShare,
+                            subtitle = if (settingsViewModel.coinsConfig.config.collectAsState().value.enabled)
+                                str.settingsShareSubtitle.replace("{coins}", "${settingsViewModel.coinsConfig.coins("referral_signup", 50)}")
+                            else "Invite friends to BPSCNotes",
                             onClick = {
                                 val shareText = "🎯 I'm preparing for BPSC on BPSCNotes!\n\n" +
                                         "Best app for BPSC exam prep — Daily quizzes, Current Affairs, Mock Tests & more.\n\n" +
@@ -538,7 +542,7 @@ private fun SettingsHeader(onBack: () -> Unit) {
 
 // ── Account Card ──────────────────────────────────────────────
 @Composable
-private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -> Unit) {
+private fun AccountCard(name: String?, email: String?, coins: Int?, coinsEnabled: Boolean = true, onEdit: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -558,12 +562,14 @@ private fun AccountCard(name: String?, email: String?, coins: Int?, onEdit: () -
                 Text(name ?: str.loading, style = MaterialTheme.typography.titleMedium, color = cs.onBackground, fontWeight = FontWeight.ExtraBold)
                 Text(email ?: "", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
-                Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFF8E1))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("🪙", fontSize = 11.sp)
-                    Text("${coins ?: 0} Coins", style = MaterialTheme.typography.labelSmall,
-                        color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                if (coinsEnabled) {
+                    Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFF8E1))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("🪙", fontSize = 11.sp)
+                        Text("${coins ?: 0} Coins", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
             Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(BpscColors.PrimaryLight)

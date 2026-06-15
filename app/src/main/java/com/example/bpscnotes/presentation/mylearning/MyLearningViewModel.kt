@@ -49,6 +49,7 @@ class MyLearningViewModel @Inject constructor(
     private val statsApi:   com.example.bpscnotes.data.remote.api.UserStatsApiService,
     private val certificatesApi: com.example.bpscnotes.data.remote.api.CertificatesApiService,
     private val bus:        RefreshEventBus,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val cacheInvalidator: CacheInvalidator
 ) : ViewModel() {
 

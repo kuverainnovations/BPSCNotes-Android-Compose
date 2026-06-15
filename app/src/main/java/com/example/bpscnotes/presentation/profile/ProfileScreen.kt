@@ -93,6 +93,7 @@ fun ProfileScreen(
                 coins       = user?.coins ?: 0,
                 rank        = user?.rank ?: 0,
                 isDark      = isDark,
+                coinsEnabled = viewModel.coinsConfig.config.collectAsState().value.enabled,
                 avatarUrl   = user?.avatarUrl,
                 onEditClick = { navController.navigate(Screen.EditProfile.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
@@ -158,6 +159,7 @@ fun ProfileScreen(
 private fun ProfileHeader(
     name: String, email: String?,
     coins: Int, rank: Int, isDark: Boolean,
+    coinsEnabled: Boolean = true,
     avatarUrl: String? = null,
     onEditClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -315,7 +317,7 @@ private fun ProfileHeader(
 
             // Pills
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Pill("🪙 $coins ${str.coins}", BpscColors.CoinGold)
+                if (coinsEnabled) Pill("🪙 $coins ${str.coins}", BpscColors.CoinGold)
                 if (rank > 0) Pill("🏆 #$rank · $rankTitle", Color.White.copy(0.85f))
             }
         }

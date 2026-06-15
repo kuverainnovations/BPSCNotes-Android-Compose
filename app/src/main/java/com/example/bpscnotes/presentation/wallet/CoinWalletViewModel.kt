@@ -47,13 +47,15 @@ class CoinWalletViewModel @Inject constructor(
     private val coinsApi: CoinsApiService,
     private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService,
     private val statsApi: com.example.bpscnotes.data.remote.api.UserStatsApiService,
-    private val bus: RefreshEventBus) : ViewModel() {
+    private val bus: RefreshEventBus,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoinWalletUiState())
     val uiState: StateFlow<CoinWalletUiState> = _uiState.asStateFlow()
 
     init { load()
         loadReferrals()
+        viewModelScope.launch { coinsConfig.fetch() }
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
             bus.events.collect { event ->

@@ -49,6 +49,7 @@ class ProfileViewModel @Inject constructor(
     private val coinsApi:   CoinsApiService,
     private val tokenStore: TokenStore
     ,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val bus: RefreshEventBus
 ) : ViewModel() {
 

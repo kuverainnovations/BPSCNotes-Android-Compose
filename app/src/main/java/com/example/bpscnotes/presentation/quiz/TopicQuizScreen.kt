@@ -111,6 +111,7 @@ fun TopicQuizScreen(
             TopicQuizIntroScreen(
                 subject    = subject,
                 topicTitle = topicTitle,
+                maxCoins   = viewModel.coinsConfig.coins("topic_quiz", 15),
                 navController = navController,
                 onStart    = { viewModel.startTopicQuiz(subject) }
             )
@@ -126,6 +127,7 @@ fun TopicQuizScreen(
 private fun TopicQuizIntroScreen(
     subject: String,
     topicTitle: String,
+    maxCoins: Int = 15,
     navController: NavHostController,
     onStart: () -> Unit
 ) {
@@ -157,7 +159,7 @@ private fun TopicQuizIntroScreen(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             TopicStat("📝", "10", "Questions")
                             TopicStat("⏱️", "30s", str.topicQuizPerQuestion)
-                            TopicStat("🪙", "+10", "Max Coins")
+                            TopicStat("🪙", "+$maxCoins", "Max Coins")
                         }
                         HorizontalDivider(color = cs.outline)
                         listOf(

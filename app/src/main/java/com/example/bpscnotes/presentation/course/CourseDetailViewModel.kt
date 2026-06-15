@@ -59,6 +59,7 @@ class CourseDetailViewModel @Inject constructor(
     private val bus: RefreshEventBus,
     private val cacheInvalidator: CacheInvalidator,
     private val okHttpClient: OkHttpClient,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     @ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 

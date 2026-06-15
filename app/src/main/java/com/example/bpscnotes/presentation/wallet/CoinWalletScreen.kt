@@ -97,6 +97,34 @@ fun CoinWalletScreen(
         return
     }
 
+    // Admin master switch (Coins page → Economy) — when off, no coins are
+    // earned or spent anywhere in the app. Show a clear paused state
+    // instead of the normal earn/spend tabs (balance stays visible so
+    // users can see what they already have).
+    val coinsEnabled = viewModel.coinsConfig.config.collectAsState().value.enabled
+    if (!coinsEnabled) {
+        Column(Modifier.fillMaxSize().background(cs.background)) {
+            CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStackSafe() })
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text("⏸️", fontSize = 48.sp)
+                    Text("Coin Rewards Paused", style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    Text(
+                        "Earning and spending coins is temporarily turned off. Your existing balance is safe and will be usable again once it's back on.",
+                        style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+        return
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         containerColor = cs.background,
@@ -167,7 +195,7 @@ fun CoinWalletScreen(
                                         when (task.action.lowercase().trim()) {
 
                                             // Daily Quiz
-                                            "quiz_attempt" -> {
+                                            "daily_quiz" -> {
                                                 val today = java.text.SimpleDateFormat(
                                                     "yyyy-MM-dd",
                                                     java.util.Locale.getDefault()
@@ -193,7 +221,7 @@ fun CoinWalletScreen(
                                             }
 
                                             // Referral
-                                            "referral" -> {
+                                            "referral_signup" -> {
                                                 val code = viewModel.getReferralCode()
 
                                                 val msg = """
@@ -287,15 +315,24 @@ fun CoinWalletScreen(
 
                     // ─── REFERRALS TAB ────────────────────────────────
                     2 -> {
+                        // Referral coin amounts are admin-configurable on
+                        // the Coins page (Referrals & Social) — read live
+                        // values instead of hardcoding them here.
+                        val refSignup     = viewModel.coinsConfig.coins("referral_signup", 50)
+                        val refEngagement = viewModel.coinsConfig.coins("referral_engagement", 50)
+                        val refActive     = viewModel.coinsConfig.coins("referral_active", 50)
+                        val refJoined     = viewModel.coinsConfig.coins("referral_joined", 25)
+                        val refTotal      = refSignup + refEngagement + refActive
                         item {
                             ReferralHeader(
                                 code         = viewModel.getReferralCode(),
                                 totalEarned  = state.referralStats?.totalEarned ?: 0,
                                 totalFriends = state.referralStats?.totalReferrals ?: 0,
+                                totalPerFriend = refTotal,
                                 isLoading    = state.isLoadingReferrals,
                                 onShare      = {
                                     val code = viewModel.getReferralCode()
-                                    val msg = "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn 25 bonus coins when you sign up.\n\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
+                                    val msg = "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn $refJoined bonus coins when you sign up.\n\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
                                     context.startActivity(android.content.Intent.createChooser(
                                         android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                             type = "text/plain"
@@ -306,11 +343,11 @@ fun CoinWalletScreen(
                             )
                         }
                         item {
-                            MilestoneExplainer()
+                            MilestoneExplainer(signup = refSignup, engagement = refEngagement, active = refActive, joined = refJoined)
                         }
                         val referees = state.referralStats?.referees ?: emptyList()
                         if (referees.isEmpty() && !state.isLoadingReferrals) {
-                            item { ReferralEmptyState(onShare = {
+                            item { ReferralEmptyState(totalPerFriend = refTotal, onShare = {
                                 val code = viewModel.getReferralCode()
                                 val msg = "Join BPSCNotes! Use code: $code\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
                                 context.startActivity(android.content.Intent.createChooser(
@@ -929,6 +966,7 @@ private fun ReferralHeader(
     code:         String,
     totalEarned:  Int,
     totalFriends: Int,
+    totalPerFriend: Int,
     isLoading:    Boolean,
     onShare:      () -> Unit
 ) {
@@ -950,7 +988,7 @@ private fun ReferralHeader(
                 }
                 Column {
                     Text("Invite Friends, Earn Coins", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
-                    Text("Up to 150 coins per friend", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                    Text("Up to $totalPerFriend coins per friend", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
                 }
             }
 
@@ -958,7 +996,7 @@ private fun ReferralHeader(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 ReferralStatChip("👥", "$totalFriends", "Invited")
                 ReferralStatChip("🪙", "$totalEarned", "Earned")
-                ReferralStatChip("✨", "${totalFriends * 150}", "Potential")
+                ReferralStatChip("✨", "${totalFriends * totalPerFriend}", "Potential")
             }
 
             // Code box
@@ -1012,11 +1050,11 @@ private fun ReferralStatChip(emoji: String, value: String, label: String) {
 }
 
 @Composable
-private fun MilestoneExplainer() {
+private fun MilestoneExplainer(signup: Int, engagement: Int, active: Int, joined: Int) {
     val milestones = listOf(
-        Triple("✍️", "Friend Signs Up", "50 🪙"),
-        Triple("📚", "Friend Enrolls / Uploads", "50 🪙"),
-        Triple("🏆", "Friend Completes 5 Quizzes", "50 🪙"),
+        Triple("✍️", "Friend Signs Up", "$signup 🪙"),
+        Triple("📚", "Friend Enrolls / Uploads", "$engagement 🪙"),
+        Triple("🏆", "Friend Completes 5 Quizzes", "$active 🪙"),
     )
     Card(
         modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -1043,7 +1081,7 @@ private fun MilestoneExplainer() {
             HorizontalDivider(color = BpscColors.Divider)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Rounded.CardGiftcard, null, tint = BpscColors.CoinGold, modifier = Modifier.size(16.dp))
-                Text("Your friend also gets 25 🪙 for joining!", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+                Text("Your friend also gets $joined 🪙 for joining!", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
             }
         }
     }
@@ -1130,13 +1168,13 @@ private fun RowScope.MilestoneChip(label: String, earned: Boolean, coins: Int) {
 }
 
 @Composable
-private fun ReferralEmptyState(onShare: () -> Unit) {
+private fun ReferralEmptyState(totalPerFriend: Int, onShare: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("👋", fontSize = 48.sp)
             Text("No referrals yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
-            Text("Share your code and earn up to 150 coins for every friend who joins and stays active!",
+            Text("Share your code and earn up to $totalPerFriend coins for every friend who joins and stays active!",
                 style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(4.dp))
             Button(onClick = onShare, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {

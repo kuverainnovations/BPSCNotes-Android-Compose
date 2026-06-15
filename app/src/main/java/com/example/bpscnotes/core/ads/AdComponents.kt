@@ -307,6 +307,7 @@ fun DashboardBannerStrip(adUnitId: String, isProUser: Boolean) {
 fun PostSessionAdPrompt(
     studyMinutes:    Int,
     coinsEarned:     Int,
+    coinsPerAd:      Int = AdManager.REWARDED_COINS,
     adReady:         Boolean,
     adsRemainingToday: Int,
     onWatchAd:       () -> Unit,
@@ -334,7 +335,7 @@ fun PostSessionAdPrompt(
                 Text(str.adGreatSession, style = MaterialTheme.typography.titleLarge,
                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    "You studied ${if (studyMinutes >= 60) "${studyMinutes/60}h ${studyMinutes%60}m" else "${studyMinutes}m"} and earned $coinsEarned coins.\nWatch a 30-second ad to earn ${AdManager.REWARDED_COINS} bonus coins!",
+                    "You studied ${if (studyMinutes >= 60) "${studyMinutes/60}h ${studyMinutes%60}m" else "${studyMinutes}m"} and earned $coinsEarned coins.\nWatch a 30-second ad to earn $coinsPerAd bonus coins!",
                     style     = MaterialTheme.typography.bodyMedium,
                     color     = Color.White.copy(0.85f),
                     lineHeight = 20.sp
@@ -355,7 +356,7 @@ fun PostSessionAdPrompt(
                         shape    = RoundedCornerShape(12.dp),
                         colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD600))
                     ) {
-                        Text("🪙 Watch & Earn +${AdManager.REWARDED_COINS}",
+                        Text("🪙 Watch & Earn +$coinsPerAd",
                             color = Color(0xFF1A1A1A), fontWeight = FontWeight.ExtraBold,
                             style = MaterialTheme.typography.titleSmall)
                     }

@@ -1983,13 +1983,15 @@ private fun BpscDrawer(
                         Text(user?.name ?: "Aspirant", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
                         Text(user?.email ?: (user?.mobile ?: ""), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.72f))
                         Spacer(Modifier.height(4.dp))
-                        Row(modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFFFFB300).copy(0.2f))
-                            .border(0.5.dp, Color(0xFFFFD54F).copy(0.4f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("🪙", fontSize = 11.sp)
-                            Text("${user?.coins ?: 0} Coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                        if (settingsViewModel.coinsConfig.config.collectAsState().value.enabled) {
+                            Row(modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color(0xFFFFB300).copy(0.2f))
+                                .border(0.5.dp, Color(0xFFFFD54F).copy(0.4f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("🪙", fontSize = 11.sp)
+                                Text("${user?.coins ?: 0} Coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                            }
                         }
                         Spacer(Modifier.height(6.dp))
                         // Language switch button in drawer header

@@ -159,6 +159,7 @@ class StudyMaterialsViewModel @Inject constructor(
     private val authApi:    com.example.bpscnotes.data.remote.api.AuthApiService,
     private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
     @ApplicationContext private val context: Context,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val bus: RefreshEventBus) : ViewModel() {
 
     private val _state = MutableStateFlow(StudyMaterialsUiState())

@@ -121,7 +121,8 @@ class QuizViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
     private val bus: RefreshEventBus,
     private val authApi: AuthApiService,
-    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuizUiState())

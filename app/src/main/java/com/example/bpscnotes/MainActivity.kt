@@ -25,6 +25,7 @@ import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
 import com.example.bpscnotes.presentation.payment.RazorpayPaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
 import com.example.bpscnotes.core.config.AppConfigRepository
+import com.example.bpscnotes.core.config.CoinsConfigRepository
 import kotlinx.coroutines.launch
 import com.razorpay.PaymentData
 import com.razorpay.PaymentResultWithDataListener
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity(),
     @Inject lateinit var tokenStore: TokenStore
     @Inject lateinit var fcmTokenManager: FcmTokenManager
     @Inject lateinit var appConfigRepo: AppConfigRepository
+    @Inject lateinit var coinsConfigRepo: CoinsConfigRepository
 
     // Callbacks registered by PaymentScreen before launching Razorpay checkout
     private var onPaymentSuccessCallback: ((String, String) -> Unit)? = null
@@ -81,6 +83,11 @@ class MainActivity : ComponentActivity(),
         // Fetch admin-controlled settings on startup
         lifecycleScope.launch {
             try { appConfigRepo.fetch() } catch (_: Exception) {}
+        }
+        // Fetch admin-controlled coin amounts/caps/economy settings —
+        // single source for every coin number shown in the app
+        lifecycleScope.launch {
+            try { coinsConfigRepo.fetch() } catch (_: Exception) {}
         }
 
         lifecycleScope.launch {

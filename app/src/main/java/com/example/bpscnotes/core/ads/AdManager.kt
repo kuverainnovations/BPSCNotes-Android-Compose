@@ -36,7 +36,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AdManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository
 ) {
     companion object {
         private const val TAG = "AdManager"
@@ -52,8 +53,14 @@ class AdManager @Inject constructor(
         // ── Frequency limits ───────────────────────────────────
         private const val INTERSTITIAL_COOLDOWN_MS = 20 * 60 * 1000L  // 20 minutes
         // No daily cap on rewarded ads — every view earns revenue for client
-        const val REWARDED_COINS                   = 10  // coins per ad watch
+        // Fallback only — admin-configured value (Coins page → Rewarded Ads)
+        // is read live via [rewardedCoins].
+        const val REWARDED_COINS                   = 5  // coins per ad watch
     }
+
+    // Live, admin-configured coins-per-ad (coin_rules.ad_watch on the
+    // Coins page). Falls back to REWARDED_COINS if config hasn't loaded.
+    val rewardedCoins: Int get() = coinsConfig.coins("ad_watch", REWARDED_COINS)
 
     // Rewarded ad state
     private var rewardedAd:          RewardedAd?     = null
@@ -156,8 +163,8 @@ class AdManager @Inject constructor(
 
         ad.show(activity) { reward ->
             rewardedWatchedToday++  // track for analytics only
-            onRewarded(REWARDED_COINS)
-            Log.d(TAG, "💰 Reward earned: ${reward.amount} ${reward.type} → +$REWARDED_COINS coins (total today: $rewardedWatchedToday)")
+            onRewarded(rewardedCoins)
+            Log.d(TAG, "💰 Reward earned: ${reward.amount} ${reward.type} → +$rewardedCoins coins (total today: $rewardedWatchedToday)")
         }
     }
 
@@ -180,7 +187,7 @@ class AdManager @Inject constructor(
     fun showRewardedAdLoop(
         activity:      Activity,
         count:         Int = 2,
-        coinsPerAd:    Int = REWARDED_COINS,
+        coinsPerAd:    Int = rewardedCoins,
         onAllComplete: (totalCoins: Int) -> Unit,  // called ONCE after ALL ads done
         onFailed:      (reason: String) -> Unit,
     ) {
