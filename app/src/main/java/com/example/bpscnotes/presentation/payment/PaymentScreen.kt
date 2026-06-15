@@ -198,6 +198,7 @@ fun SubscriptionPaymentScreen(
                             finalAmount    = state.finalAmount,
                             coinsAvailable = state.coinsAvailable,
                             coinsToUse     = state.coinsToUse,
+                            coinToInrRate  = viewModel.coinsConfig.economy.coinToInrRate,
                             onCoinsToggle  = { viewModel.toggleCoinsDiscount() }
                         )
                     }
@@ -354,7 +355,7 @@ private fun CouponSection(
 @Composable
 private fun PriceBreakdown(
     baseAmount: Int, couponDiscount: Int, coinDiscount: Int, finalAmount: Int,
-    coinsAvailable: Int, coinsToUse: Int, onCoinsToggle: () -> Unit
+    coinsAvailable: Int, coinsToUse: Int, coinToInrRate: Double, onCoinsToggle: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -383,7 +384,9 @@ private fun PriceBreakdown(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Use ${coinsAvailable} coins", style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF5D4037), fontWeight = FontWeight.SemiBold)
-                        Text("Save ₹${coinsAvailable / 10} (10 coins = ₹1)",
+                        val rateLabel = if (coinToInrRate == coinToInrRate.toInt().toDouble())
+                            coinToInrRate.toInt().toString() else coinToInrRate.toString()
+                        Text("Save up to ₹${(coinsAvailable * coinToInrRate).toInt()} (1 coin = ₹$rateLabel)",
                             style = MaterialTheme.typography.labelSmall, color = Color(0xFF8D6E63))
                     }
                     Switch(checked = coinsToUse > 0, onCheckedChange = { onCoinsToggle() },

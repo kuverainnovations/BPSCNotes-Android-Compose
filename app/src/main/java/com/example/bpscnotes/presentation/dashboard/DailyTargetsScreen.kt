@@ -88,6 +88,10 @@ fun DailyTargetsScreen(
 
     val completed = allTargets.count { it.target.isCompleted }
     val total     = allTargets.size
+    // Live per-target reward (Coins page -> Daily Targets). Each completed
+    // target awards this many coins server-side; the hero badge below
+    // multiplies it by the remaining target count.
+    val coinsPerTarget = viewModel.coinsConfig.coins("target_complete", 1)
     val progress by animateFloatAsState(
         targetValue   = if (total > 0) completed.toFloat() / total else 0f,
         animationSpec = tween(800),
@@ -174,7 +178,7 @@ fun DailyTargetsScreen(
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("🪙", fontSize = 20.sp)
-                                    Text("+${total - completed}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                                    Text("+${(total - completed) * coinsPerTarget}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
                                     Text(str.targetCoins, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 9.sp)
                                 }
                             }

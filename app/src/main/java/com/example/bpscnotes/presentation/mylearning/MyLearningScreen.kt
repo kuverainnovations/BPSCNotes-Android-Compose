@@ -1809,11 +1809,20 @@ private fun CourseDetailSheet(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Mirrors the backend's Math.min(price, floor(coins *
+                // coin_to_inr_rate)) exactly (coursesService.enroll) — used
+                // for both the slider's discount preview and the Buy Now price.
+                val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
+                val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
                 if (course.isPaid && userCoins > 0) {
-                    // Server resolves this to either the per-course
-                    // override or the global default — always a concrete
-                    // number, no client-side guessing.
-                    val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, course.price)
+                    // Server resolves maxCoinsRedeemable to either the
+                    // per-course override or the global default — always a
+                    // concrete number, no client-side guessing. The slider
+                    // cap is in coins, so convert the price ceiling from
+                    // rupees to coins via the live rate (admin: Coins page ->
+                    // Economy Settings).
+                    val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
+                    val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, priceInCoins)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1858,7 +1867,7 @@ private fun CourseDetailSheet(
                         )
                         if (coinsToUse > 0) {
                             Text(
-                                "−₹$coinsToUse discount · You'll pay ₹${course.price - coinsToUse}",
+                                "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = BpscColors.Success,
                                 fontWeight = FontWeight.SemiBold
@@ -1926,7 +1935,7 @@ private fun CourseDetailSheet(
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 if (!course.isPaid) str.courseEnrollFree
-                                else "Buy Now — ₹${maxOf(0, course.price - coinsToUse)}",
+                                else "Buy Now — ₹${maxOf(0, course.price - coinDiscountInr)}",
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }

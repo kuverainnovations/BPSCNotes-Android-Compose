@@ -201,6 +201,7 @@ fun StudyMaterialsScreen(
             onCoinsToApplyChange = { coinsToApply = it },
             userCoins = state.userCoins,
             maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+            coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate,
             onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, coinsToApply) },
             onDismiss = { showPurchaseDialog = null; coinsToApply = 0; viewModel.clearPurchaseMessages() }
         )
@@ -2481,6 +2482,7 @@ fun PurchaseConfirmDialog(
     onCoinsToApplyChange: (Int) -> Unit = {},
     userCoins:    Int = 0,
     maxCoinsPerPurchase: Int = 50,
+    coinToInrRate: Double = 1.0,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
@@ -2488,8 +2490,15 @@ fun PurchaseConfirmDialog(
     val str = LocalStrings.current
 
     val price = item.price ?: 0
-    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase) { minOf(maxCoinsPerPurchase, userCoins, price) }
-    val amountDue = (price - coinsToApply).coerceAtLeast(0)
+    // Mirrors the backend's Math.min(price, floor(coins * coin_to_inr_rate))
+    // exactly (studyMaterialsService.initPurchase) — coinDiscount is in
+    // rupees, coinsToApply is in coins.
+    val coinDiscount = minOf(price, (coinsToApply * coinToInrRate).toInt())
+    // Slider cap is in coins, so convert the price ceiling from rupees to
+    // coins via the live rate (admin: Coins page -> Economy Settings).
+    val priceInCoins = if (coinToInrRate > 0) (price / coinToInrRate).toInt() else 0
+    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) { minOf(maxCoinsPerPurchase, userCoins, priceInCoins) }
+    val amountDue = (price - coinDiscount).coerceAtLeast(0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2524,8 +2533,6 @@ fun PurchaseConfirmDialog(
                     }
                 }
                 // Price + coin discount slider
-                val coinDiscount = coinsToApply  // 1 coin = ₹1 by default (server is source of truth)
-
                 Row(
                     Modifier.fillMaxWidth(),
                     Arrangement.SpaceBetween,
@@ -2569,8 +2576,8 @@ fun PurchaseConfirmDialog(
                     Column(horizontalAlignment = Alignment.End) {
                         Text("₹$amountDue", style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                        if (coinDiscount > 0) {
-                            Text("🪙 $coinDiscount coins applied (−₹$coinDiscount)",
+                        if (coinsToApply > 0) {
+                            Text("🪙 $coinsToApply coins applied (−₹$coinDiscount)",
                                 style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }

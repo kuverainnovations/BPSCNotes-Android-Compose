@@ -72,6 +72,7 @@ class DashboardViewModel @Inject constructor(
     private val tokenStore: TokenStore
     ,
     private val bus: RefreshEventBus,
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val appConfig: AppConfigRepository
 ) : ViewModel() {
 

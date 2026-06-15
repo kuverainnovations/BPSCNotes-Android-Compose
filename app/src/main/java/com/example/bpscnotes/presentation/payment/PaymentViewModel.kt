@@ -68,7 +68,7 @@ class PaymentViewModel @Inject constructor(
     private val authApi: AuthApiService,
     private val tokenStore: TokenStore,
     private val bus: RefreshEventBus,
-    private val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
+    val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(PaymentState())
     val state: StateFlow<PaymentState> = _state.asStateFlow()
@@ -87,7 +87,7 @@ class PaymentViewModel @Inject constructor(
     private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Int> {
         val rate   = coinsConfig.economy.coinToInrRate
         val maxPct = coinsConfig.economy.maxCoinDiscountPctSubscription
-        val maxDiscountInr = base * maxPct / 100.0
+        val maxDiscountInr = (base * maxPct / 100.0).toInt()  // Math.floor equivalent (non-negative)
         val maxCoinsUsable = if (rate > 0) (maxDiscountInr / rate).toInt() else 0
         val coinsToUse = minOf(requestedCoins, coinsAvailable, maxCoinsUsable).coerceAtLeast(0)
         val discount   = minOf((coinsToUse * rate).toInt(), ceiling.coerceAtLeast(0))

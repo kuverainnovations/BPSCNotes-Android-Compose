@@ -254,6 +254,7 @@ fun CourseDetailScreen(
                     isEnrolling = state.isEnrolling,
                     userCoins   = state.userCoins,
                     maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+                    coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate,
                     onEnroll    = { coins -> viewModel.enroll(courseId, coins) },
                     // FIX 3: Correct route — same LessonViewer used by lesson tap
                     onContinue  = {
@@ -1088,6 +1089,7 @@ private fun BottomCta(
     isEnrolling: Boolean,
     userCoins:   Int,
     maxCoinsPerPurchase: Int,
+    coinToInrRate: Double,
     onEnroll:    (coinsToApply: Int) -> Unit,
     onContinue:  () -> Unit,
     completedLessons: Int
@@ -1149,11 +1151,21 @@ private fun BottomCta(
                 // ── Not enrolled: Enroll button ──
                 else -> {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Mirrors the backend's Math.min(price, floor(coins *
+                        // coin_to_inr_rate)) exactly (coursesService.enroll) —
+                        // used for both the slider's discount preview below
+                        // and the Enroll button price.
+                        val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
                         if (course.isPaid && userCoins > 0) {
-                            // Server resolves this to either the per-course
-                            // override or the global default — always a
-                            // concrete number, no client-side guessing.
-                            val maxCoins = minOf(course.maxCoinsRedeemable ?: maxCoinsPerPurchase, userCoins, course.price)
+                            // Server resolves maxCoinsRedeemable to either the
+                            // per-course override or the global default —
+                            // always a concrete number, no client-side guessing.
+                            // The slider cap is expressed in coins, so convert
+                            // the price ceiling from rupees to coins via the
+                            // live coin_to_inr_rate (admin: Coins page ->
+                            // Economy Settings).
+                            val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
+                            val maxCoins = minOf(course.maxCoinsRedeemable ?: maxCoinsPerPurchase, userCoins, priceInCoins)
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1197,7 +1209,7 @@ private fun BottomCta(
                                 )
                                 if (coinsToUse > 0) {
                                     Text(
-                                        "−₹$coinsToUse discount · You'll pay ₹${course.price - coinsToUse}",
+                                        "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = BpscColors.Success,
                                         fontWeight = FontWeight.SemiBold
@@ -1218,7 +1230,7 @@ private fun BottomCta(
                                 Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    if (course.isPaid) "Enroll — ₹${maxOf(0, course.price - coinsToUse)}" else str.courseEnrollFree,
+                                    if (course.isPaid) "Enroll — ₹${maxOf(0, course.price - coinDiscountInr)}" else str.courseEnrollFree,
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
