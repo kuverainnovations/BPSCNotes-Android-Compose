@@ -58,13 +58,21 @@ class AchievementsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val allJob    = async { api.getAll() }
+                var allError: String? = null
+                val allJob    = async {
+                    try { api.getAll() }
+                    catch (e: Exception) {
+                        Log.e("AchievementsVM", e.toUserMessage(""), e)
+                        allError = e.toUserMessage("Failed to load achievements")
+                        null
+                    }
+                }
                 val recentJob = async {
                     try { api.getRecent(5).data?.achievements ?: emptyList() }
                     catch (e: Exception) { emptyList() }
                 }
                 val allRes    = allJob.await()
-                val data      = allRes.data
+                val data      = allRes?.data
 
                 // Detect newly earned since last load (for toasts/animations)
                 val prevEarned  = _uiState.value.achievements.filter { it.isEarned }.map { it.key }.toSet()
@@ -81,6 +89,7 @@ class AchievementsViewModel @Inject constructor(
                         recentlyEarned = recentJob.await(),
                         newlyEarned   = newlyEarned,
                         isLoading     = false,
+                        error         = allError,
                     )
                 }
             } catch (e: Exception) {

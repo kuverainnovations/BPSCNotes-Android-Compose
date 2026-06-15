@@ -76,7 +76,15 @@ class CoinWalletViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val balanceJob      = async { coinsApi.getBalance().data }
+                var balanceError: String? = null
+                val balanceJob      = async {
+                    try { coinsApi.getBalance().data }
+                    catch (e: Exception) {
+                        Log.e("CoinWalletVM", e.toUserMessage(""), e)
+                        balanceError = e.toUserMessage("Failed to load wallet")
+                        null
+                    }
+                }
                 val tasksJob        = async { try { coinsApi.getEarnTasks().data?.tasks } catch (e: Exception) { emptyList() } }
                 val userJob         = async { try { authApi.getMe().data?.user } catch (_: Exception) { null } }
                 val transactionsJob = async { try { coinsApi.getTransactions().data?.transactions } catch (e: Exception) { emptyList() } }
@@ -99,7 +107,8 @@ class CoinWalletViewModel @Inject constructor(
                         transactions     = transactions,
                         adCoinsPerAd     = adConfig?.coinsPerAd ?: it.adCoinsPerAd,
                         minAdsPerSession = adConfig?.minAdsPerSession ?: it.minAdsPerSession,
-                        isLoading        = false
+                        isLoading        = false,
+                        error            = balanceError
                     )
                 }
             } catch (e: Exception) {

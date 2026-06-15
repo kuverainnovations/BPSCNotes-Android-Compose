@@ -97,6 +97,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -453,7 +454,9 @@ fun MyLearningScreen(
                 savedCourses   = remember(state.savedCourses) { state.savedCourses.map { it.toLearningCourse() } },
                 savedCourseIds = state.savedCourseIds,
                 onToggleSave   = viewModel::toggleSave,
-                adManager      = adManager
+                adManager      = adManager,
+                error          = state.error,
+                onRetry        = viewModel::load
             )
         }
     }
@@ -734,6 +737,8 @@ private fun MyCoursesTab(
     savedCourseIds: Set<String>          = emptySet(),
     onToggleSave:   (String) -> Unit     = {},
     adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
+    error:          String?              = null,
+    onRetry:        () -> Unit           = {},
 ) {
     Column(
         modifier = Modifier
@@ -750,7 +755,9 @@ private fun MyCoursesTab(
             savedCourses   = savedCourses,
             savedCourseIds = savedCourseIds,
             onToggleSave   = onToggleSave,
-            adManager      = adManager
+            adManager      = adManager,
+            error          = error,
+            onRetry        = onRetry
         )
     }
 }
@@ -766,6 +773,8 @@ private fun EnrolledCoursesContent(
     savedCourseIds: Set<String>          = emptySet(),
     onToggleSave:   (String) -> Unit     = {},
     adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
+    error:          String?              = null,
+    onRetry:        () -> Unit           = {},
 ) {
     val cs  = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -795,6 +804,10 @@ private fun EnrolledCoursesContent(
     val animProg by animateFloatAsState(totalProgress, tween(1200), label = "tp")
 
     if (courses.isEmpty()) {
+        if (error != null) {
+            AppErrorState(message = error, onRetry = onRetry)
+            return
+        }
         Box(
             Modifier.fillMaxSize().padding(32.dp),
             contentAlignment = Alignment.Center

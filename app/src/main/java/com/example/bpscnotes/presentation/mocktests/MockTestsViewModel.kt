@@ -92,7 +92,15 @@ class MockTestsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val testsJob = async { quizzesApi.getQuizzes(limit = 100).data?.quizzes ?: emptyList() }
+                var testsError: String? = null
+                val testsJob = async {
+                    try { quizzesApi.getQuizzes(limit = 100).data?.quizzes ?: emptyList() }
+                    catch (e: Exception) {
+                        Log.e("MockTestsVM", e.toUserMessage(""), e)
+                        testsError = e.toUserMessage("Failed to load tests")
+                        emptyList()
+                    }
+                }
                 val statsJob = async {
                     try { statsApi.getStats().data } catch (e: Exception) { null }
                 }
@@ -105,7 +113,8 @@ class MockTestsViewModel @Inject constructor(
                         userAccuracy         = stats?.accuracy ?: 0.0,
                         userRank             = stats?.rank,
                         userQuizzesAttempted = stats?.quizzesAttempted ?: 0,
-                        isLoading            = false
+                        isLoading            = false,
+                        error                = testsError
                     )
                 }
             } catch (e: Exception) {

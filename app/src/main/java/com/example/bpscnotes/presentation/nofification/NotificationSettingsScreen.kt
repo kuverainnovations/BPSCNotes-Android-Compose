@@ -110,7 +110,7 @@ class NotificationsViewModel @Inject constructor(
                 if (unread > 0) markAllRead(showToast = false)
             } catch (e: Exception) {
                 Log.e("NotifVM", e.toUserMessage(""), e)
-                _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
+                _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.toUserMessage("Failed to load notifications")) }
             }
         }
     }
