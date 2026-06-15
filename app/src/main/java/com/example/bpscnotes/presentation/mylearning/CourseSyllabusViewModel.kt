@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.mylearning
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,7 +56,7 @@ class CourseSyllabusViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false, chapters = sorted) }
             } catch (e: Exception) {
                 Log.e("CourseSyllabusVM", "load: ${e.message}")
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load curriculum") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load curriculum")) }
             }
         }
     }

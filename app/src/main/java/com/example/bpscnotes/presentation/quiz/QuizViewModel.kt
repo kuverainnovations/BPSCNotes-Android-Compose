@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.quiz
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 
@@ -168,7 +170,7 @@ class QuizViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("QuizVM", "loadLobby: ${e.message}", e)
                 _uiState.update {
-                    it.copy(isLoadingList = false, listError = e.message ?: "Failed to load quizzes")
+                    it.copy(isLoadingList = false, listError = e.toUserMessage("Failed to load quizzes"))
                 }
             }
         }
@@ -193,7 +195,7 @@ class QuizViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("QuizVM", "loadQuizDetail: ${e.message}", e)
                 _uiState.update {
-                    it.copy(isLoadingDetail = false, detailError = e.message ?: "Failed to load quiz")
+                    it.copy(isLoadingDetail = false, detailError = e.toUserMessage("Failed to load quiz"))
                 }
             }
         }
@@ -261,7 +263,7 @@ class QuizViewModel @Inject constructor(
                         "This quiz has no questions yet. Please try another quiz or contact admin."
                     e.message?.contains("404") == true -> "Quiz not found."
                     e.message?.contains("403") == true -> "You don't have access to this quiz."
-                    else -> e.message ?: "Failed to start quiz. Please try again."
+                    else -> e.toUserMessage("Failed to start quiz. Please try again.")
                 }
                 _uiState.update { it.copy(isStartingQuiz = false, startError = msg) }
             }
@@ -376,7 +378,7 @@ class QuizViewModel @Inject constructor(
                 bus.emit(RefreshEvent.QuizCompleted)
             } catch (e: Exception) {
                 Log.e("QuizVM", "submitQuiz: ${e.message}", e)
-                _uiState.update { it.copy(isSubmitting = false, submitError = e.message ?: "Submit failed") }
+                _uiState.update { it.copy(isSubmitting = false, submitError = e.toUserMessage("Submit failed")) }
             }
         }
     }

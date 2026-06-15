@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.auth.examsetup
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -76,7 +78,7 @@ class ExamSetupViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoadingExams = false,
-                        examsError     = e.message ?: "Failed to load exams"
+                        examsError     = e.toUserMessage("Failed to load exams")
                     )
                 }
             }
@@ -176,7 +178,7 @@ class ExamSetupViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isSaving   = false,
-                        saveError  = e.message ?: "Failed to save. Please try again."
+                        saveError  = e.toUserMessage("Failed to save. Please try again.")
                     )
                 }
             }

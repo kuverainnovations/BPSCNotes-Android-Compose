@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.marketplace
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -53,7 +55,7 @@ class MarketplaceViewModel @Inject constructor(
                     isComingSoon = comingSoon
                 )}
             } catch (e: Exception) {
-                Log.e("MarketplaceVM", e.message ?: "", e)
+                Log.e("MarketplaceVM", e.toUserMessage(""), e)
                 _state.update { it.copy(isLoading = false, error = e.message) }
             }
         }
@@ -77,7 +79,7 @@ class MarketplaceViewModel @Inject constructor(
                     }
                 )}
             } catch (e: Exception) {
-                _state.update { it.copy(purchasing = null, purchaseError = e.message ?: "Purchase failed") }
+                _state.update { it.copy(purchasing = null, purchaseError = e.toUserMessage("Purchase failed")) }
             }
         }
     }

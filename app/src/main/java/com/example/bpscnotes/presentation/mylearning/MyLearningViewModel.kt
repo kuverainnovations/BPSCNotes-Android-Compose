@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.mylearning
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -138,8 +140,8 @@ class MyLearningViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("MyLearningVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load") }
+                Log.e("MyLearningVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load")) }
             }
         }
     }
@@ -184,11 +186,11 @@ class MyLearningViewModel @Inject constructor(
                     }
                 } else {
                     Log.e("MyLearningVM", "enroll: ${e.message}", e)
-                    _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
+                    _uiState.update { it.copy(isEnrolling = false, error = e.toUserMessage("Enrollment failed")) }
                 }
             } catch (e: Exception) {
                 Log.e("MyLearningVM", "enroll: ${e.message}", e)
-                _uiState.update { it.copy(isEnrolling = false, error = e.message ?: "Enrollment failed") }
+                _uiState.update { it.copy(isEnrolling = false, error = e.toUserMessage("Enrollment failed")) }
             }
         }
     }
@@ -225,7 +227,7 @@ class MyLearningViewModel @Inject constructor(
                 _uiState.update { state ->
                     val revertIds = if (isSaved) state.savedCourseIds + courseId
                     else          state.savedCourseIds - courseId
-                    state.copy(savedCourseIds = revertIds, error = e.message ?: "Save failed")
+                    state.copy(savedCourseIds = revertIds, error = e.toUserMessage("Save failed"))
                 }
             }
         }

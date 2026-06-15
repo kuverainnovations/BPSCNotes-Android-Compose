@@ -6,6 +6,7 @@ import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
+import com.example.bpscnotes.core.network.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,7 +70,7 @@ class CurrentAffairsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error     = e.message ?: "Failed to load current affairs"
+                        error     = e.toUserMessage("Failed to load current affairs")
                     )
                 }
             }
@@ -145,7 +146,7 @@ class CurrentAffairsViewModel @Inject constructor(
                 val data = api.getMcqs(affairId).data
                 _mcqs.value = data?.mcqs ?: emptyList()
             } catch (e: Exception) {
-                _mcqError.value = e.message ?: "Failed to load questions"
+                _mcqError.value = e.toUserMessage("Failed to load questions")
                 _mcqs.value = emptyList()
             }
             _mcqLoading.value = false

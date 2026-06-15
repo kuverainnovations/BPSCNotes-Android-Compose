@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.readingrooms
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.StudyRoomsApiService
 
 import android.util.Log
@@ -52,8 +54,8 @@ class ReadingRoomsViewModel @Inject constructor(
                 val response = api.getRooms(subject = subject?.takeIf { it.isNotBlank() }, search = search?.takeIf { it.isNotBlank() })
                 _uiState.update { it.copy(rooms = response.data?.rooms ?: emptyList(), isLoading = false) }
             } catch (e: Exception) {
-                Log.e("ReadingRoomsVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load study rooms") }
+                Log.e("ReadingRoomsVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load study rooms")) }
             }
         }
     }
@@ -66,7 +68,7 @@ class ReadingRoomsViewModel @Inject constructor(
                 _uiState.update { it.copy(isJoining = false, successMessage = "Joined room! 🎉") }
                 onSuccess()
             } catch (e: Exception) {
-                _uiState.update { it.copy(isJoining = false, error = e.message ?: "Failed to join room") }
+                _uiState.update { it.copy(isJoining = false, error = e.toUserMessage("Failed to join room")) }
             }
         }
     }
@@ -80,7 +82,7 @@ class ReadingRoomsViewModel @Inject constructor(
                     onSuccess(result)
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message ?: "Failed to create room") }
+                _uiState.update { it.copy(error = e.toUserMessage("Failed to create room")) }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.payment
 
 import android.app.Activity
 import android.content.Context
+import com.example.bpscnotes.core.network.toUserMessage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -518,6 +519,6 @@ fun launchRazorpay(
             ?.setPaymentCallbacks(onSuccess, onFailure)
         checkout.open(activity, options)
     } catch (e: Exception) {
-        onFailure(-1, e.message ?: str.paymentOpenFailed)
+        onFailure(-1, e.toUserMessage(str.paymentOpenFailed))
     }
 }

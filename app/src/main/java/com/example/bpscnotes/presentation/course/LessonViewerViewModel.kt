@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.course
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -53,7 +55,7 @@ class LessonViewerViewModel @Inject constructor(
                 if (!lesson.is_locked) startTimer()
             } catch (e: Exception) {
                 Log.e(TAG, "load: ${e.message}", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load lesson") }
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load lesson")) }
             }
         }
     }

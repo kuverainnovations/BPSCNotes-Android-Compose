@@ -111,16 +111,19 @@ fun CaMcqQuizScreen(
         }
     }
 
-    // Per-question countdown — resets on each question AND on retry
+    // Per-question countdown — resets on each question AND on retry.
+    // Stops counting (freezes) as soon as the current question is answered,
+    // so it doesn't keep running and then auto-advance/jump unexpectedly.
     LaunchedEffect(currentIndex, adGatePassed, retryKey) {
         if (!adGatePassed || showResult || showReview) return@LaunchedEffect
         questionSecsLeft = 30
-        while (questionSecsLeft > 0) {
+        val questionId = mcqs.getOrNull(currentIndex)?.id
+        while (questionSecsLeft > 0 && answers[questionId] == null) {
             delay(1_000L)
             questionSecsLeft--
         }
-        // Time's up — auto-advance to next question without answer
-        if (!showResult && !showReview) {
+        // Time's up (and still unanswered) — auto-advance to next question
+        if (!showResult && !showReview && answers[questionId] == null) {
             if (currentIndex < mcqs.size - 1) currentIndex++
             else showResult = true
         }
@@ -230,7 +233,6 @@ fun CaMcqQuizScreen(
                 questionSecsLeft = questionSecsLeft,
                 onAnswer      = { qId, letter ->
                     answers = answers + (qId to letter)
-                    questionSecsLeft = 30  // reset timer after answering
                     viewModel.fetchMcqAnswer(qId)  // fetch correct answer after user taps
                 },
                 onNext        = {
@@ -615,7 +617,7 @@ private fun ReviewScreen(
                         listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() }
                             .forEach { (letter, text) ->
-                                val isCrct = correctLetter != null && letter == correctLetter
+                                val isCrct = correctLetter != null && isCorrect && letter == correctLetter
                                 val isUser = letter == userAnswer
                                 val bg = when { isCrct -> Color(0xFFE8FDF4); isUser && !isCrct -> Color(0xFFFEE8E8); else -> Color.Transparent }
                                 val tc = when { isCrct -> Color(0xFF2ECC71); isUser && !isCrct -> Color(0xFFE74C3C); else -> BpscColors.TextSecondary }

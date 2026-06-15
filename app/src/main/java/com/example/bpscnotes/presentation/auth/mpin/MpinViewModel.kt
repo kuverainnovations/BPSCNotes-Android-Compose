@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.auth.mpin
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.core.network.CacheInvalidator
@@ -165,7 +167,7 @@ class MpinViewModel @Inject constructor(
                 if (locked) startCountdown()
                 clearMpin()
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Login failed") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Login failed")) }
                 clearMpin()
             }
         }
@@ -192,7 +194,7 @@ class MpinViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false, error = msg) }
                 clearMpin()
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to create MPIN") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to create MPIN")) }
                 clearMpin()
             }
         }
@@ -216,7 +218,7 @@ class MpinViewModel @Inject constructor(
                     clearMpin()
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Reset failed") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Reset failed")) }
                 clearMpin()
             }
         }

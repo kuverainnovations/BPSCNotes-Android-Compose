@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.TierRoomsApiService
 
 import android.util.Log
@@ -269,7 +271,7 @@ class TierRoomsViewModel @Inject constructor(
             _uiState.update { it.copy(allTiers = tiers, isLoadingTiers = false, tiersError = null) }
         } catch (e: Exception) {
             Log.e(TAG, "loadTiers: ${e.message}", e)
-            _uiState.update { it.copy(isLoadingTiers = false, tiersError = e.message ?: "Failed to load tier rooms") }
+            _uiState.update { it.copy(isLoadingTiers = false, tiersError = e.toUserMessage("Failed to load tier rooms")) }
         }
     }
 
@@ -350,7 +352,7 @@ class TierRoomsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "loadMyTier: ${e.message}", e)
-                _uiState.update { it.copy(isLoadingMyTier = false, myTierError = e.message ?: "Failed to load your tier") }
+                _uiState.update { it.copy(isLoadingMyTier = false, myTierError = e.toUserMessage("Failed to load your tier")) }
             }
         }
     }
@@ -454,7 +456,7 @@ class TierRoomsViewModel @Inject constructor(
                 onFail(msg)
             } catch (e: Exception) {
                 Log.e(TAG, "claimPromotion: ${e.message}", e)
-                onFail(e.message ?: "Promotion failed. Please try again.")
+                onFail(e.toUserMessage("Promotion failed. Please try again."))
             }
         }
     }

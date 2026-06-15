@@ -1121,14 +1121,14 @@ private fun WeeklyConsistencyCard(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             when {
                 // Loading state
                 isLoading && data.isEmpty() -> {
                     Box(modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp), contentAlignment = Alignment.Center) {
+                        .height(110.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
                     }
                 }
@@ -1171,7 +1171,7 @@ private fun WeeklyConsistencyCard(
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)) {
+                        .height(110.dp)) {
 
                         // Y-axis labels
                         Column(

@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.AchievementsApiService
 
 import android.util.Log
@@ -82,8 +84,8 @@ class AchievementsViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("AchievementsVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load achievements") }
+                Log.e("AchievementsVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load achievements")) }
             }
         }
     }

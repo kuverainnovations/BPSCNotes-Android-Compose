@@ -622,14 +622,31 @@ private fun EditTargetSheet(
     onSave: (title: String, subject: String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    var title by remember { mutableStateOf(target.title) }
-    var selectedSubject by remember { mutableStateOf(target.subject.ifBlank { "General Studies" }) }
-    var subjectExpanded by remember { mutableStateOf(false) }
 
     val subjects = listOf(
         "Polity", "History", "Geography", "Economy", "Bihar GK",
         "Science & Tech", "General Studies", "Environment", "Maths", "English", "Current Affairs"
     )
+
+    // Titles are stored as "Subject - Subtopic" (see CreateTargetSheet).
+    // Split that out so this field only shows/edits the subtopic, and the
+    // dropdown below pre-selects whichever subject is actually part of this
+    // target — target.subject is preferred, but falls back to the prefix
+    // already in the title (covers carried-forward targets where the
+    // subject column may not match).
+    val dashIndex   = target.title.indexOf(" - ")
+    val titlePrefix = if (dashIndex > 0) target.title.substring(0, dashIndex) else ""
+    val initialSubject = subjects.firstOrNull { it.equals(target.subject, ignoreCase = true) }
+        ?: subjects.firstOrNull { it.equals(titlePrefix, ignoreCase = true) }
+        ?: "General Studies"
+    val initialSubtopic =
+        if (dashIndex > 0 && titlePrefix.equals(initialSubject, ignoreCase = true))
+            target.title.substring(dashIndex + 3)
+        else target.title
+
+    var title by remember { mutableStateOf(initialSubtopic) }
+    var selectedSubject by remember { mutableStateOf(initialSubject) }
+    var subjectExpanded by remember { mutableStateOf(false) }
 
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -646,7 +663,7 @@ private fun EditTargetSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Target title") },
+                label = { Text("Sub-topic") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 maxLines = 3
@@ -689,7 +706,7 @@ private fun EditTargetSheet(
                 Button(
                     onClick = {
                         if (title.isNotBlank()) {
-                            onSave(title.trim(), selectedSubject)
+                            onSave("$selectedSubject - ${title.trim()}", selectedSubject)
                             onDismiss()
                         }
                     },

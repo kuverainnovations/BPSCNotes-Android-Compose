@@ -94,6 +94,14 @@ sealed class Screen(val route: String) {
 
     object StudyMaterials : Screen("study_materials")
 
+    // Same screen as StudyMaterials, but opens pre-filtered to one material
+    // type - used when navigating from a specific item (e.g. Premium
+    // Content cards) so the user lands near what they tapped instead of
+    // an unfiltered "all materials" list.
+    object StudyMaterialsFiltered : Screen("study_materials_filtered/{type}") {
+        fun createRoute(type: String) = "study_materials_filtered/$type"
+    }
+
     // Phase 5: Chat with uploader for a purchased material
     object MaterialChat : Screen("material_chat/{chatId}") {
         fun createRoute(chatId: String) = "material_chat/$chatId"

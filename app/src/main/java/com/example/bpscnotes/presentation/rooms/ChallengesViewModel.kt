@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.ChallengesApiService
 
 import android.util.Log
@@ -50,8 +52,8 @@ class ChallengesViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("ChallengesVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load challenges") }
+                Log.e("ChallengesVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load challenges")) }
             }
         }
     }
@@ -74,7 +76,7 @@ class ChallengesViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("ChallengesVM", "claimReward: ${e.message}", e)
-                _uiState.update { it.copy(isClaiming = false, error = e.message ?: "Claim failed") }
+                _uiState.update { it.copy(isClaiming = false, error = e.toUserMessage("Claim failed")) }
             }
         }
     }

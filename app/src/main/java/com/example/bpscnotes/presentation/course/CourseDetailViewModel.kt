@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.course
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
@@ -143,7 +145,7 @@ class CourseDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("CourseDetailVM", "load: ${e.message}", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load course") }
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load course")) }
             }
         }
     }

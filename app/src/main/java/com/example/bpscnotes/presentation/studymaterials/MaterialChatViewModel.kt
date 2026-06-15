@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -83,7 +85,7 @@ class MaterialChatViewModel @Inject constructor(
                 socketManager.joinChat(chatId)
             } catch (e: Exception) {
                 Log.e(TAG, "loadThread: ${e.message}")
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load chat") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load chat")) }
             }
         }
     }
@@ -140,7 +142,7 @@ class MaterialChatViewModel @Inject constructor(
                         _state.update { s -> s.copy(messages = s.messages + msg, isSending = false) }
                     } ?: _state.update { it.copy(isSending = false) }
                 } catch (e: Exception) {
-                    _state.update { it.copy(isSending = false, error = e.message ?: "Failed to send", inputText = text) }
+                    _state.update { it.copy(isSending = false, error = e.toUserMessage("Failed to send"), inputText = text) }
                 }
             }
         }
@@ -173,7 +175,7 @@ class MaterialChatViewModel @Inject constructor(
                     chat = it.chat?.copy(status = "escalated"),
                 )}
             } catch (e: Exception) {
-                _state.update { it.copy(isEscalating = false, error = e.message ?: "Failed to escalate") }
+                _state.update { it.copy(isEscalating = false, error = e.toUserMessage("Failed to escalate")) }
             }
         }
     }

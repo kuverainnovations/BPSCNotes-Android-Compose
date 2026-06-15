@@ -35,7 +35,7 @@ fun LeaderboardScreen(
     var selectedPeriod by remember { mutableStateOf("weekly") }
     val periods = listOf("weekly" to "Weekly", "monthly" to "Monthly", "alltime" to "All time")
 
-    val tierKey = state.myTierData?.currentTier?.tierKey ?: "starter"
+    val tierKey = state.myTierData?.currentTier?.tierKey ?: "silver"
     val tierName = state.myTierData?.currentTier?.name
         ?: tierKey.replaceFirstChar { it.uppercase() }
 

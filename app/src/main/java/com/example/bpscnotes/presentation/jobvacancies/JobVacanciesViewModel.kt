@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.jobvacancies
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -49,8 +51,8 @@ class JobVacanciesViewModel @Inject constructor(
                 val response = api.getJobs(category = category, limit = 50)
                 _uiState.update { it.copy(jobs = response.data?.jobs ?: emptyList(), isLoading = false) }
             } catch (e: Exception) {
-                Log.e("JobsVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load jobs") }
+                Log.e("JobsVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load jobs")) }
             }
         }
     }

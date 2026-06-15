@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.settings
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.domain.repository.AuthRepository
@@ -109,7 +111,7 @@ class ChangeMpinViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false, error = msg) }
                 resetFields()
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Failed")) }
                 resetFields()
             }
         }

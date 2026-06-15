@@ -397,6 +397,7 @@ data class SubscriptionUiState(
     val premiumCourses:   List<CourseDto>           = emptyList(),
     val plans:            List<SubscriptionPlanItem> = emptyList(),
     val activePlan:       String?                   = null,   // current user's plan
+    val subscriptionEndsAt: String?                 = null,
     val isLoading:        Boolean                   = true,
     val isRefreshing:     Boolean                   = false,
     val isPremiumUser:    Boolean                   = false,
@@ -425,12 +426,20 @@ class SubscriptionViewModel @Inject constructor(
 
                 // Load paid courses
                 val coursesRes = try { coursesApi.getCourses().data?.courses ?: emptyList() } catch (e: Exception) { emptyList() }
-                val paidCourses = coursesRes.filter { it.isPaid }
+                // Exclude courses the user already owns - no point showing
+                // "buy" pricing for something they've already purchased.
+                val paidCourses = coursesRes.filter { it.isPaid && it.enrollment == null }
 
                 // Load subscription plans from backend
                 val plansRes = try {
                     coursesApi.getSubscriptionPlans().data?.plans ?: emptyList()
                 } catch (_: Exception) { emptyList() }
+
+                // Is the user already a Pro subscriber? Drives the
+                // "already subscribed" state (activePlan/isPremiumUser below).
+                val statusRes = try {
+                    coursesApi.getSubscriptionStatus().data
+                } catch (_: Exception) { null }
 
                 val planItems = plansRes.map { p ->
                     SubscriptionPlanItem(
@@ -456,6 +465,9 @@ class SubscriptionViewModel @Inject constructor(
                     premiumMaterials = premiumMats,
                     premiumCourses   = paidCourses,
                     plans            = planItems,
+                    isPremiumUser    = statusRes?.isActive ?: false,
+                    activePlan       = statusRes?.subscription?.plan,
+                    subscriptionEndsAt = statusRes?.subscription?.endsAt,
                     isLoading        = false,
                     isRefreshing     = false,
                     error            = null
@@ -519,6 +531,34 @@ fun SubscriptionScreen(
                     // FIX: Dynamic plan card from API
                     val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
                         "monthly", "BPSCNotes Pro", 199, 299, "1 Month", str.placeholdersBilledMonthly, 20, 100)
+                    if (state.isPremiumUser) {
+                        val planLabel = state.plans.find { it.id == state.activePlan }?.name
+                            ?: state.activePlan?.replaceFirstChar { it.uppercase() } ?: "Pro"
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f)),
+                            border = BorderStroke(1.dp, Color.White.copy(0.3f))
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Icon(Icons.Rounded.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(28.dp))
+                                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("You're a Pro member! 🎉",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        buildString {
+                                            append("$planLabel plan")
+                                            state.subscriptionEndsAt?.take(10)?.let { append(" · Active until $it") }
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(0.8f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
                     // FIX: Premium card is now clickable — shows enroll/subscribe dialog
                     var showEnrollDialog by remember { mutableStateOf(false) }
                     if (showEnrollDialog) {
@@ -605,6 +645,7 @@ fun SubscriptionScreen(
                             }
                         }
                     }
+                    }
                 }
             }
 
@@ -630,8 +671,8 @@ fun SubscriptionScreen(
                                     }
                                 }
                                 items(state.premiumMaterials, key = { it.id }) { mat ->
-                                    PremiumMaterialCard(material = mat,
-                                        onClick = { nav.navigate(Screen.StudyMaterials.route) })
+                                    PremiumMaterialCard(material = mat, isPremiumUser = state.isPremiumUser,
+                                        onClick = { nav.navigate(Screen.StudyMaterialsFiltered.createRoute(mat.type.apiKey)) })
                                 }
                             }
 
@@ -680,7 +721,7 @@ private fun SubPill(text: String) {
 }
 
 @Composable
-private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit) {
+private fun PremiumMaterialCard(material: StudyMaterialDto, isPremiumUser: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -694,10 +735,17 @@ private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("⭐ PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
-                        fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFFFF8E1)).padding(horizontal = 5.dp, vertical = 2.dp))
+                    if (isPremiumUser) {
+                        Text("✅ INCLUDED", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
+                            fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFFE8FDF4)).padding(horizontal = 5.dp, vertical = 2.dp))
+                    } else {
+                        Text("⭐ PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
+                            fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFFFFF8E1)).padding(horizontal = 5.dp, vertical = 2.dp))
+                    }
                     Text(material.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                 }
                 Text(material.title, style = MaterialTheme.typography.bodyMedium,
@@ -706,7 +754,12 @@ private fun PremiumMaterialCard(material: StudyMaterialDto, onClick: () -> Unit)
                 Text("⬇️ ${material.downloadCount} downloads · ⭐ ${material.rating}",
                     style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
             }
-            Icon(Icons.Rounded.Lock, null, tint = BpscColors.CoinGold, modifier = Modifier.size(18.dp))
+            Icon(
+                if (isPremiumUser) Icons.Rounded.CheckCircle else Icons.Rounded.Lock,
+                null,
+                tint = if (isPremiumUser) BpscColors.Success else BpscColors.CoinGold,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

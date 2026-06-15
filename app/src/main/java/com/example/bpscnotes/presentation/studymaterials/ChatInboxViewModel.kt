@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,7 +56,7 @@ class ChatInboxViewModel @Inject constructor(
                 )}
             } catch (e: Exception) {
                 Log.e(TAG, "load: ${e.message}")
-                _state.update { it.copy(isLoading = false, error = e.message ?: "Failed to load chats") }
+                _state.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load chats")) }
             }
         }
     }

@@ -111,12 +111,22 @@ private fun openMaterial(
 fun StudyMaterialsScreen(
     navController: NavHostController,
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
+    initialTypeKey: String? = null,
     viewModel:     StudyMaterialsViewModel = hiltViewModel()
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state       by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("study_materials") }
+
+    // Coming from a specific item (e.g. a Premium Content card) - open
+    // pre-filtered to that item's material type so the user lands near
+    // what they tapped instead of an unfiltered "all materials" list.
+    LaunchedEffect(initialTypeKey) {
+        if (initialTypeKey != null && state.selectedType == null) {
+            viewModel.selectType(com.example.bpscnotes.data.remote.api.MaterialType.fromKey(initialTypeKey))
+        }
+    }
 
     // ── Storage permission (Android 9 and below only) ──────────
     val storagePermissionLauncher = rememberLauncherForActivityResult(

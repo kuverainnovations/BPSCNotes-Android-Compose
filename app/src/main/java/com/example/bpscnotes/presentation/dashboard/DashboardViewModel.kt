@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.dashboard
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.BannersApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
@@ -194,7 +196,7 @@ class DashboardViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("DASHBOARD", "loadDashboard failed: ${e.message}", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load dashboard") }
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load dashboard")) }
             }
         }
     }
@@ -320,7 +322,7 @@ class DashboardViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isCreatingTarget = false,
-                        error = e.message ?: "Failed to create targets"
+                        error = e.toUserMessage("Failed to create targets")
                     )
                 }
             }
@@ -463,7 +465,7 @@ class DashboardViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 // Revert if it was already registered (409 Conflict) → still mark as registered
-                val msg = e.message ?: ""
+                val msg = e.toUserMessage("")
                 if (msg.contains("409") || msg.contains("already", ignoreCase = true)) {
                     _uiState.update { it.copy(scheduleToast = "Already registered for this class") }
                 } else {

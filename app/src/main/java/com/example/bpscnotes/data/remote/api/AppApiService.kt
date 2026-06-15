@@ -98,6 +98,21 @@ data class SubscriptionPlanDto(
 
 data class SubscriptionPlansData(val plans: List<SubscriptionPlanDto> = emptyList())
 
+data class ActiveSubscriptionDto(
+    val id: String = "",
+    val plan: String = "",
+    val status: String = "",
+    @SerializedName("starts_at")      val startsAt: String? = null,
+    @SerializedName("ends_at")        val endsAt: String? = null,
+    @SerializedName("auto_renew")     val autoRenew: Boolean = false,
+    @SerializedName("payment_method") val paymentMethod: String? = null
+)
+
+data class SubscriptionStatusData(
+    val isActive:     Boolean = false,
+    val subscription: ActiveSubscriptionDto? = null
+)
+
 // ── Payment DTOs ─────────────────────────────────────────────────────────
 data class CreateSubscriptionRequest(
     val plan: String,
@@ -551,7 +566,7 @@ interface CoursesApiService {
 
     /** GET /subscriptions/status — active subscription for current user */
     @GET("subscriptions/status")
-    suspend fun getSubscriptionStatus(): ApiResponse<Any>
+    suspend fun getSubscriptionStatus(): ApiResponse<SubscriptionStatusData>
 
     /** POST /courses/:id/purchase/confirm — verify payment, enroll in course */
     @POST("courses/{id}/purchase/confirm")

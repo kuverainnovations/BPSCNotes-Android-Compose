@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.profile
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
@@ -146,8 +148,8 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("ProfileVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load profile") }
+                Log.e("ProfileVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load profile")) }
             }
         }
     }
@@ -250,7 +252,7 @@ class ProfileViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("ProfileVM", "updateProfile: ${e.message}", e)
-                _uiState.update { it.copy(isSaving = false, error = e.message ?: "Failed to update") }
+                _uiState.update { it.copy(isSaving = false, error = e.toUserMessage("Failed to update")) }
             }
         }
     }
@@ -287,7 +289,7 @@ class ProfileViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("ProfileVM", "uploadAvatar failed: ${e.message}", e)
-                _uiState.update { it.copy(isUploadingAvatar = false, error = e.message ?: "Upload failed") }
+                _uiState.update { it.copy(isUploadingAvatar = false, error = e.toUserMessage("Upload failed")) }
             }
         }
     }

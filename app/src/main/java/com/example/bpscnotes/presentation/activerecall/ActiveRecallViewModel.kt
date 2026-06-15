@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.activerecall
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -57,8 +59,8 @@ class ActiveRecallViewModel @Inject constructor(
                 val cards    = response.data?.flashcards ?: emptyList()
                 _uiState.update { it.copy(allCards = cards, isLoading = false) }
             } catch (e: Exception) {
-                Log.e("ActiveRecallVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load flashcards") }
+                Log.e("ActiveRecallVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load flashcards")) }
             }
         }
     }

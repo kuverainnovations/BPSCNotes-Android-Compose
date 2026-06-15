@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.mocktests
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -99,7 +101,7 @@ class MockTestsViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        allTests             = tests.filter { it.type == "mock" || it.type == "topic" || it.type == "previous_year" },
+                        allTests             = tests.filter { it.type == "mock" || it.type == "previous_year" },
                         userAccuracy         = stats?.accuracy ?: 0.0,
                         userRank             = stats?.rank,
                         userQuizzesAttempted = stats?.quizzesAttempted ?: 0,
@@ -107,8 +109,8 @@ class MockTestsViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("MockTestsVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load tests") }
+                Log.e("MockTestsVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load tests")) }
             }
         }
     }

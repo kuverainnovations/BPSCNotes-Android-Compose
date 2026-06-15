@@ -1474,7 +1474,9 @@ private fun StoreCourseCard(
                         Text(
                             "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} students",
                             style = MaterialTheme.typography.labelSmall,
-                            color = cs.onSurfaceVariant
+                            color = cs.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

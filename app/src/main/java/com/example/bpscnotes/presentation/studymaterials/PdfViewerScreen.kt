@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.core.language.LocalStrings
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
@@ -102,7 +104,7 @@ fun PdfViewerScreen(
             totalPages = bitmaps.size
         } catch (e: Exception) {
             Log.e("PdfViewer", "Failed: ${e.message}", e)
-            error = e.message ?: "Could not open PDF"
+            error = e.toUserMessage("Could not open PDF")
         } finally {
             isLoading = false
         }

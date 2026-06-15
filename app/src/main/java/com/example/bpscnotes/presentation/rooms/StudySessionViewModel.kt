@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.rooms
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.TierRoomsApiService
 
 import android.util.Log
@@ -222,7 +224,7 @@ class StudySessionViewModel @Inject constructor(
                     }
                     e.message?.contains("Active session exists") == true ->
                         "You already have an active session. End it first."
-                    else -> e.message ?: "Failed to start session"
+                    else -> e.toUserMessage("Failed to start session")
                 }
                 _uiState.update { it.copy(status = SessionStatus.ERROR, error = msg) }
             }

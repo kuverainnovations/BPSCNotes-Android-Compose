@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.wallet
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 
 import android.util.Log
@@ -101,8 +103,8 @@ class CoinWalletViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("CoinWalletVM", e.message ?: "", e)
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to load wallet") }
+                Log.e("CoinWalletVM", e.toUserMessage(""), e)
+                _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load wallet")) }
             }
         }
     }

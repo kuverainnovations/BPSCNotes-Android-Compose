@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.nofification
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import android.util.Log
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import androidx.compose.foundation.*
@@ -107,7 +109,7 @@ class NotificationsViewModel @Inject constructor(
                 // a single bulk call, not one-by-one as the user taps items.
                 if (unread > 0) markAllRead(showToast = false)
             } catch (e: Exception) {
-                Log.e("NotifVM", e.message ?: "", e)
+                Log.e("NotifVM", e.toUserMessage(""), e)
                 _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
             }
         }

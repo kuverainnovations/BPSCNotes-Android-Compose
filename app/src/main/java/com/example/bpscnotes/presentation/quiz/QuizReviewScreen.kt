@@ -173,7 +173,11 @@ internal fun QuizReviewScreen(
                         question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed
                             val isUserChoice   = i == selectedIndex
-                            val isCorrectOpt   = resultKnown && i == correctIndex
+                            // Only reveal which option is correct when the user
+                            // actually got it right. For wrong/skipped answers,
+                            // the correct option is NOT highlighted - the user
+                            // sees their own (wrong) pick, but not "the answer".
+                            val isCorrectOpt   = resultKnown && isCorrect && i == correctIndex
 
                             val bgOpt = when {
                                 isCorrectOpt                    -> Color(0xFFE8FDF4)

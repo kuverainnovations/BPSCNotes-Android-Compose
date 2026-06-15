@@ -700,12 +700,13 @@ private fun QuizBottomBar(
                     .weight(1f)
                     .height(50.dp),
                 shape    = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 border   = BorderStroke(1.dp, if (showHint) BpscColors.CoinGold else cs.outline),
                 colors   = ButtonDefaults.outlinedButtonColors(contentColor = if (showHint) BpscColors.CoinGold else BpscColors.TextSecondary)
             ) {
                 Text("💡", fontSize = 14.sp)
                 Spacer(Modifier.width(4.dp))
-                Text(str.quizHint, style = MaterialTheme.typography.titleMedium)
+                Text(str.quizHint, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
             }
             Button(
                 onClick  = if (isLastQuestion) onSubmit else onNext,

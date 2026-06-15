@@ -364,6 +364,16 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
 
 
             composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
+            composable(
+                route     = Screen.StudyMaterialsFiltered.route,
+                arguments = listOf(navArgument("type") { type = NavType.StringType })
+            ) { back ->
+                StudyMaterialsScreen(
+                    navController  = navController,
+                    adManager      = adManager,
+                    initialTypeKey = back.arguments?.getString("type")
+                )
+            }
 
             // Phase 5: Chat with uploader for a purchased material
             composable(

@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.example.bpscnotes.core.network.toUserMessage
+
 import com.example.bpscnotes.data.remote.api.StudyMaterialsApiService
 
 import android.app.Application
@@ -269,7 +271,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 Log.e(TAG, "loadMaterials: ${e.message}", e)
                 _state.update {
                     it.copy(isLoadingList = false, isRefreshing = false, isLoadingMore = false,
-                        listError = e.message ?: "Failed to load materials")
+                        listError = e.toUserMessage("Failed to load materials"))
                 }
             }
         }
@@ -310,7 +312,7 @@ class StudyMaterialsViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoadingDetail = false, toastMessage = e.message ?: "Failed to load") }
+                _state.update { it.copy(isLoadingDetail = false, toastMessage = e.toUserMessage("Failed to load")) }
             }
         }
     }
@@ -332,7 +334,7 @@ class StudyMaterialsViewModel @Inject constructor(
                     _state.update { it.copy(isOpeningChat = false, toastMessage = "Could not open chat") }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isOpeningChat = false, toastMessage = e.message ?: "Could not open chat") }
+                _state.update { it.copy(isOpeningChat = false, toastMessage = e.toUserMessage("Could not open chat")) }
             }
         }
     }
@@ -605,7 +607,7 @@ class StudyMaterialsViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e(TAG, "uploadMaterial: ${e.message}", e)
-                _state.update { it.copy(isUploading = false, uploadError = e.message ?: "Upload failed") }
+                _state.update { it.copy(isUploading = false, uploadError = e.toUserMessage("Upload failed")) }
             }
         }
     }
@@ -936,7 +938,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 Log.e(TAG, "acceptNegotiationOffer: ${e.message}")
                 _state.update { it.copy(
                     isRespondingNegotiation = false,
-                    toastMessage = e.message ?: "Failed to accept offer"
+                    toastMessage = e.toUserMessage("Failed to accept offer")
                 )}
             }
         }
@@ -964,7 +966,7 @@ class StudyMaterialsViewModel @Inject constructor(
                 Log.e(TAG, "counterNegotiationOffer: ${e.message}")
                 _state.update { it.copy(
                     isRespondingNegotiation = false,
-                    toastMessage = e.message ?: "Failed to send counter-offer"
+                    toastMessage = e.toUserMessage("Failed to send counter-offer")
                 )}
             }
         }
@@ -1049,7 +1051,7 @@ class StudyMaterialsViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                val msg = e.message ?: "Purchase failed"
+                val msg = e.toUserMessage("Purchase failed")
                 _state.update { it.copy(
                     purchasingId  = null,
                     purchaseError = when {

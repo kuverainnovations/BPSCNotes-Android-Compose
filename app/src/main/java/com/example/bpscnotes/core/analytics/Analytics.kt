@@ -43,7 +43,7 @@ object Analytics {
     fun track(event: String, props: Map<String, Any?> = emptyMap()) {
         // PostHog
         PostHog.capture(event,
-            props.filterValues { it != null }.mapValues { it.value!! }.toString()
+            properties = props.filterValues { it != null }.mapValues { it.value!! }
         )
         // Firebase
         val bundle = Bundle().apply {
