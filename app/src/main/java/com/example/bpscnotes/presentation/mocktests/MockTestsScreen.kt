@@ -378,7 +378,9 @@ private fun MockTestLobbyScreen(
 
     data class MockTab(val label: String, val type: MockTestType?)
     val tabs = buildList {
-        add(MockTab(str.filterAll, null))
+        // "All" only earns its place if it aggregates 2+ of the tabs below -
+        // otherwise it's identical to (and confusingly duplicates) the single tab that exists
+        if (listOf(hasFull, hasMini, hasPrevYear).count { it } > 1) add(MockTab(str.filterAll, null))
         if (hasFull)     add(MockTab(str.quizFullMock, MockTestType.Full))
         if (hasMini)     add(MockTab("Mini Tests", MockTestType.SubjectWise))
         if (hasPrevYear) add(MockTab(str.quizPrevYear, MockTestType.PreviousYear))

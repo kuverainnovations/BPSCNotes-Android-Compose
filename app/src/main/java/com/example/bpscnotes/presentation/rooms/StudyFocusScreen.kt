@@ -371,13 +371,6 @@ private fun ActiveRoomScreen(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                Box(
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(0.12f)).padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text("📚 " + str.pomodoroFocus, style = MaterialTheme.typography.labelSmall,
-                        color = Color.White, fontWeight = FontWeight.Bold)
-                }
             }
 
             // ── AFK BANNER ─────────────────────────────────────
@@ -655,18 +648,21 @@ private fun ActiveRoomScreen(
         }
 
 
-        FloatingActionButton(
-            onClick = { showRoomChat = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 110.dp),
-            containerColor = BpscColors.Primary
-        ) {
-            Icon(
-                Icons.Rounded.Chat,
-                contentDescription = null,
-                tint = Color.White
-            )
+        // TEMP: chat disabled for now - phase 2 feature (#19)
+        if (false) {
+            FloatingActionButton(
+                onClick = { showRoomChat = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 22.dp, bottom = 110.dp),
+                containerColor = BpscColors.Primary
+            ) {
+                Icon(
+                    Icons.Rounded.Chat,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
         }
     }
 }

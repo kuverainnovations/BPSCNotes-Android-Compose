@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,38 +120,12 @@ fun CreateTargetSheet(
             Spacer(Modifier.height(16.dp))
 
             // ── Subject dropdown ──────────────────────────────────
-            ExposedDropdownMenuBox(
-                expanded = subjectExpanded,
-                onExpandedChange = { subjectExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedSubject,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Subject") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BpscColors.Primary,
-                        focusedLabelColor  = BpscColors.Primary
-                    )
-                )
-                ExposedDropdownMenu(
-                    expanded = subjectExpanded,
-                    onDismissRequest = { subjectExpanded = false }
-                ) {
-                    predefinedSubjects.forEach { subject ->
-                        DropdownMenuItem(
-                            text = { Text(subject) },
-                            onClick = {
-                                selectedSubject = subject
-                                subjectExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            BpscDropdown(
+                value    = selectedSubject,
+                label    = "Subject",
+                options  = predefinedSubjects,
+                onSelect = { selectedSubject = it }
+            )
 
             Spacer(Modifier.height(12.dp))
 

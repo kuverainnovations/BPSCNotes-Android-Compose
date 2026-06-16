@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.DailyTargetDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -684,31 +685,12 @@ private fun EditTargetSheet(
             )
 
             // Subject dropdown
-            ExposedDropdownMenuBox(
-                expanded = subjectExpanded,
-                onExpandedChange = { subjectExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedSubject,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Subject") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                ExposedDropdownMenu(
-                    expanded = subjectExpanded,
-                    onDismissRequest = { subjectExpanded = false }
-                ) {
-                    subjects.forEach { subject ->
-                        DropdownMenuItem(
-                            text = { Text(subject) },
-                            onClick = { selectedSubject = subject; subjectExpanded = false }
-                        )
-                    }
-                }
-            }
+            BpscDropdown(
+                value    = selectedSubject,
+                label    = "Subject",
+                options  = subjects,
+                onSelect = { selectedSubject = it }
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(

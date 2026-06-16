@@ -1,11 +1,12 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.kuvera.bpscnotes.R
 import com.example.bpscnotes.core.network.toUserMessage
+import com.example.bpscnotes.core.pdf.downloadPdf
+import com.example.bpscnotes.core.pdf.renderPdfPages
 
 import com.example.bpscnotes.core.language.LocalStrings
 import android.graphics.Bitmap
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -22,8 +23,9 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -35,10 +37,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
-import java.io.FileOutputStream
 
 // ════════════════════════════════════════════════════════════
 // PdfViewerScreen — Custom in-app PDF renderer
@@ -72,6 +71,11 @@ fun PdfViewerScreen(
     val context    = LocalContext.current
     val activity   = context as? android.app.Activity
     val listState  = rememberLazyListState()
+
+    // Watermark logo - decoded once, scaled dynamically to 35% of page width per-page
+    val watermarkLogo = remember {
+        android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.ic_bpsc_logo)
+    }
 
     fun navigateBack() {
         if (adManager != null && activity != null) {
@@ -147,8 +151,10 @@ fun PdfViewerScreen(
         )
     }
 
+    val cs = MaterialTheme.colorScheme
+
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = cs.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -180,7 +186,7 @@ fun PdfViewerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0D0D1A)
+                    containerColor = BpscColors.Primary
                 )
             )
         }
@@ -196,7 +202,7 @@ fun PdfViewerScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(44.dp))
-                        Text(str.pdfLoadingPdf, color = Color.White.copy(0.7f),
+                        Text(str.pdfLoadingPdf, color = BpscColors.TextSecondary,
                             style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -208,9 +214,9 @@ fun PdfViewerScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text("⚠️", fontSize = 48.sp)
-                        Text(str.pdfCantLoad, color = Color.White, fontWeight = FontWeight.Bold,
+                        Text(str.pdfCantLoad, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleLarge)
-                        Text(error!!, color = Color.White.copy(0.6f),
+                        Text(error!!, color = BpscColors.TextSecondary,
                             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                         Button(onClick = { navigateBack() },
                             shape = RoundedCornerShape(12.dp)) {
@@ -220,7 +226,7 @@ fun PdfViewerScreen(
                 }
 
                 pdfPages.isEmpty() -> {
-                    Text(str.pdfNoPages, color = Color.White.copy(0.5f))
+                    Text(str.pdfNoPages, color = BpscColors.TextSecondary)
                 }
 
                 else -> {
@@ -237,7 +243,7 @@ fun PdfViewerScreen(
                                 Arrangement.SpaceBetween, Alignment.CenterVertically
                             ) {
                                 Text("${pdfPages.size} pages",
-                                    color = Color.White.copy(0.5f),
+                                    color = BpscColors.TextSecondary,
                                     style = MaterialTheme.typography.labelSmall)
                                 if (!isPurchased && totalPages > freePages) {
                                     Text("🔒 ${str.roomsLocked} (${str.pdfGoBack} $freePages)",
@@ -270,43 +276,17 @@ fun PdfViewerScreen(
 
                                 // ── Watermark overlay (unlocked pages only) ──
                                 if (!isLocked) {
-                                    // Diagonal watermark across the full page
-                                    Canvas(modifier = Modifier.matchParentSize()) {
-                                        val paint = androidx.compose.ui.graphics.Paint().apply {
-                                            alpha = 0.13f
-                                        }
-                                        drawIntoCanvas { canvas ->
-                                            canvas.save()
-                                            canvas.translate(size.width / 2f, size.height / 2f)
-                                            canvas.rotate(-35f)
-                                            val textPaint = android.graphics.Paint().apply {
-                                                color = android.graphics.Color.parseColor("#1565C0")
-                                                textSize = size.width * 0.055f
-                                                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                                                alpha = 35
-                                            }
-                                            val wText = "BPSCNotes"
-                                            val textW = textPaint.measureText(wText)
-                                            val rows = 5
-                                            val colSpacing = size.width * 0.85f
-                                            val rowSpacing = size.height * 0.22f
-                                            for (row in -rows..rows) {
-                                                canvas.nativeCanvas.drawText(
-                                                    wText,
-                                                    -textW / 2f,
-                                                    row * rowSpacing,
-                                                    textPaint
-                                                )
-                                                canvas.nativeCanvas.drawText(
-                                                    wText,
-                                                    colSpacing - textW / 2f,
-                                                    row * rowSpacing + rowSpacing / 2f,
-                                                    textPaint
-                                                )
-                                            }
-                                            canvas.restore()
-                                        }
-                                    }
+                                    // Centered logo watermark on every page
+                                    Image(
+                                        bitmap              = watermarkLogo.asImageBitmap(),
+                                        contentDescription  = null,
+                                        modifier            = Modifier
+                                            .fillMaxWidth(0.35f)   // 35% of page width
+                                            .aspectRatio(1f)
+                                            .align(Alignment.Center)
+                                            .alpha(0.12f),
+                                        contentScale = ContentScale.Fit
+                                    )
                                     // Page number badge
                                     Box(
                                         modifier = Modifier
@@ -436,91 +416,3 @@ fun PdfViewerScreen(
 
 // ════════════════════════════════════════════════════════════
 // HELPERS — download + render on IO/Default dispatchers
-// ════════════════════════════════════════════════════════════
-
-/** Download PDF to app-private cache. Returns the local file. */
-private suspend fun downloadPdf(url: String, cacheDir: File, authToken: String = ""): File {
-    // Local file — already on device, no network needed
-    if (url.startsWith("file://")) {
-        val localFile = File(url.removePrefix("file://"))
-        if (localFile.exists() && localFile.length() > 0) return localFile
-        throw Exception("Downloaded file not found. Please re-download it.")
-    }
-
-    val fileName = "pdf_${url.hashCode()}.pdf"
-    val file     = File(cacheDir, fileName)
-
-    // Return cached version if fresh (< 1 hour)
-    if (file.exists() && file.length() > 0 &&
-        (System.currentTimeMillis() - file.lastModified()) < 3_600_000L) {
-        return file
-    }
-
-    val client  = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-        .build()
-
-    val reqBuilder = Request.Builder().url(url)
-    if (authToken.isNotBlank()) {
-        reqBuilder.addHeader("Authorization", "Bearer $authToken")
-    }
-    val response = client.newCall(reqBuilder.build()).execute()
-
-    if (!response.isSuccessful) {
-        throw Exception("Server returned ${response.code}. Please check your connection and try again.")
-    }
-
-    val body = response.body ?: throw Exception("Empty response — the file may be unavailable.")
-    val bytes = body.bytes()
-    if (bytes.isEmpty()) throw Exception("Downloaded file is empty.")
-
-    // Verify it's actually a PDF (starts with %PDF magic bytes)
-    val magic = bytes.take(4).toByteArray().toString(Charsets.ISO_8859_1)
-
-    if (bytes.size < 4 || !magic.startsWith("%PDF")) {
-
-        val ext = url.substringAfterLast('.').lowercase()
-
-        throw Exception(
-            when {
-                ext in listOf("mp4", "mkv", "webm", "avi", "mov") ->
-                    "This is a video file. Use a video player app to open it.\nTap back and use the external viewer."
-
-                ext in listOf("jpg", "jpeg", "png", "webp") ->
-                    "This is an image file — it can't be rendered as a PDF."
-
-                else ->
-                    "File is not a valid PDF (got: $magic). It may be corrupted or in an unsupported format."
-            }
-        )
-    }
-
-    FileOutputStream(file).use { out -> out.write(bytes) }
-    return file
-}
-
-/** Render all pages of a PDF file to Bitmaps. Screen-width aware. */
-private fun renderPdfPages(file: File): List<Bitmap> {
-    val bitmaps = mutableListOf<Bitmap>()
-    val pfd     = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-
-    PdfRenderer(pfd).use { renderer ->
-        val targetWidth = 1080   // render at 1080px wide for crisp display on all screens
-
-        for (i in 0 until renderer.pageCount) {
-            renderer.openPage(i).use { page ->
-                val scale    = targetWidth.toFloat() / page.width.toFloat()
-                val bmpWidth = targetWidth
-                val bmpHeight = (page.height * scale).toInt()
-
-                val bitmap = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
-                // White background (PDFs are transparent by default in PdfRenderer)
-                bitmap.eraseColor(android.graphics.Color.WHITE)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                bitmaps.add(bitmap)
-            }
-        }
-    }
-    return bitmaps
-}

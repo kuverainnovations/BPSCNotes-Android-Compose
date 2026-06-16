@@ -186,7 +186,7 @@ fun MainShell(
                 }
             ) {
                 composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
-                composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, fromScreen = "main-shell") }
+                composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, startTab = 0, fromScreen = "main-shell") }
                 //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
                 composable(Screen.RoomsHub.route) { backStackEntry ->
                     val parentEntry = remember(backStackEntry) {

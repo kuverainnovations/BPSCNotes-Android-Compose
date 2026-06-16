@@ -223,135 +223,139 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // ── Appearance ────────────────────────────────────
-                SettingsSectionLabel(str.settingsAppearance)
-                Card(
-                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Column {
-                        SettingsToggleRow(
-                            icon     = Icons.Rounded.DarkMode,
-                            iconBg   = Color(0xFF1A237E).copy(0.12f),
-                            iconTint = Color(0xFF3949AB).copy(0.4f),
-                            title    = str.settingsDarkMode,
-                            subtitle = "🚧 Coming soon — not implemented yet",
-                            checked  = false,
-                            onChange = { /* not yet implemented */ }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                        // Language picker — hidden per request
-                        // LanguagePickerRow()
+                // TEMP: Appearance / Study Preferences / Sound & Haptics / Storage & Data
+                // hidden until these settings actually do something - #21
+                if (false) {
+                    // ── Appearance ────────────────────────────────────
+                    SettingsSectionLabel(str.settingsAppearance)
+                    Card(
+                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Column {
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.DarkMode,
+                                iconBg   = Color(0xFF1A237E).copy(0.12f),
+                                iconTint = Color(0xFF3949AB).copy(0.4f),
+                                title    = str.settingsDarkMode,
+                                subtitle = "🚧 Coming soon — not implemented yet",
+                                checked  = false,
+                                onChange = { /* not yet implemented */ }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            // Language picker — hidden per request
+                            // LanguagePickerRow()
+                        }
                     }
-                }
 
-                // ── Study Preferences ─────────────────────────────
-                SettingsSectionLabel(str.settingsStudyPrefs)
-                Card(
-                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Column {
-                        SettingsToggleRow(
-                            icon     = Icons.Rounded.Alarm,
-                            iconBg   = Color(0xFFE3F2FD),
-                            iconTint = Color(0xFF1565C0),
-                            title    = str.settingsReminder,
-                            subtitle = str.settingsReminderSubtitle,
-                            checked  = settingsState.studyReminder,
-                            onChange = settingsViewModel::setStudyReminder
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                        SettingsToggleRow(
-                            icon     = Icons.Rounded.PlayCircle,
-                            iconBg   = Color(0xFFF3E5F5),
-                            iconTint = Color(0xFF7B1FA2),
-                            title    = str.settingsAutoPlay,
-                            subtitle = str.settingsAutoPlaySubtitle,
-                            checked  = settingsState.autoPlay,
-                            onChange = settingsViewModel::setAutoPlay
-                        )
+                    // ── Study Preferences ─────────────────────────────
+                    SettingsSectionLabel(str.settingsStudyPrefs)
+                    Card(
+                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Column {
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.Alarm,
+                                iconBg   = Color(0xFFE3F2FD),
+                                iconTint = Color(0xFF1565C0),
+                                title    = str.settingsReminder,
+                                subtitle = str.settingsReminderSubtitle,
+                                checked  = settingsState.studyReminder,
+                                onChange = settingsViewModel::setStudyReminder
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.PlayCircle,
+                                iconBg   = Color(0xFFF3E5F5),
+                                iconTint = Color(0xFF7B1FA2),
+                                title    = str.settingsAutoPlay,
+                                subtitle = str.settingsAutoPlaySubtitle,
+                                checked  = settingsState.autoPlay,
+                                onChange = settingsViewModel::setAutoPlay
+                            )
+                        }
                     }
-                }
 
-                // ── Sound & Haptics ───────────────────────────────
-                SettingsSectionLabel(str.settingsSound + " & Haptics")
-                Card(
-                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Column {
-                        SettingsToggleRow(
-                            icon     = Icons.Rounded.VolumeUp,
-                            iconBg   = Color(0xFFE8F5E9),
-                            iconTint = Color(0xFF2E7D32),
-                            title    = str.settingsSound,
-                            subtitle = str.settingsSoundSubtitle,
-                            checked  = settingsState.sound,
-                            onChange = settingsViewModel::setSound
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                        SettingsToggleRow(
-                            icon     = Icons.Rounded.Vibration,
-                            iconBg   = Color(0xFFFFF0EA),
-                            iconTint = Color(0xFFE67E22),
-                            title    = str.settingsHaptics,
-                            subtitle = str.settingsHapticsSubtitle,
-                            checked  = settingsState.haptics,
-                            onChange = settingsViewModel::setHaptics
-                        )
+                    // ── Sound & Haptics ───────────────────────────────
+                    SettingsSectionLabel(str.settingsSound + " & Haptics")
+                    Card(
+                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Column {
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.VolumeUp,
+                                iconBg   = Color(0xFFE8F5E9),
+                                iconTint = Color(0xFF2E7D32),
+                                title    = str.settingsSound,
+                                subtitle = str.settingsSoundSubtitle,
+                                checked  = settingsState.sound,
+                                onChange = settingsViewModel::setSound
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.Vibration,
+                                iconBg   = Color(0xFFFFF0EA),
+                                iconTint = Color(0xFFE67E22),
+                                title    = str.settingsHaptics,
+                                subtitle = str.settingsHapticsSubtitle,
+                                checked  = settingsState.haptics,
+                                onChange = settingsViewModel::setHaptics
+                            )
+                        }
                     }
-                }
 
-                // ── Storage & Data ────────────────────────────────
-                SettingsSectionLabel(str.settingsStorage)
-                Card(
-                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = cs.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    Column {
-                        // Downloaded Content — real size from filesystem
-                        SettingsActionRow(
-                            icon         = Icons.Rounded.Download,
-                            iconBg       = Color(0xFFEDE7F6),
-                            iconTint     = Color(0xFF7E57C2),
-                            title        = str.materialsDownloaded + " " + str.settingsTitle,
-                            subtitle     = str.settingsManageOffline,
-                            trailingLabel = if (settingsState.isComputingStorage) "…"
-                            else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
-                            onClick      = { navController.navigate(Screen.Downloads.route) }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                        // Clear Cache — real size + actual deletion
-                        SettingsActionRow(
-                            icon         = Icons.Rounded.CleaningServices,
-                            iconBg       = Color(0xFFFFF3E0),
-                            iconTint     = Color(0xFFFF8F00),
-                            title        = str.settingsClearCache,
-                            subtitle     = if (settingsState.isClearingCache) str.settingsClearing else str.settingsClearCacheSubtitle,
-                            trailingLabel = if (settingsState.isComputingStorage || settingsState.isClearingCache) "…"
-                            else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
-                            onClick      = { settingsViewModel.clearCache() }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                        SettingsActionRow(
-                            icon     = Icons.Rounded.WifiOff,
-                            iconBg   = Color(0xFFE8F5E9),
-                            iconTint = Color(0xFF2E7D32),
-                            title    = str.settingsOffline,
-                            subtitle = str.settingsOfflineSubtitle,
-                            onClick  = { navController.navigate(Screen.Downloads.route) }
-                        )
+                    // ── Storage & Data ────────────────────────────────
+                    SettingsSectionLabel(str.settingsStorage)
+                    Card(
+                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Column {
+                            // Downloaded Content — real size from filesystem
+                            SettingsActionRow(
+                                icon         = Icons.Rounded.Download,
+                                iconBg       = Color(0xFFEDE7F6),
+                                iconTint     = Color(0xFF7E57C2),
+                                title        = str.materialsDownloaded + " " + str.settingsTitle,
+                                subtitle     = str.settingsManageOffline,
+                                trailingLabel = if (settingsState.isComputingStorage) "…"
+                                else "${"%.1f".format(settingsState.downloadedSizeMb)} MB",
+                                onClick      = { navController.navigate(Screen.Downloads.route) }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            // Clear Cache — real size + actual deletion
+                            SettingsActionRow(
+                                icon         = Icons.Rounded.CleaningServices,
+                                iconBg       = Color(0xFFFFF3E0),
+                                iconTint     = Color(0xFFFF8F00),
+                                title        = str.settingsClearCache,
+                                subtitle     = if (settingsState.isClearingCache) str.settingsClearing else str.settingsClearCacheSubtitle,
+                                trailingLabel = if (settingsState.isComputingStorage || settingsState.isClearingCache) "…"
+                                else "${"%.1f".format(settingsState.cacheSizeMb)} MB",
+                                onClick      = { settingsViewModel.clearCache() }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            SettingsActionRow(
+                                icon     = Icons.Rounded.WifiOff,
+                                iconBg   = Color(0xFFE8F5E9),
+                                iconTint = Color(0xFF2E7D32),
+                                title    = str.settingsOffline,
+                                subtitle = str.settingsOfflineSubtitle,
+                                onClick  = { navController.navigate(Screen.Downloads.route) }
+                            )
+                        }
                     }
-                }
+                } // end TEMP hidden settings sections - #21
 
                 // ── About ─────────────────────────────────────────
                 val context = androidx.compose.ui.platform.LocalContext.current

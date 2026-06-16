@@ -1344,7 +1344,6 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work, Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
             SmallQuickCard("Downloads",   Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
-            SmallQuickCard("Premium",     Icons.Rounded.Star, Color(0xFFFFF8E1), BpscColors.CoinGold, Modifier.weight(1f)) { navController.navigate(Screen.Subscription.route) }
         }
     }
 }
@@ -1930,7 +1929,6 @@ private fun BpscDrawer(
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
         // ── Explore (5-8) ────────────────────────────────────
         Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.Leaderboard.route),
-        Triple(Icons.Rounded.Star,          str.paymentTitle,         Screen.Subscription.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
         // ── Account (9-10) ───────────────────────────────────

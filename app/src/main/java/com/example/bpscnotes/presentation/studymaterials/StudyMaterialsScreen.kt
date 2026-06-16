@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -1110,10 +1112,18 @@ private fun LibraryItemCard(
 private fun MarketplaceRulesSheet(onDismiss: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // confirmValueChange blocks swipe-to-dismiss reaching Hidden (which would
+    // leave a ghost scrim intercepting taps, since onDismissRequest={} below
+    // means the composable never leaves the tree on its own). Only the
+    // explicit "Got it" button (which sets showRulesSheet=false directly)
+    // removes this from composition.
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange    = { it != SheetValue.Hidden }
+    )
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {},  // require explicit "Got it" tap - scrim/swipe/back shouldn't silently mark rules as seen
         sheetState = sheetState,
         containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
@@ -1839,28 +1849,16 @@ private fun UploadSheet(
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
             // FIX: Subject dropdown populated from backend /subjects API
-            var subjectExpanded by remember { mutableStateOf(false) }
             val backendSubjects = state.subjects.filter { it != str.filterAll }
                 .ifEmpty { listOf("Polity","History","Geography","Economy","Bihar GK","Science","Environment","Current Affairs","BPSC Specific") }
 
-            ExposedDropdownMenuBox(
-                expanded = subjectExpanded, onExpandedChange = { subjectExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = subject, onValueChange = {},
-                    readOnly = true,
-                    label = { Text("${str.materialsFilterSubject} *") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                ExposedDropdownMenu(expanded = subjectExpanded, onDismissRequest = { subjectExpanded = false }) {
-                    backendSubjects.forEach { s ->
-                        DropdownMenuItem(text = { Text(s) }, onClick = { onFormChange(null, null, s, null, null, null, null, null, null); subjectExpanded = false })
-                    }
-                }
-            }
+            BpscDropdown(
+                value       = subject,
+                label       = "${str.materialsFilterSubject} *",
+                options     = backendSubjects,
+                onSelect    = { onFormChange(null, null, it, null, null, null, null, null, null) },
+                placeholder = "Select a subject"
+            )
 
             OutlinedTextField(value = author, onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null) },
                 label = { Text(str.materialsAuthorName) }, modifier = Modifier.fillMaxWidth(),

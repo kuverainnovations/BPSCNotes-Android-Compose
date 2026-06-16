@@ -464,8 +464,8 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                 LeaderboardScreen(navController = navController, viewModel = tiersVM)
             }
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
-            composable(Screen.MyLearning.route)         { MyLearningScreen(navController, fromScreen = "nav-host") }
-            composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, startTab = 1, fromScreen = "nav-host") }
+            composable(Screen.MyLearning.route)         { MyLearningScreen(navController, startTab = 0, fromScreen = "nav-host") }
+            composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, fromScreen = "nav-host") }
 
             // ── Placeholders ─────────────────────────────────────────
             composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }

@@ -1,11 +1,26 @@
 package com.example.bpscnotes.presentation.course
-
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
+import android.graphics.Bitmap
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import com.example.bpscnotes.core.pdf.downloadPdf
+import com.example.bpscnotes.core.pdf.renderPdfPages
+import com.example.bpscnotes.core.network.toUserMessage
+import kotlinx.coroutines.withContext
+
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -20,9 +35,9 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.kuvera.bpscnotes.R
 import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -32,7 +47,7 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 // LESSON VIEWER SCREEN
 //
 // Handles all lesson types:
-//   pdf   → WebView rendering PDF via Google Docs viewer
+//   pdf   → PdfRenderer (same as PdfViewerScreen — per-page bitmaps with centered watermark)
 //   video → WebView (YouTube embed / direct mp4)
 //   quiz  → navigates to quiz
 //   live  → shows live class join button
@@ -60,27 +75,23 @@ fun LessonViewerScreen(
     val cs = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("lesson_viewer") }
 
+    // Track whether user has scrolled to the last page (for PDF lessons).
+    // For non-PDF lessons we show the button immediately.
+    var reachedEnd by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar       = {
             LessonTopBar(
-                title     = state.lesson?.title ?: "Lesson",
-                isLoading = state.isLoading,
-                onBack    = { nav.popBackStackSafe() }
+                title         = state.lesson?.title ?: "Lesson",
+                isLoading     = state.isLoading,
+                isCompleted   = state.lesson?.is_completed == true,
+                isMarking     = state.isMarking,
+                showMarkBtn   = state.lesson != null && state.isEnrolled && reachedEnd,
+                onBack        = { nav.popBackStackSafe() },
+                onMarkComplete = { viewModel.markComplete() }
             )
         },
-        bottomBar    = {
-            // Free-preview lessons are viewable without enrollment, but
-            // "Mark as Read" / progress tracking only makes sense once the
-            // user has actually enrolled in the course.
-            if (state.lesson != null && state.isEnrolled) {
-                LessonBottomBar(
-                    isCompleted   = state.lesson?.is_completed == true,
-                    isMarking     = state.isMarking,
-                    onMarkComplete = { viewModel.markComplete() }
-                )
-            }
-        },
-        containerColor = Color(0xFF0F1117)
+        containerColor = cs.background
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
@@ -89,28 +100,26 @@ fun LessonViewerScreen(
                 state.lesson != null -> {
                     val lesson = state.lesson!!
                     when (lesson.type) {
-                        "video"       -> VideoPlayer(lesson.video_url ?: lesson.notes_url)
-                        "pdf", "notes" -> PdfViewer(lesson.notes_url)
-                        "live"        -> LiveClassView(lesson)
-                        "quiz"        -> QuizRedirectView(lesson, onQuizTap = { nav.popBackStackSafe() })
-                        else          -> PdfViewer(lesson.notes_url ?: lesson.video_url)
-                    }
-
-                    // Completed banner overlay
-                    if (state.lesson?.is_completed == true) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 8.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFF2E7D32).copy(0.9f))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment =  Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text(str.coursesCompleted, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
+                        "video"        -> {
+                            reachedEnd = true  // video: show button once loaded
+                            VideoPlayer(lesson.video_url ?: lesson.notes_url)
                         }
+                        "pdf", "notes" -> PdfViewer(
+                            notesUrl    = lesson.notes_url,
+                            onReachEnd  = { reachedEnd = true }
+                        )
+                        "live"         -> {
+                            reachedEnd = true
+                            LiveClassView(lesson)
+                        }
+                        "quiz"         -> {
+                            reachedEnd = true
+                            QuizRedirectView(lesson, onQuizTap = { nav.popBackStackSafe() })
+                        }
+                        else           -> PdfViewer(
+                            notesUrl   = lesson.notes_url ?: lesson.video_url,
+                            onReachEnd = { reachedEnd = true }
+                        )
                     }
                 }
             }
@@ -124,7 +133,15 @@ fun LessonViewerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LessonTopBar(title: String, isLoading: Boolean, onBack: () -> Unit) {
+private fun LessonTopBar(
+    title:          String,
+    isLoading:      Boolean,
+    isCompleted:    Boolean,
+    isMarking:      Boolean,
+    showMarkBtn:    Boolean,
+    onBack:         () -> Unit,
+    onMarkComplete: () -> Unit
+) {
     val str = LocalStrings.current
     TopAppBar(
         title = {
@@ -140,170 +157,110 @@ private fun LessonTopBar(title: String, isLoading: Boolean, onBack: () -> Unit) 
                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White)
             }
         },
+        actions = {
+            AnimatedVisibility(
+                visible = showMarkBtn,
+                enter   = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
+                exit    = fadeOut()
+            ) {
+                if (isCompleted) {
+                    // Completed badge
+                    Row(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF2E7D32).copy(0.9f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Text(str.coursesCompleted, style = MaterialTheme.typography.labelMedium,
+                            color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    // Mark complete pill button
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(if (isMarking) 0.15f else 0.2f))
+                            .clickable(enabled = !isMarking, onClick = onMarkComplete)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment     = Alignment.CenterVertically
+                        ) {
+                            if (isMarking) {
+                                CircularProgressIndicator(color = Color.White,
+                                    modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                            } else {
+                                Icon(Icons.Rounded.CheckCircle, null, tint = Color.White,
+                                    modifier = Modifier.size(14.dp))
+                            }
+                            Text(str.lessonMarkComplete,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF1A1D27)
+            containerColor = BpscColors.Primary
         )
     )
 }
 
 // ─────────────────────────────────────────────────────────────
-// BOTTOM BAR — Mark Complete
+// PDF VIEWER — PdfRenderer (bitmap per page, same approach as PdfViewerScreen)
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun LessonBottomBar(
-    isCompleted: Boolean,
-    isMarking: Boolean,
-    onMarkComplete: () -> Unit
-) {
-    val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A1D27))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        if (isCompleted) {
-            Row(
-                modifier             = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment    = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(str.lessonCompleted, style = MaterialTheme.typography.titleMedium, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
-            }
-        } else {
-            Button(
-                onClick  = onMarkComplete,
-                enabled  = !isMarking,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape    = RoundedCornerShape(14.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-            ) {
-                if (isMarking) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(str.lessonSaving, style = MaterialTheme.typography.titleMedium)
-                } else {
-                    Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(str.lessonMarkComplete, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// PDF VIEWER — WebView with Google Docs embed
-// ─────────────────────────────────────────────────────────────
-
-@SuppressLint("SetJavaScriptEnabled")
-@Composable
-private fun PdfViewer(notesUrl: String?) {
-    val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    if (notesUrl.isNullOrBlank()) {
-        NoContentState(str.lessonNoPdf)
-        return
-    }
-
+private fun PdfViewer(notesUrl: String?, onReachEnd: () -> Unit = {}) {
+    val cs      = MaterialTheme.colorScheme
+    val str     = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    var loading  by remember { mutableStateOf(true) }
-    var failed   by remember { mutableStateOf(false) }
-    var retryKey by remember { mutableIntStateOf(0) }
 
-    // FIX: Black screen fix — use a robust URL strategy:
-    // 1. If it's a direct PDF URL → use Google Docs embedded viewer
-    // 2. If it's already an HTML/web URL → load directly
-    // 3. On failure → show retry + open-in-browser option
-    val viewUrl = remember(notesUrl) {
+    if (notesUrl.isNullOrBlank()) { NoContentState(str.lessonNoPdf); return }
+
+    var pdfPages   by remember { mutableStateOf<List<android.graphics.Bitmap>>(emptyList()) }
+    var isLoading  by remember { mutableStateOf(true) }
+    var error      by remember { mutableStateOf<String?>(null) }
+    val listState  = rememberLazyListState()
+
+    // Watermark logo decoded once
+    val watermarkLogo = remember {
+        android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.ic_bpsc_logo)
+    }
+
+    // Download + render in background (same as PdfViewerScreen)
+    LaunchedEffect(notesUrl) {
+        isLoading = true; error = null
+        try {
+            val file    = withContext(kotlinx.coroutines.Dispatchers.IO) { downloadPdf(notesUrl, context.cacheDir) }
+            val bitmaps = withContext(kotlinx.coroutines.Dispatchers.Default) { renderPdfPages(file) }
+            pdfPages = bitmaps
+        } catch (e: Exception) {
+            error = e.toUserMessage("Could not open PDF")
+        } finally {
+            isLoading = false
+        }
+    }
+
+    // Fire onReachEnd when user scrolls to last page
+    val lastIndex = pdfPages.lastIndex
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.layoutInfo.visibleItemsInfo) {
+        if (pdfPages.isNotEmpty()) {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            if (lastVisible >= lastIndex) onReachEnd()
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(cs.background)) {
         when {
-            notesUrl.endsWith(".pdf", ignoreCase = true) ->
-                "https://docs.google.com/viewer?embedded=true&url=" +
-                        java.net.URLEncoder.encode(notesUrl, "UTF-8")
-            notesUrl.contains("/pdf", ignoreCase = true) ->
-                "https://docs.google.com/viewer?embedded=true&url=" +
-                        java.net.URLEncoder.encode(notesUrl, "UTF-8")
-            else -> notesUrl  // HTML notes or direct link
-        }
-    }
-
-    if (failed) {
-        // FIX: Show proper error with retry + open-in-browser
-        Column(
-            Modifier.fillMaxSize().background(cs.background).padding(32.dp),
-            Arrangement.Center, Alignment.CenterHorizontally
-        ) {
-            Text("📄", fontSize = 48.sp)
-            Spacer(Modifier.height(12.dp))
-            Text(str.lessonCantLoadPdf, style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold, color = cs.onSurface)
-            Text(str.lessonViewerTimeout,
-                style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Spacer(Modifier.height(20.dp))
-            Button(onClick = { failed = false; loading = true; retryKey++ },
-                modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text(str.retry)
-            }
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse(notesUrl))
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)
-            ) { Text(str.lessonOpenBrowser) }
-        }
-        return
-    }
-
-    Box(Modifier.fillMaxSize().background(cs.surface)) {
-        key(retryKey) {
-            AndroidView(
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        settings.apply {
-                            javaScriptEnabled    = true
-                            domStorageEnabled    = true
-                            builtInZoomControls  = true
-                            displayZoomControls  = false
-                            useWideViewPort      = true
-                            loadWithOverviewMode = true
-                            setSupportZoom(true)
-                            cacheMode = WebSettings.LOAD_NO_CACHE  // FIX: no cache prevents stale blank pages
-                        }
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                // FIX: check if WebView actually has content (not just blank loaded)
-                                view?.evaluateJavascript("document.body.innerHTML.length") { result ->
-                                    val bodyLen = result?.trim()?.toIntOrNull() ?: 0
-                                    loading = false
-                                    if (bodyLen < 10) failed = true  // empty page = failed load
-                                }
-                            }
-                            override fun onReceivedError(view: WebView?, errorCode: Int, desc: String?, url: String?) {
-                                loading = false; failed = true
-                            }
-                        }
-                        webChromeClient = WebChromeClient()
-                        loadUrl(viewUrl)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        if (loading) {
-            Box(Modifier.fillMaxSize().background(cs.surface), Alignment.Center) {
+            isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(color = BpscColors.Primary)
@@ -311,10 +268,80 @@ private fun PdfViewer(notesUrl: String?) {
                         color = cs.onSurfaceVariant)
                 }
             }
+            error != null -> Column(
+                Modifier.fillMaxSize().padding(32.dp),
+                Arrangement.Center, Alignment.CenterHorizontally
+            ) {
+                Text("\uD83D\uDCC4", fontSize = 48.sp)
+                Spacer(Modifier.height(12.dp))
+                Text(str.lessonCantLoadPdf, style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold, color = cs.onSurface)
+                Spacer(Modifier.height(8.dp))
+                Text(error!!, style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.height(20.dp))
+                Button(onClick = {
+                    error = null; isLoading = true
+                    // re-trigger by toggling — parent recomposes via state
+                },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) { Text(str.retry) }
+            }
+            pdfPages.isEmpty() -> NoContentState(str.lessonNoPdf)
+            else -> LazyColumn(
+                state               = listState,
+                modifier            = Modifier.fillMaxSize(),
+                contentPadding      = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(pdfPages.size, key = { it }) { pageIndex ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                    ) {
+                        // Page bitmap
+                        Image(
+                            bitmap             = pdfPages[pageIndex].asImageBitmap(),
+                            contentDescription = null,
+                            modifier           = Modifier.fillMaxWidth(),
+                            contentScale       = ContentScale.FillWidth
+                        )
+                        // Watermark — centered on every page, moves with scroll
+                        Image(
+                            bitmap             = watermarkLogo.asImageBitmap(),
+                            contentDescription = null,
+                            modifier           = Modifier
+                                .fillMaxWidth(0.35f)
+                                .aspectRatio(1f)
+                                .align(Alignment.Center)
+                                .alpha(0.12f),
+                            contentScale = ContentScale.Fit
+                        )
+                        // Page number badge
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.Black.copy(0.45f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                "${pageIndex + 1} / ${pdfPages.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
 // ─────────────────────────────────────────────────────────────
 // VIDEO PLAYER — WebView (YouTube iframe / direct video)
 // ─────────────────────────────────────────────────────────────
@@ -486,22 +513,24 @@ private fun QuizRedirectView(
 
 @Composable
 private fun LoadingState() {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(cs.background), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             CircularProgressIndicator(color = BpscColors.Primary)
-            Text(str.lessonLoading, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
+            Text(str.lessonLoading, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(cs.background), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("⚠️", fontSize = 40.sp)
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Text(str.retry)
             }
@@ -511,10 +540,11 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun NoContentState(message: String) {
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1117)), Alignment.Center) {
+    val cs = MaterialTheme.colorScheme
+    Box(Modifier.fillMaxSize().background(cs.background), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("📄", fontSize = 48.sp)
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
         }
     }
 }

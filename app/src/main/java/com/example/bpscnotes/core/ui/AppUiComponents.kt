@@ -2,13 +2,23 @@ package com.example.bpscnotes.core.ui
 
 import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExitToApp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -317,6 +327,133 @@ fun AppErrorState(
                     Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(str.uiTryAgain, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// BpscDropdown — on-brand dropdown replacing ExposedDropdownMenuBox
+//
+// Usage (simple):
+//   BpscDropdown(value=selectedSubject, label="Subject", options=list, onSelect={})
+//
+// Usage (with leading icon):
+//   BpscDropdown(..., leadingIcon={ Icon(Icons.Rounded.LocationOn, null) })
+// ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BpscDropdown(
+    value:       String,
+    label:       String,
+    options:     List<String>,
+    onSelect:    (String) -> Unit,
+    modifier:    Modifier = Modifier,
+    placeholder: String   = "",
+    enabled:     Boolean  = true,
+    leadingIcon: (@Composable () -> Unit)? = null,
+) {
+    var expanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val displayValue = value.ifBlank { placeholder }
+    val isEmpty = value.isBlank()
+
+    ExposedDropdownMenuBox(
+        expanded         = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = it },
+        modifier         = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    if (expanded) BpscColors.Primary.copy(0.06f)
+                    else          Color(0xFFF7F8FA)
+                )
+                .border(
+                    width = if (expanded) 1.5.dp else 1.dp,
+                    color = if (expanded) BpscColors.Primary else Color(0xFFE2E5EC),
+                    shape = RoundedCornerShape(14.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (leadingIcon != null) {
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                                if (expanded) BpscColors.Primary else BpscColors.TextSecondary
+                    ) {
+                        Box(Modifier.size(20.dp)) { leadingIcon() }
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text  = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (expanded) BpscColors.Primary else BpscColors.TextSecondary
+                    )
+                    Text(
+                        text  = displayValue,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = if (isEmpty) FontWeight.Normal else FontWeight.SemiBold
+                        ),
+                        color = if (isEmpty) BpscColors.TextHint else BpscColors.TextPrimary
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp
+                    else         Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint     = if (expanded) BpscColors.Primary else BpscColors.TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        ExposedDropdownMenu(
+            expanded         = expanded,
+            onDismissRequest = { expanded = false },
+            modifier         = Modifier
+                .exposedDropdownSize()
+                .background(Color.White)
+        ) {
+            options.forEachIndexed { index, option ->
+                val isSelected = option == value
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text  = option,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            ),
+                            color = if (isSelected) BpscColors.Primary else BpscColors.TextPrimary
+                        )
+                    },
+                    onClick = { onSelect(option); expanded = false },
+                    leadingIcon = if (isSelected) ({
+                        Box(
+                            Modifier
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(BpscColors.Primary)
+                        )
+                    }) else null,
+                    modifier = Modifier.background(
+                        if (isSelected) BpscColors.Primary.copy(0.07f) else Color.Transparent
+                    ),
+                    colors = MenuDefaults.itemColors(textColor = BpscColors.TextPrimary)
+                )
+                if (index < options.lastIndex) {
+                    HorizontalDivider(
+                        color     = Color(0xFFF2F4F8),
+                        thickness = 0.5.dp,
+                        modifier  = Modifier.padding(horizontal = 12.dp)
+                    )
                 }
             }
         }

@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -228,53 +229,15 @@ fun EditProfileScreen(
                         onValueChange = { email = it })
                     Spacer(Modifier.height(10.dp))
                     // District dropdown — same source as registration screen
-                    ExposedDropdownMenuBox(
-                        expanded        = showDistrictMenu,
-                        onExpandedChange = { showDistrictMenu = it && districts.isNotEmpty() }
-                    ) {
-                        OutlinedTextField(
-                            value         = district,
-                            onValueChange = { district = it },
-                            modifier      = Modifier.fillMaxWidth().menuAnchor(),
-                            leadingIcon   = { Icon(Icons.Rounded.LocationOn, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)) },
-                            label         = { Text(str.editDistrict) },
-                            placeholder   = {
-                                Text(if (districtsLoading) "Loading districts…" else str.editDistrict)
-                            },
-                            shape         = RoundedCornerShape(12.dp),
-                            singleLine    = true,
-                            readOnly      = true,
-                            trailingIcon  = {
-                                if (districtsLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = BpscColors.Primary
-                                    )
-                                } else if (districts.isNotEmpty()) {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(showDistrictMenu)
-                                }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = BpscColors.Primary,
-                                unfocusedBorderColor = cs.outline,
-                                focusedLabelColor    = BpscColors.Primary,
-                            )
-                        )
-                        if (districts.isNotEmpty()) {
-                            ExposedDropdownMenu(
-                                expanded        = showDistrictMenu,
-                                onDismissRequest = { showDistrictMenu = false }
-                            ) {
-                                districts.forEach { d ->
-                                    DropdownMenuItem(
-                                        text    = { Text(d.name) },
-                                        onClick = { district = d.name; showDistrictMenu = false }
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    BpscDropdown(
+                        value       = district,
+                        label       = str.editDistrict,
+                        placeholder = if (districtsLoading) "Loading districts…" else str.editDistrict,
+                        options     = districts.map { it.name },
+                        onSelect    = { name -> district = name },
+                        enabled     = districts.isNotEmpty() && !districtsLoading,
+                        leadingIcon = { Icon(Icons.Rounded.LocationOn, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)) }
+                    )
                     Spacer(Modifier.height(10.dp))
                     EditField(value = bio, label = str.editBio,
                         icon = Icons.Rounded.Info, singleLine = false,

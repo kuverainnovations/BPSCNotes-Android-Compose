@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -201,52 +202,15 @@ fun RegisterScreen(
                 )
 
                 // District dropdown — optional, populated from backend
-                ExposedDropdownMenuBox(
-                    expanded        = showDistrictMenu,
-                    onExpandedChange = { showDistrictMenu = it && districts.isNotEmpty() }
-                ) {
-                    OutlinedTextField(
-                        value         = district,
-                        onValueChange = { district = it },
-                        modifier      = Modifier.fillMaxWidth().menuAnchor(),
-                        leadingIcon   = { Icon(Icons.Rounded.LocationOn, null, tint = cs.outline) },
-                        label         = { Text("${str.editDistrict} (Optional)") },
-                        placeholder   = {
-                            Text(if (districtsLoading) "Loading districts…" else str.editDistrict)
-                        },
-                        shape         = RoundedCornerShape(14.dp),
-                        singleLine    = true,
-                        readOnly      = true,
-                        trailingIcon  = {
-                            if (districtsLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = BpscColors.Primary
-                                )
-                            } else if (districts.isNotEmpty()) {
-                                ExposedDropdownMenuDefaults.TrailingIcon(showDistrictMenu)
-                            }
-                        },
-                        colors        = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = BpscColors.Primary,
-                            unfocusedBorderColor = cs.outline
-                        )
-                    )
-                    if (districts.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded        = showDistrictMenu,
-                            onDismissRequest = { showDistrictMenu = false }
-                        ) {
-                            districts.forEach { d ->
-                                DropdownMenuItem(
-                                    text    = { Text(d.name) },
-                                    onClick = { district = d.name; showDistrictMenu = false }
-                                )
-                            }
-                        }
-                    }
-                }
+                BpscDropdown(
+                    value       = district,
+                    label       = "${str.editDistrict} (Optional)",
+                    placeholder = if (districtsLoading) "Loading districts…" else str.editDistrict,
+                    options     = districts.map { it.name },
+                    onSelect    = { name -> district = name },
+                    enabled     = districts.isNotEmpty() && !districtsLoading,
+                    leadingIcon = { Icon(Icons.Rounded.LocationOn, null, tint = cs.outline) }
+                )
             }
 
             // Error

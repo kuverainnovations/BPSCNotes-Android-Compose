@@ -369,9 +369,12 @@ fun MyLearningScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (fromScreen=="nav-host") Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
-                        .clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    if (fromScreen=="nav-host") {
+                        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                            .clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
                     }
                     Column(Modifier.weight(1f)) {
                         Text(
