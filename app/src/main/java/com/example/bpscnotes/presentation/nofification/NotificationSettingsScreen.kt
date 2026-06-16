@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.network.NotifCountBus
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.google.gson.annotations.SerializedName
@@ -225,14 +226,7 @@ fun NotificationSettingsScreen(
                 state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = BpscColors.Primary)
                 }
-                state.error != null && state.notifications.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp)
-                        Text(state.error!!, color = BpscColors.TextSecondary, style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                        Button(onClick = viewModel::refresh, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
-                    }
-                }
+                state.error != null && state.notifications.isEmpty() -> AppErrorState(message = state.error!!, onRetry = viewModel::refresh)
                 state.notifications.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("🔔", fontSize = 52.sp)

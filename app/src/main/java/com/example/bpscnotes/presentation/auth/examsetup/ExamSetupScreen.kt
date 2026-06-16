@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.ExamDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -195,13 +196,11 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
             // Exam list
             when {
                 state.isLoadingExams -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
-                state.examsError != null -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp)
-                        Text(str.examLoadFailed, style = MaterialTheme.typography.titleMedium)
-                        Button(onClick = vm::loadExams) { Text(str.retry) }
-                    }
-                }
+                state.examsError != null -> AppErrorState(
+                    message  = str.examLoadFailed,
+                    onRetry  = vm::loadExams,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
                 else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(filtered, key = { it.name }) { exam ->
                         val isPrimary  = state.selectedPrimary?.name == exam.name

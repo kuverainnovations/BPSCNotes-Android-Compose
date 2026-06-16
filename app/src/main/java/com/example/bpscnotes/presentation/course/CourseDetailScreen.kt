@@ -56,9 +56,59 @@ fun CourseDetailScreen(
     val cs  = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("course_detail") }
     var expandedChapter by remember { mutableStateOf<String?>(null) }
+    var showEnrollSuccessDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.enrollSuccess) {
-        if (state.enrollSuccess) viewModel.clearMessages()
+        if (state.enrollSuccess) {
+            showEnrollSuccessDialog = true
+            viewModel.clearMessages()
+        }
+    }
+
+    if (showEnrollSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showEnrollSuccessDialog = false },
+            shape            = RoundedCornerShape(20.dp),
+            containerColor   = Color.White,
+            icon = {
+                Box(
+                    modifier = Modifier.size(56.dp).clip(CircleShape)
+                        .background(Color(0xFF4CAF50).copy(0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.CheckCircle, null,
+                        tint = Color(0xFF4CAF50), modifier = Modifier.size(32.dp))
+                }
+            },
+            title = {
+                Text("Successfully Enrolled! 🎉",
+                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center)
+            },
+            text = {
+                Text("You're now enrolled in ${state.course?.title ?: "this course"}. Start learning right away!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextSecondary,
+                    textAlign = TextAlign.Center)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEnrollSuccessDialog = false
+                        nav.navigate(Screen.MyLearningCourses.route)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) { Text("Go to My Courses", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEnrollSuccessDialog = false }) {
+                    Text("Continue Browsing", color = BpscColors.TextSecondary)
+                }
+            }
+        )
     }
 
     // If the course is paid and the user hasn't purchased it, the backend
@@ -163,17 +213,8 @@ fun CourseDetailScreen(
                         item { WhatYouLearnSection(course.whatYouLearn, accent) }
                     }
 
-                    // Certificate banner — shown always; state changes based on completion
-                    item {
-                        CertificateBanner(
-                            isComplete    = allDone,
-                            courseName    = course.title,
-                            certificateUrl = state.certificateUrl,
-                            certificateId  = state.certificateId,
-                            isDownloading  = state.isDownloadingCert,
-                            viewModel      = viewModel
-                        )
-                    }
+                    // Certificate banner — TEMP #15: hidden
+                    // item { CertificateBanner(...) }
 
                     item {
                         SectionHeader(

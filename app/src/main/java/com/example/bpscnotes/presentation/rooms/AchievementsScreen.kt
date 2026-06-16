@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.AchievementDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -90,12 +91,7 @@ fun AchievementsScreen(
 
             when {
                 state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
-                state.error != null -> Box(Modifier.fillMaxSize().padding(24.dp), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp); Text(state.error!!, textAlign = TextAlign.Center, color = cs.onSurfaceVariant)
-                        Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(BpscColors.Primary)) { Text(str.retry) }
-                    }
-                }
+                state.error != null -> AppErrorState(message = state.error!!, onRetry = { viewModel.load() })
                 else -> LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     categories.forEach { cat ->
                         val items = state.grouped[cat] ?: return@forEach

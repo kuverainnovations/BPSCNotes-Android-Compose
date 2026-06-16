@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -133,15 +134,7 @@ fun QuizListScreen(
             state.isLoadingList -> {
                 com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 140.dp, itemCount = 5, itemHeight = 85.dp)
             }
-            state.listError != null -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp)
-                        Text(state.listError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                        Button(onClick = { viewModel.loadLobby() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
-                    }
-                }
-            }
+            state.listError != null -> AppErrorState(message = state.listError!!, onRetry = { viewModel.loadLobby() })
             state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {

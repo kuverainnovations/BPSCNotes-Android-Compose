@@ -79,13 +79,86 @@ fun ChallengesScreen(
                         Text(str.challengesCheckBack, style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
                     }
                 }
-                else -> LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(state.challenges, key = { it.id }) { ch ->
-                        ChallengeCard(
-                            challenge = ch,
-                            isClaiming = state.isClaiming,
-                            onClaim = { viewModel.claimReward(ch.id) }
-                        )
+                else -> {
+                    // Hoisted here — remember{} requires @Composable scope, not LazyListScope
+                    val daysLeft = remember {
+                        val cal = java.util.Calendar.getInstance()
+                        val dow = cal.get(java.util.Calendar.DAY_OF_WEEK)
+                        if (dow == 1) 0 else 8 - dow
+                    }
+                    val allDone = state.challenges.all { it.isCompleted }
+                    val sorted  = remember(state.challenges) {
+                        state.challenges.sortedWith(compareBy(
+                            { if (it.rewardClaimed) 2 else 0 },
+                            { if (it.isCompleted && !it.rewardClaimed) 1 else 0 },
+                            { if (it.progressPct == 0 && !it.isCompleted) 1 else 0 }
+                        ))
+                    }
+
+                    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                        // ── Week deadline banner ──────────────────────────
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        when {
+                                            allDone       -> BpscColors.Success.copy(0.1f)
+                                            daysLeft <= 1 -> Color(0xFFFFF3E0)
+                                            else          -> BpscColors.PrimaryLight.copy(0.5f)
+                                        }
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment     = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    when {
+                                        allDone       -> "✅"
+                                        daysLeft <= 1 -> "⚠️"
+                                        else          -> "📅"
+                                    },
+                                    fontSize = 20.sp
+                                )
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        when {
+                                            allDone       -> "All challenges complete!"
+                                            daysLeft == 0 -> "Last chance — resets tonight"
+                                            daysLeft == 1 -> "1 day left this week"
+                                            else          -> "$daysLeft days left this week"
+                                        },
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when {
+                                            allDone       -> BpscColors.Success
+                                            daysLeft <= 1 -> Color(0xFFE65100)
+                                            else          -> BpscColors.Primary
+                                        }
+                                    )
+                                    val incomplete = state.challenges.count { !it.isCompleted }
+                                    if (!allDone) {
+                                        Text(
+                                            "$incomplete challenge${if (incomplete != 1) "s" else ""} remaining — complete them before Sunday to earn coins",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = BpscColors.TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        // Sort: in-progress → not started → complete+unclaimed → claimed last
+                        items(sorted, key = { it.id }) { ch ->
+                            ChallengeCard(
+                                challenge  = ch,
+                                isClaiming = state.isClaiming,
+                                onClaim    = { viewModel.claimReward(ch.id) }
+                            )
+                        }
                     }
                 }
             }

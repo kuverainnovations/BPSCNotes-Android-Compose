@@ -1,6 +1,8 @@
 package com.example.bpscnotes.presentation.activerecall
 
 import com.example.bpscnotes.core.language.LocalStrings
+import androidx.compose.ui.platform.LocalContext
+import com.example.bpscnotes.core.ui.AppErrorState
 import androidx.compose.animation.core.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.*
@@ -83,18 +85,8 @@ fun ActiveRecallScreen(
             com.example.bpscnotes.core.ui.ActiveRecallSkeleton()
         }
 
-        state.error != null && state.allCards.isEmpty() -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(24.dp)) {
-                    Text("⚠️", fontSize = 48.sp)
-                    Text(str.recallFailed, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                    Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                    Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                        Text(str.tryAgain)
-                    }
-                }
-            }
-        }
+        state.error != null && state.allCards.isEmpty() ->
+            AppErrorState(message = state.error!!, onRetry = { viewModel.retry() })
 
         activeSubject != null -> {
             val baseCards = if (retryWeak) {
@@ -144,6 +136,7 @@ fun ActiveRecallScreen(
                     cards       = sessionCards,
                     masteredIds = masteredIds,
                     weakIds     = weakIds,
+                    subjectKey  = activeSubject ?: "",
                     onRate      = { card, rating, currentStreak ->
                         when (rating) {
                             CardRating.Mastered -> viewModel.markMastered(card.id, currentStreak)
@@ -393,17 +386,27 @@ private fun FlashcardSessionScreen(
     cards: List<CoinsApiService.FlashcardDto>,
     masteredIds: Set<String>,
     weakIds: Set<String>,
+    subjectKey: String = "",
     onRate: (CoinsApiService.FlashcardDto, CardRating, Int) -> Unit,
     onExit: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val context = LocalContext.current
 
     // ── State hoisted above ad break so it survives when showAdBreak=true causes early return ──
     var cardsCompleted  by remember { mutableIntStateOf(0) }
     var totalCardsInSession by remember { mutableIntStateOf(0) }
     var showAdBreak     by remember { mutableStateOf(false) }
-    var resumeIndex     by remember { mutableIntStateOf(0) }
+
+    // Resume from last position — keyed by subject so different subjects track independently
+    val prefs = remember { context.getSharedPreferences("flashcard_session_prefs", android.content.Context.MODE_PRIVATE) }
+    val prefsKey = if (subjectKey.isNotBlank()) "idx_$subjectKey" else null
+    var resumeIndex by remember {
+        mutableIntStateOf(
+            prefsKey?.let { prefs.getInt(it, 0).coerceIn(0, (cards.size - 1).coerceAtLeast(0)) } ?: 0
+        )
+    }
     // Streak and ratings MUST be here (not inside the ad-break guard) so they
     // survive the early return — otherwise streak resets to 0 after every ad break
     var streak          by remember { mutableIntStateOf(0) }
@@ -485,15 +488,19 @@ private fun FlashcardSessionScreen(
                 targetIndex < cards.size
             ) {
                 resumeIndex = targetIndex
+                prefsKey?.let { prefs.edit().putInt(it, targetIndex).apply() }
                 isFlipped   = false
                 offsetX.snapTo(0f)
                 totalCardsInSession = cards.size
                 showAdBreak = true
             } else if (targetIndex < cards.size) {
                 currentIndex = targetIndex
+                prefsKey?.let { prefs.edit().putInt(it, targetIndex).apply() }
                 isFlipped    = false
                 offsetX.snapTo(0f)
             } else {
+                // Session complete — clear saved position so next session starts fresh
+                prefsKey?.let { prefs.edit().remove(it).apply() }
                 isComplete = true
             }
         }

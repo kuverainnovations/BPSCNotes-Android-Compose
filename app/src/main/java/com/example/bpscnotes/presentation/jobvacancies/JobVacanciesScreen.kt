@@ -28,6 +28,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -150,13 +151,7 @@ fun JobVacanciesScreen(
     }
 
     if (vmState.error != null && allJobs.isEmpty()) {
-        Box(Modifier.fillMaxSize(), Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("⚠️", fontSize = 40.sp)
-                Text(vmState.error!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                Button(onClick = { viewModel.retry() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
-            }
-        }
+        AppErrorState(message = vmState.error!!, onRetry = { viewModel.retry() })
         return
     }
 

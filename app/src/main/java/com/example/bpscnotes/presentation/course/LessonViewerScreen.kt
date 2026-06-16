@@ -106,6 +106,7 @@ fun LessonViewerScreen(
                         }
                         "pdf", "notes" -> PdfViewer(
                             notesUrl    = lesson.notes_url,
+                            lessonId    = lesson.id,
                             onReachEnd  = { reachedEnd = true }
                         )
                         "live"         -> {
@@ -118,6 +119,7 @@ fun LessonViewerScreen(
                         }
                         else           -> PdfViewer(
                             notesUrl   = lesson.notes_url ?: lesson.video_url,
+                            lessonId   = lesson.id,
                             onReachEnd = { reachedEnd = true }
                         )
                     }
@@ -218,7 +220,7 @@ private fun LessonTopBar(
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun PdfViewer(notesUrl: String?, onReachEnd: () -> Unit = {}) {
+private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -> Unit = {}) {
     val cs      = MaterialTheme.colorScheme
     val str     = LocalStrings.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -228,7 +230,18 @@ private fun PdfViewer(notesUrl: String?, onReachEnd: () -> Unit = {}) {
     var pdfPages   by remember { mutableStateOf<List<android.graphics.Bitmap>>(emptyList()) }
     var isLoading  by remember { mutableStateOf(true) }
     var error      by remember { mutableStateOf<String?>(null) }
-    val listState  = rememberLazyListState()
+
+    // Page persistence: save/restore scroll position per lesson
+    val prefs = remember { context.getSharedPreferences("lesson_page_prefs", android.content.Context.MODE_PRIVATE) }
+    val savedPage = remember(lessonId) { if (lessonId.isNotBlank()) prefs.getInt("page_$lessonId", 0) else 0 }
+    val listState  = rememberLazyListState(initialFirstVisibleItemIndex = savedPage)
+
+    // Persist scroll position while reading
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        if (lessonId.isNotBlank() && pdfPages.isNotEmpty()) {
+            prefs.edit().putInt("page_$lessonId", listState.firstVisibleItemIndex).apply()
+        }
+    }
 
     // Watermark logo decoded once
     val watermarkLogo = remember {

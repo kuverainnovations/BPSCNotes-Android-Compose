@@ -11,10 +11,13 @@ import androidx.compose.material.icons.rounded.ExitToApp
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,11 +48,7 @@ fun AppLoader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            CircularProgressIndicator(
-                color       = BpscColors.Primary,
-                strokeWidth = 3.dp,
-                modifier    = Modifier.size(40.dp)
-            )
+            AnimatedBookLoader()
             if (message.isNotBlank()) {
                 Text(
                     message,
@@ -82,14 +81,90 @@ fun AppFullScreenLoader(message: String = "Loading…") {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                CircularProgressIndicator(
-                    color       = BpscColors.Primary,
-                    strokeWidth = 3.dp,
-                    modifier    = Modifier.size(36.dp)
-                )
+                AnimatedBookLoader(size = 44.dp)
                 Text(message, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// AnimatedBookLoader — flipping book pages animation
+// ─────────────────────────────────────────────────────────────
+@Composable
+fun AnimatedBookLoader(size: Dp = 52.dp) {
+    // Page flip: 0f = flat open, 1f = page fully turned
+    val infiniteTransition = rememberInfiniteTransition(label = "book")
+    val pageFlip by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(600, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pageFlip"
+    )
+    val spineGlow by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "spineGlow"
+    )
+
+    Canvas(modifier = Modifier.size(size)) {
+        val w   = size.toPx()
+        val h   = size.toPx()
+        val mid = w / 2f
+        val bookH  = h * 0.72f
+        val bookTop = (h - bookH) / 2f
+
+        // ── Back cover (right side) ──
+        drawRect(
+            color    = BpscColors.PrimaryLight,
+            topLeft  = androidx.compose.ui.geometry.Offset(mid, bookTop),
+            size     = androidx.compose.ui.geometry.Size(mid - 2.dp.toPx(), bookH)
+        )
+        // ── Left page (static) ──
+        drawRect(
+            color    = Color.White,
+            topLeft  = androidx.compose.ui.geometry.Offset(2.dp.toPx(), bookTop + 2.dp.toPx()),
+            size     = androidx.compose.ui.geometry.Size(mid - 4.dp.toPx(), bookH - 4.dp.toPx())
+        )
+        // ── Lines on left page ──
+        val lineColor = BpscColors.Primary.copy(0.15f)
+        val lineX     = 6.dp.toPx()
+        val lineEnd   = mid - 6.dp.toPx()
+        for (i in 1..4) {
+            val ly = bookTop + bookH * (i / 5.5f)
+            drawLine(lineColor, androidx.compose.ui.geometry.Offset(lineX, ly),
+                androidx.compose.ui.geometry.Offset(lineEnd, ly), 1.5.dp.toPx())
+        }
+        // ── Turning page (skew based on pageFlip) ──
+        val pageW   = (mid - 4.dp.toPx()) * (1f - pageFlip * 2f).coerceIn(-1f, 1f).let { Math.abs(it.toDouble()).toFloat() }
+        val pageColor = androidx.compose.ui.graphics.lerp(Color.White, BpscColors.PrimaryLight, pageFlip * 0.3f)
+        if (pageW > 1f) {
+            val startX = if (pageFlip < 0.5f) mid - 2.dp.toPx() - pageW else mid + 2.dp.toPx()
+            drawRect(
+                color   = pageColor,
+                topLeft = androidx.compose.ui.geometry.Offset(startX, bookTop + 2.dp.toPx()),
+                size    = androidx.compose.ui.geometry.Size(pageW, bookH - 4.dp.toPx())
+            )
+        }
+        // ── Spine ──
+        drawRect(
+            color    = BpscColors.Primary.copy(spineGlow),
+            topLeft  = androidx.compose.ui.geometry.Offset(mid - 2.dp.toPx(), bookTop),
+            size     = androidx.compose.ui.geometry.Size(4.dp.toPx(), bookH)
+        )
+        // ── Cover outline ──
+        drawRoundRect(
+            color       = BpscColors.Primary.copy(0.3f),
+            topLeft     = androidx.compose.ui.geometry.Offset(2.dp.toPx(), bookTop),
+            size        = androidx.compose.ui.geometry.Size(w - 4.dp.toPx(), bookH),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx()),
+            style        = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx())
+        )
     }
 }
 
@@ -296,9 +371,10 @@ fun AppInfoScreen(
 }
 @Composable
 fun AppErrorState(
-    message:  String,
-    onRetry:  (() -> Unit)? = null,
-    modifier: Modifier = Modifier.fillMaxSize()
+    message:         String,
+    onRetry:         (() -> Unit)? = null,
+    modifier:        Modifier = Modifier.fillMaxSize(),
+    secondaryAction: (@Composable () -> Unit)? = null
 ) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
@@ -319,14 +395,29 @@ fun AppErrorState(
             Text(message, style = MaterialTheme.typography.bodyMedium,
                 color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             if (onRetry != null) {
-                Button(
-                    onClick = onRetry,
-                    colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
-                    shape   = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(str.uiTryAgain, fontWeight = FontWeight.SemiBold)
+                if (secondaryAction != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        secondaryAction()
+                        Button(
+                            onClick = onRetry,
+                            colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                            shape   = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(str.uiTryAgain, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onRetry,
+                        colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                        shape   = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(str.uiTryAgain, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

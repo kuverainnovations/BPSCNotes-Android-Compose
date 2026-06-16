@@ -23,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -239,15 +240,7 @@ fun MarketplaceScreen(
                 state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = BpscColors.Primary)
                 }
-                state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("⚠️", fontSize = 40.sp)
-                        Text(state.error!!, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                        Button(onClick = { viewModel.load() }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Text(str.retry)
-                        }
-                    }
-                }
+                state.error != null -> AppErrorState(message = state.error!!, onRetry = { viewModel.load() })
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("📚", fontSize = 48.sp)

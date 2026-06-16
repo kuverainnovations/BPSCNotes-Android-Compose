@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -52,18 +53,11 @@ fun QuizDetailScreen(
                 CircularProgressIndicator(color = BpscColors.Primary)
             }
         }
-        state.detailError != null -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("⚠️", fontSize = 40.sp)
-                    Text(state.detailError!!, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { navController.popBackStackSafe() }) { Text(str.goBack) }
-                        Button(onClick = { viewModel.loadQuizDetail(quizId) }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) { Text(str.retry) }
-                    }
-                }
-            }
-        }
+        state.detailError != null -> AppErrorState(
+            message         = state.detailError!!,
+            onRetry         = { viewModel.loadQuizDetail(quizId) },
+            secondaryAction = { OutlinedButton(onClick = { navController.popBackStackSafe() }) { Text(str.goBack) } }
+        )
         state.quizDetail != null -> {
             QuizIntroContent(
                 quiz              = state.quizDetail!!,

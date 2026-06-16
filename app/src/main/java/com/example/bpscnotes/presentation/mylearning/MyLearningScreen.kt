@@ -858,7 +858,7 @@ private fun EnrolledCoursesContent(
                         LearningStatItem("📚", "${courses.size}", str.coursesEnrolled)
                         LearningStatItem("▶️", "${inProgress.size}", str.courseInProgress)
                         LearningStatItem("✅", "${completed.size}", str.coursesCompleted)
-                        LearningStatItem("🏆", "${certificates.size}", "Certs")
+                        // TEMP #15: certificates hidden — LearningStatItem("🏆", "${certificates.size}", "Certs")
                     }
                 }
             }
@@ -901,19 +901,8 @@ private fun EnrolledCoursesContent(
             }
         }
 
-        // ── 4. My Certificates (All tab, has certs) ──
-        if (selectedFilter == 0 && certificates.isNotEmpty()) {
-            item {
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    StoreSectionHeader(str.courseMyCertificates, "${certificates.size} earned")
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(certificates) { course -> CertificateCard(course = course) }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-            }
-        }
+        // ── 4. My Certificates (All tab, has certs) — TEMP #15: hidden
+        // if (selectedFilter == 0 && certificates.isNotEmpty()) { ... }
 
         // ── 5. Course list ──
         if (displayList.isEmpty()) {

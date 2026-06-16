@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -167,6 +170,16 @@ fun DownloadsScreen(
     val cs = MaterialTheme.colorScheme
     val context      = LocalContext.current
     val snackbarHost = remember { SnackbarHostState() }
+
+    // Refresh on every resume — covers the "download a file in Student Hub then come back" case
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.load(refresh = true)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let {
@@ -559,92 +572,92 @@ fun SubscriptionScreen(
                             }
                         }
                     } else {
-                    // FIX: Premium card is now clickable — shows enroll/subscribe dialog
-                    var showEnrollDialog by remember { mutableStateOf(false) }
-                    if (showEnrollDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showEnrollDialog = false },
-                            shape = RoundedCornerShape(20.dp),
-                            title = { Text(str.placeholderGetPro, fontWeight = FontWeight.ExtraBold) },
-                            text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(str.placeholdersUnlockAll)
-                                    val p = state.plans.firstOrNull()
-                                    if (p != null) {
-                                        Text(str.placeholderPremiumPdfs, style = MaterialTheme.typography.bodyMedium)
-                                        Text(str.placeholderOfflineDownloads, style = MaterialTheme.typography.bodyMedium)
-                                        Text(str.placeholdersPrioritySupport, style = MaterialTheme.typography.bodyMedium)
-                                        if (p.bonusCoins > 0) Text("✅ +${p.bonusCoins} bonus coins on signup", style = MaterialTheme.typography.bodyMedium)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("₹${p.price}/${p.duration} — ${p.billingCycle}", fontWeight = FontWeight.Bold, color = BpscColors.Primary)
+                        // FIX: Premium card is now clickable — shows enroll/subscribe dialog
+                        var showEnrollDialog by remember { mutableStateOf(false) }
+                        if (showEnrollDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showEnrollDialog = false },
+                                shape = RoundedCornerShape(20.dp),
+                                title = { Text(str.placeholderGetPro, fontWeight = FontWeight.ExtraBold) },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(str.placeholdersUnlockAll)
+                                        val p = state.plans.firstOrNull()
+                                        if (p != null) {
+                                            Text(str.placeholderPremiumPdfs, style = MaterialTheme.typography.bodyMedium)
+                                            Text(str.placeholderOfflineDownloads, style = MaterialTheme.typography.bodyMedium)
+                                            Text(str.placeholdersPrioritySupport, style = MaterialTheme.typography.bodyMedium)
+                                            if (p.bonusCoins > 0) Text("✅ +${p.bonusCoins} bonus coins on signup", style = MaterialTheme.typography.bodyMedium)
+                                            Spacer(Modifier.height(4.dp))
+                                            Text("₹${p.price}/${p.duration} — ${p.billingCycle}", fontWeight = FontWeight.Bold, color = BpscColors.Primary)
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(onClick = {
+                                        showEnrollDialog = false
+                                        nav.navigate(Screen.Payment.route)
+                                    }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
+                                        Text(str.paymentSubscribe + " →")
+                                    }
+                                },
+                                dismissButton = {
+                                    OutlinedButton(onClick = { showEnrollDialog = false }) { Text(str.pdfMaybeLater) }
+                                }
+                            )
+                        }
+
+                        Card(
+                            modifier = Modifier.clickable { showEnrollDialog = true },  // ← CLICKABLE NOW
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f)),
+                            border = BorderStroke(1.dp, Color.White.copy(0.3f))) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Column(
+                                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("BPSCNotes ${featuredPlan.name}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White, fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(str.placeholdersAllPremium,
+                                        style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                                    ) {
+                                        SubPill("📄 Premium PDFs")
+                                        SubPill("📚 All Books")
+                                        SubPill("🎬 Videos")
+                                    }
+                                    if (featuredPlan.bonusCoins > 0) {
+                                        SubPill("🪙 +${featuredPlan.bonusCoins} Bonus Coins")
                                     }
                                 }
-                            },
-                            confirmButton = {
-                                Button(onClick = {
-                                    showEnrollDialog = false
-                                    nav.navigate(Screen.Payment.route)
-                                }, colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                                    Text(str.paymentSubscribe + " →")
-                                }
-                            },
-                            dismissButton = {
-                                OutlinedButton(onClick = { showEnrollDialog = false }) { Text(str.pdfMaybeLater) }
-                            }
-                        )
-                    }
-
-                    Card(
-                        modifier = Modifier.clickable { showEnrollDialog = true },  // ← CLICKABLE NOW
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = cs.surface.copy(0.15f)),
-                        border = BorderStroke(1.dp, Color.White.copy(0.3f))) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Column(
-                                modifier = Modifier.weight(1f).padding(end = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text("BPSCNotes ${featuredPlan.name}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White, fontWeight = FontWeight.ExtraBold,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(str.placeholdersAllPremium,
-                                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.8f))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                                ) {
-                                    SubPill("📄 Premium PDFs")
-                                    SubPill("📚 All Books")
-                                    SubPill("🎬 Videos")
-                                }
-                                if (featuredPlan.bonusCoins > 0) {
-                                    SubPill("🪙 +${featuredPlan.bonusCoins} Bonus Coins")
-                                }
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                if (featuredPlan.originalPrice > featuredPlan.price) {
-                                    Text("₹${featuredPlan.originalPrice}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White.copy(0.5f),
-                                        textDecoration = TextDecoration.LineThrough)
-                                }
-                                Text("₹${featuredPlan.price}",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("/${featuredPlan.duration}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(0.7f))
-                                if (featuredPlan.savings > 0) {
-                                    Text("Save ₹${featuredPlan.savings}",
+                                Column(horizontalAlignment = Alignment.End) {
+                                    if (featuredPlan.originalPrice > featuredPlan.price) {
+                                        Text("₹${featuredPlan.originalPrice}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(0.5f),
+                                            textDecoration = TextDecoration.LineThrough)
+                                    }
+                                    Text("₹${featuredPlan.price}",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text("/${featuredPlan.duration}",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF81C784), fontWeight = FontWeight.Bold)
+                                        color = Color.White.copy(0.7f))
+                                    if (featuredPlan.savings > 0) {
+                                        Text("Save ₹${featuredPlan.savings}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF81C784), fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
-                    }
                     }
                 }
             }

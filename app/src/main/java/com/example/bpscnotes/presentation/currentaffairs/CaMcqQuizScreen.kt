@@ -80,6 +80,7 @@ fun CaMcqQuizScreen(
     val mcqLoading by viewModel.mcqLoading.collectAsState()
     val mcqError   by viewModel.mcqError.collectAsState()
     val mcqAnswers by viewModel.mcqAnswers.collectAsState()
+    val cs = MaterialTheme.colorScheme
 
     LaunchedEffect(affairId) { viewModel.loadMcqs(affairId) }
 
@@ -93,20 +94,16 @@ fun CaMcqQuizScreen(
     var showResult    by remember { mutableStateOf(false) }
     var showReview    by remember { mutableStateOf(false) }
     var retryKey      by remember { mutableIntStateOf(0) }  // increments on each retry to reset timer
-    // Ad gate: user must watch 15-sec ad before starting quiz
-    var adGateSecsLeft  by remember { mutableIntStateOf(15) }
+    // Ad gate: show full-screen interstitial before quiz starts
     var adGatePassed    by remember { mutableStateOf(false) }
     // Per-question 30-second countdown
     var questionSecsLeft by remember { mutableIntStateOf(30) }
 
-    // Ad gate countdown
-    LaunchedEffect(adGatePassed) {
-        if (!adGatePassed) {
-            adGateSecsLeft = 15
-            while (adGateSecsLeft > 0) {
-                delay(1_000L)
-                adGateSecsLeft--
-            }
+    // Show full-screen interstitial ad on entry; proceed to quiz in onComplete()
+    LaunchedEffect(Unit) {
+        if (adManager != null && activity != null) {
+            adManager.showInterstitialIfReady(activity) { adGatePassed = true }
+        } else {
             adGatePassed = true
         }
     }
@@ -159,44 +156,21 @@ fun CaMcqQuizScreen(
                 onAction    = { navController.popBackStackSafe() }
             )
 
-            // ── Ad gate: 15-second wait before quiz starts ────────
+            // ── Ad gate: brief loading while interstitial ad fires ──
             !adGatePassed -> Box(
-                modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
+                modifier = Modifier.fillMaxSize().background(cs.background),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    modifier = Modifier.padding(32.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("📺", fontSize = 64.sp)
+                    CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(40.dp))
                     Text(
-                        "Your quiz is ready!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White, fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
+                        str.caLoadingQ,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = BpscColors.TextSecondary
                     )
-                    Text(
-                        "Starting in $adGateSecsLeft seconds...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(0.7f),
-                        textAlign = TextAlign.Center
-                    )
-                    // Countdown ring
-                    Box(contentAlignment = Alignment.Center) {
-                        androidx.compose.foundation.Canvas(modifier = Modifier.size(80.dp)) {
-                            val sweep = (adGateSecsLeft / 15f) * 360f
-                            drawArc(Color.White.copy(0.15f), -90f, 360f, false,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-                            drawArc(Color(0xFF1565C0), -90f, sweep, false,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-                        }
-                        Text("$adGateSecsLeft", style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    }
-                    if (adManager != null) {
-                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
-                    }
                 }
             }
 

@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.AppEmptyState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
@@ -74,35 +76,20 @@ fun TopicQuizScreen(
         state.startError != null || state.detailError != null || state.listError != null -> {
             val msg = state.startError ?: state.detailError ?: state.listError ?: str.error
             val isNoQuiz = msg.contains("No quiz") || msg.contains("No MCQ")
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    Text(if (isNoQuiz) "📚" else "⚠️", fontSize = 48.sp)
-                    Text(
-                        // FIX: Never show raw "HTTP 400" — use cleaned message
-                        msg.replace("HTTP 400", "This quiz has no questions yet.")
-                            .replace("HTTP 404", "Quiz not found.")
-                            .replace("HTTP 403", "Access denied.")
-                            .replace("HTTP 500", "Server error. Please try again later."),
-                        style     = MaterialTheme.typography.titleMedium,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        color     = BpscColors.TextPrimary
-                    )
-                    if (!isNoQuiz) {
-                        // Network error — show retry
-                        Button(onClick = { viewModel.clearErrors(); viewModel.startTopicQuiz(subject) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                            Text(str.retry)
-                        }
-                    }
-                    OutlinedButton(onClick = { navController.popBackStackSafe() }, shape = RoundedCornerShape(12.dp)) {
-                        Text("← " + str.back)
-                    }
-                }
+            val cleanMsg = msg.replace("HTTP 400", "This quiz has no questions yet.")
+                .replace("HTTP 404", "Quiz not found.")
+                .replace("HTTP 403", "Access denied.")
+                .replace("HTTP 500", "Server error. Please try again later.")
+            if (isNoQuiz) {
+                // No quiz available — show friendly empty state, not an error
+                AppEmptyState(emoji = "📚", title = cleanMsg,
+                    actionLabel = str.back, onAction = { navController.popBackStackSafe() })
+            } else {
+                AppErrorState(
+                    message = cleanMsg,
+                    onRetry = { viewModel.clearErrors(); viewModel.startTopicQuiz(subject) },
+                    secondaryAction = { OutlinedButton(onClick = { navController.popBackStackSafe() }, shape = RoundedCornerShape(12.dp)) { Text("← " + str.back) } }
+                )
             }
         }
 
