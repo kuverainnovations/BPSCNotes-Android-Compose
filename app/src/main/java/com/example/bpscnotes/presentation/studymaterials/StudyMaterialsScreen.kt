@@ -41,6 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.BpscDropdown
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -396,11 +397,7 @@ fun StudyMaterialsScreen(
     }
 
     // ── DETAIL SHEET ─────────────────────────────────────────────
-    if (state.isLoadingDetail) {
-        Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
-    }
+    if (state.isLoadingDetail) { AppLoader() }
     state.selectedMaterial?.let { detail ->
         // FIX: Pass purchasedIds so sheet knows if user just bought this material
         // Full access if: purchased, is the uploader (owner), or is free

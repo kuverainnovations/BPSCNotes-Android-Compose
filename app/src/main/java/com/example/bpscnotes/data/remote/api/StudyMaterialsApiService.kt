@@ -333,6 +333,15 @@ data class WalletData(
     val meta: PaginationMeta? = null,
 )
 
+data class WithdrawalRequest(
+    val amount: Int,
+    @SerializedName("upiId") val upiId: String? = null
+)
+
+data class WithdrawalResult(
+    @SerializedName("newBalance") val newBalance: Int = 0
+)
+
 data class PreviewData(
     val previewUrl:  String?  = null,
     val totalPages:  Int      = 0,
@@ -450,6 +459,10 @@ interface StudyMaterialsApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 30
     ): ApiResponse<WalletData>
+
+    /** POST /study-materials/wallet/withdraw — request payout */
+    @POST("study-materials/wallet/withdraw")
+    suspend fun requestWithdrawal(@Body body: WithdrawalRequest): ApiResponse<WithdrawalResult>
 
     /** GET /study-materials/:id/preview — get signed preview (free pages only) */
     @GET("study-materials/{id}/preview")

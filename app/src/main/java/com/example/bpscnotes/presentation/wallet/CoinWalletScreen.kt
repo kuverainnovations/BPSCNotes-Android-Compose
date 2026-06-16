@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -71,9 +72,18 @@ fun CoinWalletScreen(
     val snackbarHost = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Coins are now awarded server-side when actions complete (upload approved, quiz passed).
-    // No client-side claim needed — getEarnTasks() already reflects the updated state.
-    val tabs = listOf(str.walletEarnCoins, str.walletHistory, "Referrals")
+    // 4 tabs: Earn Coins | Coin History | ₹ Earnings | Referrals
+    val tabs = listOf(str.walletEarnCoins, "Coin History", "₹ Earnings", "Referrals")
+
+    // Withdrawal dialog state
+    var showWithdrawDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.withdrawalSuccess) {
+        state.withdrawalSuccess?.let {
+            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Long)
+            viewModel.clearWithdrawalSuccess()
+        }
+    }
 
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let {
@@ -88,14 +98,7 @@ fun CoinWalletScreen(
         }
     }
 
-    if (state.isLoading && state.balance == 0) {
-        Box(Modifier
-            .fillMaxSize()
-            .background(cs.background), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.CoinGold)
-        }
-        return
-    }
+    if (state.isLoading && state.balance == 0) { AppLoader(); return }
 
     // Admin master switch (Coins page → Economy) — when off, no coins are
     // earned or spent anywhere in the app. Show a clear paused state
@@ -313,8 +316,120 @@ fun CoinWalletScreen(
                         }
                     }
 
-                    // ─── REFERRALS TAB ────────────────────────────────
+                    // ─── ₹ EARNINGS TAB ──────────────────────────────────
                     2 -> {
+                        // Earnings summary card
+                        item(key = "earnings_header") {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (state.isLoadingSellerWallet) {
+                                    AppLoader(modifier = Modifier.fillMaxWidth().height(140.dp))
+                                } else {
+                                    val wallet = state.sellerWallet
+                                    // Balance card
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(Brush.linearGradient(listOf(Color(0xFF059669), Color(0xFF047857))))
+                                            .padding(20.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            Text("Available to Withdraw", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
+                                            Text("₹${wallet?.balance ?: 0}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                                            HorizontalDivider(color = Color.White.copy(0.25f))
+                                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Text("Total earned", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                                                    Text("₹${wallet?.totalEarned ?: 0}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                                                }
+                                                Button(
+                                                    onClick = { showWithdrawDialog = true },
+                                                    enabled = (wallet?.balance ?: 0) >= 100,
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = Color.White,
+                                                        contentColor   = Color(0xFF047857),
+                                                        disabledContainerColor = Color.White.copy(0.3f),
+                                                        disabledContentColor   = Color.White.copy(0.6f)
+                                                    )
+                                                ) {
+                                                    Icon(Icons.Rounded.AccountBalanceWallet, null, modifier = Modifier.size(16.dp))
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text("Withdraw", fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            if ((wallet?.balance ?: 0) < 100) {
+                                                Text("Minimum withdrawal is ₹100. Keep selling to unlock!", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                                            }
+                                        }
+                                    }
+                                    // Info note
+                                    Row(
+                                        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFFF0FDF4)).padding(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("ℹ️", fontSize = 14.sp)
+                                        Text("Withdrawals are processed to your UPI ID within 2–3 business days. Platform takes a 15% fee on each sale.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF166534))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Transaction history
+                        val txns = state.sellerWallet?.transactions ?: emptyList()
+                        if (txns.isEmpty() && !state.isLoadingSellerWallet) {
+                            item(key = "earnings_empty") {
+                                Box(Modifier.fillMaxWidth().padding(vertical = 32.dp), Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("💰", fontSize = 40.sp)
+                                        Text("No transactions yet", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                                        Text("Sell study materials to earn real money", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                    }
+                                }
+                            }
+                        } else {
+                            item(key = "earnings_hist_hdr") {
+                                SectionHeader("Transaction History", "${txns.size} transactions")
+                            }
+                            items(txns, key = { it.id }) { txn ->
+                                val isCredit = txn.type == "sale_credit"
+                                val isWithdrawal = txn.type == "withdrawal"
+                                val statusEmoji = when(txn.status) { "disbursed" -> "✅"; "pending" -> "⏳"; "failed" -> "❌"; else -> "•" }
+                                val statusColor = when(txn.status) { "disbursed" -> BpscColors.Success; "pending" -> Color(0xFFF59E0B); "failed" -> Color(0xFFE74C3C); else -> BpscColors.TextHint }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(cs.surface)
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(Modifier.size(38.dp).clip(CircleShape).background(if (isCredit) BpscColors.Success.copy(0.12f) else if (isWithdrawal) Color(0xFF3B82F6).copy(0.12f) else Color(0xFFE74C3C).copy(0.12f)), Alignment.Center) {
+                                        Text(if (isCredit) "📈" else if (isWithdrawal) "🏦" else statusEmoji, fontSize = 16.sp)
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(txn.materialTitle ?: txn.description ?: if (isCredit) "Sale credit" else if (isWithdrawal) "Withdrawal" else txn.type,
+                                            style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = cs.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(txn.status.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold)
+                                            txn.createdAt?.take(10)?.let { Text("· $it", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint) }
+                                        }
+                                    }
+                                    Text("${if (isCredit) "+" else "−"}₹${txn.amount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = if (isCredit) BpscColors.Success else Color(0xFFE74C3C))
+                                }
+                            }
+                        }
+                    }
+
+                    // ─── REFERRALS TAB ────────────────────────────────
+                    3 -> {
                         // Referral coin amounts are admin-configurable on
                         // the Coins page (Referrals & Social) — read live
                         // values instead of hardcoding them here.
@@ -371,6 +486,19 @@ fun CoinWalletScreen(
                 }
             }
         }
+    }
+
+    // Withdrawal dialog — shown over the Scaffold
+    if (showWithdrawDialog) {
+        WithdrawDialog(
+            currentBalance = state.sellerWallet?.balance ?: 0,
+            isWithdrawing  = state.isWithdrawing,
+            onDismiss      = { showWithdrawDialog = false },
+            onConfirm      = { amount, upiId ->
+                showWithdrawDialog = false
+                viewModel.requestWithdrawal(amount, upiId)
+            }
+        )
     }
 }
 
@@ -1229,4 +1357,108 @@ private fun ReferralEmptyState(totalPerFriend: Int, onShare: () -> Unit) {
             }
         }
     }
+}
+// ─────────────────────────────────────────────────────────────
+// WITHDRAW DIALOG — UPI ID + amount input → requestWithdrawal()
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun WithdrawDialog(
+    currentBalance: Int,
+    isWithdrawing: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (amount: Int, upiId: String?) -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    var amountText by remember { mutableStateOf("") }
+    var upiId      by remember { mutableStateOf("") }
+    var error      by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isWithdrawing) onDismiss() },
+        shape            = RoundedCornerShape(20.dp),
+        containerColor   = cs.surface,
+        icon = {
+            Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFF059669).copy(0.12f)), Alignment.Center) {
+                Icon(Icons.Rounded.AccountBalanceWallet, null, tint = Color(0xFF059669), modifier = Modifier.size(28.dp))
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Withdraw Earnings", fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge)
+                Text("Available: ₹$currentBalance",
+                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Amount field
+                OutlinedTextField(
+                    value         = amountText,
+                    onValueChange = { amountText = it.filter { c -> c.isDigit() }; error = null },
+                    label         = { Text("Amount (₹)") },
+                    placeholder   = { Text("Min ₹100") },
+                    prefix        = { Text("₹") },
+                    modifier      = Modifier.fillMaxWidth(),
+                    shape         = RoundedCornerShape(12.dp),
+                    singleLine    = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    )
+                )
+                // UPI ID field
+                OutlinedTextField(
+                    value         = upiId,
+                    onValueChange = { upiId = it; error = null },
+                    label         = { Text("UPI ID (optional)") },
+                    placeholder   = { Text("e.g. name@upi") },
+                    modifier      = Modifier.fillMaxWidth(),
+                    shape         = RoundedCornerShape(12.dp),
+                    singleLine    = true
+                )
+                error?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = cs.error)
+                }
+                // Info note
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFF0FDF4)).padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("ℹ️", fontSize = 12.sp)
+                    Text("Processed within 2–3 business days. 15% platform fee already deducted from earnings.",
+                        style = MaterialTheme.typography.labelSmall, color = Color(0xFF166534))
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val amount = amountText.toIntOrNull() ?: 0
+                    when {
+                        amount < 100 -> error = "Minimum withdrawal is ₹100"
+                        amount > currentBalance -> error = "Exceeds available balance (₹$currentBalance)"
+                        else -> onConfirm(amount, upiId.trim().ifBlank { null })
+                    }
+                },
+                enabled  = !isWithdrawing,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape    = RoundedCornerShape(14.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+            ) {
+                if (isWithdrawing) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Rounded.AccountBalanceWallet, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Request Withdrawal", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isWithdrawing) {
+                Text("Cancel", color = cs.onSurfaceVariant)
+            }
+        }
+    )
 }

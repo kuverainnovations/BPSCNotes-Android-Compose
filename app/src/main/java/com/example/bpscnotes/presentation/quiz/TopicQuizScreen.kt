@@ -20,6 +20,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppEmptyState
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
@@ -63,14 +64,7 @@ fun TopicQuizScreen(
         }
 
         // ── Loading ────────────────────────────────────────────
-        state.isLoadingDetail || state.isLoadingList -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                }
-            }
-        }
+        state.isLoadingDetail || state.isLoadingList -> AppLoader(message = str.loading)
 
         // ── Error — covers both startError (no quiz found) and network errors ──
         state.startError != null || state.detailError != null || state.listError != null -> {

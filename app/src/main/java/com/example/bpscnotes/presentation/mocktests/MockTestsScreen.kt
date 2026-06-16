@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
@@ -183,15 +184,7 @@ fun MockTestsScreen(
 
     // ── Questions loading overlay ─────────────────────────────
     if (state.isLoadingQuestions) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(0.5f)), Alignment.Center) {
-            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(Color.White)) {
-                Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.quizLoadingQ, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                }
-            }
-        }
+        AppLoader(message = str.quizLoadingQ)
     }
 
     // ── Questions error ───────────────────────────────────────

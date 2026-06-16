@@ -43,7 +43,9 @@ data class CoinWalletUiState(
     val referralStats: com.example.bpscnotes.data.remote.api.ReferralStatsDto? = null,
     val isLoadingReferrals: Boolean             = false,
     val sellerWallet: com.example.bpscnotes.data.remote.api.WalletData? = null,
-    val isLoadingSellerWallet: Boolean          = false
+    val isLoadingSellerWallet: Boolean          = false,
+    val isWithdrawing: Boolean                  = false,
+    val withdrawalSuccess: String?              = null
 )
 
 @HiltViewModel
@@ -273,6 +275,24 @@ class CoinWalletViewModel @Inject constructor(
             }
         }
     }
+
+    fun requestWithdrawal(amount: Int, upiId: String?) {
+        if (amount < 100) { showMessage("Minimum withdrawal is ₹100"); return }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isWithdrawing = true) }
+            try {
+                val res = materialsApi.requestWithdrawal(
+                    com.example.bpscnotes.data.remote.api.WithdrawalRequest(amount, upiId?.ifBlank { null })
+                )
+                _uiState.update { it.copy(isWithdrawing = false, withdrawalSuccess = res.message) }
+                loadSellerWallet() // refresh balance
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isWithdrawing = false, error = e.toUserMessage("Withdrawal failed")) }
+            }
+        }
+    }
+
+    fun clearWithdrawalSuccess() { _uiState.update { it.copy(withdrawalSuccess = null) } }
 
     fun loadReferrals() {
         viewModelScope.launch {

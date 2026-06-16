@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.ExamDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -195,7 +196,7 @@ private fun StepSelectExams(state: ExamSetupUiState, vm: ExamSetupViewModel) {
 
             // Exam list
             when {
-                state.isLoadingExams -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+                state.isLoadingExams -> AppLoader(modifier = Modifier.weight(1f).fillMaxWidth())
                 state.examsError != null -> AppErrorState(
                     message  = str.examLoadFailed,
                     onRetry  = vm::loadExams,

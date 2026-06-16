@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.dto.ApiResponse
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -237,9 +238,7 @@ fun MarketplaceScreen(
 
             // ── Content ───────────────────────────────────────────
             when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                }
+                state.isLoading -> AppLoader()
                 state.error != null -> AppErrorState(message = state.error!!, onRetry = { viewModel.load() })
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {

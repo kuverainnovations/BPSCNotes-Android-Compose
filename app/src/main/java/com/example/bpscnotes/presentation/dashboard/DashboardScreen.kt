@@ -816,27 +816,22 @@ private fun DashboardHeader(
                     Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Coin balance pill
-                    Row(modifier = Modifier
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Color(0xFFFFB300).copy(0.15f))
-                        .border(0.5.dp, Color(0xFFFFD54F).copy(0.5f), RoundedCornerShape(22.dp))
-                        .clickable { navController.navigate(Screen.CoinWallet.route) }
-                        .padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("🪙", fontSize = 13.sp)
-                        Text("$coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-                    }
-                    // Wallet icon shortcut
-                    Box(
+                    // Single wallet entry point — shows coin balance, taps to wallet screen
+                    Row(
                         modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(0.15f))
-                            .clickable { navController.navigate(Screen.CoinWallet.route) },
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Color.White.copy(0.12f))
+                            .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp))
+                            .clickable { navController.navigate(Screen.CoinWallet.route) }
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(Icons.Rounded.AccountBalanceWallet, null,
-                            tint = Color.White, modifier = Modifier.size(16.dp))
+                            tint = Color.White, modifier = Modifier.size(14.dp))
+                        Text("🪙", fontSize = 12.sp)
+                        Text("$coins", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                     }
                     BadgedBox(badge = {
                         if (notifCount > 0) Badge(containerColor = Color(0xFFEF5350)) {

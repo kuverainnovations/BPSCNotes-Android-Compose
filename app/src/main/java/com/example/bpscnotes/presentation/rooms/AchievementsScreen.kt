@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.AchievementDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -90,7 +91,7 @@ fun AchievementsScreen(
             }
 
             when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+                state.isLoading -> AppLoader()
                 state.error != null -> AppErrorState(message = state.error!!, onRetry = { viewModel.load() })
                 else -> LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     categories.forEach { cat ->

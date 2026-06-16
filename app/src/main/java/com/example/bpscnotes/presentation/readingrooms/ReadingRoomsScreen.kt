@@ -100,6 +100,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -365,9 +366,7 @@ private fun RoomLobbyScreen(
     val others = filtered.filter { !it.isFeatured }
 
     if (vmState.isLoading && allRooms.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        AppLoader()
         return
     }
 

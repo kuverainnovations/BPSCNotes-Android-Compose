@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.studymaterials.clickable
@@ -106,10 +107,7 @@ fun ImageViewerScreen(
                     }
             )
         } else {
-            CircularProgressIndicator(
-                color    = BpscColors.Primary,
-                modifier = Modifier.align(Alignment.Center)
-            )
+            AppLoader(modifier = Modifier.fillMaxSize())
         }
 
         // Top bar

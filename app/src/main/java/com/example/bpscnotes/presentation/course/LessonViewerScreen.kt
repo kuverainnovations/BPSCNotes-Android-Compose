@@ -40,6 +40,7 @@ import androidx.navigation.NavHostController
 import com.kuvera.bpscnotes.R
 import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
@@ -273,14 +274,7 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
 
     Box(Modifier.fillMaxSize().background(cs.background)) {
         when {
-            isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.lessonLoadingPdf, style = MaterialTheme.typography.bodyMedium,
-                        color = cs.onSurfaceVariant)
-                }
-            }
+            isLoading -> AppLoader(message = str.lessonLoadingPdf, modifier = Modifier.fillMaxSize())
             error != null -> Column(
                 Modifier.fillMaxSize().padding(32.dp),
                 Arrangement.Center, Alignment.CenterHorizontally
@@ -528,12 +522,7 @@ private fun QuizRedirectView(
 private fun LoadingState() {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Box(Modifier.fillMaxSize().background(cs.background), Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-            Text(str.lessonLoading, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-        }
-    }
+    AppLoader(message = str.lessonLoading)
 }
 
 @Composable

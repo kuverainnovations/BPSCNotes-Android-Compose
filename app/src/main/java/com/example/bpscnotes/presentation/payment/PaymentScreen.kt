@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.AppStrings
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -167,11 +168,7 @@ fun SubscriptionPaymentScreen(
                     Text(str.paymentChoosePlan, style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface, fontWeight = FontWeight.Bold)
 
-                    if (state.isLoadingPlans) {
-                        Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = BpscColors.Primary)
-                        }
-                    } else {
+                    if (state.isLoadingPlans) { AppLoader(modifier = Modifier.fillMaxWidth().height(120.dp)) } else {
                         state.plans.forEach { plan ->
                             PlanCard(
                                 plan       = plan,

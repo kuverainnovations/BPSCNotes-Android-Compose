@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.LeaderboardEntryDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -151,9 +152,7 @@ fun LeaderboardScreen(
         ) {
             when {
                 state.isLoadingLeaderboard -> {
-                    Box(Modifier.fillMaxSize(), Alignment.Center) {
-                        CircularProgressIndicator(color = BpscColors.Primary)
-                    }
+                    AppLoader()
                 }
                 state.leaderboardError != null -> {
                     Box(Modifier.fillMaxSize().padding(32.dp), Alignment.Center) {

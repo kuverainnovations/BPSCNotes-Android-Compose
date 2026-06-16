@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
@@ -63,14 +64,7 @@ fun DailyQuizScreen(
         }
 
         // ── Starting quiz (loading questions) ─────────────────
-        state.isStartingQuiz -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.quizSettingUp, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                }
-            }
-        }
+        state.isStartingQuiz -> AppLoader(message = str.quizSettingUp)
 
         // ── Start error ───────────────────────────────────────
         state.startError != null -> {
@@ -103,14 +97,7 @@ fun DailyQuizScreen(
         }
 
         // ── Loading quiz detail ───────────────────────────────
-        state.isLoadingDetail -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary)
-                    Text(str.loading, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                }
-            }
-        }
+        state.isLoadingDetail -> AppLoader(message = str.loading)
         //state.isLoadingDetail || state.isLoadingList -> show loader
 
         // ── Detail error ──────────────────────────────────────

@@ -115,9 +115,7 @@ fun QuizPlayScreen(
                 )
             }
         }
-        else -> Box(Modifier
-            .fillMaxSize()
-            .background(cs.background), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+        else -> AppLoader()
     }
 }
 

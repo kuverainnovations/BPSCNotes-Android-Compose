@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -48,11 +49,7 @@ fun QuizDetailScreen(
     }
 
     when {
-        state.isLoadingDetail -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = BpscColors.Primary)
-            }
-        }
+        state.isLoadingDetail -> AppLoader()
         state.detailError != null -> AppErrorState(
             message         = state.detailError!!,
             onRetry         = { viewModel.loadQuizDetail(quizId) },
@@ -68,11 +65,7 @@ fun QuizDetailScreen(
                 viewModel         = viewModel,
             )
         }
-        else -> {
-            Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = BpscColors.Primary)
-            }
-        }
+        else -> AppLoader()
     }
 }
 

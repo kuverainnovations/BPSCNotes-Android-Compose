@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.ChallengeDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -71,7 +72,7 @@ fun ChallengesScreen(
             }
 
             when {
-                state.isLoading && state.challenges.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
+                state.isLoading && state.challenges.isEmpty() -> AppLoader()
                 state.challenges.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("⚡", fontSize = 48.sp)
