@@ -681,9 +681,19 @@ interface UserStatsApiService {
     suspend fun getUnreadCount(): ApiResponse<UnreadCountDto>
 }
 
+data class DailyTargetHistoryDto(
+    val date:           String,
+    val total:          Int,
+    val completed:      Int,
+    @SerializedName("completion_pct") val completionPct: Int
+)
+
 interface DailyTargetsApiService {
     @GET("users/daily-targets")
     suspend fun getDailyTargets(): ApiResponse<DailyTargetsResponseData>
+
+    @GET("users/daily-targets/history")
+    suspend fun getHistory(@Query("days") days: Int = 30): ApiResponse<List<DailyTargetHistoryDto>>
 
     @POST("users/daily-targets")
     suspend fun createTargets(@Body body: CreateTargetRequest): ApiResponse<DailyTargetsResponseData>

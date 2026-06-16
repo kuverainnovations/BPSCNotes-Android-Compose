@@ -38,6 +38,8 @@ data class DashboardUiState(
     val dailyQuizzes: List<QuizPreviewDto>    = emptyList(),
     val banners: List<BannerDto>              = emptyList(),
     val weeklyActivity: List<DayProgress>     = emptyList(),
+    val monthlyActivity: List<DayProgress>    = emptyList(),   // 28 days for "See All" detail
+    val targetHistory:  List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto> = emptyList(),
     val stats: UserStatsData?                 = null,
     val dailyTargets: List<DailyTargetDto>    = emptyList(),
     val targetSummary: DailyTargetsSummary    = DailyTargetsSummary(),
@@ -85,6 +87,7 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadDashboard()
+        loadTargetHistory()
         viewModelScope.launch {
             bus.events.collect { event ->
                 if (event is RefreshEvent.NotificationReceived) {
@@ -172,6 +175,13 @@ class DashboardViewModel @Inject constructor(
                     val dayLabel = dayAbbr[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1]
                     DayProgress(dayLabel, apiMap[dateStr] ?: 0)
                 }
+                // Full 28-day array for "See All" detail view
+                val monthly = (27 downTo 0).map { daysAgo ->
+                    cal.timeInMillis = System.currentTimeMillis() - daysAgo * 86_400_000L
+                    val dateStr  = dfmt.format(cal.time)
+                    val dayLabel = dayAbbr[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1]
+                    DayProgress(dayLabel, apiMap[dateStr] ?: 0)
+                }
 
 
 // Derive achievements from user profile — no extra API call needed
@@ -184,6 +194,7 @@ class DashboardViewModel @Inject constructor(
                         dailyQuizzes   = quizzes,
                         banners        = banners,
                         weeklyActivity = weekly,
+                        monthlyActivity = monthly,
                         stats          = stats,
                         dailyTargets   = targetsData?.targets ?: emptyList(),
                         targetSummary  = targetsData?.summary ?: DailyTargetsSummary(),
@@ -543,6 +554,16 @@ class DashboardViewModel @Inject constructor(
     fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearTargetSuccess() { _uiState.update { it.copy(targetSuccess = null) } }
     fun clearTargetError()   { _uiState.update { it.copy(targetError = null) } }
+
+    // ── Daily Target History ───────────────────────────────────
+    fun loadTargetHistory() {
+        viewModelScope.launch {
+            try {
+                val history = targetsApi.getHistory(30).data ?: emptyList()
+                _uiState.update { it.copy(targetHistory = history) }
+            } catch (_: Exception) { /* non-blocking — history is optional UI */ }
+        }
+    }
 
     fun getGreeting(): String {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)

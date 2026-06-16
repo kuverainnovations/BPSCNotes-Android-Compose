@@ -104,7 +104,7 @@ fun CoinWalletScreen(
     val coinsEnabled = viewModel.coinsConfig.config.collectAsState().value.enabled
     if (!coinsEnabled) {
         Column(Modifier.fillMaxSize().background(cs.background)) {
-            CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStackSafe() })
+            CoinHeroHeader(coins = state.balance, sellerWallet = state.sellerWallet, isLoadingWallet = state.isLoadingSellerWallet, onBack = { navController.popBackStackSafe() })
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -135,7 +135,7 @@ fun CoinWalletScreen(
             .fillMaxSize()
             .padding(scaffoldPadding)) {
             // Pinned header — does not scroll
-            CoinHeroHeader(coins = state.balance, onBack = { navController.popBackStackSafe() })
+            CoinHeroHeader(coins = state.balance, sellerWallet = state.sellerWallet, isLoadingWallet = state.isLoadingSellerWallet, onBack = { navController.popBackStackSafe() })
             // Pinned tab row — does not scroll
             CoinTabRow(selectedTab = selectedTab, tabs = tabs, onSelect = { selectedTab = it })
 
@@ -378,81 +378,126 @@ fun CoinWalletScreen(
 // HERO HEADER
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// WALLET HERO — dual card: Coins (left) + ₹ Real Wallet (right)
+// ─────────────────────────────────────────────────────────────
 @Composable
-private fun CoinHeroHeader(coins: Int, onBack: () -> Unit) {
+private fun CoinHeroHeader(
+    coins:        Int,
+    sellerWallet: com.example.bpscnotes.data.remote.api.WalletData?,
+    isLoadingWallet: Boolean,
+    onBack:       () -> Unit
+) {
     val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    val animCoins by animateFloatAsState(targetValue = coins.toFloat(), animationSpec = tween(1400), label = "coinAnim")
+    val animCoins by animateFloatAsState(targetValue = coins.toFloat(), animationSpec = tween(1200), label = "coinAnim")
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFFFAC84A),
-                        Color(0xFFF0A500),
-                        Color(0xFFE59400)
-                    )
-                )
-            )
-        //  .statusBarsPadding()
+            .background(Brush.verticalGradient(listOf(Color(0xFF0D1B3E), Color(0xFF1A2C5B), Color(0xFF0D47A1))))
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
+        // Decorative circles
         Canvas(modifier = Modifier.matchParentSize()) {
-            drawCircle(Color.White.copy(0.12f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
-            drawCircle(Color.White.copy(0.08f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.75f))
-            drawCircle(Color.White.copy(0.07f), 100.dp.toPx(), Offset(size.width/2, size.height*0.52f), style = Stroke(1.dp.toPx()))
-            drawCircle(Color.White.copy(0.05f), 130.dp.toPx(), Offset(size.width/2, size.height*0.52f), style = Stroke(1.dp.toPx()))
-            val dotSpacing = 28.dp.toPx()
-            var x = dotSpacing
-            while (x < size.width) { var y = dotSpacing; while (y < size.height) { drawCircle(Color.White.copy(0.07f), 1.dp.toPx(), Offset(x, y)); y += dotSpacing }; x += dotSpacing }
+            drawCircle(Color.White.copy(0.05f), 200.dp.toPx(), Offset(size.width + 40.dp.toPx(), 0f))
+            drawCircle(Color.White.copy(0.04f), 120.dp.toPx(), Offset(-30.dp.toPx(), size.height))
         }
 
-        // Back button
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(top = 46.dp, bottom = 16.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(0.2f))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-        }
-
-        // Coin icon + balance
-        Column(
-            modifier            = Modifier
-                .align(Alignment.Center)
-                .padding(top = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(str.walletTitle, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(0.85f))
-            // Coin medallion
-            Box(
-                modifier = Modifier
-                    .size(70.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(0.25f))
-                    .border(2.dp, Color.White.copy(0.5f), CircleShape),
-                contentAlignment = Alignment.Center
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Top row: back button + title
+            Row(
+                Modifier.fillMaxWidth(),
+                Arrangement.SpaceBetween,
+                Alignment.CenterVertically
             ) {
-                Text("🏛️", fontSize = 32.sp)
+                Box(
+                    modifier = Modifier.size(36.dp).clip(CircleShape)
+                        .background(Color.White.copy(0.12f))
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Text("My Wallets", style = MaterialTheme.typography.titleMedium,
+                    color = Color.White, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.size(36.dp)) // balance the back button
             }
-            Text(
-                "${animCoins.toInt()} Coins",
-                style      = MaterialTheme.typography.headlineLarge,
-                color      = Color.White,
-                fontWeight = FontWeight.ExtraBold
-            )
+
+            // Dual wallet cards
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // ── Coins card ──────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706))))
+                        .padding(16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("🪙", fontSize = 16.sp)
+                            Text("Coins", style = MaterialTheme.typography.labelLarge,
+                                color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold)
+                        }
+                        Text(
+                            "${animCoins.toInt()}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold
+                        )
+                        HorizontalDivider(color = Color.White.copy(0.2f), thickness = 0.5.dp)
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                            WalletMiniStat("Earned", "+$coins")
+                        }
+                    }
+                }
+
+                // ── Real money card ─────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF059669), Color(0xFF047857))))
+                        .padding(16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Rounded.AccountBalanceWallet, null, tint = Color.White.copy(0.9f), modifier = Modifier.size(16.dp))
+                            Text("₹ Wallet", style = MaterialTheme.typography.labelLarge,
+                                color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold)
+                        }
+                        if (isLoadingWallet) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(
+                                "₹${sellerWallet?.balance ?: 0}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.White, fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        HorizontalDivider(color = Color.White.copy(0.2f), thickness = 0.5.dp)
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                            WalletMiniStat("Earned", "₹${sellerWallet?.totalEarned ?: 0}")
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
+@Composable
+private fun WalletMiniStat(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+        Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+    }
+}
 // ─────────────────────────────────────────────────────────────
 // TAB ROW
 // ─────────────────────────────────────────────────────────────

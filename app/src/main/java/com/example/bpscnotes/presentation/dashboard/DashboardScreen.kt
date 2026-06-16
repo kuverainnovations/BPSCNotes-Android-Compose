@@ -196,12 +196,22 @@ fun DashboardScreen(
                             onClick = { navController.navigate(Screen.DailyTargets.route) }
                         )
 
+                        var showActivityDetail by remember { mutableStateOf(false) }
+
                         // ── Weekly consistency (no fake fallback) ──────────────────
                         WeeklyConsistencyCard(
                             data = state.weeklyActivity,
                             streak = state.stats?.currentStreak ?: state.user?.streak ?: 0,
-                            isLoading = state.isLoading
+                            isLoading = state.isLoading,
+                            onSeeAll = { showActivityDetail = true }
                         )
+
+                        if (showActivityDetail) {
+                            ActivityDetailSheet(
+                                data    = state.monthlyActivity,
+                                onDismiss = { showActivityDetail = false }
+                            )
+                        }
 
                         // Ad banner below weekly consistency chart
                         if (adManager != null) {
@@ -806,6 +816,7 @@ private fun DashboardHeader(
                     Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Coin balance pill
                     Row(modifier = Modifier
                         .clip(RoundedCornerShape(22.dp))
                         .background(Color(0xFFFFB300).copy(0.15f))
@@ -814,6 +825,18 @@ private fun DashboardHeader(
                         .padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("🪙", fontSize = 13.sp)
                         Text("$coins", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    }
+                    // Wallet icon shortcut
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.15f))
+                            .clickable { navController.navigate(Screen.CoinWallet.route) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.AccountBalanceWallet, null,
+                            tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                     BadgedBox(badge = {
                         if (notifCount > 0) Badge(containerColor = Color(0xFFEF5350)) {
@@ -1099,7 +1122,8 @@ private fun TodayTargetCard(
 private fun WeeklyConsistencyCard(
     data: List<DayProgress>,
     streak: Int,
-    isLoading: Boolean
+    isLoading: Boolean,
+    onSeeAll: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -1108,16 +1132,22 @@ private fun WeeklyConsistencyCard(
         .padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(str.dashboardWeeklyConsistency, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                     Text(str.dashboardWeeklySubtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
-                Row(modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(BpscColors.AccentLight)
-                    .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Rounded.Whatshot, null, tint = BpscColors.Accent, modifier = Modifier.size(14.dp))
-                    Text(if (streak > 0) "$streak streak" else "0 streak", style = MaterialTheme.typography.labelSmall, color = BpscColors.Accent, fontWeight = FontWeight.ExtraBold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(BpscColors.AccentLight)
+                        .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Rounded.Whatshot, null, tint = BpscColors.Accent, modifier = Modifier.size(14.dp))
+                        Text(if (streak > 0) "$streak streak" else "0 streak", style = MaterialTheme.typography.labelSmall, color = BpscColors.Accent, fontWeight = FontWeight.ExtraBold)
+                    }
+                    TextButton(onClick = onSeeAll, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                        Text("See All", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
 
@@ -2162,5 +2192,135 @@ private fun SmallQuickCard(title: String, icon: ImageVector, iconBg: Color, icon
                 .background(iconBg), contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconTint, modifier = Modifier.size(19.dp)) }
             Text(title, style = MaterialTheme.typography.labelSmall, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 14.sp)
         }
+    }
+}
+// ════════════════════════════════════════════════════════════
+// ACTIVITY DETAIL SHEET — 28-day study activity breakdown
+// ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivityDetailSheet(
+    data:      List<DayProgress>,
+    onDismiss: () -> Unit
+) {
+    val cs  = MaterialTheme.colorScheme
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.Hidden })
+
+    ModalBottomSheet(
+        onDismissRequest = {},
+        sheetState       = sheetState,
+        containerColor   = cs.surface,
+        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle       = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(top = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Column {
+                    Text("Study Activity", style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
+                    Text("Last 28 days", style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurfaceVariant)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant)
+                }
+            }
+
+            // Summary stats
+            if (data.isNotEmpty()) {
+                val activeDays = data.count { it.score > 0 }
+                val totalMins  = data.sumOf { it.score }
+                val bestDay    = data.maxByOrNull { it.score }
+
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                    .background(BpscColors.PrimaryLight.copy(0.3f))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    Arrangement.SpaceEvenly) {
+                    ActivityStat("📅", "$activeDays", "Active Days")
+                    ActivityStat("⏱️", "${if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m"}", "Total Study")
+                    ActivityStat("🏆", "${bestDay?.score ?: 0}m", "Best Day")
+                }
+            }
+
+            // 28-day bar chart — 4 rows of 7 days each
+            if (data.isNotEmpty()) {
+                val maxScore = data.maxOfOrNull { it.score }?.coerceAtLeast(1) ?: 1
+                val weeks = data.chunked(7)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    weeks.forEachIndexed { weekIdx, week ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            // Week label
+                            val weeksAgo = weeks.size - 1 - weekIdx
+                            Text(
+                                if (weeksAgo == 0) "This week" else "$weeksAgo week${if (weeksAgo>1)"s" else ""} ago",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextHint
+                            )
+                            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp)) {
+                                week.forEach { day ->
+                                    val pct = day.score.toFloat() / maxScore
+                                    val isToday = day == data.last()
+                                    Column(
+                                        modifier            = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        // Bar
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(64.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(cs.onSurface.copy(0.06f)),
+                                            contentAlignment = Alignment.BottomCenter
+                                        ) {
+                                            if (pct > 0f) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .fillMaxHeight(pct.coerceIn(0.05f, 1f))
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .background(
+                                                            if (isToday) BpscColors.Accent
+                                                            else BpscColors.Primary.copy(
+                                                                alpha = 0.4f + pct * 0.6f
+                                                            )
+                                                        )
+                                                )
+                                            }
+                                        }
+                                        // Day label
+                                        Text(
+                                            day.day.take(1),
+                                            style  = MaterialTheme.typography.labelSmall,
+                                            color  = if (isToday) BpscColors.Accent else BpscColors.TextHint,
+                                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityStat(emoji: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(emoji, fontSize = 18.sp)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
     }
 }

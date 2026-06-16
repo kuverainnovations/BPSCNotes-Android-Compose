@@ -115,6 +115,7 @@ fun DailyTargetsScreen(
 
     //var selectedTab    by remember { mutableIntStateOf(0) }
     var showAddSheet   by remember { mutableStateOf(false) }
+    var showHistory    by remember { mutableStateOf(false) }
 
     //val tabs    = listOf("List", "Cards", "Timeline")
 
@@ -149,12 +150,20 @@ fun DailyTargetsScreen(
                                 )
                             }
                         }
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.15f)).clickable { showAddSheet = true }.padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Text(str.targetAdd, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { showHistory = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.History, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.15f)).clickable { showAddSheet = true }.padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    Text(str.targetAdd, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -319,11 +328,141 @@ fun DailyTargetsScreen(
             }
             CreateTargetSheet(viewModel = viewModel, onDismiss = { showAddSheet = false })
         }
+
+        if (showHistory) {
+            DailyTargetHistorySheet(
+                history   = state.targetHistory,
+                onDismiss = { showHistory = false }
+            )
+        }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// TAB 1 — LIST VIEW
+// HISTORY SHEET — 30-day completion overview
+// ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DailyTargetHistorySheet(
+    history:   List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto>,
+    onDismiss: () -> Unit
+) {
+    val cs  = MaterialTheme.colorScheme
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.Hidden })
+    val dfmt = remember { java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()) }
+
+    ModalBottomSheet(
+        onDismissRequest = {},
+        sheetState       = sheetState,
+        containerColor   = cs.surface,
+        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle       = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            // Header
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                Arrangement.SpaceBetween, Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Target History", style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
+                    Text("Last 30 days", style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurfaceVariant)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant)
+                }
+            }
+
+            if (history.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("📊", fontSize = 40.sp)
+                        Text("No history yet", style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text("Complete some targets to see your progress here", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                }
+            } else {
+                // Summary
+                val totalCompleted = history.sumOf { it.completed }
+                val totalTargets   = history.sumOf { it.total }
+                val avgPct         = if (history.isNotEmpty()) history.sumOf { it.completionPct } / history.size else 0
+                val activeDays     = history.count { it.completed > 0 }
+
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BpscColors.PrimaryLight.copy(0.3f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    Arrangement.SpaceEvenly
+                ) {
+                    HistoryStat("✅", "$totalCompleted", "Completed")
+                    HistoryStat("📅", "$activeDays", "Active Days")
+                    HistoryStat("📈", "$avgPct%", "Avg Rate")
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // List
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    items(history) { day ->
+                        val date = remember(day.date) {
+                            try { dfmt.format(java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(day.date)!!) }
+                            catch (_: Exception) { day.date }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(cs.background)
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            Arrangement.SpaceBetween, Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(date, style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold, color = cs.onSurface)
+                                Text("${day.completed}/${day.total} targets",
+                                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                // Mini progress bar
+                                Box(Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp))
+                                    .background(cs.onSurface.copy(0.08f))) {
+                                    Box(Modifier.fillMaxWidth(day.completionPct / 100f).fillMaxHeight()
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary))
+                                }
+                                Text("${day.completionPct}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryStat(emoji: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(emoji, fontSize = 16.sp)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+    }
+}
 // ─────────────────────────────────────────────────────────────
 
 @Composable

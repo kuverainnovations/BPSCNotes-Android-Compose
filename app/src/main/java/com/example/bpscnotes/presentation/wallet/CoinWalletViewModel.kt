@@ -41,7 +41,9 @@ data class CoinWalletUiState(
     val successMessage: String?                 = null,
     val referralCode: String                    = "",
     val referralStats: com.example.bpscnotes.data.remote.api.ReferralStatsDto? = null,
-    val isLoadingReferrals: Boolean             = false
+    val isLoadingReferrals: Boolean             = false,
+    val sellerWallet: com.example.bpscnotes.data.remote.api.WalletData? = null,
+    val isLoadingSellerWallet: Boolean          = false
 )
 
 @HiltViewModel
@@ -49,6 +51,7 @@ class CoinWalletViewModel @Inject constructor(
     private val coinsApi: CoinsApiService,
     private val authApi:  com.example.bpscnotes.data.remote.api.AuthApiService,
     private val statsApi: com.example.bpscnotes.data.remote.api.UserStatsApiService,
+    private val materialsApi: com.example.bpscnotes.data.remote.api.StudyMaterialsApiService,
     private val bus: RefreshEventBus,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
 
@@ -57,6 +60,7 @@ class CoinWalletViewModel @Inject constructor(
 
     init { load()
         loadReferrals()
+        loadSellerWallet()
         viewModelScope.launch { coinsConfig.fetch() }
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
@@ -256,6 +260,18 @@ class CoinWalletViewModel @Inject constructor(
     /** Returns the current user's referral code for sharing */
     fun getReferralCode(): String = _uiState.value.referralCode.ifBlank {
         _uiState.value.referralStats?.referralCode?.ifBlank { "BPSCNOTES" } ?: "BPSCNOTES"
+    }
+
+    fun loadSellerWallet() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSellerWallet = true) }
+            try {
+                val wallet = materialsApi.getWallet().data
+                _uiState.update { it.copy(sellerWallet = wallet, isLoadingSellerWallet = false) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoadingSellerWallet = false) }
+            }
+        }
     }
 
     fun loadReferrals() {

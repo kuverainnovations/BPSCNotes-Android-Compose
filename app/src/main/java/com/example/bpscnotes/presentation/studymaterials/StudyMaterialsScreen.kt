@@ -1090,7 +1090,7 @@ private fun LibraryItemCard(
                     Text(
                         when {
                             isDownloaded                   -> "Saved"
-                            item.isPremium && !isPurchased -> "Unlock 🪙${item.price}"
+                            item.isPremium && !isPurchased -> "Unlock ₹${item.price}"
                             else                           -> str.materialsDownload
                         },
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
@@ -1939,7 +1939,8 @@ private fun UploadSheet(
                                 OutlinedTextField(
                                     value = price,
                                     onValueChange = { onFormChange(null, null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }) },
-                                    label = { Text(str.materialPriceCoins) },
+                                    label = { Text("₹ Price (INR)") },
+                                    placeholder = { Text("e.g. 49") },
                                     modifier = if (isPdfType) Modifier.weight(1f) else Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp), singleLine = true,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -2271,8 +2272,8 @@ fun MyUploadsTab(
                                     Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
                                 if (item.price > 0) {
-                                    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.CoinGold.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                        Text("🪙 ${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                        Text("₹${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
                             }
