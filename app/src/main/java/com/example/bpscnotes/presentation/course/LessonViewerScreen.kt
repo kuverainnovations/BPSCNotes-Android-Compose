@@ -419,9 +419,7 @@ private fun VideoPlayer(videoUrl: String?) {
             modifier = Modifier.fillMaxSize()
         )
         if (loading) {
-            Box(Modifier.fillMaxSize().background(Color.Black), Alignment.Center) {
-                CircularProgressIndicator(color = Color.White)
-            }
+            AppLoader()
         }
     }
 }

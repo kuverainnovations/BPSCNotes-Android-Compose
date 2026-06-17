@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CourseDto
@@ -139,9 +140,7 @@ fun CourseDetailScreen(
     }
 
     when {
-        state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
+        state.isLoading -> AppLoader()
 
         state.error != null && state.course == null -> ErrorState(
             message = state.error!!,

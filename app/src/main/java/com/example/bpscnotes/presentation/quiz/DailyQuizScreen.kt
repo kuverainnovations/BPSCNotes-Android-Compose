@@ -218,9 +218,7 @@ private fun QuizLobbyScreen(
             // Content
             when {
                 state.isLoadingList -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = BpscColors.Primary)
-                    }
+                    AppLoader()
                 }
                 state.listError != null -> {
                     com.example.bpscnotes.core.ui.AppErrorState(

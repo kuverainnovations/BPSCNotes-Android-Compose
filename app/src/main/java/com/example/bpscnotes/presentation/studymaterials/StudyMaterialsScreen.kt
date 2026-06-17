@@ -2193,9 +2193,7 @@ fun MyUploadsTab(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     when {
-        isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
+        isLoading -> AppLoader()
         uploads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("📤", fontSize = 56.sp)
@@ -2373,9 +2371,7 @@ fun DownloadsTab(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     when {
-        isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
+        isLoading -> AppLoader()
         downloads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

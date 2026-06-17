@@ -28,6 +28,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
@@ -144,9 +145,7 @@ fun JobVacanciesScreen(
     }
 
     if (vmState.isLoading && allJobs.isEmpty()) {
-        Box(Modifier.fillMaxSize(), Alignment.Center) {
-            CircularProgressIndicator(color = BpscColors.Primary)
-        }
+        AppLoader()
         return
     }
 

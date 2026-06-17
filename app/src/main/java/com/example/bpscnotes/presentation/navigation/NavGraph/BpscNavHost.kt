@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.navigation.NavGraph
 
+import com.example.bpscnotes.core.ui.AppLoader
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -581,9 +582,5 @@ private fun ForgotMpinRedirectScreen(
             popUpTo(Screen.ForgotMpin.createRoute(mobile)) { inclusive = true }
         }
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        androidx.compose.material3.CircularProgressIndicator(
-            color = com.example.bpscnotes.core.ui.t.BpscColors.Primary
-        )
-    }
+    AppLoader()
 }

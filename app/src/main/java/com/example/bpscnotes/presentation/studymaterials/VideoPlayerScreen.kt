@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ads.AdManager
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
@@ -87,15 +88,7 @@ fun VideoPlayerScreen(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(color = BpscColors.Primary)
-                Spacer(Modifier.height(12.dp))
-                Text("Loading…", color = Color.White, style = MaterialTheme.typography.bodyMedium)
-            }
+            AppLoader(message = "Loading video…")
         }
 
         // Top bar overlay

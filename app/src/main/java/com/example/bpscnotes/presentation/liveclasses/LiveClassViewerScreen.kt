@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
@@ -219,11 +220,7 @@ fun LiveClassViewerScreen(
             exit    = fadeOut()
         ) {
             Box(Modifier.fillMaxSize().background(Color(0xFF0D0D0D)), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
-                    Text("Joining class...", color = Color.White, style = MaterialTheme.typography.bodyLarge)
-                    Text(classTitle, color = Color.White.copy(0.6f), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
-                }
+                AppLoader(message = "Joining class…")
             }
         }
 

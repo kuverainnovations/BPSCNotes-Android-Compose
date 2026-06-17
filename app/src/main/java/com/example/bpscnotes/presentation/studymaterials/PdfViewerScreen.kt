@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
+import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.Dispatchers
@@ -197,14 +198,7 @@ fun PdfViewerScreen(
         ) {
             when {
                 isLoading -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        CircularProgressIndicator(color = BpscColors.Primary, modifier = Modifier.size(44.dp))
-                        Text(str.pdfLoadingPdf, color = BpscColors.TextSecondary,
-                            style = MaterialTheme.typography.bodyLarge)
-                    }
+                    AppLoader(message = str.pdfLoadingPdf)
                 }
 
                 error != null -> {
