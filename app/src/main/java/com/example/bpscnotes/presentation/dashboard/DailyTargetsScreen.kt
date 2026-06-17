@@ -287,14 +287,15 @@ fun DailyTargetsScreen(
                     }
                 }
             } else {
-                // ── Tab content ─────────────────────────────────
-                /*when (selectedTab) {
-                    0 -> ListTabContent(
-                        items            = allTargets,
-                        filters          = filters,
-                        selectedFilter   = selectedFilter,
-                        onFilterChange   = { selectedFilter = it },
-                        onToggleComplete = { id ->  viewModel.toggleTargetComplete(id)*//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
+                // ── Tab content — weight(1f) gives LazyColumn a bounded height ──
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    /*when (selectedTab) {
+                        0 -> ListTabContent(
+                            items            = allTargets,
+                            filters          = filters,
+                            selectedFilter   = selectedFilter,
+                            onFilterChange   = { selectedFilter = it },
+                            onToggleComplete = { id ->  viewModel.toggleTargetComplete(id)*//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
                         onStartQuiz      = { subjectId -> navController.navigate(Screen.DailyQuiz.createRoute(subjectId)) },
                         onViewNotes      = { navController.navigate(Screen.ELibrary.route) }
                     )
@@ -312,12 +313,13 @@ fun DailyTargetsScreen(
                         onViewNotes      = { navController.navigate(Screen.ELibrary.route) }
                     )
                 }*/
-                ListTabContent(
-                    items            = allTargets,
-                    onToggleComplete = { id -> viewModel.toggleTargetComplete(id) },
-                    onDelete         = { id -> viewModel.deleteTarget(id) },
-                    onUpdate         = { id, title, subject -> viewModel.updateTarget(id, title, subject) }
-                )
+                    ListTabContent(
+                        items            = allTargets,
+                        onToggleComplete = { id -> viewModel.toggleTargetComplete(id) },
+                        onDelete         = { id -> viewModel.deleteTarget(id) },
+                        onUpdate         = { id, title, subject -> viewModel.updateTarget(id, title, subject) }
+                    )
+                } // end weight Box
             }
         }
 
@@ -363,6 +365,7 @@ private fun DailyTargetHistorySheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
         ) {
             // Header
             Row(
@@ -409,13 +412,14 @@ private fun DailyTargetHistorySheet(
 
                 Spacer(Modifier.height(12.dp))
 
-                // List
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.heightIn(max = 400.dp)
+                // List — flows naturally inside the outer scrollable Column
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(history) { day ->
+                    history.forEach { day ->
                         val date = remember(day.date) {
                             try { dfmt.format(java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(day.date)!!) }
                             catch (_: Exception) { day.date }
@@ -478,19 +482,21 @@ private fun ListTabContent(
     val today   = items.filter { !it.target.isCarriedForward }
     var editingTarget by remember { mutableStateOf<TargetItem?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (carried.isNotEmpty()) {
-                item { SectionLabel("📅", "Carried Forward", "From yesterday") }
-                items(carried, key = { it.target.id }) { item ->
-                    TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
-                }
-                item { Spacer(Modifier.height(4.dp)) }
-            }
-            item { SectionLabel("🎯", "Today's Targets", "${today.size} topics assigned") }
-            items(today, key = { it.target.id }) { item ->
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (carried.isNotEmpty()) {
+            item { SectionLabel("📅", "Carried Forward", "From yesterday") }
+            items(carried, key = { it.target.id }) { item ->
                 TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
             }
+            item { Spacer(Modifier.height(4.dp)) }
+        }
+        item { SectionLabel("🎯", "Today's Targets", "${today.size} topics assigned") }
+        items(today, key = { it.target.id }) { item ->
+            TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
         }
     }
 

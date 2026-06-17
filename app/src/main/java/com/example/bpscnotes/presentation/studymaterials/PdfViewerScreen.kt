@@ -281,10 +281,10 @@ fun PdfViewerScreen(
                                         bitmap              = watermarkLogo.asImageBitmap(),
                                         contentDescription  = null,
                                         modifier            = Modifier
-                                            .fillMaxWidth(0.35f)   // 35% of page width
+                                            .fillMaxWidth(0.55f)   // 35% of page width
                                             .aspectRatio(1f)
                                             .align(Alignment.Center)
-                                            .alpha(0.12f),
+                                            .alpha(0.18f),
                                         contentScale = ContentScale.Fit
                                     )
                                     // Page number badge

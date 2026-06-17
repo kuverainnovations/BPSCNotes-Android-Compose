@@ -145,7 +145,8 @@ fun CoinWalletScreen(
             // Scrollable content area
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .weight(1f)
                     .background(cs.background),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
@@ -179,11 +180,11 @@ fun CoinWalletScreen(
                                         )
                                     }
                                 },
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                             )
                         }
 
-                        item { SectionHeader(str.walletEarnCoins, str.walletEarnCoins) }
+                        item { SectionHeader(str.walletEarnCoins, "Complete tasks to earn coins") }
                         state.earnTasks.forEachIndexed { idx, task ->
                             item(key = task.id) {
                                 Log.e("TASK_ACTION", task.action)

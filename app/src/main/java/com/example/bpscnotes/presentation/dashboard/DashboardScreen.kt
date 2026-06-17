@@ -56,6 +56,7 @@ import com.example.bpscnotes.core.language.LanguageManager
 import com.example.bpscnotes.core.language.LanguageSwitchButton
 import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.core.language.LocalStrings
+import com.example.bpscnotes.core.ui.DashboardSkeleton
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.data.remote.api.BannerDto
@@ -208,8 +209,12 @@ fun DashboardScreen(
 
                         if (showActivityDetail) {
                             ActivityDetailSheet(
-                                data    = state.monthlyActivity,
-                                onDismiss = { showActivityDetail = false }
+                                data        = state.monthlyActivity,
+                                quizMins    = state.monthlyQuizMins,
+                                roomMins    = state.monthlyRoomMins,
+                                caMins      = state.monthlyCaMins,
+                                lessonMins  = state.monthlyLessonMins,
+                                onDismiss   = { showActivityDetail = false }
                             )
                         }
 
@@ -341,17 +346,7 @@ private fun ErrorBanner(message: String, onRetry: () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun LoadingSection() {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        repeat(4) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFEEEEEE))
-            )
-        }
-    }
+    DashboardSkeleton()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2190,15 +2185,36 @@ private fun SmallQuickCard(title: String, icon: ImageVector, iconBg: Color, icon
     }
 }
 // ════════════════════════════════════════════════════════════
-// ACTIVITY DETAIL SHEET — 28-day study activity breakdown
+// ACTIVITY DETAIL SHEET — 28-day breakdown: Quiz / Study Room / CA / Lessons
 // ════════════════════════════════════════════════════════════
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActivityDetailSheet(
-    data:      List<DayProgress>,
-    onDismiss: () -> Unit
+    data:       List<DayProgress>,
+    quizMins:   Map<String, Int>,
+    roomMins:   Map<String, Int>,
+    caMins:     Map<String, Int>,
+    lessonMins: Map<String, Int>,
+    onDismiss:  () -> Unit
 ) {
     val cs  = MaterialTheme.colorScheme
+    val dfmt = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
+
+    // Re-build date keys to align with breakdown maps (same as ViewModel)
+    val cal   = remember { java.util.Calendar.getInstance() }
+    val dateKeys = remember(data) {
+        (27 downTo 0).map { daysAgo ->
+            cal.timeInMillis = System.currentTimeMillis() - daysAgo * 86_400_000L
+            dfmt.format(cal.time)
+        }
+    }
+
+    // Legend colours
+    val colorQuiz   = Color(0xFF1565C0)   // blue
+    val colorRoom   = Color(0xFF2E7D32)   // green
+    val colorCa     = Color(0xFFF57F17)   // amber
+    val colorLesson = Color(0xFF6A1B9A)   // purple
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
         confirmValueChange = { it != SheetValue.Hidden })
 
@@ -2213,6 +2229,7 @@ private fun ActivityDetailSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(top = 20.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -2230,74 +2247,127 @@ private fun ActivityDetailSheet(
                 }
             }
 
+            // Legend
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(cs.background).padding(horizontal = 12.dp, vertical = 8.dp),
+                Arrangement.SpaceEvenly
+            ) {
+                LegendDot(colorQuiz,   "Quizzes")
+                LegendDot(colorRoom,   "Study Room")
+                LegendDot(colorCa,     "Curr. Affairs")
+                LegendDot(colorLesson, "Lessons")
+            }
+
             // Summary stats
             if (data.isNotEmpty()) {
-                val activeDays = data.count { it.score > 0 }
-                val totalMins  = data.sumOf { it.score }
-                val bestDay    = data.maxByOrNull { it.score }
+                val activeDays  = data.count { it.score > 0 }
+                val totalMins   = data.sumOf { it.score }
+                val totalQuiz   = quizMins.values.sum()
+                val totalRoom   = roomMins.values.sum()
+                val totalCa     = caMins.values.sum()
+                val totalLesson = lessonMins.values.sum()
 
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .background(BpscColors.PrimaryLight.copy(0.3f))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                    Arrangement.SpaceEvenly) {
-                    ActivityStat("📅", "$activeDays", "Active Days")
-                    ActivityStat("⏱️", "${if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m"}", "Total Study")
-                    ActivityStat("🏆", "${bestDay?.score ?: 0}m", "Best Day")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Top summary row
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                            .background(BpscColors.PrimaryLight.copy(0.3f))
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        Arrangement.SpaceEvenly
+                    ) {
+                        ActivityStat("📅", "$activeDays", "Active Days")
+                        ActivityStat("⏱️",
+                            if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m",
+                            "Total Study")
+                        ActivityStat("🏆", "${data.maxOfOrNull { it.score } ?: 0}m", "Best Day")
+                    }
+                    // Breakdown row
+                    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {
+                        BreakdownChip(colorQuiz,   "📝", "${if (totalQuiz >= 60) "${totalQuiz/60}h ${totalQuiz%60}m" else "${totalQuiz}m"}", "Quiz",    Modifier.weight(1f))
+                        BreakdownChip(colorRoom,   "🏠", "${if (totalRoom >= 60) "${totalRoom/60}h ${totalRoom%60}m" else "${totalRoom}m"}", "Room",    Modifier.weight(1f))
+                        BreakdownChip(colorCa,     "📰", "${if (totalCa >= 60) "${totalCa/60}h ${totalCa%60}m" else "${totalCa}m"}", "CA",      Modifier.weight(1f))
+                        BreakdownChip(colorLesson, "📚", "${if (totalLesson >= 60) "${totalLesson/60}h ${totalLesson%60}m" else "${totalLesson}m"}", "Lessons", Modifier.weight(1f))
+                    }
                 }
             }
 
-            // 28-day bar chart — 4 rows of 7 days each
-            if (data.isNotEmpty()) {
-                val maxScore = data.maxOfOrNull { it.score }?.coerceAtLeast(1) ?: 1
-                val weeks = data.chunked(7)
+            // 4-week stacked bar chart
+            if (data.isNotEmpty() && dateKeys.size == data.size) {
+                val maxTotal = data.maxOfOrNull { it.score }?.coerceAtLeast(1) ?: 1
+                val weeks = data.zip(dateKeys).chunked(7)
+
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     weeks.forEachIndexed { weekIdx, week ->
+                        val weeksAgo = weeks.size - 1 - weekIdx
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            // Week label
-                            val weeksAgo = weeks.size - 1 - weekIdx
                             Text(
-                                if (weeksAgo == 0) "This week" else "$weeksAgo week${if (weeksAgo>1)"s" else ""} ago",
+                                if (weeksAgo == 0) "This week" else "$weeksAgo week${if (weeksAgo > 1) "s" else ""} ago",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.TextHint
                             )
                             Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp)) {
-                                week.forEach { day ->
-                                    val pct = day.score.toFloat() / maxScore
-                                    val isToday = day == data.last()
+                                week.forEach { (day, dateKey) ->
+                                    val q = quizMins[dateKey]   ?: 0
+                                    val r = roomMins[dateKey]   ?: 0
+                                    val c = caMins[dateKey]     ?: 0
+                                    val l = lessonMins[dateKey] ?: 0
+                                    val total = day.score.coerceAtLeast(q + r + c + l)
+                                    val isToday = dateKey == dateKeys.last()
+
                                     Column(
                                         modifier            = Modifier.weight(1f),
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        verticalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
-                                        // Bar
+                                        // Stacked bar
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(64.dp)
+                                                .height(72.dp)
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .background(cs.onSurface.copy(0.06f)),
                                             contentAlignment = Alignment.BottomCenter
                                         ) {
-                                            if (pct > 0f) {
-                                                Box(
+                                            if (total > 0) {
+                                                val barH = (total.toFloat() / maxTotal).coerceIn(0.05f, 1f)
+                                                Column(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .fillMaxHeight(pct.coerceIn(0.05f, 1f))
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(
-                                                            if (isToday) BpscColors.Accent
-                                                            else BpscColors.Primary.copy(
-                                                                alpha = 0.4f + pct * 0.6f
+                                                        .fillMaxHeight(barH)
+                                                        .clip(RoundedCornerShape(6.dp)),
+                                                    verticalArrangement = Arrangement.Bottom
+                                                ) {
+                                                    // Draw segments bottom-to-top: lesson, ca, room, quiz
+                                                    listOf(
+                                                        l to colorLesson,
+                                                        c to colorCa,
+                                                        r to colorRoom,
+                                                        q to colorQuiz
+                                                    ).forEach { (mins, color) ->
+                                                        if (mins > 0) {
+                                                            Box(
+                                                                Modifier
+                                                                    .fillMaxWidth()
+                                                                    .weight(mins.toFloat().coerceAtLeast(0.1f))
+                                                                    .background(color)
                                                             )
-                                                        )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            // Today ring
+                                            if (isToday) {
+                                                Box(
+                                                    Modifier.fillMaxSize()
+                                                        .border(1.5.dp, BpscColors.Accent, RoundedCornerShape(6.dp))
                                                 )
                                             }
                                         }
-                                        // Day label
                                         Text(
                                             day.day.take(1),
-                                            style  = MaterialTheme.typography.labelSmall,
-                                            color  = if (isToday) BpscColors.Accent else BpscColors.TextHint,
+                                            style      = MaterialTheme.typography.labelSmall,
+                                            color      = if (isToday) BpscColors.Accent else BpscColors.TextHint,
                                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                         )
                                     }
@@ -2308,6 +2378,27 @@ private fun ActivityDetailSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(color))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
+    }
+}
+
+@Composable
+private fun BreakdownChip(color: Color, emoji: String, value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier            = modifier.clip(RoundedCornerShape(10.dp)).background(color.copy(0.1f)).padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(emoji, fontSize = 14.sp)
+        Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary)
     }
 }
 

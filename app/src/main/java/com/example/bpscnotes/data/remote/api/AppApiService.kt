@@ -422,7 +422,14 @@ data class BannersResponseData(val banners: List<BannerDto> = emptyList())
 // USER STATS DTOs  (unchanged)
 // ══════════════════════════════════════════════════════════════
 
-data class WeeklyActivityDto(val date: String = "", val activity: Int = 0)
+data class WeeklyActivityDto(
+    val date:        String = "",
+    val activity:    Int    = 0,   // merged total (backward compat)
+    @SerializedName("quiz_mins")    val quizMins:    Int = 0,
+    @SerializedName("room_mins")    val roomMins:    Int = 0,
+    @SerializedName("ca_mins")      val caMins:      Int = 0,
+    @SerializedName("lesson_mins")  val lessonMins:  Int = 0,
+)
 
 data class SubjectAccuracyDto(
     val subject:     String = "",

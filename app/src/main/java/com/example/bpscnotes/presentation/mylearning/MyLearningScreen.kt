@@ -53,7 +53,9 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -1591,382 +1593,438 @@ private fun CourseDetailSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val state by viewModel.uiState.collectAsState()
     var coinsToUse by remember { mutableIntStateOf(0) }
+    var showEnrollSuccessDialog by remember { mutableStateOf(false) }
 
-    // Paid course: enroll() hit a 402 -> navigate to real Razorpay payment screen
-    LaunchedEffect(state.purchaseRequired) {
-        if (state.purchaseRequired && state.purchaseCourseId == course.id) {
-            onDismiss()
-            navController.navigate(
-                Screen.CoursePayment.createRoute(
-                    state.purchaseCourseId!!, state.purchaseCourseTitle, state.purchasePrice,
-                    state.purchaseOrderId, state.purchaseKeyId
-                )
-            )
-            viewModel.clearPurchaseRequired()
+    // Show success dialog when enrollment succeeds for this specific course
+    LaunchedEffect(state.justEnrolledId) {
+        if (state.justEnrolledId == course.id) {
+            showEnrollSuccessDialog = true
         }
     }
 
-    val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
-        BpscColors.Primary,
-        BpscColors.PrimaryLight
-    )
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = cs.surface,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                accent.copy(
-                                    red = accent.red * 0.6f,
-                                    green = accent.green * 0.6f,
-                                    blue = accent.blue * 0.6f
-                                ), accent
-                            )
-                        )
-                    )
-                    .padding(20.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(subjectEmoji(course.subject), fontSize = 18.sp)
-                        course.tags.take(2).forEach { tag ->
-                            Text(
-                                tag,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(0.85f),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color.White.copy(0.2f))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                    Text(
-                        course.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 26.sp
-                    )
-                    Text(
-                        "By ${course.instructor}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(0.8f)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
-                        SheetStatWhite(
-                            "👥",
-                            "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
-                        )
-                        SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
-                    }
-                }
-            }
-            val sheetScrollState = rememberScrollState()
-            // The sheet's own drag-to-dismiss and this content's
-            // verticalScroll both react to a small downward drag while
-            // scrolled to the top - each nudges the content position,
-            // which is the vertical "flicker" on light drags. Absorb that
-            // boundary case here so only the sheet's drag/settle animates.
-            val sheetContentNestedScroll = remember(sheetScrollState) {
-                object : NestedScrollConnection {
-                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-                        if (sheetScrollState.value == 0 && available.y > 0f) available else Offset.Zero
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .nestedScroll(sheetContentNestedScroll)
-                    .verticalScroll(sheetScrollState)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+    if (showEnrollSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showEnrollSuccessDialog = false; onDismiss() },
+            shape            = RoundedCornerShape(20.dp),
+            containerColor   = Color.White,
+            icon = {
+                Box(
+                    modifier = Modifier.size(56.dp).clip(CircleShape)
+                        .background(Color(0xFF4CAF50).copy(0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
-                    "⏱️",
-                    "${course.totalHours}h",
-                    "Duration"
-                )
-                    DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
-                    "🎯",
-                    "${course.bpscRelevance}%",
-                    "BPSC Rel."
-                )
+                    Icon(Icons.Rounded.CheckCircle, null,
+                        tint = Color(0xFF4CAF50), modifier = Modifier.size(32.dp))
                 }
-                Text(
-                    str.courseAbout,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cs.onSurface,
-                    fontWeight = FontWeight.Bold
+            },
+            title = {
+                Text("Successfully Enrolled! 🎉",
+                    fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center)
+            },
+            text = {
+                Text("You're now enrolled in ${course.title}. Start learning right away!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextSecondary,
+                    textAlign = TextAlign.Center)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEnrollSuccessDialog = false
+                        onDismiss()
+                        // Already navigates to My Courses via justEnrolledId LaunchedEffect in parent
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) { Text("Go to My Courses", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEnrollSuccessDialog = false; onDismiss() }) {
+                    Text("Continue Browsing", color = BpscColors.TextSecondary)
+                }
+            }
+        )
+    } else {
+
+        // Paid course: enroll() hit a 402 -> navigate to real Razorpay payment screen
+        LaunchedEffect(state.purchaseRequired) {
+            if (state.purchaseRequired && state.purchaseCourseId == course.id) {
+                onDismiss()
+                navController.navigate(
+                    Screen.CoursePayment.createRoute(
+                        state.purchaseCourseId!!, state.purchaseCourseTitle, state.purchasePrice,
+                        state.purchaseOrderId, state.purchaseKeyId
+                    )
                 )
-                Text(
-                    course.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = cs.onSurfaceVariant,
-                    lineHeight = 24.sp
-                )
-                if (course.trialLessonTitle.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(BpscColors.PrimaryLight)
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(BpscColors.Primary),
-                            contentAlignment = Alignment.Center
+                viewModel.clearPurchaseRequired()
+            }
+        }
+
+        val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
+            BpscColors.Primary,
+            BpscColors.PrimaryLight
+        )
+
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = sheetState,
+            containerColor = cs.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    accent.copy(
+                                        red = accent.red * 0.6f,
+                                        green = accent.green * 0.6f,
+                                        blue = accent.blue * 0.6f
+                                    ), accent
+                                )
+                            )
+                        )
+                        .padding(20.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Rounded.PlayArrow,
-                                null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                str.courseFreeTrial,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.Primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                course.trialLessonTitle,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = cs.onSurface,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text(subjectEmoji(course.subject), fontSize = 18.sp)
+                            course.tags.take(2).forEach { tag ->
+                                Text(
+                                    tag,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(0.85f),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.White.copy(0.2f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
                         }
                         Text(
-                            str.courseWatch,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = BpscColors.Primary,
-                            fontWeight = FontWeight.ExtraBold
+                            course.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 26.sp
                         )
+                        Text(
+                            "By ${course.instructor}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(0.8f)
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
+                            SheetStatWhite(
+                                "👥",
+                                "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
+                            )
+                            SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
+                        }
                     }
                 }
-                // Reviews
-                if (course.reviews.isNotEmpty()) {
+                val sheetScrollState = rememberScrollState()
+                // The sheet's own drag-to-dismiss and this content's
+                // verticalScroll both react to a small downward drag while
+                // scrolled to the top - each nudges the content position,
+                // which is the vertical "flicker" on light drags. Absorb that
+                // boundary case here so only the sheet's drag/settle animates.
+                val sheetContentNestedScroll = remember(sheetScrollState) {
+                    object : NestedScrollConnection {
+                        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                            if (sheetScrollState.value == 0 && available.y > 0f) available else Offset.Zero
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .nestedScroll(sheetContentNestedScroll)
+                        .verticalScroll(sheetScrollState)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
+                        "⏱️",
+                        "${course.totalHours}h",
+                        "Duration"
+                    )
+                        DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
+                        "🎯",
+                        "${course.bpscRelevance}%",
+                        "BPSC Rel."
+                    )
+                    }
                     Text(
-                        str.courseStudentReviews,
+                        str.courseAbout,
                         style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    course.reviews.forEach { review ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = cs.background),
-                            elevation = CardDefaults.cardElevation(0.dp)
+                    Text(
+                        course.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = cs.onSurfaceVariant,
+                        lineHeight = 24.sp
+                    )
+                    if (course.trialLessonTitle.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(BpscColors.PrimaryLight)
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(BpscColors.Primary),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        review.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = cs.onSurface,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Row {
-                                        repeat(5) { i ->
-                                            Icon(
-                                                Icons.Rounded.Star,
-                                                null,
-                                                tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
-                                    }
-                                }
+                                Icon(
+                                    Icons.Rounded.PlayArrow,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    review.comment,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = cs.onSurfaceVariant
+                                    str.courseFreeTrial,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    review.date,
+                                    course.trialLessonTitle,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = cs.onSurface,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Text(
+                                str.courseWatch,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = BpscColors.Primary,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                    // Reviews
+                    if (course.reviews.isNotEmpty()) {
+                        Text(
+                            str.courseStudentReviews,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                        course.reviews.forEach { review ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = cs.background),
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            review.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = cs.onSurface,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Row {
+                                            repeat(5) { i ->
+                                                Icon(
+                                                    Icons.Rounded.Star,
+                                                    null,
+                                                    tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        review.comment,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = cs.onSurfaceVariant
+                                    )
+                                    Text(
+                                        review.date,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.TextHint
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(color = cs.outline)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Mirrors the backend's Math.min(price, floor(coins *
+                    // coin_to_inr_rate)) exactly (coursesService.enroll) — used
+                    // for both the slider's discount preview and the Buy Now price.
+                    val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
+                    val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
+                    if (course.isPaid && userCoins > 0) {
+                        // Server resolves maxCoinsRedeemable to either the
+                        // per-course override or the global default — always a
+                        // concrete number, no client-side guessing. The slider
+                        // cap is in coins, so convert the price ceiling from
+                        // rupees to coins via the live rate (admin: Coins page ->
+                        // Economy Settings).
+                        val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
+                        val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, priceInCoins)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BpscColors.CoinGold.copy(0.08f))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "🪙 Use coins for discount",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = cs.onSurface
+                                )
+                                Text(
+                                    "$coinsToUse / $maxCoins",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = BpscColors.CoinGold,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (maxCoins < userCoins) {
+                                Text(
+                                    "Max $maxCoins coins redeemable on this course (you have $userCoins)",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.TextHint
                                 )
                             }
-                        }
-                    }
-                }
-            }
-            HorizontalDivider(color = cs.outline)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Mirrors the backend's Math.min(price, floor(coins *
-                // coin_to_inr_rate)) exactly (coursesService.enroll) — used
-                // for both the slider's discount preview and the Buy Now price.
-                val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
-                val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
-                if (course.isPaid && userCoins > 0) {
-                    // Server resolves maxCoinsRedeemable to either the
-                    // per-course override or the global default — always a
-                    // concrete number, no client-side guessing. The slider
-                    // cap is in coins, so convert the price ceiling from
-                    // rupees to coins via the live rate (admin: Coins page ->
-                    // Economy Settings).
-                    val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
-                    val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, priceInCoins)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(BpscColors.CoinGold.copy(0.08f))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "🪙 Use coins for discount",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = cs.onSurface
+                            Slider(
+                                value = coinsToUse.toFloat(),
+                                onValueChange = { coinsToUse = it.toInt() },
+                                valueRange = 0f..maxCoins.toFloat(),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = BpscColors.CoinGold,
+                                    activeTrackColor = BpscColors.CoinGold
+                                )
                             )
-                            Text(
-                                "$coinsToUse / $maxCoins",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = BpscColors.CoinGold,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        if (maxCoins < userCoins) {
-                            Text(
-                                "Max $maxCoins coins redeemable on this course (you have $userCoins)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.TextHint
-                            )
-                        }
-                        Slider(
-                            value = coinsToUse.toFloat(),
-                            onValueChange = { coinsToUse = it.toInt() },
-                            valueRange = 0f..maxCoins.toFloat(),
-                            colors = SliderDefaults.colors(
-                                thumbColor = BpscColors.CoinGold,
-                                activeTrackColor = BpscColors.CoinGold
-                            )
-                        )
-                        if (coinsToUse > 0) {
-                            Text(
-                                "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = BpscColors.Success,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-                OutlinedButton(
-                    onClick = {
-                        onDismiss()
-                        navController.navigate(Screen.CourseDetail.createRoute(course.id))
-                    },
-                    modifier = Modifier.fillMaxWidth().height(46.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
-                        onClick = onWishlist,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            if (isWishlisted) BpscColors.CoinGold else cs.outline
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextSecondary)
-                    ) {
-                        Icon(
-                            if (isWishlisted) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            if (course.isPaid) {
-                                // enroll() will hit 402 -> purchaseRequired -> LaunchedEffect
-                                // above navigates to CoursePaymentScreen with real price/order.
-                                viewModel.enroll(course.id, course.title, coinsToUse)
-                            } else {
-                                viewModel.enroll(course.id, course.title)
-                                onDismiss()
+                            if (coinsToUse > 0) {
+                                Text(
+                                    "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = BpscColors.Success,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onDismiss()
+                            navController.navigate(Screen.CourseDetail.createRoute(course.id))
                         },
-                        enabled = !state.isEnrolling,
-                        modifier = Modifier
-                            .weight(3f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (!course.isPaid) BpscColors.Success else BpscColors.Primary)
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        if (state.isEnrolling) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
+                        Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = onWishlist,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isWishlisted) BpscColors.CoinGold else cs.outline
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextSecondary)
+                        ) {
                             Icon(
-                                if (!course.isPaid) Icons.Rounded.PlayArrow else Icons.Rounded.ShoppingCart,
+                                if (isWishlisted) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                                 null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                if (!course.isPaid) str.courseEnrollFree
-                                else "Buy Now — ₹${maxOf(0, course.price - coinDiscountInr)}",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                        }
+                        Button(
+                            onClick = {
+                                if (course.isPaid) {
+                                    // enroll() will hit 402 -> purchaseRequired -> LaunchedEffect
+                                    // above navigates to CoursePaymentScreen with real price/order.
+                                    viewModel.enroll(course.id, course.title, coinsToUse)
+                                } else {
+                                    viewModel.enroll(course.id, course.title)
+                                    onDismiss()
+                                }
+                            },
+                            enabled = !state.isEnrolling,
+                            modifier = Modifier
+                                .weight(3f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (!course.isPaid) BpscColors.Success else BpscColors.Primary)
+                        ) {
+                            if (state.isEnrolling) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(
+                                    if (!course.isPaid) Icons.Rounded.PlayArrow else Icons.Rounded.ShoppingCart,
+                                    null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (!course.isPaid) str.courseEnrollFree
+                                    else "Buy Now — ₹${maxOf(0, course.price - coinDiscountInr)}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-    }
+    } // end else (showEnrollSuccessDialog)
 }
 
 // ─────────────────────────────────────────────────────────────

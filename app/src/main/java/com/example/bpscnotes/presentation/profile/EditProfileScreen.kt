@@ -261,24 +261,17 @@ fun EditProfileScreen(
                             Text(user?.mobile ?: str.noData, style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onBackground, fontWeight = FontWeight.SemiBold)
                         }
-                        val mobileVerified = user?.isVerified == true
+                        // All users log in via OTP — mobile is always verified by definition.
+                        // is_verified (admin manual flag) ≠ mobile_verified (set on every OTP login).
+                        // Showing "Not Verified" for OTP-based login is misleading — always show verified.
                         Row(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (mobileVerified) Color(0xFF2E7D32).copy(0.1f)
-                                else cs.onSurfaceVariant.copy(0.12f)
-                            )
+                            .background(Color(0xFF2E7D32).copy(0.1f))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            if (mobileVerified) {
-                                Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(12.dp))
-                                Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
-                            } else {
-                                Icon(Icons.Rounded.ErrorOutline, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(12.dp))
-                                Text(str.editNotVerified, style = MaterialTheme.typography.labelSmall,
-                                    color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
-                            }
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2E7D32), modifier = Modifier.size(12.dp))
+                            Text(str.editVerified, style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

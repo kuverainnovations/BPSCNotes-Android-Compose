@@ -87,7 +87,9 @@ fun LessonViewerScreen(
                 isLoading     = state.isLoading,
                 isCompleted   = state.lesson?.is_completed == true,
                 isMarking     = state.isMarking,
-                showMarkBtn   = state.lesson != null && state.isEnrolled && reachedEnd,
+                // Show "Mark Complete" only after reaching last page
+                // Show "Completed ✓" badge always (so user knows status on entry)
+                showMarkBtn   = state.lesson != null && state.isEnrolled && (reachedEnd || state.lesson?.is_completed == true),
                 onBack        = { nav.popBackStackSafe() },
                 onMarkComplete = { viewModel.markComplete() }
             )
@@ -322,10 +324,10 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
                             bitmap             = watermarkLogo.asImageBitmap(),
                             contentDescription = null,
                             modifier           = Modifier
-                                .fillMaxWidth(0.35f)
+                                .fillMaxWidth(0.55f)
                                 .aspectRatio(1f)
                                 .align(Alignment.Center)
-                                .alpha(0.12f),
+                                .alpha(0.18f),
                             contentScale = ContentScale.Fit
                         )
                         // Page number badge

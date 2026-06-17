@@ -487,6 +487,30 @@ private fun MockTestLobbyScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Explain Full Mock when that filter is active
+                if (selectedType == MockTestType.Full) {
+                    item(key = "full_mock_info") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(BpscColors.PrimaryLight.copy(0.5f))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("📋", fontSize = 20.sp)
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text("What is a Full Mock Test?",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold, color = BpscColors.Primary)
+                                Text("Simulates the complete BPSC exam — full syllabus, full question count, timed. Best taken as exam practice after completing your preparation.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = BpscColors.TextSecondary)
+                            }
+                        }
+                    }
+                }
                 // Empty state — no tests available
                 if (filtered.isEmpty()) {
                     item {

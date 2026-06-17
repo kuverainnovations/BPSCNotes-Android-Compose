@@ -61,72 +61,54 @@ fun ShimmerBox(
 @Composable
 fun DashboardSkeleton() {
     val cs = MaterialTheme.colorScheme
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(cs.background),
-        contentPadding = PaddingValues(bottom = 32.dp)
+    // NOTE: Uses Column not LazyColumn — this skeleton is placed inside
+    // DashboardScreen's Column(verticalScroll), so LazyColumn would crash
+    // with infinite height constraints.
+    Column(
+        modifier = Modifier.fillMaxWidth().background(cs.background),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         // Header
-        item {
-            Box(
-                Modifier.fillMaxWidth().height(160.dp)
-                    .background(shimmerBrush())
-            )
-        }
+        Box(Modifier.fillMaxWidth().height(160.dp).background(shimmerBrush()))
         // Stats row
-        item {
-            Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                repeat(4) {
-                    ShimmerBox(
-                        Modifier.weight(1f).height(70.dp),
-                        RoundedCornerShape(12.dp)
-                    )
-                }
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(4) {
+                ShimmerBox(Modifier.weight(1f).height(70.dp), RoundedCornerShape(12.dp))
             }
         }
         // Quiz cards row
-        item {
-            ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(14.dp),
-                RoundedCornerShape(4.dp))
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(2) {
-                    ShimmerBox(Modifier.width(170.dp).height(100.dp), RoundedCornerShape(16.dp))
-                }
+        ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(14.dp), RoundedCornerShape(4.dp))
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(2) {
+                ShimmerBox(Modifier.width(170.dp).height(100.dp), RoundedCornerShape(16.dp))
             }
         }
         // Quick access grid
-        item {
-            Spacer(Modifier.height(20.dp))
-            ShimmerBox(Modifier.padding(horizontal = 16.dp).width(100.dp).height(14.dp),
-                RoundedCornerShape(4.dp))
-            Spacer(Modifier.height(10.dp))
-            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ShimmerBox(Modifier.weight(1f).height(90.dp), RoundedCornerShape(16.dp))
-                    ShimmerBox(Modifier.weight(1f).height(90.dp), RoundedCornerShape(16.dp))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    repeat(3) {
-                        ShimmerBox(Modifier.weight(1f).height(80.dp), RoundedCornerShape(16.dp))
-                    }
+        Spacer(Modifier.height(20.dp))
+        ShimmerBox(Modifier.padding(horizontal = 16.dp).width(100.dp).height(14.dp), RoundedCornerShape(4.dp))
+        Spacer(Modifier.height(10.dp))
+        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ShimmerBox(Modifier.weight(1f).height(90.dp), RoundedCornerShape(16.dp))
+                ShimmerBox(Modifier.weight(1f).height(90.dp), RoundedCornerShape(16.dp))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                repeat(3) {
+                    ShimmerBox(Modifier.weight(1f).height(80.dp), RoundedCornerShape(16.dp))
                 }
             }
         }
         // Weekly consistency
-        item {
-            Spacer(Modifier.height(20.dp))
-            ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(130.dp),
-                RoundedCornerShape(16.dp))
-        }
+        Spacer(Modifier.height(20.dp))
+        ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(130.dp), RoundedCornerShape(16.dp))
         // Daily targets
-        item {
-            Spacer(Modifier.height(16.dp))
-            ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(100.dp),
-                RoundedCornerShape(16.dp))
-        }
+        Spacer(Modifier.height(16.dp))
+        ShimmerBox(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(100.dp), RoundedCornerShape(16.dp))
+        Spacer(Modifier.height(32.dp))
     }
 }
 

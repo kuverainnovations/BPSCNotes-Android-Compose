@@ -40,6 +40,11 @@ data class DashboardUiState(
     val weeklyActivity: List<DayProgress>     = emptyList(),
     val monthlyActivity: List<DayProgress>    = emptyList(),   // 28 days for "See All" detail
     val targetHistory:  List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto> = emptyList(),
+    // Per-source breakdown for ActivityDetailSheet
+    val monthlyQuizMins:    Map<String, Int>  = emptyMap(),   // date → mins
+    val monthlyRoomMins:    Map<String, Int>  = emptyMap(),
+    val monthlyCaMins:      Map<String, Int>  = emptyMap(),
+    val monthlyLessonMins:  Map<String, Int>  = emptyMap(),
     val stats: UserStatsData?                 = null,
     val dailyTargets: List<DailyTargetDto>    = emptyList(),
     val targetSummary: DailyTargetsSummary    = DailyTargetsSummary(),
@@ -169,6 +174,11 @@ class DashboardViewModel @Inject constructor(
                 val dfmt      = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                 val dayAbbr   = listOf("Sun","Mon","Tue","Wed","Thu","Fri","Sat")
                 val apiMap    = stats?.weeklyActivity?.associate { it.date.take(10) to it.activity } ?: emptyMap()
+                // Per-source breakdown maps (date → mins)
+                val quizMap    = stats?.weeklyActivity?.associate { it.date.take(10) to it.quizMins }   ?: emptyMap()
+                val roomMap    = stats?.weeklyActivity?.associate { it.date.take(10) to it.roomMins }   ?: emptyMap()
+                val caMap      = stats?.weeklyActivity?.associate { it.date.take(10) to it.caMins }     ?: emptyMap()
+                val lessonMap  = stats?.weeklyActivity?.associate { it.date.take(10) to it.lessonMins } ?: emptyMap()
                 val weekly    = (6 downTo 0).map { daysAgo ->
                     cal.timeInMillis = System.currentTimeMillis() - daysAgo * 86_400_000L
                     val dateStr  = dfmt.format(cal.time)
@@ -193,8 +203,12 @@ class DashboardViewModel @Inject constructor(
                         courses        = courses,
                         dailyQuizzes   = quizzes,
                         banners        = banners,
-                        weeklyActivity = weekly,
+                        weeklyActivity  = weekly,
                         monthlyActivity = monthly,
+                        monthlyQuizMins   = quizMap,
+                        monthlyRoomMins   = roomMap,
+                        monthlyCaMins     = caMap,
+                        monthlyLessonMins = lessonMap,
                         stats          = stats,
                         dailyTargets   = targetsData?.targets ?: emptyList(),
                         targetSummary  = targetsData?.summary ?: DailyTargetsSummary(),
