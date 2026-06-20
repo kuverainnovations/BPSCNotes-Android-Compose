@@ -36,6 +36,7 @@ import com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsScreen
 import com.example.bpscnotes.core.notifications.FcmDebugScreen
 import com.example.bpscnotes.presentation.currentaffairs.CaMcqQuizScreen
 import com.example.bpscnotes.presentation.currentaffairs.CaArticleDetailScreen
+import com.example.bpscnotes.presentation.currentaffairs.CaAdGateScreen
 import com.example.bpscnotes.presentation.payment.SubscriptionPaymentScreen
 import com.example.bpscnotes.presentation.payment.CoursePaymentScreen
 import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
@@ -247,6 +248,14 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             ) { backStackEntry ->
                 val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
                 CaMcqQuizScreen(navController = navController, affairId = affairId)
+            }
+
+            composable(
+                route     = "ca_ad_gate/{affairId}",
+                arguments = listOf(navArgument("affairId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
+                CaAdGateScreen(navController = navController, affairId = affairId, adManager = adManager)
             }
 
             composable(

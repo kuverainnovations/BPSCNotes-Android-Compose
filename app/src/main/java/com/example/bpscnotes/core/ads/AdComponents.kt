@@ -55,6 +55,24 @@ fun BannerAdView(adUnitId: String) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 1b. MEDIUM RECTANGLE AD — 300x250, centered full-screen placements
+//    Usage: MediumRectangleAdView(adUnitId = adManager.getGatedReadAdUnitId())
+// ─────────────────────────────────────────────────────────────
+@Composable
+fun MediumRectangleAdView(adUnitId: String, modifier: Modifier = Modifier) {
+    AndroidView(
+        modifier = modifier.wrapContentSize(),
+        factory  = { context ->
+            AdView(context).apply {
+                setAdSize(AdSize.MEDIUM_RECTANGLE)
+                setAdUnitId(adUnitId)
+                loadAd(AdRequest.Builder().build())
+            }
+        }
+    )
+}
+
+// ─────────────────────────────────────────────────────────────
 // 2. REWARDED AD BUTTON — for CoinWalletScreen "Earn" tab
 //    Shows remaining daily watches and a pulsing "Watch Ad" CTA.
 // ─────────────────────────────────────────────────────────────

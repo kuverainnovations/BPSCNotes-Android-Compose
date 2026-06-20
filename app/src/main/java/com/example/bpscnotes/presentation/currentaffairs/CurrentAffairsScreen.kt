@@ -284,6 +284,7 @@ fun CurrentAffairsScreen(
                 // Article list
                 else -> {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        var globalArticleIndex = 0
                         grouped.forEach { (date, dateArticles) ->
                             stickyHeader(key = date) { DateGroupHeader(date = dateArticles.firstOrNull()?.date ?: date, count = dateArticles.size) }
                             itemsIndexed(dateArticles, key = { _, a -> a.id }) { _, article ->
@@ -299,13 +300,22 @@ fun CurrentAffairsScreen(
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
-                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) },
+                                    onReadMore  = { navController.navigate(Screen.CaAdGate.createRoute(article.id)) },
                                     onStartMcq = {
                                         navController.navigate("ca_mcq_quiz/${article.id}")
                                     }
 
                                 )
                                 Spacer(Modifier.height(10.dp))
+
+                                // Banner every 5 articles — counted across the whole
+                                // flattened list, not reset per date group, so a long
+                                // single-date group still gets ads at a steady cadence.
+                                globalArticleIndex++
+                                if (adManager != null && globalArticleIndex % 5 == 0) {
+                                    BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                                    Spacer(Modifier.height(10.dp))
+                                }
                             }
                         }
                     }

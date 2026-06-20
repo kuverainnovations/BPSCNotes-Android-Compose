@@ -49,6 +49,12 @@ class AdManager @Inject constructor(
         private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"  // test
         private const val BANNER_AD_UNIT_ID       = "ca-app-pub-3940256099942544/6300978111"  // test
         private const val NATIVE_AD_UNIT_ID       = "ca-app-pub-3940256099942544/2247696110"  // test
+        // Medium-rectangle unit shown inside the custom 15s timer overlay
+        // before a Current Affairs article opens (CaAdGateScreen). Kept as
+        // its own constant — same test ID for now, but a real release
+        // should use a distinct unit so this placement's inventory/CTR is
+        // tracked separately from the in-feed list banner above.
+        private const val GATED_READ_AD_UNIT_ID   = "ca-app-pub-3940256099942544/6300978111"  // test
 
         // ── Frequency limits ───────────────────────────────────
         private const val INTERSTITIAL_COOLDOWN_MS = 20 * 60 * 1000L  // 20 minutes
@@ -350,4 +356,5 @@ class AdManager @Inject constructor(
     // ── Banner ad unit ID (used directly in BannerAdView composable) ──
     fun getBannerAdUnitId()  = BANNER_AD_UNIT_ID
     fun getNativeAdUnitId()  = NATIVE_AD_UNIT_ID
+    fun getGatedReadAdUnitId() = GATED_READ_AD_UNIT_ID
 }

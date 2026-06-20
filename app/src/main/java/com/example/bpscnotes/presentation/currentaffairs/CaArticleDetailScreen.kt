@@ -52,6 +52,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -262,89 +264,142 @@ fun CaArticleDetailScreen(
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // ── Top bar — always visible so back/share/bookmark work even
-            // while the article is still loading or failed to load ──────
-            Row(
-                modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // ── Hero header — status bar, top bar, and the MCQ CTA all sit
+            // on one continuous gradient panel, matching the header style
+            // used in CurrentAffairsScreen and CaMcqQuizScreen. Top bar is
+            // always shown (back works even while loading/erroring); the
+            // CTA only appears once the article has loaded.
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
+                            start = Offset(0f, 0f), end = Offset(400f, 400f)
+                        )
+                    )
+                    .statusBarsPadding()
             ) {
-                Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
-                        .clickable { navController.popBackStackSafe() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.ArrowBack, null, tint = cs.onSurface, modifier = Modifier.size(18.dp))
-                }
-                Text(
-                    article?.category ?: str.caTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cs.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 10.dp)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (article != null) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
-                                .clickable(enabled = !isDownloadingPdf) {
-                                    scope.launch {
-                                        val uri = viewModel.downloadArticlePdf(article.id, article.headline)
-                                        uri?.let {
-                                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(it, "application/pdf")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            try {
-                                                context.startActivity(Intent.createChooser(viewIntent, "Open PDF"))
-                                            } catch (_: Exception) {
-                                                // No PDF viewer installed — fall back to a share
-                                                // sheet so they can still save it via Drive/etc.
-                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                    type = "application/pdf"
-                                                    putExtra(Intent.EXTRA_STREAM, it)
-                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                                context.startActivity(Intent.createChooser(shareIntent, "Share PDF"))
-                                            }
-                                        }
-                                    }
-                                },
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                                .clickable { navController.popBackStackSafe() },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isDownloadingPdf) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onSurface)
-                            } else {
-                                Icon(Icons.Rounded.Download, null, tint = cs.onSurface, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        Text(
+                            article?.category ?: str.caTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(horizontal = 10.dp)
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (article != null) {
+                                Box(
+                                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                                        .clickable(enabled = !isDownloadingPdf) {
+                                            scope.launch {
+                                                val uri = viewModel.downloadArticlePdf(article.id, article.headline)
+                                                uri?.let {
+                                                    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(it, "application/pdf")
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    try {
+                                                        context.startActivity(Intent.createChooser(viewIntent, "Open PDF"))
+                                                    } catch (_: Exception) {
+                                                        // No PDF viewer installed — fall back to a share
+                                                        // sheet so they can still save it via Drive/etc.
+                                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                            type = "application/pdf"
+                                                            putExtra(Intent.EXTRA_STREAM, it)
+                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        }
+                                                        context.startActivity(Intent.createChooser(shareIntent, "Share PDF"))
+                                                    }
+                                                }
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isDownloadingPdf) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                    } else {
+                                        Icon(Icons.Rounded.Download, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                                        .clickable {
+                                            val shareText = "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app"
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_SUBJECT, article.headline)
+                                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, str.caShare))
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                                Box(
+                                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                                        .clickable { viewModel.toggleBookmark(article.id) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null,
+                                        tint = if (isBookmarked) BpscColors.CoinGold else Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
-                        Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
-                                .clickable {
-                                    val shareText = "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app"
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, article.headline)
-                                        putExtra(Intent.EXTRA_TEXT, shareText)
-                                    }
-                                    context.startActivity(Intent.createChooser(intent, str.caShare))
-                                },
-                            contentAlignment = Alignment.Center
+                    }
+
+                    if (article != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 2.dp, bottom = 16.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.12f))
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Rounded.Share, null, tint = cs.onSurface, modifier = Modifier.size(16.dp))
-                        }
-                        Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
-                                .clickable { viewModel.toggleBookmark(article.id) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null,
-                                tint = if (isBookmarked) BpscColors.CoinGold else cs.onSurface,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(str.caMcqPractice, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(
+                                    when {
+                                        mcqLoading -> str.caLoadingQuestions
+                                        mcqs.isEmpty() -> str.caNoMcqs
+                                        else -> "${mcqs.size} questions from this article"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f)
+                                )
+                            }
+                            if (mcqLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Button(
+                                    onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
+                                    enabled = mcqs.isNotEmpty(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color(0xFF0A2472),
+                                        disabledContainerColor = Color.White.copy(alpha = 0.3f),
+                                        disabledContentColor = Color.White.copy(alpha = 0.7f)
+                                    )
+                                ) { Text("Start MCQ", style = MaterialTheme.typography.titleSmall) }
+                            }
                         }
                     }
                 }
@@ -365,40 +420,9 @@ fun CaArticleDetailScreen(
                 article != null -> {
                     val (catFg, catBg) = CA_DETAIL_CATEGORY_COLORS[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
-                    // ── Fixed "Start MCQ" CTA — pinned right under the top
-                    // bar, always visible regardless of scroll position ───
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).clip(RoundedCornerShape(12.dp))
-                            .background(BpscColors.PrimaryLight).padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(str.caMcqPractice, style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                            Text(
-                                when {
-                                    mcqLoading -> str.caLoadingQuestions
-                                    mcqs.isEmpty() -> str.caNoMcqs
-                                    else -> "${mcqs.size} questions from this article"
-                                },
-                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant
-                            )
-                        }
-                        if (mcqLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
-                        } else {
-                            Button(
-                                onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
-                                enabled = mcqs.isNotEmpty(),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                            ) { Text("Start MCQ", style = MaterialTheme.typography.titleSmall) }
-                        }
-                    }
-                    HorizontalDivider(color = cs.outline.copy(alpha = 0.3f))
-
                     // ── Everything below scrolls as ONE page — heading,
-                    // meta, and article body move together. Only the top
-                    // bar and the MCQ CTA above stay fixed. ──────────────
+                    // meta, and article body move together. Only the
+                    // gradient header above stays fixed. ─────────────────
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
                     ) {

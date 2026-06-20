@@ -168,6 +168,8 @@ data class ContentStrings2(
     val materialsPremiumContent: String, val materialsChargeCoins: String,
     val materialsDownloadedDone: String, val materialsUnlockPro: String, val materialsDownloadFree: String,
     val caLoadingQuestions: String, val caSavedDone: String,
+    val caGateWaiting: String, val caGateReady: String, val caGateSubtitle: String,
+    val caGateContinue: String, val caGateWaitButton: String,
 )
 
 data class JobRoomStrings(
@@ -778,6 +780,9 @@ data class AppStrings(
     val materialsDownloadedDone get() = _ct2.materialsDownloadedDone; val materialsUnlockPro get() = _ct2.materialsUnlockPro
     val materialsDownloadFree get() = _ct2.materialsDownloadFree
     val caLoadingQuestions get() = _ct2.caLoadingQuestions; val caSavedDone get() = _ct2.caSavedDone
+    val caGateWaiting get() = _ct2.caGateWaiting; val caGateReady get() = _ct2.caGateReady
+    val caGateSubtitle get() = _ct2.caGateSubtitle; val caGateContinue get() = _ct2.caGateContinue
+    val caGateWaitButton get() = _ct2.caGateWaitButton
     // ── Job/Room extras ───────────────────────────────────────────
     val jobsNew get() = _jr.jobsNew; val jobsApplicationClosed get() = _jr.jobsApplicationClosed
     val jobsNoLink get() = _jr.jobsNoLink; val jobsApplyOfficialSite get() = _jr.jobsApplyOfficialSite
@@ -1202,6 +1207,9 @@ val EnglishStrings: AppStrings = mkAppStrings(
         materialsDownloadedDone="Downloaded ✓", materialsUnlockPro="Unlock with Pro",
         materialsDownloadFree="Download Free",
         caLoadingQuestions="Loading questions…", caSavedDone="Saved ✓",
+        caGateWaiting="Unlocking your article…", caGateReady="Your article is ready!",
+        caGateSubtitle="Just a few seconds while we load this for you",
+        caGateContinue="Continue to Article", caGateWaitButton="Wait {s}s",
     ),
     jr = JobRoomStrings(
         jobsTitle="Job Vacancies", jobsApplyNow="Apply Now", jobsLastDate="Last Date",
@@ -1757,6 +1765,9 @@ val HindiStrings: AppStrings = mkAppStrings(
         materialsDownloadedDone="डाउनलोड ✓", materialsUnlockPro="Pro से अनलॉक करें",
         materialsDownloadFree="मुफ़्त डाउनलोड",
         caLoadingQuestions="प्रश्न लोड हो रहे हैं…", caSavedDone="सहेजा ✓",
+        caGateWaiting="आपका लेख अनलॉक हो रहा है…", caGateReady="आपका लेख तैयार है!",
+        caGateSubtitle="इसे लोड करने में बस कुछ सेकंड लगेंगे",
+        caGateContinue="लेख पर जाएँ", caGateWaitButton="{s} सेकंड प्रतीक्षा करें",
     ),
     jr = JobRoomStrings(
         jobsTitle="नौकरी रिक्तियां", jobsApplyNow="अभी आवेदन करें", jobsLastDate="अंतिम तारीख",
