@@ -205,6 +205,23 @@ class CurrentAffairsViewModel @Inject constructor(
     private val _mcqAnswers = MutableStateFlow<Map<String, CaMcqAnswerDto>>(emptyMap())
     val mcqAnswers: StateFlow<Map<String, CaMcqAnswerDto>> = _mcqAnswers.asStateFlow()
 
+    // Global negative marking config — admin-set once, applies to every
+    // CA / Practice MCQ session (these are lightweight practice questions
+    // attached to an article, not a per-test record like `quizzes`).
+    private val _mcqMarkingConfig = MutableStateFlow(com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto())
+    val mcqMarkingConfig: StateFlow<com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto> = _mcqMarkingConfig.asStateFlow()
+
+    fun loadMcqMarkingConfig() {
+        viewModelScope.launch {
+            try {
+                val data = api.getMcqMarkingConfig().data
+                if (data != null) _mcqMarkingConfig.value = data.config
+            } catch (_: Exception) {
+                // Non-fatal — practice continues without negative marking if this fails
+            }
+        }
+    }
+
     fun loadMcqs(affairId: String) {
         viewModelScope.launch {
             _mcqLoading.value = true
@@ -220,6 +237,7 @@ class CurrentAffairsViewModel @Inject constructor(
             }
             _mcqLoading.value = false
         }
+        loadMcqMarkingConfig()
     }
 
     /** After user taps — resolve correct answer from already-loaded mcqs */

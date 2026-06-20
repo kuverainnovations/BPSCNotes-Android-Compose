@@ -80,6 +80,7 @@ fun CaMcqQuizScreen(
     val mcqLoading by viewModel.mcqLoading.collectAsState()
     val mcqError   by viewModel.mcqError.collectAsState()
     val mcqAnswers by viewModel.mcqAnswers.collectAsState()
+    val mcqMarkingConfig by viewModel.mcqMarkingConfig.collectAsState()
 
     LaunchedEffect(affairId) { viewModel.loadMcqs(affairId) }
 
@@ -155,6 +156,7 @@ fun CaMcqQuizScreen(
                 mcqs          = mcqs,
                 answers       = answers,
                 serverAnswers = mcqAnswers,
+                markingConfig = mcqMarkingConfig,
                 onRetry       = {
                     answers = emptyMap()
                     currentIndex = 0
@@ -406,6 +408,7 @@ private fun ResultScreen(
     mcqs:          List<CaMcqDto>,
     answers:       Map<String, String>,
     serverAnswers: Map<String, CaMcqAnswerDto>,
+    markingConfig: com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto = com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto(),
     onRetry:       () -> Unit,
     onReview:      () -> Unit,
     onBack:        () -> Unit,
@@ -413,6 +416,7 @@ private fun ResultScreen(
     activity:      Activity?,
 ) {
     val str     = LocalStrings.current
+    val cs      = MaterialTheme.colorScheme
     val correct = mcqs.count { q ->
         val userAnswer = answers[q.id]
         userAnswer != null && serverAnswers[q.id]?.correct == userAnswer
@@ -421,6 +425,12 @@ private fun ResultScreen(
     val wrong   = mcqs.size - correct - skipped
     val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
     val animPct by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
+
+    val negativeMarkingEnabled = markingConfig.negativeMarkingEnabled
+    val marksObtained = correct * markingConfig.marksPerCorrect
+    val negativeMarks = wrong * markingConfig.marksPerWrong
+    val finalScore     = marksObtained - negativeMarks
+    val totalMarks      = mcqs.size * markingConfig.marksPerCorrect
 
     BackHandler { onBack() }
 
@@ -468,6 +478,22 @@ private fun ResultScreen(
                 ResultStat("❌", "$wrong",   str.quizWrong,   Color(0xFFE74C3C))
                 ResultStat("⏭️", "$skipped", "Skipped",       BpscColors.TextSecondary)
                 ResultStat("📝", "${mcqs.size}", "Total",      BpscColors.Primary)
+            }
+        }
+
+        // ── Marks breakdown — only when negative marking is enabled for practice MCQs ──
+        if (negativeMarkingEnabled) {
+            Spacer(Modifier.height(12.dp))
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    HorizontalDivider(color = cs.outline)
+                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Marks Earned", "+${com.example.bpscnotes.presentation.quiz.formatMarks(marksObtained)}", valueColor = Color(0xFF2ECC71))
+                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Negative Marks", "-${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}", valueColor = Color(0xFFE74C3C))
+                    HorizontalDivider(color = cs.outline)
+                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Final Score", "${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)} / ${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}", valueColor = BpscColors.Primary)
+                }
             }
         }
 

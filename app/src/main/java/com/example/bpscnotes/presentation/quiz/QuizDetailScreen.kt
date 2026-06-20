@@ -213,17 +213,68 @@ private fun QuizIntroContent(
                         Text(str.quizRules, style = MaterialTheme.typography.titleLarge,
                             color = cs.onSurface, fontWeight = FontWeight.Bold)
                         HorizontalDivider(color = cs.outline)
-                        listOf(
-                            "📝  ${quiz.totalQuestions} questions to answer",
-                            "⏱️  ${quiz.durationMins} minutes total time limit",
-                            "🎯  Score ${quiz.passingScore}% or above to pass",
-                            "🪙  Earn ${quiz.coinsReward} coins on passing",
-                            "⏭️  " + str.quizSkip.trimEnd(),
-                            "📊  " + str.topicQuizReview,
-                            "✅  " + str.quizSubmit
-                        ).forEach { rule ->
+                        buildList {
+                            add("📝  ${quiz.totalQuestions} questions to answer")
+                            add("⏱️  ${quiz.durationMins} minutes total time limit")
+                            add("🎯  Score ${quiz.passingScore}% or above to pass")
+                            add("🪙  Earn ${quiz.coinsReward} coins on passing")
+                            if (quiz.negativeMarkingEnabled) {
+                                add("✅  Each correct answer carries +${formatMarks(quiz.marksPerCorrect)} marks")
+                                add("❌  Each incorrect answer carries -${formatMarks(quiz.marksPerWrong)} marks")
+                                add("⚪  No marks will be deducted for unanswered questions")
+                            }
+                            add("⏭️  " + str.quizSkip.trimEnd())
+                            add("📊  " + str.topicQuizReview)
+                            add("✅  " + str.quizSubmit)
+                        }.forEach { rule ->
                             Text(rule, style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant, lineHeight = 20.sp)
+                        }
+                    }
+                }
+
+                // ── Marking Scheme — shown clearly before the user starts ──
+                Card(
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Test Details", style = MaterialTheme.typography.titleLarge,
+                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Total Questions", "${quiz.totalQuestions}")
+                        MarkingSchemeRow("Total Marks", formatMarks(quiz.totalMarks))
+                        MarkingSchemeRow("Duration", "${quiz.durationMins} Minutes")
+                        MarkingSchemeRow(
+                            "Correct Answer",
+                            "+${formatMarks(quiz.marksPerCorrect)} Marks",
+                            valueColor = BpscColors.Success
+                        )
+                        MarkingSchemeRow(
+                            "Wrong Answer",
+                            if (quiz.negativeMarkingEnabled) "-${formatMarks(quiz.marksPerWrong)} Marks" else "0 Marks",
+                            valueColor = if (quiz.negativeMarkingEnabled) Color(0xFFE74C3C) else cs.onSurface
+                        )
+                        MarkingSchemeRow("Unanswered Questions", "0 Marks")
+
+                        if (quiz.negativeMarkingEnabled) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFFEE8E8))
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("⚠️", fontSize = 14.sp)
+                                Text(
+                                    "Negative Marking Applicable: ${formatMarks(quiz.marksPerWrong)} marks will be deducted for every incorrect answer.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFC0392B),
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 18.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -295,3 +346,21 @@ private fun StatChipWhite(icon: String, value: String, label: String) {
 private fun VerticalDividerWhite() {
     Box(Modifier.width(1.dp).height(32.dp).background(Color.White.copy(0.2f)))
 }
+
+@Composable
+internal fun MarkingSchemeRow(label: String, value: String, valueColor: Color? = null) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = valueColor ?: cs.onSurface, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Formats a marks value without a trailing ".0" for whole numbers (2.0 → "2", 0.66 stays "0.66"). */
+internal fun formatMarks(value: Double): String =
+    if (value == value.toLong().toDouble()) value.toLong().toString()
+    else value.toString().trimEnd('0').trimEnd('.')

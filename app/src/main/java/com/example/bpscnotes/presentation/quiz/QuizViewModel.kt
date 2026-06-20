@@ -53,8 +53,14 @@ data class QuizSession(
     val durationMins: Int,
     val passingScore: Int,
     val coinsReward: Int,
-    val questions: List<QuizSessionQuestion>
-)
+    val questions: List<QuizSessionQuestion>,
+    // ── Negative marking — admin-configurable per quiz ────────
+    val negativeMarkingEnabled: Boolean = false,
+    val marksPerCorrect: Double = 1.0,
+    val marksPerWrong: Double = 0.0,
+) {
+    val totalMarks: Double get() = questions.size * marksPerCorrect
+}
 
 data class QuizAnswerDetail(
     val question: QuizSessionQuestion,
@@ -62,7 +68,9 @@ data class QuizAnswerDetail(
     val correctLetter: String,
     val isCorrect: Boolean,
     val isSkipped: Boolean,
-    val explanation: String
+    val explanation: String,
+    /** Marks this question contributed: +marksPerCorrect, -marksPerWrong, or 0 if skipped */
+    val marks: Double = 0.0
 ) {
     val selectedIndex: Int get() = when (selectedLetter.lowercase()) { "a"->0;"b"->1;"c"->2;"d"->3; else->-1 }
     val correctIndex:  Int get() = when (correctLetter.lowercase())   { "a"->0;"b"->1;"c"->2;"d"->3; else->-1 }
@@ -78,7 +86,15 @@ data class QuizResult(
     val coinsEarned: Int,
     val isPassed: Boolean,
     val timeTakenSecs: Int,
-    val answerDetails: List<QuizAnswerDetail>
+    val answerDetails: List<QuizAnswerDetail>,
+    // ── Negative marking breakdown ────────────────────────────
+    val negativeMarkingEnabled: Boolean = false,
+    val marksPerCorrect: Double = 1.0,
+    val marksPerWrong: Double = 0.0,
+    val totalMarks: Double = 0.0,
+    val marksObtained: Double = 0.0,
+    val negativeMarks: Double = 0.0,
+    val finalScore: Double = 0.0,
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -247,7 +263,10 @@ class QuizViewModel @Inject constructor(
                     durationMins = quiz.durationMins,
                     passingScore = quiz.passingScore,
                     coinsReward  = quiz.coinsReward,
-                    questions    = questions
+                    questions    = questions,
+                    negativeMarkingEnabled = quiz.negativeMarkingEnabled,
+                    marksPerCorrect        = quiz.marksPerCorrect,
+                    marksPerWrong          = quiz.marksPerWrong,
                 )
                 _uiState.update { it.copy(activeSession = session, isStartingQuiz = false) }
             } catch (e: Exception) {
@@ -337,7 +356,8 @@ class QuizViewModel @Inject constructor(
                         correctLetter  = correctLtr,
                         isCorrect      = correct,
                         isSkipped      = isSkipped,
-                        explanation    = r?.explanation ?: q.explanation ?: ""
+                        explanation    = r?.explanation ?: q.explanation ?: "",
+                        marks          = r?.marks ?: 0.0
                     )
                 }
 
@@ -354,7 +374,14 @@ class QuizViewModel @Inject constructor(
                             coinsEarned    = data.coinsEarned,
                             isPassed       = data.isPassed,
                             timeTakenSecs  = data.timeTakenSecs,
-                            answerDetails  = answerDetails
+                            answerDetails  = answerDetails,
+                            negativeMarkingEnabled = data.negativeMarkingEnabled,
+                            marksPerCorrect        = data.marksPerCorrect,
+                            marksPerWrong          = data.marksPerWrong,
+                            totalMarks              = data.totalMarks,
+                            marksObtained           = data.marksObtained,
+                            negativeMarks           = data.negativeMarks,
+                            finalScore              = data.finalScore,
                         ),
                         isSubmitting    = false,
                         // Update isAttempted AND myLastScore locally for immediate UI update

@@ -243,6 +243,10 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                     Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     Text("·", color = BpscColors.TextHint)
                     Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    if (quiz.negativeMarkingEnabled) {
+                        Text("·", color = BpscColors.TextHint)
+                        Text("⚠️ -${formatMarks(quiz.marksPerWrong)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
+                    }
                 }
                 if (quiz.isAttempted) {
                     val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()

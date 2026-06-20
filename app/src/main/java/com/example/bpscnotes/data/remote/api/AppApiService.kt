@@ -189,8 +189,15 @@ data class QuizPreviewDto(
     @SerializedName("is_attempted")    val isAttempted: Boolean = false,
     @SerializedName("my_last_score")   val myLastScore: Int? = null,
     @SerializedName("scheduled_for")   val scheduledFor: String? = null,
-    val status: String = "published"
-)
+    val status: String = "published",
+    // ── Negative marking — admin-configurable per quiz/test ──────
+    @SerializedName("negative_marking_enabled") val negativeMarkingEnabled: Boolean = false,
+    @SerializedName("marks_per_correct")        val marksPerCorrect: Double = 1.0,
+    @SerializedName("marks_per_wrong")          val marksPerWrong: Double = 0.0,
+) {
+    /** Total Marks shown on the test details screen = questions × marks/correct */
+    val totalMarks: Double get() = totalQuestions * marksPerCorrect
+}
 
 data class QuizzesResponseData(val quizzes: List<QuizPreviewDto> = emptyList())
 
@@ -265,7 +272,9 @@ data class QuizAnswerResultDto(
     val answer: String,                          // what the user chose
     @SerializedName("isCorrect")     val isCorrect: Boolean = false,
     @SerializedName("correctAnswer") val correctAnswer: String = "",
-    val explanation: String? = null              // explanation from backend
+    val explanation: String? = null,             // explanation from backend
+    // Marks this question contributed: +marksPerCorrect, -marksPerWrong, or 0 if skipped
+    val marks: Double = 0.0
 )
 
 /**
@@ -281,6 +290,7 @@ data class QuizResultData(
     val correct: Int = 0,
     val total: Int = 0,
     val wrong: Int = 0,
+    val unanswered: Int = 0,
     val accuracy: Double = 0.0,
 
     val isPassed: Boolean = false,
@@ -289,6 +299,15 @@ data class QuizResultData(
 
     val rank: Int = 0,
     val percentile: Double = 0.0,
+
+    // ── Negative marking breakdown ────────────────────────────
+    val negativeMarkingEnabled: Boolean = false,
+    val marksPerCorrect: Double = 1.0,
+    val marksPerWrong: Double = 0.0,
+    val totalMarks: Double = 0.0,
+    val marksObtained: Double = 0.0,
+    val negativeMarks: Double = 0.0,
+    val finalScore: Double = 0.0,
 
     val answers: List<QuizAnswerResultDto> = emptyList()
 )
@@ -636,6 +655,21 @@ data class CaMcqsResponseData(
     val mcqs: List<CaMcqDto> = emptyList()
 )
 
+/**
+ * Global negative marking config for CA / Practice MCQs — applies to every
+ * article-attached MCQ practice session, set once by the admin (unlike
+ * `quizzes`, these aren't created per-test so there's no per-record config).
+ */
+data class CaMcqMarkingConfigDto(
+    val negativeMarkingEnabled: Boolean = false,
+    val marksPerCorrect: Double = 1.0,
+    val marksPerWrong: Double = 0.0,
+)
+
+data class CaMcqMarkingConfigData(
+    val config: CaMcqMarkingConfigDto = CaMcqMarkingConfigDto()
+)
+
 interface CurrentAffairsApiService {
     @GET("current-affairs")
     suspend fun getAffairs(
@@ -655,6 +689,10 @@ interface CurrentAffairsApiService {
 
     @GET("current-affairs/{id}/mcqs")
     suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
+
+    /** GET /current-affairs/mcq-config — global negative marking settings for CA/Practice MCQs */
+    @GET("current-affairs/mcq-config")
+    suspend fun getMcqMarkingConfig(): ApiResponse<CaMcqMarkingConfigData>
 
     // Returns raw PDF bytes (this one route deliberately bypasses the
     // backend's standard JSON envelope), so it's typed as a streamed

@@ -708,6 +708,7 @@ private fun SummaryStatItem(icon: String, value: String, label: String, color: C
 @Composable
 internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
+    negativeMarkingEnabled: Boolean = false,
     onBack: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
@@ -750,12 +751,26 @@ internal fun QuizAnswerReviewScreen(
                                 }
                                 SubjectChip(detail.question.subject)
                             }
-                            Text(
-                                when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (negativeMarkingEnabled && !detail.isSkipped) {
+                                    val marksText = if (detail.marks >= 0) "+${formatMarks(detail.marks)}" else formatMarks(detail.marks)
+                                    Text(
+                                        marksText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (detail.marks >= 0) BpscColors.Success else Color(0xFFE74C3C),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                            .background(if (detail.marks >= 0) Color(0xFFE8FDF4) else Color(0xFFFEE8E8))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Text(
+                                    when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         Text(detail.question.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)

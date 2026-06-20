@@ -752,7 +752,11 @@ private fun QuizResultScreen(
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
 
     if (showDetailReview) {
-        QuizAnswerReviewScreen(answerDetails = result.answerDetails, onBack = { showDetailReview = false })
+        QuizAnswerReviewScreen(
+            answerDetails = result.answerDetails,
+            negativeMarkingEnabled = result.negativeMarkingEnabled,
+            onBack = { showDetailReview = false }
+        )
         return
     }
 
@@ -810,6 +814,25 @@ private fun QuizResultScreen(
                     ResultStat("❌", "${result.wrongCount}", "Wrong", Color(0xFFE74C3C))
                     ResultStat("⏭️", "${result.skippedCount}", "Skipped", BpscColors.TextSecondary)
                     ResultStat("🪙", "+${result.coinsEarned}", "Coins", BpscColors.CoinGold)
+                }
+            }
+
+            // ── Marks breakdown — only shown for tests with negative marking ──
+            if (result.negativeMarkingEnabled) {
+                Spacer(Modifier.height(12.dp))
+                Card(Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Correct Answers", "${result.correctCount}")
+                        MarkingSchemeRow("Marks Earned", "+${formatMarks(result.marksObtained)}", valueColor = BpscColors.Success)
+                        MarkingSchemeRow("Wrong Answers", "${result.wrongCount}")
+                        MarkingSchemeRow("Negative Marks", "-${formatMarks(result.negativeMarks)}", valueColor = Color(0xFFE74C3C))
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Final Score", "${formatMarks(result.finalScore)} / ${formatMarks(result.totalMarks)}", valueColor = BpscColors.Primary)
+                    }
                 }
             }
 

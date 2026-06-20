@@ -31,6 +31,8 @@ import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
+import com.example.bpscnotes.presentation.quiz.formatMarks
+import com.example.bpscnotes.presentation.quiz.MarkingSchemeRow
 import kotlinx.coroutines.*
 
 enum class MockTestType { Full, SubjectWise, PreviousYear, Custom }
@@ -46,7 +48,12 @@ data class MockTest(
     val subject: String?,
     val year: Int? = null,
     val isPaid: Boolean = false,
-    val negativeMarking: Float = 0.33f,
+    // negativeMarking = marks deducted per wrong answer (only meaningful when
+    // negativeMarkingEnabled is true). Sourced from the admin-configured
+    // quiz.marks_per_wrong — no longer a hardcoded client default.
+    val negativeMarkingEnabled: Boolean = false,
+    val negativeMarking: Float = 0f,
+    val marksPerCorrect: Float = 1f,
     val totalAttempts: Int = 0,
     val averageScore: Float = 0f,
     val isFeatured: Boolean = false,
@@ -107,6 +114,9 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         durationMinutes = durationMins,
         subject         = subject.takeIf { it.isNotBlank() },
         isPaid          = false,
+        negativeMarkingEnabled = negativeMarkingEnabled,
+        negativeMarking         = marksPerWrong.toFloat(),
+        marksPerCorrect          = marksPerCorrect.toFloat(),
         totalAttempts   = attemptCount,
         averageScore    = avgScore.toFloat(),
         isFeatured      = false,
@@ -687,9 +697,11 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                             Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                         }
-                        // Negative marking
-                        Text("-${test.negativeMarking}m", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontSize = 9.sp,
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        // Negative marking — only shown when the admin actually enabled it for this test
+                        if (test.negativeMarkingEnabled) {
+                            Text("⚠️ -${formatMarks(test.negativeMarking.toDouble())}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontSize = 9.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
                         if (test.year != null) {
                             Text("${test.year}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -821,8 +833,53 @@ private fun TestInstructionsScreen(
                         ) {
                             item { InfoTile("📝", str.quizQuestions, "${test.totalQuestions}") }
                             item { InfoTile("⏱️", str.quizDuration, "${test.durationMinutes} min") }
-                            item { InfoTile("✅", "Marks/Q",  "+1.0") }
-                            item { InfoTile("❌", "Negative",  "-${test.negativeMarking}") }
+                            item { InfoTile("✅", "Marks/Q",  "+${formatMarks(test.marksPerCorrect.toDouble())}") }
+                            item {
+                                if (test.negativeMarkingEnabled)
+                                    InfoTile("❌", "Negative",  "-${formatMarks(test.negativeMarking.toDouble())}")
+                                else
+                                    InfoTile("➖", "Negative",  "None")
+                            }
+                        }
+                    }
+                }
+
+                // Marking scheme — full breakdown so the rules are unambiguous
+                // before the user commits to starting the test.
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Marking Scheme", style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Total Marks", formatMarks(test.totalQuestions * test.marksPerCorrect.toDouble()))
+                        MarkingSchemeRow("Correct Answer", "+${formatMarks(test.marksPerCorrect.toDouble())} Marks", valueColor = BpscColors.Success)
+                        MarkingSchemeRow(
+                            "Wrong Answer",
+                            if (test.negativeMarkingEnabled) "-${formatMarks(test.negativeMarking.toDouble())} Marks" else "0 Marks",
+                            valueColor = if (test.negativeMarkingEnabled) Color(0xFFE74C3C) else cs.onSurface
+                        )
+                        MarkingSchemeRow("Unanswered Questions", "0 Marks")
+                        if (test.negativeMarkingEnabled) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFFEE8E8))
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("⚠️", fontSize = 14.sp)
+                                Text(
+                                    "Negative Marking Applicable: ${formatMarks(test.negativeMarking.toDouble())} marks will be deducted for every incorrect answer.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFC0392B),
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 18.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -836,16 +893,19 @@ private fun TestInstructionsScreen(
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(str.mockInstructions, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        listOf(
-                            Triple("🟢", "Attempted",            "Questions you have answered"),
-                            Triple("🔵", "Marked for Review",    "Questions you want to revisit"),
-                            Triple("⚪", "Unattempted",          "Questions not yet answered"),
-                            Triple("🟡", "Attempted + Marked",   "Answered but flagged for review"),
-                            Triple("📖", str.quizNavTitle,   "Tap the grid icon to jump to any question"),
-                            Triple("🔖", "Bookmark",             "Save important questions for later"),
-                            Triple("⏰", "Auto Submit",          "Test submits automatically when timer ends"),
-                            Triple("↩️",  "Resume",              str.quizCanResume),
-                        ).forEach { (emoji, title, desc) ->
+                        buildList {
+                            if (test.negativeMarkingEnabled) {
+                                add(Triple("✅", "Marking Scheme", "Each correct answer carries +${formatMarks(test.marksPerCorrect.toDouble())} marks; each incorrect answer carries -${formatMarks(test.negativeMarking.toDouble())} marks. No marks are deducted for unanswered questions."))
+                            }
+                            add(Triple("🟢", "Attempted",            "Questions you have answered"))
+                            add(Triple("🔵", "Marked for Review",    "Questions you want to revisit"))
+                            add(Triple("⚪", "Unattempted",          "Questions not yet answered"))
+                            add(Triple("🟡", "Attempted + Marked",   "Answered but flagged for review"))
+                            add(Triple("📖", str.quizNavTitle,   "Tap the grid icon to jump to any question"))
+                            add(Triple("🔖", "Bookmark",             "Save important questions for later"))
+                            add(Triple("⏰", "Auto Submit",          "Test submits automatically when timer ends"))
+                            add(Triple("↩️",  "Resume",              str.quizCanResume))
+                        }.forEach { (emoji, title, desc) ->
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(emoji, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
                                 Column {
@@ -1281,11 +1341,14 @@ private fun TestAnalysisScreen(
     val str = LocalStrings.current
     val resultAnswers = submitResult?.answers ?: emptyList()
 
-    val correct = resultAnswers.count { it.isCorrect }
-
-    val wrong = resultAnswers.count { !it.isCorrect }
-
-    val skipped = questions.size - resultAnswers.size
+    // Prefer the authoritative backend counts — `resultAnswers` includes BOTH
+    // attempted and skipped questions (skipped ones carry answer="", isCorrect=false),
+    // so deriving wrong/skipped purely from isCorrect would wrongly count every
+    // skipped question as "wrong". submitResult.wrong/unanswered already separate
+    // these correctly server-side.
+    val correct = submitResult?.correct ?: resultAnswers.count { it.isCorrect }
+    val wrong   = submitResult?.wrong   ?: resultAnswers.count { !it.isCorrect && it.answer.isNotBlank() }
+    val skipped = submitResult?.unanswered ?: (questions.size - resultAnswers.count { it.answer.isNotBlank() })
 
     val percentage = submitResult?.score ?: 0
     val rank       = submitResult?.rank
@@ -1401,6 +1464,23 @@ private fun TestAnalysisScreen(
                     AnalysisStat("❌", "$wrong",          str.quizWrong,     Color(0xFFE74C3C))
                     AnalysisStat("⏭️", "$skipped",        "Skipped",   BpscColors.TextSecondary)
                     AnalysisStat("🪙", if (coinsEarned > 0) "+$coinsEarned" else "0", "Coins", Color(0xFFF57F17))
+                }
+            }
+
+            // ── Marks breakdown — only for tests with negative marking enabled ──
+            if (submitResult?.negativeMarkingEnabled == true) {
+                Spacer(Modifier.height(12.dp))
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface)) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Correct Answers", "$correct")
+                        MarkingSchemeRow("Marks Earned", "+${formatMarks(submitResult.marksObtained)}", valueColor = BpscColors.Success)
+                        MarkingSchemeRow("Wrong Answers", "$wrong")
+                        MarkingSchemeRow("Negative Marks", "-${formatMarks(submitResult.negativeMarks)}", valueColor = Color(0xFFE74C3C))
+                        HorizontalDivider(color = cs.outline)
+                        MarkingSchemeRow("Final Score", "${formatMarks(submitResult.finalScore)} / ${formatMarks(submitResult.totalMarks)}", valueColor = BpscColors.Primary)
+                    }
                 }
             }
 
