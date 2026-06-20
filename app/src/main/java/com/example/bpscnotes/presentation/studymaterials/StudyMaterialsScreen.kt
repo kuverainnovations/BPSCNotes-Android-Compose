@@ -1130,7 +1130,7 @@ private fun LibraryItemCard(
                     }
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
                     Text(item.author ?: item.uploaderName ?: "BPSCNotes Team",
                         style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
@@ -1163,15 +1163,25 @@ private fun LibraryItemCard(
                 if ((item.price ?: 0) > 0) {
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFFFF8E1))
+                         //   .clip(RoundedCornerShape(12.dp))
+                        //    .background(Color(0xFFFFF8E1))
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                         horizontalArrangement = Arrangement.spacedBy(3.dp),
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
-                        Text("🪙", fontSize = 10.sp)
-                        Text("${item.price}", style = MaterialTheme.typography.labelSmall,
+                        Text("₹${item.price}", style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF856404), fontWeight = FontWeight.Bold)
+                    }
+                }else{
+                    Row(
+                        modifier = Modifier
+                            //   .clip(RoundedCornerShape(12.dp))
+                            //    .background(Color(0xFFFFF8E1))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text("Free", fontSize = 10.sp)
                     }
                 }
                 // Social proof: "12 students bought this" — only for paid materials with sales
@@ -2439,9 +2449,27 @@ fun MyUploadsTab(
                                         Text("₹${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
-                                if (item.language.isNotEmpty() && item.language != "English") {
+                               /* if (item.language.isNotEmpty() && item.language != "English") {
                                     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE0F2F1)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         Text("🌐 ${item.language}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00796B), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    }
+                                }*/
+                                val language = item.language.orEmpty()
+
+                                if (language.isNotEmpty() && language != "English") {
+                                    Box(
+                                        Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(0xFFE0F2F1))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            "🌐 $language",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF00796B),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
                                     }
                                 }
                             }
