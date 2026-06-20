@@ -2,4 +2,9 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Certificates downloaded for sharing (CourseDetailScreen "Share" button) -->
     <cache-path name="certificates" path="certificates/" />
+    <!-- Current Affairs PDFs -->
+    <cache-path
+        name="current_affairs_pdfs"
+        path="current-affairs-pdfs/" />
+
 </paths>

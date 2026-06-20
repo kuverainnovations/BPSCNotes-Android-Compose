@@ -299,7 +299,11 @@ fun CurrentAffairsScreen(
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
-                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) }
+                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) },
+                                    onStartMcq = {
+                                        navController.navigate("ca_mcq_quiz/${article.id}")
+                                    }
+
                                 )
                                 Spacer(Modifier.height(10.dp))
                             }
@@ -347,7 +351,7 @@ private fun DateGroupHeader(date: String, count: Int) {
 // ARTICLE CARD — unchanged
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit) {
+private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit,   onStartMcq: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
@@ -375,8 +379,46 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
             Text(article.summary, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(str.caReadMore, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp).clickable { onReadMore() })
             Spacer(Modifier.height(12.dp)); HorizontalDivider(color = cs.outline); Spacer(Modifier.height(10.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("❓", fontSize = 11.sp); Text("${article.mcqCount} MCQs from this topic", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold, fontSize = 10.sp) }
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+
+                val hasMcqs = article.mcqCount > 0
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (hasMcqs)
+                                BpscColors.PrimaryLight
+                            else
+                                Color(0xFFF1F5F9)
+                        )
+                        .clickable(enabled = hasMcqs) {
+                            onStartMcq()
+                        }
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        if (hasMcqs) "❓" else "🚫",
+                        fontSize = 11.sp
+                    )
+
+                    Text(
+                        if (hasMcqs)
+                            "${article.mcqCount} MCQs from this topic"
+                        else
+                            "No MCQs available",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (hasMcqs)
+                            BpscColors.Primary
+                        else
+                            BpscColors.TextHint,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp
+                    )
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(cs.background).clickable(onClick = onShare), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, null, tint = BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
                     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface).clickable(onClick = onBookmark), contentAlignment = Alignment.Center) { Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, tint = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }

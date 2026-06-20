@@ -656,6 +656,13 @@ interface CurrentAffairsApiService {
     @GET("current-affairs/{id}/mcqs")
     suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
 
+    // Returns raw PDF bytes (this one route deliberately bypasses the
+    // backend's standard JSON envelope), so it's typed as a streamed
+    // ResponseBody instead of ApiResponse<T> like every other endpoint here.
+    @Streaming
+    @GET("current-affairs/{id}/pdf")
+    suspend fun downloadArticlePdf(@Path("id") id: String): retrofit2.Response<okhttp3.ResponseBody>
+
     @POST("current-affairs/log-activity")
     suspend fun logActivity(@Body body: LogActivityRequest): ApiResponse<Any>
 }

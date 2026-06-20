@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
@@ -35,6 +36,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -44,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +67,7 @@ import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import kotlinx.coroutines.launch
 
 // Inline study time tracker — same pattern as CurrentAffairsScreen.kt /
 // CaMcqQuizScreen.kt (each screen keeps its own private copy).
@@ -231,6 +236,17 @@ fun CaArticleDetailScreen(
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
     val mcqs by viewModel.mcqs.collectAsState()
     val mcqLoading by viewModel.mcqLoading.collectAsState()
+    val isDownloadingPdf by viewModel.isDownloadingPdf.collectAsState()
+    val pdfError by viewModel.pdfError.collectAsState()
+
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(pdfError) {
+        pdfError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPdfError()
+        }
+    }
 
     LaunchedEffect(affairId) {
         com.example.bpscnotes.core.analytics.Event.screenView("ca_article_detail")
@@ -271,6 +287,39 @@ fun CaArticleDetailScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (article != null) {
+                        Box(
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
+                                .clickable(enabled = !isDownloadingPdf) {
+                                    scope.launch {
+                                        val uri = viewModel.downloadArticlePdf(article.id, article.headline)
+                                        uri?.let {
+                                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(it, "application/pdf")
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            try {
+                                                context.startActivity(Intent.createChooser(viewIntent, "Open PDF"))
+                                            } catch (_: Exception) {
+                                                // No PDF viewer installed — fall back to a share
+                                                // sheet so they can still save it via Drive/etc.
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "application/pdf"
+                                                    putExtra(Intent.EXTRA_STREAM, it)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(Intent.createChooser(shareIntent, "Share PDF"))
+                                            }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isDownloadingPdf) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onSurface)
+                            } else {
+                                Icon(Icons.Rounded.Download, null, tint = cs.onSurface, modifier = Modifier.size(18.dp))
+                            }
+                        }
                         Box(
                             modifier = Modifier.size(36.dp).clip(CircleShape).background(cs.surfaceVariant)
                                 .clickable {
@@ -402,5 +451,10 @@ fun CaArticleDetailScreen(
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+        )
     }
 }

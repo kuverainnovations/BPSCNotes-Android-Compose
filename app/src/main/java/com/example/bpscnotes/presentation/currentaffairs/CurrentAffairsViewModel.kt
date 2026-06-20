@@ -1,17 +1,25 @@
 package com.example.bpscnotes.presentation.currentaffairs
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.core.network.toUserMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 data class CurrentAffairsUiState(
@@ -30,7 +38,8 @@ data class CaArticleDetailState(
 @HiltViewModel
 class CurrentAffairsViewModel @Inject constructor(
     private val api: CurrentAffairsApiService,
-    private val bus: RefreshEventBus
+    private val bus: RefreshEventBus,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CurrentAffairsUiState())
@@ -44,6 +53,14 @@ class CurrentAffairsViewModel @Inject constructor(
     // doesn't include full_content (kept light for the listing screen).
     private val _articleDetailState = MutableStateFlow(CaArticleDetailState())
     val articleDetailState: StateFlow<CaArticleDetailState> = _articleDetailState.asStateFlow()
+
+    // PDF download — separate from articleDetailState since it's a
+    // one-off action rather than screen-load state.
+    private val _isDownloadingPdf = MutableStateFlow(false)
+    val isDownloadingPdf: StateFlow<Boolean> = _isDownloadingPdf.asStateFlow()
+    private val _pdfError = MutableStateFlow<String?>(null)
+    val pdfError: StateFlow<String?> = _pdfError.asStateFlow()
+    fun clearPdfError() { _pdfError.update { null } }
 
     init {
         loadArticles()
@@ -225,6 +242,44 @@ class CurrentAffairsViewModel @Inject constructor(
                     )
                 )
             } catch (_: Exception) { /* silent — tracking must never crash the app */ }
+        }
+    }
+
+    // ── PDF export ───────────────────────────────────────────────
+    // Downloads the article PDF via the authenticated Retrofit client
+    // (the endpoint requires the same JWT as every other current-affairs
+    // call), saves it into app-private cache, and hands back a
+    // FileProvider content:// Uri for the caller to open/share — same
+    // shape as CourseDetailViewModel.downloadCertificateForShare().
+    suspend fun downloadArticlePdf(affairId: String, title: String): Uri? {
+        return withContext(Dispatchers.IO) {
+            _isDownloadingPdf.value = true
+            _pdfError.value = null
+            try {
+                val response = api.downloadArticlePdf(affairId)
+                if (!response.isSuccessful) throw Exception("Download failed: HTTP ${response.code()}")
+                val body = response.body() ?: throw Exception("Empty PDF response")
+
+                val dir = File(appContext.cacheDir, "current-affairs-pdfs").apply { mkdirs() }
+                val safeName = title.ifBlank { "article" }
+                    .replace(Regex("[^a-zA-Z0-9 _-]"), "")
+                    .trim()
+                    .take(60)
+                    .ifBlank { "article" }
+                val file = File(dir, "${safeName}_$affairId.pdf")
+
+                body.byteStream().use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
+
+                FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
+            } catch (e: Exception) {
+                Log.e("CurrentAffairsVM", "downloadArticlePdf: ${e.message}", e)
+                _pdfError.value = e.toUserMessage("Could not download PDF")
+                null
+            } finally {
+                _isDownloadingPdf.value = false
+            }
         }
     }
 }
