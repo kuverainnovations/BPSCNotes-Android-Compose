@@ -1016,7 +1016,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         goBack="Go Back", tryAgain="Try Again", version="v1.0.0",
     ),
     n = NavAuthStrings(
-        navDashboard="Dashboard", navMyLearning="My Learning", navRooms="Study Rooms", navProfile="Profile",
+        navDashboard="Dashboard", navMyLearning="My Courses", navRooms="Study Rooms", navProfile="Profile",
         splashTagline="Study Smart. Recall Better. Rank Higher.",
         langSelectTitle="Choose Your Language", langSelectSubtitle="You can change this anytime from Settings",
         langSelectContinue="Continue",

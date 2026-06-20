@@ -464,11 +464,13 @@ fun StudyMaterialsScreen(
             isUploading    = state.isUploading,
             uploadProgress = state.uploadProgress,
             uploadError    = state.uploadError,
-            onSubmit       = viewModel::uploadMaterial,
+            onSubmit       = { uri, t, d, s, ty, a, tg, pc, ip, fp, p ->
+                viewModel.uploadMaterial(uri, t, d, s, ty, a, tg, pc, ip, fp, p, state.uploadLanguage)
+            },
             onDismiss      = viewModel::hideUpload,
             onCancel       = viewModel::confirmCancelUpload,
-            onFormChange   = { t, d, s, a, tg, ty, ip, fp, p ->
-                viewModel.updateUploadForm(t, d, s, a, tg, ty, ip, fp, p)
+            onFormChange   = { t, d, s, a, tg, ty, ip, fp, p, lang ->
+                viewModel.updateUploadForm(t, d, s, a, tg, ty, ip, fp, p, lang)
             },
             state          = state
         )
@@ -870,10 +872,18 @@ private fun MaterialsList(
     onLoadMore: () -> Unit
 ) {
     val str = LocalStrings.current
-    val pinned   = state.materials.filter { it.isFeatured }
-    val trending = state.materials.filter { it.isTrending && !it.isFeatured }
-    val newItems = state.materials.filter { it.isNew && !it.isTrending && !it.isFeatured }
-    val rest     = state.materials.filter { !it.isFeatured && !it.isTrending && !it.isNew }
+    // FIX: pinned items come from a dedicated unpaginated endpoint (state.pinnedMaterials)
+    // so they always show here even if they'd rank outside the first page of the
+    // downloads-sorted main list. We also union them into "All Resources" below so
+    // a pinned item is findable there too, not just via search.
+    val pinned       = state.pinnedMaterials
+    val pinnedIds    = pinned.map { it.id }.toSet()
+    val trending     = state.materials.filter { it.isTrending && it.id !in pinnedIds }
+    val newItems     = state.materials.filter { it.isNew && !it.isTrending && it.id !in pinnedIds }
+    val restFromPage = state.materials.filter { it.id !in pinnedIds && !it.isTrending && !it.isNew }
+    // Merge: pinned items not already present in the paginated list get added to
+    // "All Resources" too, so they're visible there without needing search.
+    val rest = restFromPage + pinned.filter { p -> state.materials.none { it.id == p.id } }
 
     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -1715,7 +1725,7 @@ private fun UploadSheet(
     onDismiss: () -> Unit,
     onCancel: () -> Unit,
     onFormChange: (title: String?, description: String?, subject: String?, author: String?,
-                   tags: String?, type: MaterialType?, isPremium: Boolean?, freePages: String?, price: String?) -> Unit,
+                   tags: String?, type: MaterialType?, isPremium: Boolean?, freePages: String?, price: String?, language: String?) -> Unit,
     state: StudyMaterialsUiState
 ) {
     val cs = MaterialTheme.colorScheme
@@ -1731,6 +1741,7 @@ private fun UploadSheet(
     val selType     = state.uploadType
     val isPremium   = state.uploadIsPremium
     val freePages   = state.uploadFreePages
+    val language    = state.uploadLanguage
     val price       = state.uploadPrice
 
     // File URI is still local — can't serialize a URI into ViewModel state safely
@@ -1841,7 +1852,7 @@ private fun UploadSheet(
                 }
             }
 
-            OutlinedTextField(value = title, onValueChange = { onFormChange(it, null, null, null, null, null, null, null, null) },
+            OutlinedTextField(value = title, onValueChange = { onFormChange(it, null, null, null, null, null, null, null, null, null) },
                 label = { Text(str.materialsNotesTitle) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
@@ -1853,11 +1864,20 @@ private fun UploadSheet(
                 value       = subject,
                 label       = "${str.materialsFilterSubject} *",
                 options     = backendSubjects,
-                onSelect    = { onFormChange(null, null, it, null, null, null, null, null, null) },
+                onSelect    = { onFormChange(null, null, it, null, null, null, null, null, null, null) },
                 placeholder = "Select a subject"
             )
 
-            OutlinedTextField(value = author, onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null) },
+            // Language dropdown — admin can filter/display this per material
+            BpscDropdown(
+                value       = language,
+                label       = "Language",
+                options     = listOf("English", "Hindi", "Hindi + English"),
+                onSelect    = { onFormChange(null, null, null, null, null, null, null, null, null, it) },
+                placeholder = "Select language"
+            )
+
+            OutlinedTextField(value = author, onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null, null) },
                 label = { Text(str.materialsAuthorName) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true)
 
@@ -1872,7 +1892,7 @@ private fun UploadSheet(
                         .background(if (sel) color else typeBg(type))
                         .clickable {
                             fileUri = null; fileName = ""  // reset local file state
-                            onFormChange(null, null, null, null, null, type, null, "3", null)
+                            onFormChange(null, null, null, null, null, type, null, "3", null, null)
                         }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1898,13 +1918,13 @@ private fun UploadSheet(
                     .padding(horizontal = 10.dp, vertical = 7.dp)
             )
 
-            OutlinedTextField(value = description, onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null) },
+            OutlinedTextField(value = description, onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null, null) },
                 label = { Text("Message to Admin (optional)") },
                 placeholder = { Text("Tell the reviewer what this material is about, source, year, etc.") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
-            OutlinedTextField(value = tagsInput, onValueChange = { onFormChange(null, null, null, null, it, null, null, null, null) },
+            OutlinedTextField(value = tagsInput, onValueChange = { onFormChange(null, null, null, null, it, null, null, null, null, null) },
                 label = { Text("Tags (optional)") }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true,
                 placeholder = { Text("e.g. BPSC, Polity, Indian Constitution") },
@@ -1921,21 +1941,22 @@ private fun UploadSheet(
                         Column {
                             Text(str.materialsPremiumContent, style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold, color = cs.onSurface)
-                            Text(
-                                if (isPdfType) str.materialsChargeCoins
-                                else str.materialsChargeCoins,
-                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            // "Charge coins for full access" text removed per design change
                         }
-                        Switch(checked = isPremium, onCheckedChange = { onFormChange(null, null, null, null, null, null, it, null, null) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = BpscColors.CoinGold,
-                                checkedTrackColor = BpscColors.CoinGold.copy(0.3f)))
+                        Switch(checked = isPremium, onCheckedChange = { onFormChange(null, null, null, null, null, null, it, null, null, null) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor  = BpscColors.CoinGold,
+                                checkedTrackColor  = BpscColors.CoinGold.copy(0.3f),
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = Color(0xFF888888),
+                                uncheckedBorderColor = Color(0xFFAAAAAA)))
                     }
                     AnimatedVisibility(visible = isPremium) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 OutlinedTextField(
                                     value = price,
-                                    onValueChange = { onFormChange(null, null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }) },
+                                    onValueChange = { onFormChange(null, null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }, null) },
                                     label = { Text("₹ Price (INR)") },
                                     placeholder = { Text("e.g. 49") },
                                     modifier = if (isPdfType) Modifier.weight(1f) else Modifier.fillMaxWidth(),
@@ -1947,7 +1968,7 @@ private fun UploadSheet(
                                 if (isPdfType) {
                                     OutlinedTextField(
                                         value = freePages,
-                                        onValueChange = { onFormChange(null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }, null) },
+                                        onValueChange = { onFormChange(null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }, null, null) },
                                         label = { Text("${str.coursesFree} pages") },
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(12.dp), singleLine = true,

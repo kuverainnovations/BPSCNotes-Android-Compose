@@ -62,8 +62,9 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
 
     // Determine prelims/mains from examTags
     val examTagsLower = examTags.map { it.lowercase() }
-    val isPrelims     = isImportant || examTagsLower.any { "prelim" in it || "pt" in it }
-    val isMains       = examTagsLower.any { "main" in it || "gs" in it }
+    val isBoth    = examTagsLower.any { it == "both" }
+    val isPrelims = isBoth || isImportant || examTagsLower.any { "prelim" in it || "pt" in it }
+    val isMains   = isBoth || examTagsLower.any { "main" in it || "gs" in it }
 
     // MCQ count: use real count from backend (ca_mcqs table)
     val mcqCount = mcqCount

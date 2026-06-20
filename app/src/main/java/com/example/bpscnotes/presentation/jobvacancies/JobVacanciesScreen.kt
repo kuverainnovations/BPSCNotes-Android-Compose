@@ -343,8 +343,10 @@ fun JobVacanciesScreen(
         // Alert sheet
         if (showAlertSheet) {
             JobAlertSheet(
-                categories = liveCategories,
-                onDismiss  = { showAlertSheet = false }
+                categories      = liveCategories,
+                selectedLabels  = vmState.alertCategories,
+                onToggle        = { viewModel.toggleAlertCategory(it) },
+                onDismiss       = { showAlertSheet = false }
             )
         }
     }
@@ -646,12 +648,13 @@ private fun JobDetailSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun JobAlertSheet(
-    categories: List<JobCategory?>,
-    onDismiss:  () -> Unit,
+    categories:     List<JobCategory?>,
+    selectedLabels: Set<String>,
+    onToggle:       (String) -> Unit,
+    onDismiss:      () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val selected = remember { mutableStateListOf<String>() }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor   = Color.White,
@@ -670,7 +673,7 @@ private fun JobAlertSheet(
             }
             HorizontalDivider(color = cs.outline)
             categories.forEach { cat ->
-                val isOn = selected.contains(cat?.label)
+                val isOn = cat?.label != null && selectedLabels.contains(cat.label)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -682,10 +685,7 @@ private fun JobAlertSheet(
                                 BpscColors.Surface
                         )
                         .clickable {
-                            if (isOn)
-                                selected.remove(cat?.label)
-                            else
-                                cat?.label?.let { selected.add(it) }
+                            cat?.label?.let { onToggle(it) }
                         }
                         .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -710,10 +710,7 @@ private fun JobAlertSheet(
                         Switch(
                             checked = isOn,
                             onCheckedChange = {
-                                if (isOn)
-                                    selected.remove(cat.label)
-                                else
-                                    selected.add(cat.label)
+                                cat.label?.let { label -> onToggle(label) }
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
@@ -723,8 +720,8 @@ private fun JobAlertSheet(
                     }
                 }
             }
-            if (selected.isNotEmpty()) {
-                Text("✅ Alerts on: ${selected.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Success, fontWeight = FontWeight.SemiBold)
+            if (selectedLabels.isNotEmpty()) {
+                Text("✅ Alerts on: ${selectedLabels.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Success, fontWeight = FontWeight.SemiBold)
             }
             Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {

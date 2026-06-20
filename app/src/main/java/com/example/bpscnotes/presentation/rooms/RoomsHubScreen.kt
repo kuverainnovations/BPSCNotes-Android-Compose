@@ -597,12 +597,14 @@ private fun RoomCard(
         isClaimReady -> Color(0xFF1E4D35)            // soft green
         isMyRoom     -> Color(0xFF1A3460)            // medium navy highlight
         isLocked     -> Color(0xFF1C2540)            // muted navy
+        isLowerTier  -> Color(0xFF151C30)            // darker muted — disabled past tier
         else         -> Color(0xFF1E2D52)            // clean navy card
     }
     val borderColor = when {
         isClaimReady -> BpscColors.Success
         isMyRoom     -> tierColor
         isLocked     -> Color.White.copy(0.08f)
+        isLowerTier  -> Color.White.copy(0.05f)     // nearly invisible border
         else         -> Color.White.copy(0.12f)
     }
 
@@ -610,7 +612,8 @@ private fun RoomCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 5.dp)
-            .clickable(onClick = onClick),
+            .clickable(enabled = !isLowerTier, onClick = onClick)
+            .alpha(if (isLowerTier) 0.45f else 1f),
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = bgColor),
         border    = BorderStroke(if (isMyRoom) 1.5.dp else 1.dp, borderColor),
@@ -635,6 +638,7 @@ private fun RoomCard(
                     isStarting   -> CircularProgressIndicator(color = tierColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     isClaimReady -> Text("🎉", fontSize = 24.sp)
                     isLocked     -> Icon(Icons.Rounded.Lock, null, tint = Color.White.copy(0.3f), modifier = Modifier.size(22.dp))
+                    isLowerTier  -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
                     else         -> Text(tier.iconEmoji ?: "🏆", fontSize = 24.sp)
                 }
             }
@@ -669,6 +673,13 @@ private fun RoomCard(
                             .padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text(str.roomsLocked, style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFAAAAAA), fontSize = 9.sp)
+                        }
+                        isLowerTier -> Box(modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(0.07f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
+                            Text("✓ Completed", style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.35f), fontSize = 9.sp)
                         }
                     }
                 }

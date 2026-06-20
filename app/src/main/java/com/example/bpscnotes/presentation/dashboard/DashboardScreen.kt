@@ -182,19 +182,19 @@ fun DashboardScreen(
                             LoadingSection()
                         }
 
-                        // ── Banners ────────────────────────────────────────────────
-                        BannerSection(
-                            banners = state.banners,
-                            isLoading = state.isLoading,
-                            navController = navController
-                        )
-
                         // ── Today's target card ────────────────────────────────────
                         TodayTargetCard(
                             targets = state.dailyTargets,
                             isLoading = state.isLoading,
                             onCreateTarget = { showTargetSheet = true },
                             onClick = { navController.navigate(Screen.DailyTargets.route) }
+                        )
+
+                        // ── Banners (between targets and weekly consistency) ────────
+                        BannerSection(
+                            banners = state.banners,
+                            isLoading = state.isLoading,
+                            navController = navController
                         )
 
                         var showActivityDetail by remember { mutableStateOf(false) }
@@ -774,7 +774,7 @@ private fun DashboardHeader(
             .fillMaxWidth()
             // .statusBarsPadding()
             .padding(horizontal = 20.dp)
-            .padding(top = 44.dp)) {
+            .padding(top = 14.dp)) {
             // Top bar
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier
@@ -852,7 +852,7 @@ private fun DashboardHeader(
                     }
                 }
             }
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Hero row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -866,10 +866,9 @@ private fun DashboardHeader(
                     }
                     Text(
                         if (name.isNotEmpty()) "${name.split(" ").first()} 👋" else str.dashboardAspirant,
-                        style = MaterialTheme.typography.headlineMedium, color = Color.White,
-                        fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp
+                        style = MaterialTheme.typography.titleLarge, color = Color.White,
+                        fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp
                     )
-                    Spacer(Modifier.height(2.dp))
                     Row(modifier = Modifier
                         .clip(RoundedCornerShape(22.dp))
                         .background(Color(0xFFFF8F00).copy(0.18f))
@@ -883,7 +882,7 @@ private fun DashboardHeader(
                     }
                 }
                 // Progress ring (targets completion)
-                Box(modifier = Modifier.size(90.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val stroke = 7.dp.toPx(); val inset = stroke / 2
                         val arcSz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
@@ -897,7 +896,7 @@ private fun DashboardHeader(
                     }
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(10.dp))
 
             // ── Stats strip — ALL values from API ─────────────────────────
             val rankText  = if (rank != null) "#$rank" else "--"
@@ -929,7 +928,7 @@ private fun DashboardHeader(
                     Brush.verticalGradient(listOf(Color.White.copy(0.35f), Color.Transparent)),
                     RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                 )
-                .padding(horizontal = 4.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                .padding(horizontal = 4.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 HeaderStat("📚", topicsText, "Topics")
                 HeaderStatDivider()
                 HeaderStat("🏆", rankText,  "Rank")
@@ -1352,7 +1351,7 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
                     }
                 }
             }
-            LargeQuickCard("My Courses", str.dashboardContinueLearning, Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearningCourses.route) }
+            LargeQuickCard("Courses", str.dashboardContinueLearning, Icons.Rounded.MenuBook, listOf(Color(0xFFBF360C), Color(0xFFE64A19), Color(0xFFFF5722)), Modifier.weight(1f)) { navController.navigate(Screen.MyLearningCourses.route) }
         }
         Spacer(Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2277,7 +2276,7 @@ private fun ActivityDetailSheet(
                         ActivityStat("📅", "$activeDays", "Active Days")
                         ActivityStat("⏱️",
                             if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m",
-                            "Total Study")
+                            "Total (28d)")
                         ActivityStat("🏆", "${data.maxOfOrNull { it.score } ?: 0}m", "Best Day")
                     }
                     Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {

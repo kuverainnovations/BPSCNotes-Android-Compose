@@ -55,6 +55,9 @@ data class StudyMaterialDto(
     @SerializedName("is_premium")
     val isPremium: Boolean = false,
 
+    @SerializedName("language")
+    val language: String = "English",
+
     @SerializedName("is_featured")
     val isFeatured: Boolean = false,
 
@@ -369,6 +372,15 @@ interface StudyMaterialsApiService {
     suspend fun getSubjects(): ApiResponse<SubjectsData>
 
     /**
+     * GET /study-materials/pinned
+     * Returns ALL featured/pinned materials, unaffected by the main list's
+     * pagination — so pinned items always show in the Pinned section,
+     * not just when they happen to rank in the first page of results.
+     */
+    @GET("study-materials/pinned")
+    suspend fun getPinned(): ApiResponse<MaterialListData>
+
+    /**
      * GET /study-materials?type=pdf&subject=Polity&search=...&page=1&limit=20&sort=newest
      * sort: newest | downloads | rating
      * bookmarkedOnly: true (show saved only)
@@ -494,5 +506,6 @@ interface StudyMaterialsApiService {
         @Part("isPremium")                 isPremium:    RequestBody,
         @Part("freePages")                 freePages:    RequestBody,
         @Part("price")                     price:        RequestBody,
+        @Part("language")                  language:     RequestBody,
     ): ApiResponse<UploadResultData>
 }

@@ -296,7 +296,7 @@ private fun formatCertDate(raw: String?): String {
 fun MyLearningScreen(
     navController: NavHostController,
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
-    startTab: Int = 1,   // default to My Courses tab — Marketplace accessible by switching
+    startTab: Int = 0,   // default to My Courses tab — Marketplace accessible by switching
     viewModel: MyLearningViewModel = hiltViewModel(),
     fromScreen: String=""
 ) {
@@ -311,7 +311,7 @@ fun MyLearningScreen(
     // and clear the trigger so it doesn't fire again on recomposition
     LaunchedEffect(state.justEnrolledId) {
         if (state.justEnrolledId != null) {
-            selectedTab = 1          // 0 = Store, 1 = My Courses
+            selectedTab = 0          // 0 = My Courses, 1 = Marketplace
             viewModel.clearJustEnrolled()
         }
     }
@@ -420,7 +420,7 @@ fun MyLearningScreen(
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("🛍️  " + str.marketTitle, "📚  My Courses").forEachIndexed { index, tab ->
+                    listOf("📚  My Courses", "🛍️  " + str.marketTitle).forEachIndexed { index, tab ->
                         val sel = selectedTab == index
                         Box(
                             modifier = Modifier
@@ -444,16 +444,7 @@ fun MyLearningScreen(
         }
 
         when (selectedTab) {
-            0 -> StoreTab(
-                navController  = navController,
-                userCoins      = userCoins,
-                courses        = storeItems,
-                savedCourseIds = state.savedCourseIds,
-                viewModel      = viewModel,
-                subjects       = state.subjects.ifEmpty { listOf("All") },
-                adManager=adManager
-            )
-            1 -> MyCoursesTab(
+            0 -> MyCoursesTab(
                 navController  = navController,
                 courses        = learningCourses,
                 savedCourses   = remember(state.savedCourses) { state.savedCourses.map { it.toLearningCourse() } },
@@ -462,6 +453,15 @@ fun MyLearningScreen(
                 adManager      = adManager,
                 error          = state.error,
                 onRetry        = viewModel::load
+            )
+            1 -> StoreTab(
+                navController  = navController,
+                userCoins      = userCoins,
+                courses        = storeItems,
+                savedCourseIds = state.savedCourseIds,
+                viewModel      = viewModel,
+                subjects       = state.subjects.ifEmpty { listOf("All") },
+                adManager=adManager
             )
         }
     }

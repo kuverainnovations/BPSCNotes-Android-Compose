@@ -170,6 +170,14 @@ class TokenStore @Inject constructor(
     fun setStringPref(key: String, value: String) =
         prefs.edit().putString("pref_$key", value).apply()
 
+    // ── Job alert category preferences ───────────────────────────
+    // Persisted locally — the toggle in JobAlertSheet previously lived in
+    // an unbacked remember{} list that reset every time the sheet closed.
+    fun getJobAlertCategories(): Set<String> =
+        prefs.getStringSet("job_alert_categories", emptySet()) ?: emptySet()
+    fun setJobAlertCategories(categories: Set<String>) =
+        prefs.edit().putStringSet("job_alert_categories", categories).apply()
+
     // ── Downloaded material IDs ─────────────────────────────────
     fun getDownloadedIds(): Set<String> =
         prefs.getStringSet("downloaded_material_ids", emptySet()) ?: emptySet()

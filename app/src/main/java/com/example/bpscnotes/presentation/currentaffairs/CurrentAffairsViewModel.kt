@@ -58,10 +58,12 @@ class CurrentAffairsViewModel @Inject constructor(
                 val serverList = response.data?.affairs ?: emptyList()
 
                 val serverBookmarked = serverList.filter { it.isBookmarked }.map { it.id }.toSet()
-                _bookmarkedIds.value = serverBookmarked
+                // Merge: keep any locally-toggled bookmarks even if cache returns stale data
+                val mergedBookmarked = serverBookmarked + _bookmarkedIds.value
+                _bookmarkedIds.value = mergedBookmarked
 
                 val articles = serverList.map { dto ->
-                    dto.toUiModel(isBookmarked = serverBookmarked.contains(dto.id))
+                    dto.toUiModel(isBookmarked = mergedBookmarked.contains(dto.id))
                 }
 
                 _uiState.update { it.copy(allArticles = articles, articles = articles, isLoading = false) }
