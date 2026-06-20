@@ -21,6 +21,12 @@ data class CurrentAffairsUiState(
     val error: String? = null
 )
 
+data class CaArticleDetailState(
+    val article: CAArticle? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
 @HiltViewModel
 class CurrentAffairsViewModel @Inject constructor(
     private val api: CurrentAffairsApiService,
@@ -34,6 +40,11 @@ class CurrentAffairsViewModel @Inject constructor(
     private val _bookmarkedIds = MutableStateFlow<Set<String>>(emptySet())
     val bookmarkedIds: StateFlow<Set<String>> = _bookmarkedIds.asStateFlow()
 
+    // Article detail screen state — fetched by id since the list payload
+    // doesn't include full_content (kept light for the listing screen).
+    private val _articleDetailState = MutableStateFlow(CaArticleDetailState())
+    val articleDetailState: StateFlow<CaArticleDetailState> = _articleDetailState.asStateFlow()
+
     init {
         loadArticles()
 
@@ -42,6 +53,7 @@ class CurrentAffairsViewModel @Inject constructor(
             bus.events.collect { event ->
                 when (event) {
                     is RefreshEvent.CoinsChanged -> refresh()
+                    is RefreshEvent.CaBookmarkChanged -> applyBookmarkState(event.affairId, event.isBookmarked)
                     else -> {}
                 }
             }
@@ -105,6 +117,9 @@ class CurrentAffairsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 api.toggleBookmark(id)
+                // Let any other live CurrentAffairsViewModel instance (list vs.
+                // detail screen each have their own) know about this change.
+                bus.emit(RefreshEvent.CaBookmarkChanged(id, !wasBookmarked))
             } catch (e: Exception) {
                 // Revert on failure
                 _bookmarkedIds.update { current ->
@@ -121,9 +136,44 @@ class CurrentAffairsViewModel @Inject constructor(
         }
     }
 
+    /** Applies a bookmark state change that originated from another screen's
+     *  ViewModel instance (via the bus) — no API call, just local state sync. */
+    private fun applyBookmarkState(id: String, isBookmarked: Boolean) {
+        _bookmarkedIds.update { current -> if (isBookmarked) current + id else current - id }
+        _uiState.update { state ->
+            state.copy(articles = state.articles.map { a -> if (a.id == id) a.copy(isBookmarked = isBookmarked) else a })
+        }
+        _articleDetailState.update { state ->
+            val a = state.article
+            if (a != null && a.id == id) state.copy(article = a.copy(isBookmarked = isBookmarked)) else state
+        }
+    }
+
     fun refresh() = loadArticles()
 
     fun clearError() { _uiState.update { it.copy(error = null) } }
+
+    // ── Article detail (full-screen page) ──────────────────────────
+    fun loadArticleDetail(affairId: String) {
+        viewModelScope.launch {
+            _articleDetailState.update { it.copy(isLoading = it.article == null, error = null) }
+            try {
+                val dto = api.getAffairDetail(affairId).data?.affair
+                    ?: throw IllegalStateException("Article not found")
+                // Bias toward "bookmarked" so we never clobber a local optimistic
+                // toggle made on another screen with stale server data — same
+                // merge rule loadArticles() uses.
+                if (dto.isBookmarked) _bookmarkedIds.update { it + dto.id }
+                _articleDetailState.update {
+                    it.copy(article = dto.toUiModel(isBookmarked = _bookmarkedIds.value.contains(dto.id)), isLoading = false)
+                }
+            } catch (e: Exception) {
+                _articleDetailState.update {
+                    it.copy(isLoading = false, error = e.toUserMessage("Failed to load article"))
+                }
+            }
+        }
+    }
 
     // ── MCQs ─────────────────────────────────────────────────────
     private val _mcqs = MutableStateFlow<List<com.example.bpscnotes.data.remote.api.CaMcqDto>>(emptyList())

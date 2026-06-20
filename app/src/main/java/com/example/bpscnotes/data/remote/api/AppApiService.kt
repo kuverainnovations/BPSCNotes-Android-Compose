@@ -398,6 +398,7 @@ data class SubmitReviewRequest(
 )
 
 data class AffairsResponseData(val affairs: List<CurrentAffairDto> = emptyList())
+data class AffairDetailResponseData(val affair: CurrentAffairDto)
 
 // ══════════════════════════════════════════════════════════════
 // BANNER DTOs  (unchanged)
@@ -647,7 +648,7 @@ interface CurrentAffairsApiService {
     ): ApiResponse<AffairsResponseData>
 
     @GET("current-affairs/{id}")
-    suspend fun getAffairDetail(@Path("id") id: String): ApiResponse<Any>
+    suspend fun getAffairDetail(@Path("id") id: String): ApiResponse<AffairDetailResponseData>
 
     @POST("current-affairs/{id}/bookmark")
     suspend fun toggleBookmark(@Path("id") id: String): ApiResponse<Any>

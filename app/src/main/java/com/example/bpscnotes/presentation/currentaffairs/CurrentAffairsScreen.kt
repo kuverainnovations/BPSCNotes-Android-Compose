@@ -49,10 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -124,7 +121,6 @@ fun CurrentAffairsScreen(
     var selectedTab      by remember { mutableIntStateOf(0) }
     var searchQuery      by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(str.filterAll) }
-    var selectedArticle  by remember { mutableStateOf<CAArticle?>(null) }
     val focusManager      = LocalFocusManager.current
     val tabs              = listOf(str.filterAll, str.filterPrelims, str.filterMains, str.filterSaved)
 
@@ -303,7 +299,7 @@ fun CurrentAffairsScreen(
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
-                                    onReadMore  = { selectedArticle = article }
+                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) }
                                 )
                                 Spacer(Modifier.height(10.dp))
                             }
@@ -311,18 +307,6 @@ fun CurrentAffairsScreen(
                     }
                 }
             }
-        }
-
-        // Bottom sheet
-        selectedArticle?.let { article ->
-            ArticleBottomSheet(
-                article       = article,
-                isBookmarked  = bookmarkedIds.contains(article.id),
-                navController = navController,
-                viewModel     = viewModel,
-                onBookmark    = { viewModel.toggleBookmark(article.id) },
-                onDismiss     = { selectedArticle = null }
-            )
         }
     }
 }
@@ -396,106 +380,6 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(cs.background).clickable(onClick = onShare), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, null, tint = BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
                     Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface).clickable(onClick = onBookmark), contentAlignment = Alignment.Center) { Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, tint = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary, modifier = Modifier.size(16.dp)) }
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// ARTICLE BOTTOM SHEET — unchanged
-// ─────────────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ArticleBottomSheet(
-    article: CAArticle, isBookmarked: Boolean,
-    navController: androidx.navigation.NavHostController,
-    viewModel: com.example.bpscnotes.presentation.currentaffairs.CurrentAffairsViewModel,
-    onBookmark: () -> Unit, onDismiss: () -> Unit
-) {
-    val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val mcqs by viewModel.mcqs.collectAsState()
-    val mcqLoading by viewModel.mcqLoading.collectAsState()
-    LaunchedEffect(article.id) { viewModel.loadMcqs(article.id) }
-    val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
-    val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = cs.surface, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), contentWindowInsets = { WindowInsets(0, 0, 0, 0) }) {
-        Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
-            Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0)), start = Offset(0f, 0f), end = Offset(400f, 200f))).padding(horizontal = 20.dp, vertical = 20.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(article.category, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp))
-                        if (article.isImportant) Row(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF3CD)).padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) { Text("⭐", fontSize = 9.sp); Text(str.caImportant, style = MaterialTheme.typography.labelSmall, color = Color(0xFF856404), fontSize = 9.sp, fontWeight = FontWeight.Bold) }
-                        Spacer(Modifier.weight(1f))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) { Icon(Icons.Rounded.Schedule, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(11.dp)); Text("${article.readMinutes} min read", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f), fontSize = 10.sp) }
-                    }
-                    Text(article.headline, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(article.date, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.6f))
-                        if (article.isPrelims) Text(str.filterPrelims, style = MaterialTheme.typography.labelSmall, color = Color(0xFF1ABC9C), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 6.dp, vertical = 2.dp))
-                        if (article.isMains) Text(str.filterMains, style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
-                    }
-                }
-            }
-            Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(article.fullContent, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, lineHeight = 26.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    article.tags.forEach { tag -> Text("#$tag", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontSize = 10.sp, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.PrimaryLight).padding(horizontal = 8.dp, vertical = 3.dp)) }
-                }
-                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(str.caMcqPractice, style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                        Text(when { mcqLoading -> str.caLoadingQuestions; mcqs.isNullOrEmpty() -> "No MCQs added yet"; else -> "${mcqs.size} questions from this article" },
-                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                    }
-                    if (mcqLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
-                    } else {
-                        Button(
-                            onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
-                            enabled = mcqs.isNotEmpty(),
-                            shape   = RoundedCornerShape(10.dp),
-                            colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                        ) { Text(if (mcqs.isNullOrEmpty()) "No MCQs" else "Start", style = MaterialTheme.typography.titleMedium) }
-                    }
-                }
-            }
-            HorizontalDivider(color = cs.outline)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick   = onBookmark,
-                    modifier  = Modifier.weight(1f).height(46.dp),
-                    shape     = RoundedCornerShape(12.dp),
-                    border    = androidx.compose.foundation.BorderStroke(1.dp, if (isBookmarked) BpscColors.CoinGold else cs.outline),
-                    colors    = ButtonDefaults.outlinedButtonColors(contentColor = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextSecondary)
-                ) {
-                    Icon(if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (isBookmarked) str.caSavedDone else "Save", style = MaterialTheme.typography.titleMedium)
-                }
-                Button(
-                    onClick  = {
-                        val shareText = "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app"
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
-                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                        }
-                        navController.context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
-                    },
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape    = RoundedCornerShape(12.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) {
-                    Icon(Icons.Rounded.Share, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(str.caShare, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

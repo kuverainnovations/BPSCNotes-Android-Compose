@@ -15,6 +15,11 @@ sealed class RefreshEvent {
     object NotificationReceived : RefreshEvent()   // fires when push arrives → update badge
     data class CourseProgressChanged(val courseId: String) : RefreshEvent()
     data class AvatarUpdated(val avatarUrl: String) : RefreshEvent()
+    // Detail screen and list screen hold separate CurrentAffairsViewModel
+    // instances (each Compose Navigation destination gets its own
+    // hiltViewModel()) — this keeps their local bookmark state in sync
+    // without forcing a full reload, same pattern as CoinsChanged.
+    data class CaBookmarkChanged(val affairId: String, val isBookmarked: Boolean) : RefreshEvent()
 }
 
 @Singleton
