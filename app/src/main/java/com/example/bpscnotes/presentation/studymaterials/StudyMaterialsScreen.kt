@@ -31,6 +31,8 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.mutableIntStateOf
@@ -250,37 +252,51 @@ fun StudyMaterialsScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHost) }, containerColor = cs.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)) { scaffoldPadding ->
+        var showFilterDialog by remember { mutableStateOf(false) }
+        // Count active (non-default) filters for the badge on the filter icon
+        val activeFilterCount = listOf(
+            state.selectedType != null,
+            state.selectedSubject.isNotEmpty() && state.selectedSubject != str.filterAll,
+            state.selectedLanguage != "All",
+            state.sortBy != "downloads",
+        ).count { it }
+
         Column(modifier = Modifier.fillMaxSize().padding(scaffoldPadding).background(cs.background)) {
 
-            // ── HEADER ──────────────────────────────────────────
+            // ── HEADER — compact single row: back · title … info · upload ──
             StudyMaterialsHeader(
                 stats = state.stats,
                 onBack = { navController.popBackStackSafe() },
-                onUpload = { viewModel.showUpload() }
-            )
-
-            // ── SEARCH + FILTERS ─────────────────────────────────
-            SearchAndStats(
-                query = state.searchQuery,
-                onQueryChange = viewModel::setSearch,
-                stats = state.stats,
-                bookmarkedCount = state.bookmarkedIds.size,
-                showBookmarksOnly = state.showBookmarksOnly,
-                onToggleBookmarks = viewModel::toggleBookmarksOnly,
-                onUpload = viewModel::showUpload,
+                onUpload = { viewModel.showUpload() },
                 onShowRules = viewModel::showRules
             )
 
-            // Unified filter bar — type + sort in ONE row (subjects on demand)
-            CompactFilterBar(
-                selectedType    = state.selectedType,
-                selectedSubject = state.selectedSubject,
-                subjects        = state.subjects,
-                sortBy          = state.sortBy,
-                onTypeSelect    = viewModel::selectType,
-                onSubjectSelect = viewModel::selectSubject,
-                onSortSelect    = viewModel::setSortBy
+            // ── SEARCH + FILTER ICON ──────────────────────────────
+            SearchBarWithFilter(
+                query = state.searchQuery,
+                onQueryChange = viewModel::setSearch,
+                onFilterClick = { showFilterDialog = true },
+                activeFilterCount = activeFilterCount
             )
+
+            if (showFilterDialog) {
+                FilterDialog(
+                    selectedType      = state.selectedType,
+                    selectedSubject   = state.selectedSubject,
+                    selectedLanguage  = state.selectedLanguage,
+                    subjects          = state.subjects,
+                    sortBy            = state.sortBy,
+                    stats             = state.stats,
+                    bookmarkedCount   = state.bookmarkedIds.size,
+                    showBookmarksOnly = state.showBookmarksOnly,
+                    onTypeSelect      = viewModel::selectType,
+                    onSubjectSelect   = viewModel::selectSubject,
+                    onLanguageSelect  = viewModel::selectLanguage,
+                    onSortSelect      = viewModel::setSortBy,
+                    onToggleBookmarks = viewModel::toggleBookmarksOnly,
+                    onDismiss         = { showFilterDialog = false }
+                )
+            }
 
             // ── PULL-TO-REFRESH CONTENT ─────────────────────────
             val pullRefreshState = rememberPullToRefreshState()
@@ -318,7 +334,7 @@ fun StudyMaterialsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clickable { selectedTab = index }
-                            .padding(vertical = 12.dp)
+                            .padding(vertical = 8.dp)
                             .then(if (isSelected) Modifier.background(Color.Transparent) else Modifier),
                         contentAlignment = Alignment.Center
                     ) {
@@ -339,7 +355,7 @@ fun StudyMaterialsScreen(
                             if (isSelected) {
                                 Box(
                                     Modifier
-                                        .padding(top = 4.dp)
+                                        .padding(top = 3.dp)
                                         .fillMaxWidth(0.6f)
                                         .height(3.dp)
                                         .clip(RoundedCornerShape(2.dp))
@@ -355,10 +371,15 @@ fun StudyMaterialsScreen(
             // ── Tab content ───────────────────────────────────────
             if (selectedTab == 0) {
                 // Explore tab
+                // Compact library snapshot — pinned above the list (not part of
+                // the scrolling content), replaces the old stats card removed
+                // from the filter dialog.
+                MiniLibraryStrip(stats = state.stats)
                 PullToRefreshBox(
                     state = pullRefreshState,
                     isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.refresh() }
+                    onRefresh = { viewModel.refresh() },
+                    modifier = Modifier.weight(1f)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         when {
@@ -380,18 +401,20 @@ fun StudyMaterialsScreen(
                 }
             } else {
                 // My Uploads tab — user owns everything here, no locks
-                MyUploadsTab(
-                    uploads   = state.myUploads,
-                    isLoading = state.isLoadingList && state.myUploads.isEmpty(),
-                    // Open PDF with full access — user owns their uploads, no page locks
-                    onOpenPdf = { url, title, freePages, _ ->
-                        openMaterial(context, navController, url, title, freePages, isPurchased = true, adManager = adManager)
-                    },
-                    onRefresh = { viewModel.refresh() },
-                    onRespondNegotiation = { material -> viewModel.openNegotiation(material) },
-                    onOpenWallet = { viewModel.openWallet() },
-                    onOpenChats = { navController.navigate(Screen.ChatInbox.route) }
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    MyUploadsTab(
+                        uploads   = state.myUploads,
+                        isLoading = state.isLoadingList && state.myUploads.isEmpty(),
+                        // Open PDF with full access — user owns their uploads, no page locks
+                        onOpenPdf = { url, title, freePages, _ ->
+                            openMaterial(context, navController, url, title, freePages, isPurchased = true, adManager = adManager)
+                        },
+                        onRefresh = { viewModel.refresh() },
+                        onRespondNegotiation = { material -> viewModel.openNegotiation(material) },
+                        onOpenWallet = { viewModel.openWallet() },
+                        onOpenChats = { navController.navigate(Screen.ChatInbox.route) }
+                    )
+                }
             }
         }
     }
@@ -481,8 +504,7 @@ fun StudyMaterialsScreen(
 // HEADER
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
+private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload: () -> Unit, onShowRules: () -> Unit) {
     val str = LocalStrings.current
     Box(
         modifier = Modifier.fillMaxWidth()
@@ -490,22 +512,43 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
                 listOf(Color(0xFF051D56), Color(0xFF0A2472), Color(0xFF1565C0)),
                 Offset(0f, 0f), Offset(500f, 500f)
             ))
-        // .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 56.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f))
-                        .clickable(onClick = onBack), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                    Column {
-                        Text(str.materialsTitle, style = MaterialTheme.typography.titleLarge,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text(str.materialsSubtitle, style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.7f))
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = 12.dp, end = 16.dp, top = 48.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(0.15f))
+                    .clickable(onClick = onBack), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(17.dp))
+                }
+                Text(str.materialsTitle, style = MaterialTheme.typography.titleMedium,
+                    color = Color.White, fontWeight = FontWeight.ExtraBold)
+            }
+
+            // Right end: Info + Upload — visibly distinct colors, compact
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape)
+                        .background(Color.White.copy(0.15f))
+                        .clickable(onClick = onShowRules),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.Info, contentDescription = str.marketRulesInfoTooltip,
+                        tint = Color.White, modifier = Modifier.size(17.dp))
+                }
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                        .background(BpscColors.CoinGold)
+                        .clickable(onClick = onUpload)
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(Icons.Rounded.Upload, null, tint = Color(0xFF1A1A1A), modifier = Modifier.size(15.dp))
+                        Text(str.materialsUpload, style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF1A1A1A), fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -514,24 +557,28 @@ private fun StudyMaterialsHeader(stats: StatsData?, onBack: () -> Unit, onUpload
 }
 
 // ════════════════════════════════════════════════════════════
-// SEARCH + STATS BAR
+// SEARCH BAR + FILTER ICON (opens filter dialog)
+// Replaces the old SearchAndStats + CompactFilterBar rows —
+// stats and all filter controls now live in one dialog so the
+// list gets far more vertical space.
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun SearchAndStats(
+private fun SearchBarWithFilter(
     query: String, onQueryChange: (String) -> Unit,
-    stats: StatsData?, bookmarkedCount: Int,
-    showBookmarksOnly: Boolean, onToggleBookmarks: () -> Unit, onUpload: () -> Unit,
-    onShowRules: () -> Unit = {}
+    onFilterClick: () -> Unit,
+    activeFilterCount: Int,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val focusManager = LocalFocusManager.current
 
-    Column(modifier = Modifier.fillMaxWidth().background(cs.surface)
-        .padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-
-        // Search bar
-        Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().background(cs.surface)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
             .background(cs.background).border(1.dp, cs.outline, RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -552,48 +599,225 @@ private fun SearchAndStats(
                 modifier = Modifier.size(16.dp).clickable { onQueryChange("") })
         }
 
-        // Stats + upload
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LibSmallStat("📄", "${stats?.pdfs ?: "—"}", "PDFs")
-                LibSmallStat("📝", "${stats?.pyqs ?: "—"}", "PYQs")
-                LibSmallStat("📚", "${stats?.books ?: "—"}", "Books")
-                Box(modifier = Modifier.clip(RoundedCornerShape(8.dp))
-                    .background(if (showBookmarksOnly) BpscColors.CoinGold.copy(0.15f) else BpscColors.Surface)
-                    .clickable(onClick = onToggleBookmarks).padding(horizontal = 6.dp, vertical = 4.dp)) {
-                    LibSmallStat("🔖", "$bookmarkedCount", "Saved")
-                }
+        // Filter icon — opens the filter dialog. Badge shows active filter count.
+        // Badge is a sibling (not a child of the clipped Box) so it isn't
+        // cut off by the parent's RoundedCornerShape clip.
+        Box(modifier = Modifier.size(38.dp)) {
+            Box(
+                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (activeFilterCount > 0) BpscColors.PrimaryLight else BpscColors.Surface)
+                    .border(1.dp, if (activeFilterCount > 0) BpscColors.Primary else cs.outline, RoundedCornerShape(12.dp))
+                    .clickable(onClick = onFilterClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Tune, null,
+                    tint = if (activeFilterCount > 0) BpscColors.Primary else BpscColors.TextHint,
+                    modifier = Modifier.size(16.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // (i) Rules info button — re-opens the marketplace rules sheet anytime
+            if (activeFilterCount > 0) {
                 Box(
-                    modifier = Modifier.size(34.dp).clip(CircleShape)
-                        .background(BpscColors.PrimaryLight)
-                        .clickable(onClick = onShowRules),
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-5).dp)
+                        .size(16.dp).clip(CircleShape).background(BpscColors.CoinGold)
+                        .border(1.5.dp, cs.surface, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Rounded.Info, contentDescription = LocalStrings.current.marketRulesInfoTooltip,
-                        tint = BpscColors.Primary, modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Upload button — highlighted (filled, prominent) per marketplace rules
-                Box(
-                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(listOf(BpscColors.Primary, Color(0xFF1E88E5))))
-                        .clickable(onClick = onUpload)
-                        .padding(horizontal = 16.dp, vertical = 9.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Rounded.Upload, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Text(str.materialsUpload, style = MaterialTheme.typography.labelLarge,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    }
+                    Text("$activeFilterCount", style = MaterialTheme.typography.labelSmall,
+                        color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// FILTER DIALOG — Type, Subject, Language, Sort + library stats
+// Replaces the old always-visible filter rows. Opened from the
+// filter icon next to search.
+// ════════════════════════════════════════════════════════════
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun FilterDialog(
+    selectedType:    MaterialType?,
+    selectedSubject: String,
+    selectedLanguage: String,
+    subjects:        List<String>,
+    sortBy:          String,
+    stats:           StatsData?,
+    bookmarkedCount: Int,
+    showBookmarksOnly: Boolean,
+    onTypeSelect:    (MaterialType?) -> Unit,
+    onSubjectSelect: (String) -> Unit,
+    onLanguageSelect: (String) -> Unit,
+    onSortSelect:    (String) -> Unit,
+    onToggleBookmarks: () -> Unit,
+    onDismiss:       () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val str = LocalStrings.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(str.materialsFilters, style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold, color = BpscColors.TextPrimary)
+                    Icon(Icons.Rounded.Close, null, tint = BpscColors.TextHint,
+                        modifier = Modifier.size(22.dp).clickable(onClick = onDismiss))
+                }
+                Spacer(Modifier.height(14.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    // Saved-only toggle — a real filter, kept here; PDF/PYQ/Books
+                    // counts moved out to a compact strip at the top of the list page.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                            .background(if (showBookmarksOnly) BpscColors.CoinGold.copy(0.12f) else BpscColors.Surface)
+                            .border(1.dp, if (showBookmarksOnly) BpscColors.CoinGold else Color.Transparent, RoundedCornerShape(14.dp))
+                            .clickable(onClick = onToggleBookmarks)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("🔖", fontSize = 15.sp)
+                            Text("Saved only", style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold, color = BpscColors.TextPrimary)
+                        }
+                        Text(
+                            "$bookmarkedCount",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (showBookmarksOnly) Color(0xFF856404) else BpscColors.TextHint,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Type
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Type", style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TypeChip(label = str.filterAll, emoji = "📋", selected = selectedType == null) { onTypeSelect(null) }
+                            MaterialType.values().forEach { type ->
+                                TypeChip(label = type.label, emoji = type.emoji, selected = selectedType == type) {
+                                    onTypeSelect(if (selectedType == type) null else type)
+                                }
+                            }
+                        }
+                    }
+
+                    // Language
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(str.materialsFilterLanguage, style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("All", "English", "Hindi", "Hindi + English").forEach { lang ->
+                                val sel = selectedLanguage == lang
+                                Text(
+                                    lang,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (sel) Color.White else BpscColors.TextSecondary,
+                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (sel) BpscColors.Primary else BpscColors.Surface)
+                                        .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                                        .clickable { onLanguageSelect(lang) }
+                                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Subject
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(str.materialsFilterSubject, style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            subjects.forEach { subj ->
+                                val sel = selectedSubject == subj
+                                Text(
+                                    subj,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (sel) Color.White else BpscColors.TextSecondary,
+                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (sel) BpscColors.Primary else BpscColors.Surface)
+                                        .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                                        .clickable { onSubjectSelect(subj) }
+                                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Sort
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Sort by", style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest).forEach { (key, label) ->
+                                val sel = sortBy == key
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (sel) FontWeight.ExtraBold else FontWeight.Normal,
+                                    color = if (sel) Color.White else BpscColors.TextSecondary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (sel) BpscColors.Primary else BpscColors.Surface)
+                                        .clickable { onSortSelect(key) }
+                                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) {
+                    Text("Apply", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniLibraryStrip(stats: StatsData?) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth().background(cs.surface)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        MiniStatChip("📄", stats?.pdfs ?: 0, "PDFs")
+        MiniStatChip("📝", stats?.pyqs ?: 0, "PYQs")
+        MiniStatChip("📚", stats?.books ?: 0, "Books")
+    }
+}
+
+@Composable
+private fun MiniStatChip(icon: String, value: Int, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(icon, fontSize = 10.sp)
+        Text("$value", style = MaterialTheme.typography.labelSmall,
+            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+        Text(label, style = MaterialTheme.typography.labelSmall,
+            color = BpscColors.TextHint, fontSize = 9.sp)
     }
 }
 
@@ -612,153 +836,6 @@ private fun LibSmallStat(icon: String, value: String, label: String) {
 // ════════════════════════════════════════════════════════════
 // TYPE FILTER ROW
 // ════════════════════════════════════════════════════════════
-@Composable
-// ════════════════════════════════════════════════════════════
-// COMPACT FILTER BAR — replaces 3 separate filter rows
-// Row 1: Type chips (All · PDF · PYQ · Books) — horizontally scrollable
-// Row 2: Sort pills (Popular · Newest) + Subject dropdown on same line
-// ════════════════════════════════════════════════════════════
-@OptIn(ExperimentalMaterial3Api::class)
-private fun CompactFilterBar(
-    selectedType:    MaterialType?,
-    selectedSubject: String,
-    subjects:        List<String>,
-    sortBy:          String,
-    onTypeSelect:    (MaterialType?) -> Unit,
-    onSubjectSelect: (String) -> Unit,
-    onSortSelect:    (String) -> Unit,
-) {
-    val cs = MaterialTheme.colorScheme
-
-    val str = LocalStrings.current
-    var showSubjectSheet by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(cs.surface)
-            .padding(bottom = 6.dp)
-    ) {
-        // Row 1: Type filter chips
-        LazyRow(
-            contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            item {
-                TypeChip(label = str.filterAll, emoji = "📋", selected = selectedType == null) {
-                    onTypeSelect(null)
-                }
-            }
-            items(MaterialType.values()) { type ->
-                TypeChip(
-                    label    = type.label,
-                    emoji    = type.emoji,
-                    selected = selectedType == type
-                ) { onTypeSelect(if (selectedType == type) null else type) }
-            }
-        }
-
-        HorizontalDivider(color = cs.outline, thickness = 0.5.dp)
-
-        // Row 2: Sort tabs + Subject picker — all in one line
-        Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Sort pills
-            listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest).forEach { (key, label) ->
-                val sel = sortBy == key
-                Text(
-                    label,
-                    style     = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (sel) FontWeight.ExtraBold else FontWeight.Normal,
-                    color     = if (sel) Color.White else BpscColors.TextSecondary,
-                    modifier  = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (sel) BpscColors.Primary else BpscColors.Surface)
-                        .clickable { onSortSelect(key) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                )
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            // Subject picker — shows selected subject, opens bottom sheet on tap
-            Row(
-                modifier          = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .border(1.dp, cs.outline, RoundedCornerShape(20.dp))
-                    .clickable { showSubjectSheet = true }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    selectedSubject.ifEmpty { str.materialsFilterSubject },
-                    style  = MaterialTheme.typography.labelSmall,
-                    color  = if (selectedSubject.isEmpty() || selectedSubject == str.filterAll) BpscColors.TextHint else BpscColors.Primary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-                Icon(Icons.Rounded.KeyboardArrowDown, null,
-                    tint = BpscColors.TextHint, modifier = Modifier.size(14.dp))
-            }
-        }
-    }
-
-    // Subject bottom sheet
-    if (showSubjectSheet) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { showSubjectSheet = false },
-            sheetState       = sheetState,
-            containerColor   = Color.White
-        ) {
-            Column(
-                modifier            = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    str.materialsFilterSubject,
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color      = BpscColors.TextPrimary,
-                    modifier   = Modifier.padding(bottom = 8.dp)
-                )
-                subjects.forEach { subj ->
-                    val sel = selectedSubject == subj
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (sel) BpscColors.PrimaryLight else Color.Transparent)
-                            .clickable { onSubjectSelect(subj); showSubjectSheet = false }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            subj,
-                            style      = MaterialTheme.typography.bodyLarge,
-                            color      = if (sel) BpscColors.Primary else BpscColors.TextPrimary,
-                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal
-                        )
-                        if (sel) Icon(Icons.Rounded.Check, null,
-                            tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun TypeChip(label: String, emoji: String, selected: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
@@ -885,8 +962,71 @@ private fun MaterialsList(
     // "All Resources" too, so they're visible there without needing search.
     val rest = restFromPage + pinned.filter { p -> state.materials.none { it.id == p.id } }
 
-    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)) {
+    // Pinned section shows max 2 cards directly; "View all" expands the rest
+    // inline as a horizontal strip — keeps the vertical list short and fast
+    // to scroll instead of stacking every pinned item as full-width cards.
+    var pinnedExpanded by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+
+        // ── Pinned strip — capped, horizontal, max 2 visible by default ──
+        if (pinned.isNotEmpty()) {
+            item {
+                LibSectionHeader(str.materialsPinned, "${pinned.size} items")
+            }
+            item {
+                val visiblePinned = if (pinnedExpanded) pinned else pinned.take(2)
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(end = 4.dp, bottom = 4.dp)
+                ) {
+                    items(visiblePinned, key = { "pin_${it.id}" }) { item ->
+                        Box(modifier = Modifier.width(260.dp)) {
+                            LibraryItemCard(
+                                item          = item,
+                                isBookmarked  = state.bookmarkedIds.contains(item.id),
+                                isDownloaded  = state.downloadedIds.contains(item.id),
+                                isDownloading = state.downloadingId == item.id,
+                                purchasedIds  = state.purchasedIds,
+                                onBookmark    = { onBookmark(item.id) },
+                                onDownload    = { onDownload(item) },
+                                onPurchase    = { onPurchase(item) },
+                                onView        = { onView(item.id) }
+                            )
+                        }
+                    }
+                    if (pinned.size > 2) {
+                        item(key = "pin_toggle") {
+                            Box(
+                                modifier = Modifier
+                                    .width(72.dp)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(BpscColors.PrimaryLight)
+                                    .clickable { pinnedExpanded = !pinnedExpanded },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(
+                                        if (pinnedExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                        null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        if (pinnedExpanded) "Less" else "+${pinned.size - 2}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(10.dp)) }
+        }
 
         fun sectionItems(label: String, count: Int, items: List<StudyMaterialDto>) {
             if (items.isEmpty()) return
@@ -908,7 +1048,6 @@ private fun MaterialsList(
             item { Spacer(Modifier.height(6.dp)) }
         }
 
-        sectionItems(str.materialsPinned, pinned.size, pinned)
         sectionItems(str.materialsTrending, trending.size, trending)
         sectionItems(str.materialsRecent, newItems.size, newItems)
         sectionItems(str.materialsAll, rest.size, rest)
@@ -980,6 +1119,14 @@ private fun LibraryItemCard(
                         TypeBadge(item.type); if (item.isNew) NewBadge()
                         if (item.isTrending) Text("🔥", fontSize = 12.sp)
                         if (!item.isPremium) FreeBadge()
+                        if (item.language.isNotEmpty() && item.language != "English") {
+                            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFE0F2F1))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)) {
+                                Text("🌐 ${item.language}", style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF00796B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
@@ -991,8 +1138,8 @@ private fun LibraryItemCard(
                 // Small touch targets inside a Card.clickable() cause the outer click to fire instead.
                 Box(
                     modifier = Modifier
-                        .size(44.dp)          // bigger touch target — was 28dp, too small
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(24.dp)          // bigger touch target — was 28dp, too small
+                        .clip(RoundedCornerShape(5.dp))
                         .background(if (isBookmarked) Color(0xFFFFF8E1) else BpscColors.Surface)
                         .clickable(onClick = onBookmark),
                     contentAlignment = Alignment.Center
@@ -1001,7 +1148,7 @@ private fun LibraryItemCard(
                         if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                         contentDescription = if (isBookmarked) str.materialsRemoveSaved else str.materialsSave,
                         tint     = if (isBookmarked) BpscColors.CoinGold else BpscColors.TextHint,
-                        modifier = Modifier.size(20.dp)  // icon also slightly bigger
+                        modifier = Modifier.size(10.dp)  // icon also slightly bigger
                     )
                 }
             }
@@ -2290,6 +2437,11 @@ fun MyUploadsTab(
                                 if (item.price > 0) {
                                     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         Text("₹${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                    }
+                                }
+                                if (item.language.isNotEmpty() && item.language != "English") {
+                                    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE0F2F1)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                        Text("🌐 ${item.language}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00796B), fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
                             }

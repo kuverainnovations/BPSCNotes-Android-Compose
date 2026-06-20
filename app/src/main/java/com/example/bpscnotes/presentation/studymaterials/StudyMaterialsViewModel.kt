@@ -90,6 +90,7 @@ data class StudyMaterialsUiState(
     // Filters
     val selectedType:       MaterialType?          = null,
     val selectedSubject:    String                 = "All",
+    val selectedLanguage:   String                 = "All",
     val searchQuery:        String                 = "",
     val sortBy:             String                 = "downloads",
     val showBookmarksOnly:  Boolean                = false,
@@ -255,9 +256,8 @@ class StudyMaterialsViewModel @Inject constructor(
             }
         }
     }
+
     fun loadMaterials(loadMore: Boolean = false, reset: Boolean = false){
-
-
     val s = _state.value
     if (loadMore && (!s.hasNextPage || s.isLoadingMore)) return
 
@@ -275,6 +275,7 @@ class StudyMaterialsViewModel @Inject constructor(
             val res = api.list(
                 type           = s.selectedType?.apiKey,
                 subject        = if (s.selectedSubject == "All") null else s.selectedSubject,
+                language       = if (s.selectedLanguage == "All") null else s.selectedLanguage,
                 search         = s.searchQuery.ifEmpty { null },
                 page           = page,
                 limit          = 20,
@@ -312,6 +313,7 @@ fun loadMore()  = loadMaterials(loadMore = true)
 // ── Filters ───────────────────────────────────────────────
 fun selectType(type: MaterialType?)   { _state.update { it.copy(selectedType    = type)    }; loadMaterials(reset = true) }
 fun selectSubject(subject: String)    { _state.update { it.copy(selectedSubject = subject) }; loadMaterials(reset = true) }
+fun selectLanguage(language: String)  { _state.update { it.copy(selectedLanguage = language) }; loadMaterials(reset = true) }
 fun setSortBy(sort: String)           { _state.update { it.copy(sortBy          = sort)    }; loadMaterials(reset = true) }
 fun toggleBookmarksOnly()             { _state.update { it.copy(showBookmarksOnly = !it.showBookmarksOnly) }; loadMaterials(reset = true) }
 

@@ -151,6 +151,7 @@ data class ContentStrings(
     val materialsPopular: String, val materialsNewest: String, val materialsTopRated: String,
     val materialsPinned: String, val materialsTrending: String, val materialsRecent: String,
     val materialsAll: String, val materialsFilterSubject: String,
+    val materialsFilterLanguage: String, val materialsFilters: String,
     val materialsExplore: String, val materialsMyUploads: String,
 )
 
@@ -611,6 +612,7 @@ data class AppStrings(
     val materialsPopular get() = _ct.materialsPopular; val materialsNewest get() = _ct.materialsNewest; val materialsTopRated get() = _ct.materialsTopRated
     val materialsPinned get() = _ct.materialsPinned; val materialsTrending get() = _ct.materialsTrending; val materialsRecent get() = _ct.materialsRecent
     val materialsAll get() = _ct.materialsAll; val materialsFilterSubject get() = _ct.materialsFilterSubject
+    val materialsFilterLanguage get() = _ct.materialsFilterLanguage; val materialsFilters get() = _ct.materialsFilters
     val materialsExplore get() = _ct.materialsExplore; val materialsMyUploads get() = _ct.materialsMyUploads
 
     val jobsTitle get() = _jr.jobsTitle; val jobsApplyNow get() = _jr.jobsApplyNow; val jobsLastDate get() = _jr.jobsLastDate
@@ -1179,7 +1181,8 @@ val EnglishStrings: AppStrings = mkAppStrings(
         materialsPopular="🔥 Popular", materialsNewest="🆕 Newest", materialsTopRated="⭐ Top Rated",
         materialsPinned="📌 Pinned by Admin", materialsTrending="🔥 Trending This Week",
         materialsRecent="🆕 Recently Added", materialsAll="📂 All Resources",
-        materialsFilterSubject="Filter by Subject", materialsExplore="🔍 Explore",
+        materialsFilterSubject="Filter by Subject", materialsFilterLanguage="Language",
+        materialsFilters="Filters", materialsExplore="🔍 Explore",
         materialsMyUploads="📤 My Uploads",
     ),
     ct2 = ContentStrings2(
@@ -1733,7 +1736,8 @@ val HindiStrings: AppStrings = mkAppStrings(
         materialsPopular="🔥 लोकप्रिय", materialsNewest="🆕 नया", materialsTopRated="⭐ शीर्ष रेटेड",
         materialsPinned="📌 एडमिन द्वारा पिन", materialsTrending="🔥 इस सप्ताह ट्रेंडिंग",
         materialsRecent="🆕 हाल ही में जोड़ा", materialsAll="📂 सभी संसाधन",
-        materialsFilterSubject="विषय से फ़िल्टर", materialsExplore="🔍 खोजें",
+        materialsFilterSubject="विषय से फ़िल्टर", materialsFilterLanguage="भाषा",
+        materialsFilters="फ़िल्टर", materialsExplore="🔍 खोजें",
         materialsMyUploads="📤 मेरे अपलोड",
     ),
     ct2 = ContentStrings2(

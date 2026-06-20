@@ -774,7 +774,7 @@ private fun DashboardHeader(
             .fillMaxWidth()
             // .statusBarsPadding()
             .padding(horizontal = 20.dp)
-            .padding(top = 14.dp)) {
+            .padding(top = 34.dp)) {
             // Top bar
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier

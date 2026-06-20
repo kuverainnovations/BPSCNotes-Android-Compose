@@ -389,6 +389,7 @@ interface StudyMaterialsApiService {
     suspend fun list(
         @Query("type")           type:          String? = null,
         @Query("subject")        subject:       String? = null,
+        @Query("language")        language:       String? = null,
         @Query("search")         search:        String? = null,
         @Query("page")           page:          Int     = 1,
         @Query("limit")          limit:         Int     = 20,

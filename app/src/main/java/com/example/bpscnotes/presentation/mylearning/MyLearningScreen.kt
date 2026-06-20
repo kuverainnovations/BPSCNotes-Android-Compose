@@ -296,7 +296,7 @@ private fun formatCertDate(raw: String?): String {
 fun MyLearningScreen(
     navController: NavHostController,
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
-    startTab: Int = 0,   // default to My Courses tab — Marketplace accessible by switching
+    startTab: Int = 1,   // default to My Courses tab — Marketplace accessible by switching
     viewModel: MyLearningViewModel = hiltViewModel(),
     fromScreen: String=""
 ) {
