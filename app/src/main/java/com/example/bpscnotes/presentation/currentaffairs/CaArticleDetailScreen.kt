@@ -68,6 +68,7 @@ import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.launch
 
@@ -389,7 +390,7 @@ fun CaArticleDetailScreen(
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
                             } else {
                                 Button(
-                                    onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
+                                    onClick = { navController.navigate(Screen.CaAdGate.createRoute(article.id, "mcq")) },
                                     enabled = mcqs.isNotEmpty(),
                                     shape = RoundedCornerShape(10.dp),
                                     colors = ButtonDefaults.buttonColors(

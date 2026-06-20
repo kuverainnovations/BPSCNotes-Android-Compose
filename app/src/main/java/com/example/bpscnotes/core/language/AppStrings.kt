@@ -170,6 +170,7 @@ data class ContentStrings2(
     val caLoadingQuestions: String, val caSavedDone: String,
     val caGateWaiting: String, val caGateReady: String, val caGateSubtitle: String,
     val caGateContinue: String, val caGateWaitButton: String,
+    val caGateReadyMcq: String, val caGateContinueMcq: String,
 )
 
 data class JobRoomStrings(
@@ -783,6 +784,7 @@ data class AppStrings(
     val caGateWaiting get() = _ct2.caGateWaiting; val caGateReady get() = _ct2.caGateReady
     val caGateSubtitle get() = _ct2.caGateSubtitle; val caGateContinue get() = _ct2.caGateContinue
     val caGateWaitButton get() = _ct2.caGateWaitButton
+    val caGateReadyMcq get() = _ct2.caGateReadyMcq; val caGateContinueMcq get() = _ct2.caGateContinueMcq
     // ── Job/Room extras ───────────────────────────────────────────
     val jobsNew get() = _jr.jobsNew; val jobsApplicationClosed get() = _jr.jobsApplicationClosed
     val jobsNoLink get() = _jr.jobsNoLink; val jobsApplyOfficialSite get() = _jr.jobsApplyOfficialSite
@@ -1210,6 +1212,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         caGateWaiting="Unlocking your article…", caGateReady="Your article is ready!",
         caGateSubtitle="Just a few seconds while we load this for you",
         caGateContinue="Continue to Article", caGateWaitButton="Wait {s}s",
+        caGateReadyMcq="Your quiz is ready!", caGateContinueMcq="Start MCQ",
     ),
     jr = JobRoomStrings(
         jobsTitle="Job Vacancies", jobsApplyNow="Apply Now", jobsLastDate="Last Date",
@@ -1768,6 +1771,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         caGateWaiting="आपका लेख अनलॉक हो रहा है…", caGateReady="आपका लेख तैयार है!",
         caGateSubtitle="इसे लोड करने में बस कुछ सेकंड लगेंगे",
         caGateContinue="लेख पर जाएँ", caGateWaitButton="{s} सेकंड प्रतीक्षा करें",
+        caGateReadyMcq="आपका क्विज़ तैयार है!", caGateContinueMcq="MCQ शुरू करें",
     ),
     jr = JobRoomStrings(
         jobsTitle="नौकरी रिक्तियां", jobsApplyNow="अभी आवेदन करें", jobsLastDate="अंतिम तारीख",

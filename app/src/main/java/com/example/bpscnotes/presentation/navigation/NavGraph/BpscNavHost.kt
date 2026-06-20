@@ -251,11 +251,15 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             }
 
             composable(
-                route     = "ca_ad_gate/{affairId}",
-                arguments = listOf(navArgument("affairId") { type = NavType.StringType })
+                route     = "ca_ad_gate/{affairId}/{target}",
+                arguments = listOf(
+                    navArgument("affairId") { type = NavType.StringType },
+                    navArgument("target") { type = NavType.StringType; defaultValue = "article" }
+                )
             ) { backStackEntry ->
                 val affairId = backStackEntry.arguments?.getString("affairId") ?: return@composable
-                CaAdGateScreen(navController = navController, affairId = affairId, adManager = adManager)
+                val target = backStackEntry.arguments?.getString("target") ?: "article"
+                CaAdGateScreen(navController = navController, affairId = affairId, target = target, adManager = adManager)
             }
 
             composable(

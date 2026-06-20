@@ -302,7 +302,8 @@ fun CurrentAffairsScreen(
                                     },
                                     onReadMore  = { navController.navigate(Screen.CaAdGate.createRoute(article.id)) },
                                     onStartMcq = {
-                                        navController.navigate("ca_mcq_quiz/${article.id}")
+//                                        navController.navigate("ca_mcq_quiz/${article.id}")
+                                        navController.navigate(Screen.CaAdGate.createRoute(article.id, "mcq"))
                                     }
 
                                 )

@@ -62,25 +62,28 @@ private const val GATE_SECONDS = 15
 fun CaAdGateScreen(
     navController: NavHostController,
     affairId: String,
+    target: String = "article",
     adManager: AdManager?
 ) {
     val str = LocalStrings.current
     var secondsLeft by remember { mutableIntStateOf(GATE_SECONDS) }
     val unlocked = secondsLeft <= 0
 
-    LaunchedEffect(affairId) {
+    LaunchedEffect(affairId, target) {
+        secondsLeft = GATE_SECONDS
         while (secondsLeft > 0) {
             delay(1000)
             secondsLeft--
         }
     }
 
-    fun proceedToArticle() {
-        navController.navigate(Screen.CaArticleDetail.createRoute(affairId)) {
+    fun proceedToDestination() {
+        val nextRoute = if (target == "mcq") "ca_mcq_quiz/$affairId" else Screen.CaArticleDetail.createRoute(affairId)
+        navController.navigate(nextRoute) {
             // Removes this gate screen from the back stack so the system
-            // back button from the article goes straight to the list, not
-            // back into another 15s wait.
-            popUpTo("ca_ad_gate/{affairId}") { inclusive = true }
+            // back button from the destination goes straight to whatever
+            // was below the gate, not back into another 15s wait.
+            popUpTo("ca_ad_gate/{affairId}/{target}") { inclusive = true }
         }
     }
 
@@ -109,7 +112,11 @@ fun CaAdGateScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                if (unlocked) str.caGateReady else str.caGateWaiting,
+                when {
+                    unlocked && target == "mcq" -> str.caGateReadyMcq
+                    unlocked -> str.caGateReady
+                    else -> str.caGateWaiting
+                },
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
                 fontWeight = FontWeight.ExtraBold
@@ -155,7 +162,7 @@ fun CaAdGateScreen(
             Spacer(Modifier.height(28.dp))
 
             Button(
-                onClick = { proceedToArticle() },
+                onClick = { proceedToDestination() },
                 enabled = unlocked,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(14.dp),
@@ -167,7 +174,11 @@ fun CaAdGateScreen(
                 )
             ) {
                 Text(
-                    if (unlocked) str.caGateContinue else str.caGateWaitButton.replace("{s}", "$secondsLeft"),
+                    if (unlocked) {
+                        if (target == "mcq") str.caGateContinueMcq else str.caGateContinue
+                    } else {
+                        str.caGateWaitButton.replace("{s}", "$secondsLeft")
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )

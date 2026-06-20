@@ -93,34 +93,14 @@ fun CaMcqQuizScreen(
     var showResult    by remember { mutableStateOf(false) }
     var showReview    by remember { mutableStateOf(false) }
     var retryKey      by remember { mutableIntStateOf(0) }  // increments on each retry to reset timer
-    // Ad gate: always wait 20 seconds before quiz starts.
-    // Real interstitial fires immediately (takes over screen natively).
-    // Countdown UI shows during the 20-sec wait regardless of whether ad loaded.
-    var adGatePassed    by remember { mutableStateOf(false) }
-    var adGateSecsLeft  by remember { mutableIntStateOf(20) }
     // Per-question 30-second countdown
     var questionSecsLeft by remember { mutableIntStateOf(30) }
-
-    // Fire interstitial immediately (shows natively over the app)
-    // then run the 20-sec countdown regardless — user must wait the full time
-    LaunchedEffect(Unit) {
-        if (adManager != null && activity != null) {
-            adManager.showInterstitialIfReady(activity) { /* ad dismissed — countdown continues */ }
-        }
-        // Always count down 20 seconds
-        adGateSecsLeft = 20
-        while (adGateSecsLeft > 0) {
-            delay(1_000L)
-            adGateSecsLeft--
-        }
-        adGatePassed = true
-    }
 
     // Per-question countdown — resets on each question AND on retry.
     // Stops counting (freezes) as soon as the current question is answered,
     // so it doesn't keep running and then auto-advance/jump unexpectedly.
-    LaunchedEffect(currentIndex, adGatePassed, retryKey) {
-        if (!adGatePassed || showResult || showReview) return@LaunchedEffect
+    LaunchedEffect(currentIndex, retryKey) {
+        if (showResult || showReview) return@LaunchedEffect
         questionSecsLeft = 30
         val questionId = mcqs.getOrNull(currentIndex)?.id
         while (questionSecsLeft > 0 && answers[questionId] == null) {
@@ -163,60 +143,6 @@ fun CaMcqQuizScreen(
                 actionLabel = str.caGoBack,
                 onAction    = { navController.popBackStackSafe() }
             )
-
-            // ── Ad gate: 20-second countdown before quiz unlocks ──
-            !adGatePassed -> Box(
-                modifier = Modifier.fillMaxSize().background(Color(0xFF0D1B3E)),
-                contentAlignment = Alignment.Center
-            ) {
-                // Decorative background circles
-                androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
-                    drawCircle(Color.White.copy(0.04f), 250.dp.toPx(),
-                        androidx.compose.ui.geometry.Offset(size.width + 60.dp.toPx(), -80.dp.toPx()))
-                    drawCircle(Color.White.copy(0.03f), 150.dp.toPx(),
-                        androidx.compose.ui.geometry.Offset(-40.dp.toPx(), size.height * 0.8f))
-                }
-                Column(
-                    modifier            = Modifier.padding(40.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    Text("📝", fontSize = 64.sp)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Quiz is loading…",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        Text("A short message from our sponsor",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.6f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    }
-                    // Countdown ring
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(96.dp)) {
-                        androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
-                            // Background ring
-                            drawArc(Color.White.copy(0.15f), -90f, 360f, false,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    6.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                            // Progress ring
-                            val sweep = (adGateSecsLeft / 20f) * 360f
-                            drawArc(Color(0xFF42A5F5), -90f, sweep, false,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    6.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                        }
-                        Text(
-                            "$adGateSecsLeft",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = Color.White, fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                    Text("Starting in $adGateSecsLeft sec",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(0.5f))
-                }
-            }
 
             showReview -> ReviewScreen(
                 mcqs      = mcqs,
