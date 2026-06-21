@@ -209,29 +209,6 @@ class TierRoomsViewModel @Inject constructor(
             }
         }
 
-        // Live activity feed events (spec section 9) — prepend so newest
-        // shows first, matching the GET endpoint's ordering. Capped at 100
-        // client-side; the room screen only ever shows the most recent few.
-        viewModelScope.launch {
-            socket.activityFeedEvents.collect { event ->
-                val viewedTierKey = socket.getCurrentTierKey() ?: _uiState.value.selectedTierKey
-                if (event.tierKey != viewedTierKey) return@collect
-                val entry = ActivityFeedEntryDto(
-                    id = event.id, userId = event.userId, userName = event.userName,
-                    eventType = event.eventType,
-                    metadata = buildMap<String, Any?> {
-                        val keys = event.metadata.keys()
-                        while (keys.hasNext()) {
-                            val key = keys.next().toString()
-                            put(key, event.metadata.opt(key))
-                        }
-                    },
-                    createdAt = event.createdAt,
-                )
-                _uiState.update { it.copy(activityFeed = (listOf(entry) + it.activityFeed).take(100)) }
-            }
-        }
-
         // BUG FIX: Real-time member join — add member to list immediately without API call.
         // Previously members only appeared after going back + returning (no auto-refresh).
         viewModelScope.launch {
@@ -244,11 +221,12 @@ class TierRoomsViewModel @Inject constructor(
                 val existing = _uiState.value.members.any { it.id == event.userId }
                 if (!existing) {
                     // Optimistic add: create a minimal TierMemberDto so the card appears instantly.
-                    // Full details (XP, streak) will load on next loadMembers() call.
+                    // Full details (XP, streak, rank, time windows) will load on next loadMembers() call.
                     val newMember = TierMemberDto(
                         id                = event.userId,
                         name              = event.userName,
                         isStudyingNow     = true,
+                        status            = "studying",
                         xpLevel           = 1,
                         streak            = 0,
                         totalStudyMinutes = 0
@@ -266,14 +244,24 @@ class TierRoomsViewModel @Inject constructor(
             }
         }
 
-        // BUG FIX: Real-time member leave — remove immediately
+        // Real-time member leave — transition them to "online" rather than
+        // removing them from the roster. The old behavior (filtering them
+        // out entirely) predates the redesign's status tabs: it made sense
+        // when "members" only ever meant "currently studying", but now
+        // that the same list backs the leaderboard's All/Online/Offline
+        // tabs too, removing the row would make them vanish from "All
+        // Members" instead of correctly showing as Online until the next
+        // loadMembers() poll settles their real last-active-based status.
         viewModelScope.launch {
             socket.memberLeaves.collect { event ->
                 val myTierKey = _uiState.value.myTierData?.currentTier?.tierKey ?: return@collect
                 if (event.tierKey != myTierKey) return@collect
                 _uiState.update { state ->
                     state.copy(
-                        members = state.members.filter { it.id != event.userId },
+                        members = state.members.map { m ->
+                            if (m.id == event.userId) m.copy(isStudyingNow = false, status = "online")
+                            else m
+                        },
                         allTiers = state.allTiers.map { tier ->
                             if (tier.tierKey == event.tierKey)
                                 tier.copy(activeSessions = (tier.activeSessions - 1).coerceAtLeast(0))
@@ -401,9 +389,8 @@ class TierRoomsViewModel @Inject constructor(
                 loadLeaderboard(tierKey)
                 // Load members for the tab
                 loadMembers(tierKey)
-                // Room Insights + Activity Feed (spec sections 4, 9)
+                // Room Insights (spec section 4)
                 loadRoomStats(tierKey)
-                loadActivityFeed(tierKey)
                 // Champions + personal rank (redesign sections 4, 5)
                 loadChampions(tierKey)
                 loadMyRank(tierKey)
@@ -534,7 +521,6 @@ class TierRoomsViewModel @Inject constructor(
         loadLeaderboard(tierKey)   // show leaderboard for any tier (browse mode)
         loadMembers(tierKey)       // show members of any tier
         loadRoomStats(tierKey)
-        loadActivityFeed(tierKey)
         loadChampions(tierKey)
         loadMyRank(tierKey)
         socket.joinTierRoom(tierKey)

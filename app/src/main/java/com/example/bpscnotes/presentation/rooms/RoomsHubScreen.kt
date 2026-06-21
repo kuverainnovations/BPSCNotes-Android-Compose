@@ -201,7 +201,6 @@ fun RoomsHubScreen(
             RoomsHeroHeader(
                 state = state,
                 onBack = { navController.popBackStackSafe() },
-                onLeaderboard = { navController.navigate(Screen.Leaderboard.route) },
                 onRoomInfo = { showRoomInfo = true },
             )
 
@@ -252,17 +251,15 @@ fun RoomsHubScreen(
                     ) {
 
                         // Moved out of the hero (redesign section 1): personal
-                        // progress/stats, Room Champions, Room Insights,
-                        // Activity Feed — all normal scrollable cards now,
-                        // not pinned inside the compact gradient header.
+                        // progress/stats, Room Champions, Room Insights —
+                        // normal scrollable cards now, not pinned inside the
+                        // compact gradient header. (Activity Feed removed.)
                         if (state.myTierData?.currentTier != null) {
                             MyRoomProgressCard(state)
                             Spacer(Modifier.height(12.dp))
                             RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
                             Spacer(Modifier.height(12.dp))
                             RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
-                            Spacer(Modifier.height(12.dp))
-                            RoomActivityFeedCard(state.activityFeed, Modifier.padding(horizontal = 16.dp))
                             Spacer(Modifier.height(12.dp))
                         }
 
@@ -429,7 +426,6 @@ fun RoomsHubScreen(
 private fun RoomsHeroHeader(
     state: TierRoomsUiState,
     onBack: () -> Unit,
-    onLeaderboard: () -> Unit,
     onRoomInfo: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -483,12 +479,13 @@ private fun RoomsHeroHeader(
                         .clip(CircleShape)
                         .background(dotColor))
 
-                    RoomActionIcon(emoji = "🏆", contentDescription = "Leaderboard", onClick = onLeaderboard)
                     RoomActionIcon(emoji = "ℹ️", contentDescription = "Room Info", onClick = onRoomInfo)
-                    // Chat intentionally not in top-right actions yet — see
-                    // RoomActivityFeedCard's comment / final report: only
-                    // re-enable once reconnect/persistence/dedup/scroll are
-                    // verified, per explicit redesign-doc instruction.
+                    // Leaderboard moved inside the room itself
+                    // (StudyFocusScreen's top bar) — it only makes sense
+                    // once you've actually joined, per the redesign spec's
+                    // "after joining a room" framing. Chat intentionally
+                    // still not here either — only re-enable once
+                    // reconnect/persistence/dedup/scroll are verified.
                 }
             }
 
@@ -683,79 +680,6 @@ private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
         }
-    }
-}
-
-@Composable
-private fun RoomActivityFeedCard(feed: List<ActivityFeedEntryDto>, modifier: Modifier = Modifier) {
-    if (feed.isEmpty()) return
-    val cs = MaterialTheme.colorScheme
-    Card(
-        modifier  = modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = cs.surfaceVariant.copy(0.4f)),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Recent Activity", style = MaterialTheme.typography.labelLarge,
-                color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
-            feed.take(8).forEach { entry ->
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(activityFeedIcon(entry.eventType), fontSize = 14.sp)
-                    Text(
-                        activityFeedMessage(entry),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = cs.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun activityFeedIcon(eventType: String): String = when (eventType) {
-    "joined"            -> "👋"
-    "left"               -> "🚪"
-    "session_completed" -> "✅"
-    "streak_milestone"  -> "🔥"
-    "promoted"          -> "⬆️"
-    "demoted"           -> "⬇️"
-    "champion"          -> "🏆"
-    else                -> "•"
-}
-
-// Templated client-side (rather than a pre-rendered string from the
-// backend) so this stays localizable — same reasoning as the rest of
-// this screen's string handling via LocalStrings.
-private fun activityFeedMessage(entry: ActivityFeedEntryDto): String {
-    val name = entry.userName.ifBlank { "Someone" }
-    return when (entry.eventType) {
-        "joined" -> "$name joined the room"
-        "left"   -> "$name left the room"
-        "session_completed" -> {
-            val mins = (entry.metadata["activeMinutes"] as? Number)?.toInt() ?: 0
-            val h = mins / 60; val m = mins % 60
-            val timeStr = if (h > 0) "${h}h ${m}m" else "${m}m"
-            "$name completed a $timeStr study session"
-        }
-        "streak_milestone" -> {
-            val days = (entry.metadata["streakDays"] as? Number)?.toInt() ?: 0
-            "$name achieved a $days-day streak"
-        }
-        "promoted" -> {
-            val tier = entry.metadata["tierName"] as? String ?: "a new tier"
-            "$name was promoted to $tier"
-        }
-        "demoted" -> {
-            val tier = entry.metadata["tierName"] as? String ?: "a lower tier"
-            "$name moved to $tier"
-        }
-        "champion" -> {
-            val period = entry.metadata["period"] as? String ?: "weekly"
-            "$name became the $period champion! 🏆"
-        }
-        else -> "$name had some activity"
     }
 }
 

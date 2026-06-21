@@ -188,7 +188,8 @@ fun StudyFocusScreen(
             onBack         = { showEndConfirm = true },
             onEnd          = { showEndConfirm = true },   // ■ End button = intentional quit
             onDismissAfk   = { viewModel.dismissAfkWarning() },
-            tiersViewModel = tiersViewModel
+            tiersViewModel = tiersViewModel,
+            navController=navController
         )
     }
 }
@@ -224,8 +225,10 @@ private fun ActiveRoomScreen(
     onBack:         () -> Unit,        // navigate away (PIP mode)
     onEnd:          () -> Unit,         // intentional end session
     onDismissAfk:   () -> Unit = {},
-    tiersViewModel: TierRoomsViewModel
-) {
+    tiersViewModel: TierRoomsViewModel,
+    navController:  NavHostController,
+
+    ) {
     val cs = MaterialTheme.colorScheme
     // Compute elapsed time directly from startedAt timestamp — same approach as PIP overlay.
     // This is immune to: ViewModel re-creation, startElapsedTimer() resets, re-composition,
@@ -366,22 +369,37 @@ private fun ActiveRoomScreen(
                         }
                     }
                 }
-                // ■ End Session button (intentional quit only)
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFEF5350).copy(0.15f))
-                        .border(1.dp, Color(0xFFEF5350).copy(0.5f), CircleShape)
-                        .clickable(onClick = onEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        androidx.compose.material.icons.Icons.Rounded.Stop,
-                        contentDescription = str.roomsEndSession,
-                        tint     = Color(0xFFEF5350),
-                        modifier = Modifier.size(18.dp)
-                    )
+                // ── Top-right room actions: Leaderboard + End Session ──
+                // (redesign: leaderboard access lives inside the room
+                // itself, once joined — not the pre-join lobby)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .clickable { navController.navigate(Screen.Leaderboard.route) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🏆", fontSize = 16.sp)
+                    }
+                    // ■ End Session button (intentional quit only)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF5350).copy(0.15f))
+                            .border(1.dp, Color(0xFFEF5350).copy(0.5f), CircleShape)
+                            .clickable(onClick = onEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            androidx.compose.material.icons.Icons.Rounded.Stop,
+                            contentDescription = str.roomsEndSession,
+                            tint     = Color(0xFFEF5350),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
