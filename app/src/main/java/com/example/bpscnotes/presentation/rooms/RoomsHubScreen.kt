@@ -153,6 +153,7 @@ fun RoomsHubScreen(
     }
 
     val snackbarHost = remember { SnackbarHostState() }
+    var showRoomInfo by remember { mutableStateOf(false) }
 
     // Track previous status so we only auto-navigate to StudyFocus when session
     // transitions FROM a non-active state TO active (i.e. user just joined a room).
@@ -197,7 +198,16 @@ fun RoomsHubScreen(
         // FIX: Pin header using Column + pinned header above scrollable LazyColumn
         Column(Modifier.fillMaxSize().padding(padding)) {
             // Pinned — does not scroll
-            RoomsHeroHeader(state = state, onBack = { navController.popBackStackSafe() })
+            RoomsHeroHeader(
+                state = state,
+                onBack = { navController.popBackStackSafe() },
+                onLeaderboard = { navController.navigate(Screen.Leaderboard.route) },
+                onRoomInfo = { showRoomInfo = true },
+            )
+
+            if (showRoomInfo) {
+                RoomInfoSheet(tier = state.myTierData?.currentTier, onDismiss = { showRoomInfo = false })
+            }
 
             // Scrollable content
             LazyColumn(
@@ -240,6 +250,21 @@ fun RoomsHubScreen(
                             .background(cs.background)
                             .padding(top = 8.dp)
                     ) {
+
+                        // Moved out of the hero (redesign section 1): personal
+                        // progress/stats, Room Champions, Room Insights,
+                        // Activity Feed — all normal scrollable cards now,
+                        // not pinned inside the compact gradient header.
+                        if (state.myTierData?.currentTier != null) {
+                            MyRoomProgressCard(state)
+                            Spacer(Modifier.height(12.dp))
+                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
+                            RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
+                            RoomActivityFeedCard(state.activityFeed, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
+                        }
 
                         // Promotion ready banner
                         val allDone = state.myTierData?.progressItems?.all { it.done } == true
@@ -362,11 +387,12 @@ fun RoomsHubScreen(
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Quick links
+                        // Quick links — Leaderboard moved to top-right room
+                        // actions (redesign section 2); no longer a 3rd
+                        // cramped card here.
                         QuickActionRow(
                             onAchievements = { navController.navigate(Screen.Achievements.route) },
                             onChallenges = { navController.navigate(Screen.WeeklyChallenges.route) },
-                            onLeaderboard = { navController.navigate(Screen.Leaderboard.route) }
                         )
 
                         // ── Bottom banner ad ──────────────────────────────
@@ -393,10 +419,19 @@ fun RoomsHubScreen(
     }
 }
 // ════════════════════════════════════════════════════════════
-// HERO HEADER
+// HERO HEADER — kept deliberately compact (redesign section 1):
+// title, tier, live status, online/studying counts only. Everything
+// else (progress, personal stats, Room Insights, Champions, Activity
+// Feed) now lives in normal scrollable cards in the LazyColumn below,
+// not inside this gradient block.
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
+private fun RoomsHeroHeader(
+    state: TierRoomsUiState,
+    onBack: () -> Unit,
+    onLeaderboard: () -> Unit,
+    onRoomInfo: () -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val myTier    = state.myTierData?.currentTier
@@ -413,199 +448,264 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                     Offset(0f, 0f), Offset(500f, 500f)
                 )
             )
-//            .statusBarsPadding()
     ) {
         Column(modifier = Modifier
             .padding(horizontal = 20.dp)
-            .padding(top = 46.dp, bottom = 30.dp)) {
+            .padding(top = 46.dp, bottom = 16.dp)) {
 
-            // Top bar
+            // Top bar: title + top-right room actions (redesign section 2)
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    /* Box(
-                         modifier = Modifier
-                             .size(36.dp)
-                             .clip(CircleShape)
-                             .background(Color.White.copy(0.12f))
-                             .clickable(onClick = onBack),
-                         contentAlignment = Alignment.Center
-                     ) {
-                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                     }*/
-                    Column {
-                        Text(str.roomsGroupStudy,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold)
-                        Text(str.roomsTapToStart,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(0.6f))
+                Text(str.roomsGroupStudy,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Tri-state connection indicator (spec section 11) —
+                    // reuses the same ChatConnectionStatus enum + localized
+                    // strings ChatSheet already established for this socket.
+                    val connectionStatus = when {
+                        state.isSocketConnected  -> ChatConnectionStatus.LIVE
+                        state.hasConnectedBefore -> ChatConnectionStatus.RECONNECTING
+                        else                     -> ChatConnectionStatus.CONNECTING
                     }
-                }
-                // Tri-state connection indicator (spec section 11) — reuses
-                // the same ChatConnectionStatus enum + localized strings
-                // ChatSheet already established for this exact socket.
-                val connectionStatus = when {
-                    state.isSocketConnected  -> ChatConnectionStatus.LIVE
-                    state.hasConnectedBefore -> ChatConnectionStatus.RECONNECTING
-                    else                     -> ChatConnectionStatus.CONNECTING
-                }
-                val (dotColor, label) = when (connectionStatus) {
-                    ChatConnectionStatus.LIVE         -> BpscColors.Success to str.chatLive
-                    ChatConnectionStatus.RECONNECTING -> Color(0xFFFFA726)  to str.chatReconnecting
-                    ChatConnectionStatus.CONNECTING   -> Color.Gray         to str.chatConnecting
-                }
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(dotColor.copy(0.2f))
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment     = Alignment.CenterVertically
-                ) {
+                    val dotColor = when (connectionStatus) {
+                        ChatConnectionStatus.LIVE         -> BpscColors.Success
+                        ChatConnectionStatus.RECONNECTING -> Color(0xFFFFA726)
+                        ChatConnectionStatus.CONNECTING   -> Color.Gray
+                    }
                     Box(Modifier
-                        .size(6.dp)
+                        .size(8.dp)
                         .clip(CircleShape)
                         .background(dotColor))
-                    Text(label, style = MaterialTheme.typography.labelSmall, color = dotColor, fontWeight = FontWeight.Bold)
+
+                    RoomActionIcon(emoji = "🏆", contentDescription = "Leaderboard", onClick = onLeaderboard)
+                    RoomActionIcon(emoji = "ℹ️", contentDescription = "Room Info", onClick = onRoomInfo)
+                    // Chat intentionally not in top-right actions yet — see
+                    // RoomActivityFeedCard's comment / final report: only
+                    // re-enable once reconnect/persistence/dedup/scroll are
+                    // verified, per explicit redesign-doc instruction.
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
 
             if (state.isLoadingMyTier) {
                 Box(Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(Color.White.copy(0.08f)))
                 return@Column
             }
 
+            // Compact room summary — the ONLY room content left in the
+            // hero: name, tier emoji, live status (online/studying counts).
             if (myTier != null) {
-                Card(
-                    modifier  = Modifier.fillMaxWidth(),
-                    shape     = RoundedCornerShape(20.dp),
-                    colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.12f)),
-                    elevation = CardDefaults.cardElevation(0.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cs.surface.copy(0.12f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier              = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment     = Alignment.CenterVertically
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(tierColor.copy(0.25f)),
-                                    contentAlignment = Alignment.Center
-                                ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 26.sp) }
-                                Column {
-                                    Text(myTier.name ?: str.roomsTierSilver + " Room",
-                                        style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                    Text("${myTier.displayMembers} members · ${myTier.displayActive} online now",
-                                        style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.65f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(tierColor.copy(0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) { Text(myTier.iconEmoji ?: "🏆", fontSize = 18.sp) }
+                        Column {
+                            Text(myTier.name ?: str.roomsTierSilver + " Room",
+                                style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("👥 ${myTier.displayMembers}",
+                                    style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
+                                Text("🟢 ${myTier.displayActive} studying",
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
+                                state.roomStats?.let {
+                                    Text("📶 ${it.onlineMembers} online",
+                                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFA726))
                                 }
-                            }
-                            Box(modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.CoinGold.copy(0.2f))
-                                .padding(horizontal = 10.dp, vertical = 5.dp)) {
-                                Text("🪙 ${myTier.coinMultiplier}×/hr",
-                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
-                            }
-                        }
-
-                        // Progress bar to next tier
-                        state.myTierData?.nextTier?.let { next ->
-                            val progress  = state.myTierData.nextTierProgress.toFloat()
-                            val animProg  by animateFloatAsState(progress, tween(900), label = "prog")
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Box(modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(Color.White.copy(0.15f))) {
-                                    Box(modifier = Modifier
-                                        .fillMaxWidth(animProg.coerceIn(0f, 1f))
-                                        .fillMaxHeight()
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                listOf(
-                                                    Color(0xFF64B5F6),
-                                                    Color.White
-                                                )
-                                            ), RoundedCornerShape(3.dp)
-                                        ))
-                                }
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
-                                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 10.sp)
-                                    Text("${(progress * 100).toInt()}%",
-                                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                                }
-                            }
-                        }
-
-                        // Stats strip
-                        state.myTierData?.userStats?.let { stats ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(0.08f))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                StatPill("⏱️", "${stats.totalStudyHours.toInt()}h", str.roomsStudied)
-                                StatPill("🔥", "${stats.streak}", "Streak")
-                                StatPill("📝", "${stats.quizzesAttempted}", "Quizzes")
-                                StatPill("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
                             }
                         }
                     }
+                    Box(modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(BpscColors.CoinGold.copy(0.2f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)) {
+                        Text("🪙 ${myTier.coinMultiplier}×/hr",
+                            style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
-
-                // Room Insights (spec section 4) — the ROOM's aggregate
-                // stats, distinct from the personal stats strip above.
-                Spacer(Modifier.height(12.dp))
-                RoomInsightsCard(state.roomStats)
-
-                // Room Activity Feed (spec section 9)
-                Spacer(Modifier.height(12.dp))
-                RoomActivityFeedCard(state.activityFeed)
             }
         }
     }
 }
 
 @Composable
-private fun RoomActivityFeedCard(feed: List<ActivityFeedEntryDto>) {
+private fun RoomActionIcon(emoji: String, contentDescription: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(0.12f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(emoji, fontSize = 15.sp)
+    }
+}
+
+// Extracted from the old hero Card: coin multiplier progress + personal
+// stats strip. Now a normal scrollable card (redesign section 1), not
+// pinned inside the hero.
+@Composable
+private fun MyRoomProgressCard(state: TierRoomsUiState) {
+    val myTier = state.myTierData?.currentTier ?: return
+    Card(
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(0.4f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Progress bar to next tier
+            state.myTierData?.nextTier?.let { next ->
+                val progress  = state.myTierData.nextTierProgress.toFloat()
+                val animProg  by animateFloatAsState(progress, tween(900), label = "prog")
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(0.1f))) {
+                        Box(modifier = Modifier
+                            .fillMaxWidth(animProg.coerceIn(0f, 1f))
+                            .fillMaxHeight()
+                            .background(
+                                Brush.horizontalGradient(listOf(Color(0xFF1565C0), Color(0xFF64B5F6))),
+                                RoundedCornerShape(3.dp)
+                            ))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Progress to ${next.iconEmoji ?: ""} ${next.name}",
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                        Text("${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    }
+                }
+            }
+
+            // Stats strip
+            state.myTierData?.userStats?.let { stats ->
+                val str = LocalStrings.current
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(0.05f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatPillLight("⏱️", "${stats.totalStudyHours.toInt()}h", str.roomsStudied)
+                    StatPillLight("🔥", "${stats.streak}", "Streak")
+                    StatPillLight("📝", "${stats.quizzesAttempted}", "Quizzes")
+                    StatPillLight("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatPillLight(icon: String, value: String, label: String) {
+    val cs = MaterialTheme.colorScheme
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(icon, fontSize = 12.sp)
+        Text(value, style = MaterialTheme.typography.labelMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 9.sp)
+    }
+}
+
+// ℹ️ Room Info top-right action (redesign section 2) — tier description
+// + perks, reusing fields RoomTierDto already carries rather than a new
+// endpoint.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState,
+        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (tier == null) {
+                Text("Room info unavailable", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(tier.iconEmoji ?: "🏆", fontSize = 28.sp)
+                    Column {
+                        Text(tier.name ?: "Room", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                        Text("${tier.displayMembers} members", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (!tier.description.isNullOrBlank()) {
+                    Text(tier.description, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (tier.perks.isNotEmpty()) {
+                    Text("Perks", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    tier.perks.forEach { perk ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("✓", color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                            Text(perk, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                Box(modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(BpscColors.CoinGold.copy(0.15f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Text("🪙 Earn ${tier.coinMultiplier}× coins per hour studied in this room",
+                        style = MaterialTheme.typography.labelMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun RoomActivityFeedCard(feed: List<ActivityFeedEntryDto>, modifier: Modifier = Modifier) {
     if (feed.isEmpty()) return
     val cs = MaterialTheme.colorScheme
     Card(
-        modifier  = Modifier.fillMaxWidth(),
+        modifier  = modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.10f)),
+        colors    = CardDefaults.cardColors(containerColor = cs.surfaceVariant.copy(0.4f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Recent Activity", style = MaterialTheme.typography.labelLarge,
-                color = Color.White, fontWeight = FontWeight.ExtraBold)
+                color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             feed.take(8).forEach { entry ->
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(activityFeedIcon(entry.eventType), fontSize = 14.sp)
                     Text(
                         activityFeedMessage(entry),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(0.7f),
+                        color = cs.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -615,11 +715,14 @@ private fun RoomActivityFeedCard(feed: List<ActivityFeedEntryDto>) {
 }
 
 private fun activityFeedIcon(eventType: String): String = when (eventType) {
-    "joined"           -> "👋"
-    "streak_milestone" -> "🔥"
-    "promoted"         -> "⬆️"
-    "demoted"          -> "⬇️"
-    else               -> "•"
+    "joined"            -> "👋"
+    "left"               -> "🚪"
+    "session_completed" -> "✅"
+    "streak_milestone"  -> "🔥"
+    "promoted"          -> "⬆️"
+    "demoted"           -> "⬇️"
+    "champion"          -> "🏆"
+    else                -> "•"
 }
 
 // Templated client-side (rather than a pre-rendered string from the
@@ -628,7 +731,14 @@ private fun activityFeedIcon(eventType: String): String = when (eventType) {
 private fun activityFeedMessage(entry: ActivityFeedEntryDto): String {
     val name = entry.userName.ifBlank { "Someone" }
     return when (entry.eventType) {
-        "joined"           -> "$name joined the room"
+        "joined" -> "$name joined the room"
+        "left"   -> "$name left the room"
+        "session_completed" -> {
+            val mins = (entry.metadata["activeMinutes"] as? Number)?.toInt() ?: 0
+            val h = mins / 60; val m = mins % 60
+            val timeStr = if (h > 0) "${h}h ${m}m" else "${m}m"
+            "$name completed a $timeStr study session"
+        }
         "streak_milestone" -> {
             val days = (entry.metadata["streakDays"] as? Number)?.toInt() ?: 0
             "$name achieved a $days-day streak"
@@ -641,36 +751,39 @@ private fun activityFeedMessage(entry: ActivityFeedEntryDto): String {
             val tier = entry.metadata["tierName"] as? String ?: "a lower tier"
             "$name moved to $tier"
         }
+        "champion" -> {
+            val period = entry.metadata["period"] as? String ?: "weekly"
+            "$name became the $period champion! 🏆"
+        }
         else -> "$name had some activity"
     }
 }
 
 @Composable
-private fun RoomInsightsCard(stats: RoomStatsResponseData?) {
+private fun RoomInsightsCard(stats: RoomStatsResponseData?, modifier: Modifier = Modifier) {
     if (stats == null) return
     val cs = MaterialTheme.colorScheme
     Card(
-        modifier  = Modifier.fillMaxWidth(),
+        modifier  = modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.10f)),
+        colors    = CardDefaults.cardColors(containerColor = cs.surfaceVariant.copy(0.4f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Room Insights", style = MaterialTheme.typography.labelLarge,
-                color = Color.White, fontWeight = FontWeight.ExtraBold)
+                color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatPill("👥", "${stats.totalMembers}", "Members")
-                StatPill("🟢", "${stats.studyingNow}", "Now")
-                StatPill("📅", "${stats.activeMembers}", "Active 7d")
-                StatPill("🔥", "${stats.highestStreak}", "Top streak")
+                StatPillLight("👥", "${stats.totalMembers}", "Members")
+                StatPillLight("🟢", "${stats.studyingNow}", "Studying")
+                StatPillLight("📶", "${stats.onlineMembers}", "Online")
+                StatPillLight("🔥", "${stats.highestStreak}", "Top streak")
             }
-            HorizontalDivider(color = Color.White.copy(0.1f), thickness = 0.5.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                val todayH = stats.minutesToday / 60.0
-                val weekH  = stats.minutesThisWeek / 60.0
-                Text("Today: ${"%.1f".format(todayH)}h · This week: ${"%.1f".format(weekH)}h",
-                    style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
-            }
+            HorizontalDivider(color = cs.onSurface.copy(0.08f), thickness = 0.5.dp)
+            val todayH = stats.minutesToday / 60.0
+            val weekH  = stats.minutesThisWeek / 60.0
+            val monthH = stats.minutesThisMonth / 60.0
+            Text("Today: ${"%.1f".format(todayH)}h · Week: ${"%.1f".format(weekH)}h · Month: ${"%.1f".format(monthH)}h",
+                style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             stats.topPerformer?.let { top ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("🏆", fontSize = 13.sp)
@@ -682,14 +795,49 @@ private fun RoomInsightsCard(stats: RoomStatsResponseData?) {
     }
 }
 
+// Room Champions (redesign section 5) — Today/Weekly/Monthly champion +
+// Most Improved, shown prominently per the spec ("Show these prominently").
 @Composable
-private fun StatPill(icon: String, value: String, label: String) {
+fun RoomChampionsCard(champions: RoomChampionsResponseData?, modifier: Modifier = Modifier) {
+    if (champions == null) return
     val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(icon, fontSize = 12.sp)
-        Text(value, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.5f), fontSize = 9.sp)
+    val entries = listOfNotNull(
+        champions.todayChampion?.let { Triple("🏆", "Today's Champion", it) },
+        champions.weeklyChampion?.let { Triple("🔥", "Weekly Champion", it) },
+        champions.monthlyChampion?.let { Triple("👑", "Monthly Champion", it) },
+        champions.mostImproved?.let { Triple("⚡", "Most Improved", it) },
+    )
+    if (entries.isEmpty()) return
+    Card(
+        modifier  = modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surfaceVariant.copy(0.4f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Room Champions", style = MaterialTheme.typography.labelLarge,
+                color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+            entries.forEach { (emoji, label, champion) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(emoji, fontSize = 16.sp)
+                        Column {
+                            Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                            Text(champion.userName, style = MaterialTheme.typography.labelMedium,
+                                color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    val mins = champion.deltaMinutes ?: champion.minutes
+                    val prefix = if (champion.deltaMinutes != null) "+" else ""
+                    Text("$prefix${mins / 60}h ${mins % 60}m",
+                        style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
 }
 
@@ -1039,7 +1187,7 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
 // QUICK ACTION ROW
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit, onLeaderboard: () -> Unit) {
+private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier
         .fillMaxWidth()
@@ -1047,7 +1195,6 @@ private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
         QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
-        QuickActionCard("🏆", "Leaderboard", "Room rankings", Color(0xFF1565C0), Modifier.weight(1f), onLeaderboard)
     }
 }
 

@@ -145,7 +145,17 @@ data class TierMemberDto(
     // room (not the global last_active_at, which spans all rooms).
     @SerializedName("last_active_at")     val lastActiveAt: String? = null,
     // Inactive tab: all-time contribution to this specific room.
-    @SerializedName("room_total_minutes") val roomTotalMinutes: Int = 0
+    @SerializedName("room_total_minutes") val roomTotalMinutes: Int = 0,
+    // Full leaderboard fields — today/week/month shown simultaneously per
+    // row rather than gating behind a period selector.
+    @SerializedName("today_minutes")      val todayMinutes: Int = 0,
+    @SerializedName("week_minutes")       val weekMinutes: Int = 0,
+    @SerializedName("month_minutes")      val monthMinutes: Int = 0,
+    @SerializedName("rank_position")      val rankPosition: Int = 0,
+    // "studying" | "online" | "offline" — see backend
+    // TierRoomsService.ONLINE_WINDOW_MINUTES for what "online" means.
+    val status: String = "offline",
+    @SerializedName("badge_count")        val badgeCount: Int = 0
 )
 
 data class TierMembersResponseData(
@@ -163,11 +173,43 @@ data class RoomStatsTopPerformerDto(
 data class RoomStatsResponseData(
     @SerializedName("total_members")    val totalMembers: Int = 0,
     @SerializedName("active_members")   val activeMembers: Int = 0,
+    @SerializedName("online_members")   val onlineMembers: Int = 0,
     @SerializedName("studying_now")     val studyingNow: Int = 0,
     @SerializedName("minutes_today")    val minutesToday: Int = 0,
     @SerializedName("minutes_this_week") val minutesThisWeek: Int = 0,
+    @SerializedName("minutes_this_month") val minutesThisMonth: Int = 0,
     @SerializedName("highest_streak")   val highestStreak: Int = 0,
     @SerializedName("topPerformer")     val topPerformer: RoomStatsTopPerformerDto? = null
+)
+
+// ── Room Champions (redesign section 5) ─────────────────────────
+
+data class RoomChampionDto(
+    @SerializedName("user_id")    val userId: String = "",
+    @SerializedName("user_name")  val userName: String = "",
+    @SerializedName("avatar_url") val avatarUrl: String? = null,
+    val minutes: Int = 0,
+    // Only populated for mostImproved
+    @SerializedName("delta_minutes") val deltaMinutes: Int? = null
+)
+
+data class RoomChampionsResponseData(
+    val todayChampion: RoomChampionDto? = null,
+    val weeklyChampion: RoomChampionDto? = null,
+    val monthlyChampion: RoomChampionDto? = null,
+    val mostImproved: RoomChampionDto? = null
+)
+
+// ── Personal Ranking (redesign section 4) ───────────────────────
+
+data class MyRankResponseData(
+    @SerializedName("rankPosition")       val rankPosition: Int? = null,
+    @SerializedName("todayMinutes")       val todayMinutes: Int = 0,
+    @SerializedName("weekMinutes")        val weekMinutes: Int = 0,
+    @SerializedName("monthMinutes")       val monthMinutes: Int = 0,
+    val streak: Int = 0,
+    @SerializedName("minutesToNextRank")  val minutesToNextRank: Int? = null,
+    @SerializedName("nextRankPosition")   val nextRankPosition: Int? = null
 )
 
 // ── Room Activity Feed (spec section 9) ─────────────────────────
@@ -358,6 +400,24 @@ interface TierRoomsApiService {
     suspend fun getRoomStats(
         @Path("tierKey") tierKey: String
     ): ApiResponse<RoomStatsResponseData>
+
+    /**
+     * GET /rooms/tiers/{tierKey}/champions
+     * Today/Weekly/Monthly champions + Most Improved member.
+     */
+    @GET("rooms/tiers/{tierKey}/champions")
+    suspend fun getRoomChampions(
+        @Path("tierKey") tierKey: String
+    ): ApiResponse<RoomChampionsResponseData>
+
+    /**
+     * GET /rooms/tiers/{tierKey}/my-rank
+     * Personal ranking + minutes needed to overtake the next rank up.
+     */
+    @GET("rooms/tiers/{tierKey}/my-rank")
+    suspend fun getMyRank(
+        @Path("tierKey") tierKey: String
+    ): ApiResponse<MyRankResponseData>
 
     /**
      * GET /rooms/tiers/{tierKey}/activity?limit=50

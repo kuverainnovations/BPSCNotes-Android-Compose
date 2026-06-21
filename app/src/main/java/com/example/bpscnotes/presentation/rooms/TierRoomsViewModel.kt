@@ -62,6 +62,14 @@ data class TierRoomsUiState(
     val roomStats: RoomStatsResponseData?            = null,
     val isLoadingRoomStats: Boolean                  = false,
 
+    // Room Champions (redesign section 5)
+    val champions: RoomChampionsResponseData?         = null,
+    val isLoadingChampions: Boolean                   = false,
+
+    // Personal ranking (redesign section 4)
+    val myRank: MyRankResponseData?                   = null,
+    val isLoadingMyRank: Boolean                      = false,
+
     // Room Activity Feed (spec section 9) — newest first
     val activityFeed: List<ActivityFeedEntryDto>     = emptyList(),
     val isLoadingActivityFeed: Boolean                = false,
@@ -186,11 +194,18 @@ class TierRoomsViewModel @Inject constructor(
                 _uiState.update { it.copy(pendingDemotion = event) }
             }
         }
-        // Observe leaderboard ticks — update in-memory leaderboard
+        // Observe leaderboard ticks — refresh the rich member list (now the
+        // leaderboard screen's primary data source), champions, and the
+        // legacy snapshot leaderboard together.
         viewModelScope.launch {
             socket.leaderboardTicks.collect { tick ->
                 val selected = _uiState.value.selectedTierKey
-                if (tick.tierKey == selected) loadLeaderboard(selected)
+                if (tick.tierKey == selected) {
+                    loadLeaderboard(selected)
+                    loadMembers(selected)
+                    loadChampions(selected)
+                    loadMyRank(selected)
+                }
             }
         }
 
@@ -389,6 +404,9 @@ class TierRoomsViewModel @Inject constructor(
                 // Room Insights + Activity Feed (spec sections 4, 9)
                 loadRoomStats(tierKey)
                 loadActivityFeed(tierKey)
+                // Champions + personal rank (redesign sections 4, 5)
+                loadChampions(tierKey)
+                loadMyRank(tierKey)
                 // Join the correct socket room now that we know the user's actual tier —
                 // but don't clobber an active session's join to a different room
                 // (e.g. user started a session in a lower unlocked tier).
@@ -464,6 +482,34 @@ class TierRoomsViewModel @Inject constructor(
         }
     }
 
+    // ── Room Champions (redesign section 5) ────────────────────
+    fun loadChampions(tierKey: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingChampions = true) }
+            try {
+                val response = api.getRoomChampions(tierKey)
+                _uiState.update { it.copy(champions = response.data, isLoadingChampions = false) }
+            } catch (e: Exception) {
+                Log.w(TAG, "loadChampions: ${e.message}")
+                _uiState.update { it.copy(isLoadingChampions = false) }
+            }
+        }
+    }
+
+    // ── Personal ranking (redesign section 4) ──────────────────
+    fun loadMyRank(tierKey: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMyRank = true) }
+            try {
+                val response = api.getMyRank(tierKey)
+                _uiState.update { it.copy(myRank = response.data, isLoadingMyRank = false) }
+            } catch (e: Exception) {
+                Log.w(TAG, "loadMyRank: ${e.message}")
+                _uiState.update { it.copy(isLoadingMyRank = false) }
+            }
+        }
+    }
+
     // ── Room Activity Feed (spec section 9) ────────────────────
     // Initial/refresh load via REST; new entries afterward arrive live
     // through the activityFeedEvents socket collector above.
@@ -489,6 +535,8 @@ class TierRoomsViewModel @Inject constructor(
         loadMembers(tierKey)       // show members of any tier
         loadRoomStats(tierKey)
         loadActivityFeed(tierKey)
+        loadChampions(tierKey)
+        loadMyRank(tierKey)
         socket.joinTierRoom(tierKey)
     }
 

@@ -887,7 +887,7 @@ private fun InactiveMemberCard(member: TierMemberDto) {
 // relative string. Local/self-contained rather than a new shared utility —
 // this is the only place in Rooms that needs a relative (not clock-time)
 // label.
-private fun relativeTimeAgo(isoString: String): String {
+fun relativeTimeAgo(isoString: String): String {
     if (isoString.isBlank()) return "Unknown"
     val parsers = listOf(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
