@@ -365,7 +365,8 @@ fun RoomsHubScreen(
                         // Quick links
                         QuickActionRow(
                             onAchievements = { navController.navigate(Screen.Achievements.route) },
-                            onChallenges = { navController.navigate(Screen.WeeklyChallenges.route) }
+                            onChallenges = { navController.navigate(Screen.WeeklyChallenges.route) },
+                            onLeaderboard = { navController.navigate(Screen.Leaderboard.route) }
                         )
 
                         // ── Bottom banner ad ──────────────────────────────
@@ -445,21 +446,32 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                             color = Color.White.copy(0.6f))
                     }
                 }
-                if (state.isSocketConnected) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(BpscColors.Success.copy(0.2f))
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        Box(Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(BpscColors.Success))
-                        Text(str.roomsLive, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                    }
+                // Tri-state connection indicator (spec section 11) — reuses
+                // the same ChatConnectionStatus enum + localized strings
+                // ChatSheet already established for this exact socket.
+                val connectionStatus = when {
+                    state.isSocketConnected  -> ChatConnectionStatus.LIVE
+                    state.hasConnectedBefore -> ChatConnectionStatus.RECONNECTING
+                    else                     -> ChatConnectionStatus.CONNECTING
+                }
+                val (dotColor, label) = when (connectionStatus) {
+                    ChatConnectionStatus.LIVE         -> BpscColors.Success to str.chatLive
+                    ChatConnectionStatus.RECONNECTING -> Color(0xFFFFA726)  to str.chatReconnecting
+                    ChatConnectionStatus.CONNECTING   -> Color.Gray         to str.chatConnecting
+                }
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(dotColor.copy(0.2f))
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Box(Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(dotColor))
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = dotColor, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -559,6 +571,111 @@ private fun RoomsHeroHeader(state: TierRoomsUiState, onBack: () -> Unit) {
                             }
                         }
                     }
+                }
+
+                // Room Insights (spec section 4) — the ROOM's aggregate
+                // stats, distinct from the personal stats strip above.
+                Spacer(Modifier.height(12.dp))
+                RoomInsightsCard(state.roomStats)
+
+                // Room Activity Feed (spec section 9)
+                Spacer(Modifier.height(12.dp))
+                RoomActivityFeedCard(state.activityFeed)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoomActivityFeedCard(feed: List<ActivityFeedEntryDto>) {
+    if (feed.isEmpty()) return
+    val cs = MaterialTheme.colorScheme
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.10f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Recent Activity", style = MaterialTheme.typography.labelLarge,
+                color = Color.White, fontWeight = FontWeight.ExtraBold)
+            feed.take(8).forEach { entry ->
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(activityFeedIcon(entry.eventType), fontSize = 14.sp)
+                    Text(
+                        activityFeedMessage(entry),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(0.7f),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun activityFeedIcon(eventType: String): String = when (eventType) {
+    "joined"           -> "👋"
+    "streak_milestone" -> "🔥"
+    "promoted"         -> "⬆️"
+    "demoted"          -> "⬇️"
+    else               -> "•"
+}
+
+// Templated client-side (rather than a pre-rendered string from the
+// backend) so this stays localizable — same reasoning as the rest of
+// this screen's string handling via LocalStrings.
+private fun activityFeedMessage(entry: ActivityFeedEntryDto): String {
+    val name = entry.userName.ifBlank { "Someone" }
+    return when (entry.eventType) {
+        "joined"           -> "$name joined the room"
+        "streak_milestone" -> {
+            val days = (entry.metadata["streakDays"] as? Number)?.toInt() ?: 0
+            "$name achieved a $days-day streak"
+        }
+        "promoted" -> {
+            val tier = entry.metadata["tierName"] as? String ?: "a new tier"
+            "$name was promoted to $tier"
+        }
+        "demoted" -> {
+            val tier = entry.metadata["tierName"] as? String ?: "a lower tier"
+            "$name moved to $tier"
+        }
+        else -> "$name had some activity"
+    }
+}
+
+@Composable
+private fun RoomInsightsCard(stats: RoomStatsResponseData?) {
+    if (stats == null) return
+    val cs = MaterialTheme.colorScheme
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = cs.surface.copy(0.10f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Room Insights", style = MaterialTheme.typography.labelLarge,
+                color = Color.White, fontWeight = FontWeight.ExtraBold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                StatPill("👥", "${stats.totalMembers}", "Members")
+                StatPill("🟢", "${stats.studyingNow}", "Now")
+                StatPill("📅", "${stats.activeMembers}", "Active 7d")
+                StatPill("🔥", "${stats.highestStreak}", "Top streak")
+            }
+            HorizontalDivider(color = Color.White.copy(0.1f), thickness = 0.5.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                val todayH = stats.minutesToday / 60.0
+                val weekH  = stats.minutesThisWeek / 60.0
+                Text("Today: ${"%.1f".format(todayH)}h · This week: ${"%.1f".format(weekH)}h",
+                    style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
+            }
+            stats.topPerformer?.let { top ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("🏆", fontSize = 13.sp)
+                    Text("Top this week: ${top.userName} (${top.minutes / 60}h ${top.minutes % 60}m)",
+                        style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -922,7 +1039,7 @@ private fun ProgressBreakdownCard(tierData: MyTierResponseData) {
 // QUICK ACTION ROW
 // ════════════════════════════════════════════════════════════
 @Composable
-private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit) {
+private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit, onLeaderboard: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(modifier = Modifier
         .fillMaxWidth()
@@ -930,6 +1047,7 @@ private fun QuickActionRow(onAchievements: () -> Unit, onChallenges: () -> Unit)
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         QuickActionCard("🏅", "Achievements", "Unlock badges", BpscColors.CoinGold, Modifier.weight(1f), onAchievements)
         QuickActionCard("⚡", "Challenges", "Weekly goals", BpscColors.Primary, Modifier.weight(1f), onChallenges)
+        QuickActionCard("🏆", "Leaderboard", "Room rankings", Color(0xFF1565C0), Modifier.weight(1f), onLeaderboard)
     }
 }
 

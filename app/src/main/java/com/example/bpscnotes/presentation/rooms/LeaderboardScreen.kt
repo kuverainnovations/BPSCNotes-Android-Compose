@@ -253,13 +253,22 @@ private fun Podium(top3: List<LeaderboardEntryDto>, myUserId: String) {
                         .border(2.dp, colors[i], CircleShape),
                     Alignment.Center
                 ) {
-                    Text(
-                        entry?.userName?.take(1)?.uppercase() ?: "?",
-                        style = if (i == 1) MaterialTheme.typography.titleLarge
-                        else MaterialTheme.typography.titleMedium,
-                        color = colors[i],
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    if (!entry?.avatarUrl.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = entry?.avatarUrl,
+                            contentDescription = entry?.userName,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            entry?.userName?.take(1)?.uppercase() ?: "?",
+                            style = if (i == 1) MaterialTheme.typography.titleLarge
+                            else MaterialTheme.typography.titleMedium,
+                            color = colors[i],
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
                 Text(medals[i], fontSize = if (i == 1) 20.sp else 16.sp)
                 Text(
@@ -336,12 +345,22 @@ private fun LeaderboardRow(
                 .background(if (isMe) BpscColors.Primary else BpscColors.PrimaryLight),
             Alignment.Center
         ) {
-            Text(
-                entry.userName.take(1).uppercase(),
-                style = MaterialTheme.typography.titleSmall,
-                color = if (isMe) Color.White else BpscColors.Primary,
-                fontWeight = FontWeight.ExtraBold
-            )
+            if (!entry.avatarUrl.isNullOrBlank()) {
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                coil.compose.AsyncImage(
+                    model = entry.avatarUrl,
+                    contentDescription = entry.userName,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+            } else {
+                Text(
+                    entry.userName.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isMe) Color.White else BpscColors.Primary,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
         }
 
         // Name + stats
@@ -370,6 +389,12 @@ private fun LeaderboardRow(
                 Text("⏱ $timeStr",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (mins > 0) cs.onSurfaceVariant else cs.onSurfaceVariant.copy(0.4f))
+                if (entry.studyMinutesToday > 0) {
+                    val td = entry.studyMinutesToday
+                    val todayStr = if (td >= 60) "${td/60}h ${td%60}m" else "${td}m"
+                    Text("📍 $todayStr today",
+                        style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
+                }
                 if (entry.coinsEarned > 0)
                     Text("🪙 ${entry.coinsEarned}",
                         style = MaterialTheme.typography.labelSmall, color = Color(0xFFFF8F00))

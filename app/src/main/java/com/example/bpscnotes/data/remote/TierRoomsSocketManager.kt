@@ -47,9 +47,12 @@ data class PromotionEvent(val tierKey: String, val tierName: String, val tierEmo
 data class DemotionEvent(val tierKey: String, val tierName: String, val tierEmoji: String, val message: String)
 data class LeaderboardTickEntry(val userId: String, val userName: String, val rankPosition: Int, val studyMinutes: Int, val coinsEarned: Int)
 data class LeaderboardTickEvent(val tierKey: String, val top3: List<LeaderboardTickEntry>, val updatedAt: String)
-data class HeartbeatAckEvent(val isAfk: Boolean, val activeMinsThisBeat: Int, val coinsEarnedThisBeat: Int, val xpEarnedThisBeat: Int, val totalCoinsThisSession: Int, val totalXpThisSession: Int, val totalActiveMinutes: Int)
 data class MemberJoinEvent(val tierKey: String, val userId: String, val userName: String)
 data class MemberLeaveEvent(val tierKey: String, val userId: String)
+data class ActivityFeedSocketEvent(
+    val id: String, val tierKey: String, val userId: String?, val userName: String,
+    val eventType: String, val metadata: JSONObject, val createdAt: String
+)
 data class RoomMessageEvent(
     val id: String, val senderId: String, val senderName: String,
     val message: String, val tierKey: String, val createdAt: String
@@ -74,16 +77,14 @@ class TierRoomsSocketManager @Inject constructor(private val tokenStore: TokenSt
     val demotionEvents: SharedFlow<DemotionEvent> = _demotionEvents.asSharedFlow()
     private val _leaderboardTicks = MutableSharedFlow<LeaderboardTickEvent>(extraBufferCapacity = 16)
     val leaderboardTicks: SharedFlow<LeaderboardTickEvent> = _leaderboardTicks.asSharedFlow()
-    private val _heartbeatAcks    = MutableSharedFlow<HeartbeatAckEvent>(extraBufferCapacity = 32)
-    val heartbeatAcks: SharedFlow<HeartbeatAckEvent> = _heartbeatAcks.asSharedFlow()
-    private val _afkWarnings      = MutableSharedFlow<String>(extraBufferCapacity = 8)
-    val afkWarnings: SharedFlow<String> = _afkWarnings.asSharedFlow()
     private val _roomMessages     = MutableSharedFlow<RoomMessageEvent>(extraBufferCapacity = 200)
     val roomMessages: SharedFlow<RoomMessageEvent> = _roomMessages.asSharedFlow()
     private val _memberJoins      = MutableSharedFlow<MemberJoinEvent>(extraBufferCapacity = 64)
     val memberJoins: SharedFlow<MemberJoinEvent>  = _memberJoins.asSharedFlow()
     private val _memberLeaves     = MutableSharedFlow<MemberLeaveEvent>(extraBufferCapacity = 64)
     val memberLeaves: SharedFlow<MemberLeaveEvent> = _memberLeaves.asSharedFlow()
+    private val _activityFeedEvents = MutableSharedFlow<ActivityFeedSocketEvent>(extraBufferCapacity = 32)
+    val activityFeedEvents: SharedFlow<ActivityFeedSocketEvent> = _activityFeedEvents.asSharedFlow()
     private val _socketErrors     = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val socketErrors: SharedFlow<String> = _socketErrors.asSharedFlow()
 
@@ -216,6 +217,19 @@ class TierRoomsSocketManager @Inject constructor(private val tokenStore: TokenSt
             Log.d(TAG, "👤- ${json.optString("userId")}")
         }
 
+        s.on("room:activity") { args ->
+            val json = args.firstOrNull() as? JSONObject ?: return@on
+            _activityFeedEvents.tryEmit(ActivityFeedSocketEvent(
+                id        = json.optString("id"),
+                tierKey   = json.optString("tierKey"),
+                userId    = json.optString("userId").takeIf { it.isNotBlank() },
+                userName  = json.optString("userName"),
+                eventType = json.optString("eventType"),
+                metadata  = json.optJSONObject("metadata") ?: JSONObject(),
+                createdAt = json.optString("createdAt")
+            ))
+        }
+
         s.on("tier:promotion") { args ->
             val json = args.firstOrNull() as? JSONObject ?: return@on
             _promotionEvents.tryEmit(PromotionEvent(
@@ -240,20 +254,6 @@ class TierRoomsSocketManager @Inject constructor(private val tokenStore: TokenSt
             }
             _leaderboardTicks.tryEmit(LeaderboardTickEvent(
                 json.optString("tierKey"), top3, json.optString("updatedAt")))
-        }
-
-        s.on("session:heartbeat_ack") { args ->
-            val json = args.firstOrNull() as? JSONObject ?: return@on
-            _heartbeatAcks.tryEmit(HeartbeatAckEvent(
-                json.optBoolean("isAfk"), json.optInt("activeMinsThisBeat"),
-                json.optInt("coinsEarnedThisBeat"), json.optInt("xpEarnedThisBeat"),
-                json.optInt("totalCoinsThisSession"), json.optInt("totalXpThisSession"),
-                json.optInt("totalActiveMinutes")))
-        }
-
-        s.on("session:afk_warning") { args ->
-            val json = args.firstOrNull() as? JSONObject ?: return@on
-            _afkWarnings.tryEmit(json.optString("sessionId"))
         }
 
         s.on("room:new_message") { args ->
@@ -287,10 +287,12 @@ class TierRoomsSocketManager @Inject constructor(private val tokenStore: TokenSt
         socket?.emit("tier:leave_room")
     }
 
-    fun sendHeartbeat(sessionId: String) {
-        if (socket?.connected() != true) { Log.w(TAG, "Heartbeat skipped"); return }
-        socket?.emit("session:heartbeat", JSONObject().put("sessionId", sessionId))
-    }
+    // NOTE: heartbeats go over REST (StudySessionViewModel -> POST
+    // /rooms/sessions/heartbeat), not this socket — there used to be a
+    // sendHeartbeat()/session:heartbeat WS path here too, but nothing ever
+    // called it, and the server's matching handler had drifted out of sync
+    // with the real anti-cheat checks. Removed both sides rather than wire
+    // up an unused, divergent second implementation.
 
     fun sendChatMessage(message: String) {
         if (socket?.connected() == true) {

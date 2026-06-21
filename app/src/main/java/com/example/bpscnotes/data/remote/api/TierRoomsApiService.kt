@@ -95,13 +95,15 @@ data class TiersListResponseData(
 data class LeaderboardEntryDto(
     @SerializedName("rank_position")   val rankPositionRaw: Any? = null,  // backend may send Int or String
     @SerializedName("study_minutes")   val studyMinutes: Int = 0,
+    @SerializedName("study_minutes_today") val studyMinutesToday: Int = 0,
     @SerializedName("coins_earned")    val coinsEarned: Int = 0,
     @SerializedName("xp_earned")       val xpEarned: Int = 0,
     @SerializedName("goals_completed") val goalsCompleted: Int = 0,
     @SerializedName("streak_days")     val streakDays: Int = 0,
     @SerializedName("user_id")         val userId: String = "",
     @SerializedName("user_name")       val userName: String = "",
-    @SerializedName("xp_level")        val xpLevel: Int = 1
+    @SerializedName("xp_level")        val xpLevel: Int = 1,
+    @SerializedName("avatar_url")      val avatarUrl: String? = null
 ) {
     val rankPosition: Int get() = when (rankPositionRaw) {
         is Int    -> rankPositionRaw
@@ -124,6 +126,8 @@ data class TierMemberDto(
     val id: String,
     val name: String,
     val streak: Int,
+    @SerializedName("longest_streak")    val longestStreak: Int = 0,
+    @SerializedName("avatar_url")        val avatarUrl: String? = null,
 //    @SerializedName("quizzes_attempted") val quizzesAttempted: Int,
 //    val accuracy: Double,
 //    val coins: Int,
@@ -132,11 +136,53 @@ data class TierMemberDto(
     @SerializedName("total_study_minutes") val totalStudyMinutes: Int,
 //    @SerializedName("promoted_at")        val promotedAt: String?,
 //    @SerializedName("next_tier_progress") val nextTierProgress: Double,
-    @SerializedName("is_studying_now")    val isStudyingNow: Boolean = false
+    @SerializedName("is_studying_now")    val isStudyingNow: Boolean = false,
+    // Active tab: when their current session in THIS room started — used
+    // to drive a live-ticking timer client-side, same pattern as your own
+    // session timer, rather than a number that's stale on arrival.
+    @SerializedName("current_session_started_at") val currentSessionStartedAt: String? = null,
+    // Inactive tab: last time this user was active specifically in this
+    // room (not the global last_active_at, which spans all rooms).
+    @SerializedName("last_active_at")     val lastActiveAt: String? = null,
+    // Inactive tab: all-time contribution to this specific room.
+    @SerializedName("room_total_minutes") val roomTotalMinutes: Int = 0
 )
 
 data class TierMembersResponseData(
     val members: List<TierMemberDto> = emptyList()
+)
+
+// ── Room Statistics (spec section 4: Room Insights) ────────────
+
+data class RoomStatsTopPerformerDto(
+    @SerializedName("user_id")   val userId: String = "",
+    @SerializedName("user_name") val userName: String = "",
+    val minutes: Int = 0
+)
+
+data class RoomStatsResponseData(
+    @SerializedName("total_members")    val totalMembers: Int = 0,
+    @SerializedName("active_members")   val activeMembers: Int = 0,
+    @SerializedName("studying_now")     val studyingNow: Int = 0,
+    @SerializedName("minutes_today")    val minutesToday: Int = 0,
+    @SerializedName("minutes_this_week") val minutesThisWeek: Int = 0,
+    @SerializedName("highest_streak")   val highestStreak: Int = 0,
+    @SerializedName("topPerformer")     val topPerformer: RoomStatsTopPerformerDto? = null
+)
+
+// ── Room Activity Feed (spec section 9) ─────────────────────────
+
+data class ActivityFeedEntryDto(
+    val id: String,
+    @SerializedName("userId")   val userId: String? = null,
+    @SerializedName("userName") val userName: String = "",
+    @SerializedName("eventType") val eventType: String = "",  // joined|streak_milestone|promoted|demoted
+    val metadata: Map<String, Any?> = emptyMap(),
+    @SerializedName("createdAt") val createdAt: String = ""
+)
+
+data class ActivityFeedResponseData(
+    val feed: List<ActivityFeedEntryDto> = emptyList()
 )
 
 // ── Study Session DTOs ────────────────────────────────────────
@@ -302,6 +348,28 @@ interface TierRoomsApiService {
         @Path("tierKey")   tierKey: String,
         @Query("period")   period: String = "weekly"
     ): ApiResponse<LeaderboardResponseData>
+
+    /**
+     * GET /rooms/tiers/{tierKey}/stats
+     * Returns the Room Insights card data: member counts, hours today/this
+     * week, highest streak in the room, top performer this week.
+     */
+    @GET("rooms/tiers/{tierKey}/stats")
+    suspend fun getRoomStats(
+        @Path("tierKey") tierKey: String
+    ): ApiResponse<RoomStatsResponseData>
+
+    /**
+     * GET /rooms/tiers/{tierKey}/activity?limit=50
+     * Returns the room's recent activity feed (joins, streak milestones,
+     * promotions, demotions), newest first. New entries also arrive live
+     * over the socket as "room:activity" while connected.
+     */
+    @GET("rooms/tiers/{tierKey}/activity")
+    suspend fun getActivityFeed(
+        @Path("tierKey") tierKey: String,
+        @Query("limit")  limit: Int = 50
+    ): ApiResponse<ActivityFeedResponseData>
 
     // ── Study Sessions ───────────────────────────────────────
 

@@ -41,6 +41,10 @@ import com.example.bpscnotes.presentation.readingrooms.ChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import javax.inject.Inject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
+import java.util.Locale
 
 // ════════════════════════════════════════════════════════════
 // StudyFocusScreen — Inside the Study Room
@@ -312,6 +316,14 @@ private fun ActiveRoomScreen(
                 (myUserId.isBlank() || member.id.trim() != myUserId)
     }
 
+    // Inactive Learners tab (spec section 2) — joined the room but not
+    // currently studying. Same self-exclusion as liveMembers above.
+    val inactiveMembers = tiersState.members.filter { member ->
+        !member.isStudyingNow &&
+                (myUserId.isBlank() || member.id.trim() != myUserId)
+    }
+    var selectedMemberTab by remember { mutableStateOf("active") }
+
     // Full dark background — unified, no mismatch
     val bgGradient = Brush.verticalGradient(
         listOf(Color(0xFF030D2E), Color(0xFF051D56), Color(0xFF071E3D))
@@ -552,40 +564,45 @@ private fun ActiveRoomScreen(
             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp)
                 .background(Color.White.copy(0.08f)))
 
-            // ── STUDYING NOW SECTION ──────────────────────────
+            // ── ACTIVE / INACTIVE TABS (spec section 2) ───────
             Row(
                 modifier              = Modifier.fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(BpscColors.Success))
-                    Text(str.roomsStudying, style = MaterialTheme.typography.titleSmall,
-                        color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    if (liveMembers.isNotEmpty()) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                            .background(BpscColors.Success.copy(0.15f))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                            Text("${liveMembers.size}", style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                        }
-                    }
-                }
-                /* Text(str.focusTapMessage, style = MaterialTheme.typography.labelSmall,
-                     color = Color.White.copy(0.4f))*/
+                MemberTabChip(
+                    selected = selectedMemberTab == "active",
+                    dotColor = BpscColors.Success,
+                    label    = str.roomsStudying,
+                    count    = liveMembers.size,
+                    onClick  = { selectedMemberTab = "active" }
+                )
+                MemberTabChip(
+                    selected = selectedMemberTab == "inactive",
+                    dotColor = Color.White.copy(0.35f),
+                    label    = "Idle",
+                    count    = inactiveMembers.size,
+                    onClick  = { selectedMemberTab = "inactive" }
+                )
             }
 
             // ── MEMBERS LIST — vertical, handles 1000+ ────────
-            if (liveMembers.isEmpty()) {
+            val visibleMembers = if (selectedMemberTab == "active") liveMembers else inactiveMembers
+            if (visibleMembers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("👋", fontSize = 32.sp)
-                        Text(str.focusFirstHere, style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.5f))
-                        Text(str.focusOthersJoin, style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(0.3f))
+                        if (selectedMemberTab == "active") {
+                            Text(str.focusFirstHere, style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(0.5f))
+                            Text(str.focusOthersJoin, style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.3f))
+                        } else {
+                            Text("No idle members", style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(0.5f))
+                        }
                     }
                 }
             } else {
@@ -596,16 +613,16 @@ private fun ActiveRoomScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ){
-                    // Show max 50 live members. Backend should page large rooms.
-                    items(liveMembers.take(50), key = { it.id }) { member ->
-                        // LiveMemberRow(member = member, onClick = { onMemberTap(member) })
-                        LiveMemberCard(member = member)
+                    // Show max 50 members per tab. Backend should page large rooms.
+                    items(visibleMembers.take(50), key = { it.id }) { member ->
+                        if (selectedMemberTab == "active") LiveMemberCard(member = member)
+                        else InactiveMemberCard(member = member)
                     }
-                    if (liveMembers.size > 50) {
+                    if (visibleMembers.size > 50) {
                         item(key = "more") {
                             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                                 contentAlignment = Alignment.Center) {
-                                Text("+ ${liveMembers.size - 50} more studying",
+                                Text("+ ${visibleMembers.size - 50} more",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(0.4f))
                             }
@@ -728,6 +745,29 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
 }*/
 
 @Composable
+private fun MemberTabChip(selected: Boolean, dotColor: Color, label: String, count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) Color.White.copy(0.12f) else Color.Transparent)
+            .border(1.dp, if (selected) Color.White.copy(0.2f) else Color.White.copy(0.08f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(dotColor))
+        Text(label, style = MaterialTheme.typography.labelMedium,
+            color = if (selected) Color.White else Color.White.copy(0.6f),
+            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium)
+        if (count > 0) {
+            Text("$count", style = MaterialTheme.typography.labelSmall,
+                color = if (selected) Color.White.copy(0.7f) else Color.White.copy(0.4f))
+        }
+    }
+}
+
+@Composable
 private fun LiveMemberCard(member: TierMemberDto) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -796,6 +836,80 @@ private fun LiveMemberCard(member: TierMemberDto) {
                 fontSize = 10.sp
             )
         }
+    }
+}
+
+// Inactive Learners tab (spec section 2): last active time + total
+// contribution to this room, instead of the live "studying now" badge.
+@Composable
+private fun InactiveMemberCard(member: TierMemberDto) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.03f)),
+        border = BorderStroke(1.dp, Color.White.copy(0.06f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(54.dp).clip(CircleShape)
+                    .background(Color.White.copy(0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(member.name.first().uppercase(), color = Color.White.copy(0.6f),
+                    fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            }
+            Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium, color = Color.White.copy(0.75f),
+                fontWeight = FontWeight.Bold)
+            Text(
+                text = member.lastActiveAt?.let { relativeTimeAgo(it) } ?: "Not yet active",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(0.4f), fontSize = 10.sp
+            )
+            if (member.roomTotalMinutes > 0) {
+                val h = member.roomTotalMinutes / 60
+                val m = member.roomTotalMinutes % 60
+                Text(
+                    text = "⏱ ${if (h > 0) "${h}h ${m}m" else "${m}m"} total",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(0.35f), fontSize = 9.sp
+                )
+            }
+        }
+    }
+}
+
+// Parses the same ISO-8601 shapes the backend sends elsewhere in this
+// screen group (see RoomChatViewModel.formatTime) and renders a short
+// relative string. Local/self-contained rather than a new shared utility —
+// this is the only place in Rooms that needs a relative (not clock-time)
+// label.
+private fun relativeTimeAgo(isoString: String): String {
+    if (isoString.isBlank()) return "Unknown"
+    val parsers = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ssXXX"
+    )
+    var date: Date? = null
+    for (fmt in parsers) {
+        try {
+            val p = SimpleDateFormat(fmt, Locale.getDefault())
+            p.timeZone = TimeZone.getTimeZone("UTC")
+            date = p.parse(isoString)
+            if (date != null) break
+        } catch (_: Exception) {}
+    }
+    val then = date?.time ?: return "Unknown"
+    val diffMin = ((Date().time - then) / 60000).coerceAtLeast(0)
+    return when {
+        diffMin < 1   -> "Just now"
+        diffMin < 60  -> "${diffMin}m ago"
+        diffMin < 1440 -> "${diffMin / 60}h ago"
+        else          -> "${diffMin / 1440}d ago"
     }
 }
 

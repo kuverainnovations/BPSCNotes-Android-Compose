@@ -58,11 +58,23 @@ data class TierRoomsUiState(
     val isLoadingMembers: Boolean                   = false,
     val membersError: String?                       = null,
 
+    // Room Insights card (spec section 4)
+    val roomStats: RoomStatsResponseData?            = null,
+    val isLoadingRoomStats: Boolean                  = false,
+
+    // Room Activity Feed (spec section 9) — newest first
+    val activityFeed: List<ActivityFeedEntryDto>     = emptyList(),
+    val isLoadingActivityFeed: Boolean                = false,
+
     // Which tier the user is currently browsing (may differ from their own tier)
     // Default "starter" so leaderboard loads immediately without waiting for getMyTier
     val selectedTierKey: String                     = "starter",
     // Real-time WebSocket state
     val isSocketConnected: Boolean                  = false,
+    // true once the socket has connected at least once this app session —
+    // distinguishes "Reconnecting" (was connected, dropped) from the
+    // initial "Connecting" state (spec section 11: connection states).
+    val hasConnectedBefore: Boolean                  = false,
     val pendingPromotion: PromotionEvent?            = null,
     val pendingDemotion: DemotionEvent?              = null,
     // Current user's ID — used to filter self from members list
@@ -121,6 +133,14 @@ class TierRoomsViewModel @Inject constructor(
                 }
             }
         }
+        // Connected vs Reconnecting vs Connecting (spec section 11) — the
+        // UI distinguishes "never connected yet" from "was connected, just
+        // dropped" using this alongside isSocketConnected.
+        viewModelScope.launch {
+            socket.hasConnectedBefore.collect { value ->
+                _uiState.update { it.copy(hasConnectedBefore = value) }
+            }
+        }
         // Observe individual presence update events — fires IMMEDIATELY on each join/leave.
         // This is faster than presenceSnapshot (which is the full map, batched).
         viewModelScope.launch {
@@ -171,6 +191,29 @@ class TierRoomsViewModel @Inject constructor(
             socket.leaderboardTicks.collect { tick ->
                 val selected = _uiState.value.selectedTierKey
                 if (tick.tierKey == selected) loadLeaderboard(selected)
+            }
+        }
+
+        // Live activity feed events (spec section 9) — prepend so newest
+        // shows first, matching the GET endpoint's ordering. Capped at 100
+        // client-side; the room screen only ever shows the most recent few.
+        viewModelScope.launch {
+            socket.activityFeedEvents.collect { event ->
+                val viewedTierKey = socket.getCurrentTierKey() ?: _uiState.value.selectedTierKey
+                if (event.tierKey != viewedTierKey) return@collect
+                val entry = ActivityFeedEntryDto(
+                    id = event.id, userId = event.userId, userName = event.userName,
+                    eventType = event.eventType,
+                    metadata = buildMap<String, Any?> {
+                        val keys = event.metadata.keys()
+                        while (keys.hasNext()) {
+                            val key = keys.next().toString()
+                            put(key, event.metadata.opt(key))
+                        }
+                    },
+                    createdAt = event.createdAt,
+                )
+                _uiState.update { it.copy(activityFeed = (listOf(entry) + it.activityFeed).take(100)) }
             }
         }
 
@@ -343,6 +386,9 @@ class TierRoomsViewModel @Inject constructor(
                 loadLeaderboard(tierKey)
                 // Load members for the tab
                 loadMembers(tierKey)
+                // Room Insights + Activity Feed (spec sections 4, 9)
+                loadRoomStats(tierKey)
+                loadActivityFeed(tierKey)
                 // Join the correct socket room now that we know the user's actual tier —
                 // but don't clobber an active session's join to a different room
                 // (e.g. user started a session in a lower unlocked tier).
@@ -404,11 +450,45 @@ class TierRoomsViewModel @Inject constructor(
         }
     }
 
+    // ── Room Statistics (spec section 4) ───────────────────────
+    fun loadRoomStats(tierKey: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingRoomStats = true) }
+            try {
+                val response = api.getRoomStats(tierKey)
+                _uiState.update { it.copy(roomStats = response.data, isLoadingRoomStats = false) }
+            } catch (e: Exception) {
+                Log.w(TAG, "loadRoomStats: ${e.message}")
+                _uiState.update { it.copy(isLoadingRoomStats = false) }
+            }
+        }
+    }
+
+    // ── Room Activity Feed (spec section 9) ────────────────────
+    // Initial/refresh load via REST; new entries afterward arrive live
+    // through the activityFeedEvents socket collector above.
+    fun loadActivityFeed(tierKey: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingActivityFeed = true) }
+            try {
+                val response = api.getActivityFeed(tierKey)
+                _uiState.update {
+                    it.copy(activityFeed = response.data?.feed ?: emptyList(), isLoadingActivityFeed = false)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "loadActivityFeed: ${e.message}")
+                _uiState.update { it.copy(isLoadingActivityFeed = false) }
+            }
+        }
+    }
+
     // ── Select a tier to browse (does not change user's tier) ─
     fun selectTier(tierKey: String) {
         _uiState.update { it.copy(selectedTierKey = tierKey) }
         loadLeaderboard(tierKey)   // show leaderboard for any tier (browse mode)
         loadMembers(tierKey)       // show members of any tier
+        loadRoomStats(tierKey)
+        loadActivityFeed(tierKey)
         socket.joinTierRoom(tierKey)
     }
 

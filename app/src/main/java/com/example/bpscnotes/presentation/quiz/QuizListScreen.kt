@@ -187,40 +187,69 @@ fun QuizListScreen(
 @Composable
 internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val str = LocalStrings.current
+
+    // Vector icon + tint per quiz type — smaller and crisper than the old
+    // 52dp emoji box, and consistent across devices (emoji rendering varies).
+    val (typeIcon, typeColor) = when (quiz.type) {
+        "daily" -> Icons.Rounded.CalendarToday to Color(0xFF1565C0)
+        "topic" -> Icons.Rounded.MenuBook      to Color(0xFF8E44AD)
+        "mock"  -> Icons.Rounded.Assignment    to Color(0xFFE67E22)
+        else    -> Icons.Rounded.Quiz          to BpscColors.Primary
+    }
+
     Card(
         modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape     = RoundedCornerShape(18.dp),
+        shape     = RoundedCornerShape(16.dp),
         colors    = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(3.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(
-                modifier         = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(when (quiz.type) { "daily"->"📅"; "topic"->"📝"; "mock"->"📋"; else->"🎯" }, fontSize = 24.sp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // ── Leading icon — 40dp (down from 52dp), with a small "done"
+            // badge on the corner so the title row doesn't need its own pill ──
+            Box(modifier = Modifier.size(40.dp)) {
+                Box(
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                        .background(typeColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(typeIcon, null, tint = typeColor, modifier = Modifier.size(20.dp))
+                }
+                if (quiz.isAttempted) {
+                    Box(
+                        modifier = Modifier.size(15.dp)
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .clip(CircleShape)
+                            .background(BpscColors.Success)
+                            .border(2.dp, cs.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(9.dp))
+                    }
+                }
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Title row — coins badge pinned to the right, never displaced
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                // Title row — now gets the full line to itself (the old "Done"
+                // pill that used to eat into this space moved to the icon badge)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(quiz.title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                        if (quiz.isAttempted) {
-                            Text(str.dashboardDone, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                    }
-                    // Coins — always right-aligned, never wraps to second line
+                    Text(
+                        quiz.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = cs.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     if (quiz.coinsReward > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -236,30 +265,54 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                         }
                     }
                 }
-                // Info row — subject · Qs · duration, no coins here
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(quiz.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("·", color = BpscColors.TextHint)
-                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    Text("·", color = BpscColors.TextHint)
-                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    if (quiz.negativeMarkingEnabled) {
-                        Text("·", color = BpscColors.TextHint)
-                        Text("⚠️ -${formatMarks(quiz.marksPerWrong)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
+
+                // Subject row — the topic name is now a colored chip of its own
+                // instead of small gray text squeezed between Q-count and duration,
+                // so it's the second thing your eye lands on after the title.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SubjectChip(quiz.subject)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Icon(Icons.Rounded.HelpOutline, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
+                        Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
+                        Text("${quiz.durationMins}m", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                     }
                 }
-                if (quiz.isAttempted) {
-                    val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
-                    val passed = lastScore >= quiz.passingScore
-                    Text(
-                        "Last score: $lastScore%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
-                        fontWeight = FontWeight.SemiBold
-                    )
+
+                // Result / negative-marking row — only rendered when there's
+                // something to say, so untried quizzes stay a tidy 2-line card
+                if (quiz.isAttempted || quiz.negativeMarkingEnabled) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (quiz.isAttempted) {
+                            val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
+                            val passed = lastScore >= quiz.passingScore
+                            Text(
+                                "Last score: $lastScore%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp
+                            )
+                        }
+                        if (quiz.negativeMarkingEnabled) {
+                            Text(
+                                "⚠️ -${formatMarks(quiz.marksPerWrong)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE74C3C),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(5.dp))
+                                    .background(Color(0xFFFEE8E8))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(20.dp))
+
+            Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
         }
     }
 }
