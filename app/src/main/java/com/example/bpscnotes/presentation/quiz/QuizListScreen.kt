@@ -287,11 +287,10 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (quiz.isAttempted) {
                             val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
-                            val passed = lastScore >= quiz.passingScore
                             Text(
                                 "Last score: $lastScore%",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                color = BpscColors.Success,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp
                             )

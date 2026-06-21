@@ -152,8 +152,6 @@ private fun QuizIntroContent(
                         StatChipWhite("⏱️", "${quiz.durationMins}m", str.quizDuration)
                         VerticalDividerWhite()
                         StatChipWhite("🪙", "${quiz.coinsReward}", str.coins)
-                        VerticalDividerWhite()
-                        StatChipWhite("🎯", "${quiz.passingScore}%", "To Pass")
                     }
                 }
             }
@@ -180,24 +178,23 @@ private fun QuizIntroContent(
                     }
                     if (quiz.isAttempted) {
                         val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
-                        val passed    = lastScore >= quiz.passingScore
                         Row(
                             modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(if (passed) BpscColors.Success.copy(0.1f) else Color(0xFFFEE8E8))
+                                .background(BpscColors.Success.copy(0.1f))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
-                                if (passed) Icons.Rounded.Star else Icons.Rounded.Refresh,
+                                Icons.Rounded.Star,
                                 null,
-                                tint = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                tint = BpscColors.Success,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 "Last score: $lastScore%",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                                color = BpscColors.Success,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -216,8 +213,7 @@ private fun QuizIntroContent(
                         buildList {
                             add("📝  ${quiz.totalQuestions} questions to answer")
                             add("⏱️  ${quiz.durationMins} minutes total time limit")
-                            add("🎯  Score ${quiz.passingScore}% or above to pass")
-                            add("🪙  Earn ${quiz.coinsReward} coins on passing")
+                            add("🪙  Earn ${quiz.coinsReward} coins on completing the quiz")
                             if (quiz.negativeMarkingEnabled) {
                                 add("✅  Each correct answer carries +${formatMarks(quiz.marksPerCorrect)} marks")
                                 add("❌  Each incorrect answer carries -${formatMarks(quiz.marksPerWrong)} marks")

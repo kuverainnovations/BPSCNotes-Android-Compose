@@ -103,11 +103,7 @@ object Event {
             "total"        to total,
             "time_secs"    to timeSecs,
             "coins_earned" to coinsEarned,
-            "passed"       to (score >= 60),
         ))
-
-    fun quizFailed(quizId: String, score: Int) =
-        Analytics.track("quiz_failed", mapOf("quiz_id" to quizId, "score" to score))
 
     // ── Courses ───────────────────────────────────────────────
     fun courseViewed(courseId: String, courseTitle: String, isPaid: Boolean) =

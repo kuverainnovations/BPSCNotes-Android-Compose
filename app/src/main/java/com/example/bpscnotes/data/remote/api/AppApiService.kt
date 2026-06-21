@@ -181,7 +181,6 @@ data class QuizPreviewDto(
     @SerializedName("total_questions") val totalQuestions: Int = 0,
     @SerializedName("duration_mins")   val durationMins: Int = 15,
     @SerializedName("coins_reward")    val coinsReward: Int = 0,
-    @SerializedName("passing_score")   val passingScore: Int = 60,
     @SerializedName("exam_tags")       val examTags: List<String> = emptyList(),
     @SerializedName("attempt_count")   val attemptCount: Int = 0,
     @SerializedName("avg_score")       val avgScore: Double = 0.0,
@@ -293,7 +292,6 @@ data class QuizResultData(
     val unanswered: Int = 0,
     val accuracy: Double = 0.0,
 
-    val isPassed: Boolean = false,
     val coinsEarned: Int = 0,
     val timeTakenSecs: Int = 0,
 

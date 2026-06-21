@@ -796,10 +796,6 @@ private fun QuizResultScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${accuracy.toInt()}%", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text(str.quizScore, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
-                    Text(if (result.isPassed) str.quizPassed else str.quizFailed,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (result.isPassed) Color(0xFF2ECC71) else Color(0xFFFF6B6B),
-                        fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -862,9 +858,8 @@ private fun QuizResultScreen(
                                 ), RoundedCornerShape(5.dp)
                             ))
                     }
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.Start) {
                         Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                        Text("Pass: ${session.passingScore}%", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                     }
                 }
             }

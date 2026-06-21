@@ -227,7 +227,7 @@ class MockTestsViewModel @Inject constructor(
                 // Endpoint may not exist yet — build leaderboard from submit result
                 // Show the current user's result as rank #1 as a temporary fallback
                 val submitResult = _uiState.value.submitResult
-                val fallback = if (submitResult != null && submitResult.isPassed) {
+                val fallback = if (submitResult != null) {
                     listOf(QuizLeaderboardEntry(
                         rank           = submitResult.rank.takeIf { it > 0 } ?: 1,
                         userId         = currentUserId,

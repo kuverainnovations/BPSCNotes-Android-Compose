@@ -105,7 +105,7 @@ data class QuizStrings(
     val quizTitle: String, val quizDaily: String, val quizTopic: String, val quizMock: String,
     val quizStart: String, val quizQuestions: String, val quizTimeLimit: String,
     val quizSubmit: String, val quizResult: String, val quizScore: String,
-    val quizCorrect: String, val quizWrong: String, val quizPassed: String, val quizFailed: String,
+    val quizCorrect: String, val quizWrong: String,
     val quizCoinsEarned: String, val quizReview: String, val quizNext: String, val quizFinish: String,
     val quizSkip: String, val quizPrevious: String, val quizHint: String,
     val quizAttempted: String, val quizDuration: String, val quizRules: String,
@@ -117,7 +117,6 @@ data class QuizStrings(
     val quizNoAvailable: String, val quizCheckLater: String,
     val quizReviewAll: String, val quizRetakeQuiz: String, val quizBackToQuizzes: String,
     val quizNavTitle: String, val quizCorrectAns: String, val quizWrongAns: String,
-    val quizPassed2: String, val quizNotPassed: String,
     val quizSaveNext: String, val quizSubmitTest: String,
     val quizStartTest: String, val quizTestOverview: String,
     val quizCanResume: String, val quizAvgScore: String,
@@ -586,7 +585,6 @@ data class AppStrings(
     val quizTopic get() = _qz.quizTopic; val quizMock get() = _qz.quizMock
     val quizStart get() = _qz.quizStart; val quizQuestions get() = _qz.quizQuestions; val quizTimeLimit get() = _qz.quizTimeLimit
     val quizCorrect get() = _qz.quizCorrect; val quizWrong get() = _qz.quizWrong
-    val quizPassed get() = _qz.quizPassed; val quizFailed get() = _qz.quizFailed
     val quizCoinsEarned get() = _qz.quizCoinsEarned; val quizReview get() = _qz.quizReview
     val quizNext get() = _qz.quizNext; val quizFinish get() = _qz.quizFinish
     val quizSkip get() = _qz.quizSkip; val quizPrevious get() = _qz.quizPrevious; val quizHint get() = _qz.quizHint
@@ -747,7 +745,6 @@ data class AppStrings(
     val quizReviewAll get() = _qz.quizReviewAll; val quizRetakeQuiz get() = _qz.quizRetakeQuiz
     val quizBackToQuizzes get() = _qz.quizBackToQuizzes; val quizNavTitle get() = _qz.quizNavTitle
     val quizCorrectAns get() = _qz.quizCorrectAns; val quizWrongAns get() = _qz.quizWrongAns
-    val quizPassed2 get() = _qz.quizPassed2; val quizNotPassed get() = _qz.quizNotPassed
     val quizSaveNext get() = _qz.quizSaveNext; val quizSubmitTest get() = _qz.quizSubmitTest
     val quizStartTest get() = _qz.quizStartTest; val quizTestOverview get() = _qz.quizTestOverview
     val quizCanResume get() = _qz.quizCanResume; val quizAvgScore get() = _qz.quizAvgScore
@@ -1130,8 +1127,8 @@ val EnglishStrings: AppStrings = mkAppStrings(
         quizTitle="Quizzes", quizDaily="Daily Quiz", quizTopic="Topic Quiz", quizMock="Mock Test",
         quizStart="Start Quiz", quizQuestions="Questions", quizTimeLimit="Time Limit",
         quizSubmit="Submit Quiz", quizResult="Quiz Result", quizScore="Score",
-        quizCorrect="Correct", quizWrong="Wrong", quizPassed="Passed! 🎉",
-        quizFailed="Better luck next time!", quizCoinsEarned="Coins Earned",
+        quizCorrect="Correct", quizWrong="Wrong",
+        quizCoinsEarned="Coins Earned",
         quizReview="Review Answers", quizNext="Next →", quizFinish="Finish",
         quizSkip="Skip →", quizPrevious="← Previous", quizHint="Hint",
         quizAttempted="✓ Attempted", quizDuration="Duration", quizRules="Quiz Rules",
@@ -1147,7 +1144,6 @@ val EnglishStrings: AppStrings = mkAppStrings(
         quizReviewAll="Review All Questions", quizRetakeQuiz="Retake Quiz",
         quizBackToQuizzes="Back to Quizzes", quizNavTitle="Question Navigator",
         quizCorrectAns="✅ Correct", quizWrongAns="❌ Wrong",
-        quizPassed2="✅ Passed", quizNotPassed="❌ Not passed",
         quizSaveNext="Save & Next →", quizSubmitTest="Submit Test",
         quizStartTest="Start Test", quizTestOverview="Test Overview",
         quizCanResume="You can resume if you exit accidentally",
@@ -1688,8 +1684,8 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizTitle="क्विज़", quizDaily="दैनिक क्विज़", quizTopic="विषय क्विज़", quizMock="मॉक टेस्ट",
         quizStart="क्विज़ शुरू करें", quizQuestions="प्रश्न", quizTimeLimit="समय सीमा",
         quizSubmit="क्विज़ जमा करें", quizResult="परिणाम", quizScore="अंक",
-        quizCorrect="सही", quizWrong="गलत", quizPassed="उत्तीर्ण! 🎉",
-        quizFailed="अगली बार बेहतर करें!", quizCoinsEarned="अर्जित सिक्के",
+        quizCorrect="सही", quizWrong="गलत",
+        quizCoinsEarned="अर्जित सिक्के",
         quizReview="उत्तर देखें", quizNext="अगला →", quizFinish="समाप्त",
         quizSkip="छोड़ें →", quizPrevious="← पिछला", quizHint="संकेत",
         quizAttempted="✓ प्रयास किया", quizDuration="समय अवधि", quizRules="क्विज़ नियम",
@@ -1705,7 +1701,6 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizReviewAll="सभी प्रश्न देखें", quizRetakeQuiz="क्विज़ दोबारा दें",
         quizBackToQuizzes="क्विज़ पर वापस जाएं", quizNavTitle="प्रश्न नेविगेटर",
         quizCorrectAns="✅ सही", quizWrongAns="❌ गलत",
-        quizPassed2="✅ उत्तीर्ण", quizNotPassed="❌ उत्तीर्ण नहीं",
         quizSaveNext="सहेजें और अगला →", quizSubmitTest="टेस्ट जमा करें",
         quizStartTest="टेस्ट शुरू करें", quizTestOverview="टेस्ट अवलोकन",
         quizCanResume="यदि गलती से बाहर हो जाएं तो फिर से शुरू कर सकते हैं",

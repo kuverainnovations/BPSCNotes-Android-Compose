@@ -51,7 +51,6 @@ data class QuizSession(
     val title: String,
     val subtitle: String,
     val durationMins: Int,
-    val passingScore: Int,
     val coinsReward: Int,
     val questions: List<QuizSessionQuestion>,
     // ── Negative marking — admin-configurable per quiz ────────
@@ -84,7 +83,6 @@ data class QuizResult(
     val totalQuestions: Int,
     val accuracy: Double,
     val coinsEarned: Int,
-    val isPassed: Boolean,
     val timeTakenSecs: Int,
     val answerDetails: List<QuizAnswerDetail>,
     // ── Negative marking breakdown ────────────────────────────
@@ -261,7 +259,6 @@ class QuizViewModel @Inject constructor(
                     title        = quiz.title,
                     subtitle     = "${questions.size} questions · ${quiz.durationMins} min · ${quiz.subject}",
                     durationMins = quiz.durationMins,
-                    passingScore = quiz.passingScore,
                     coinsReward  = quiz.coinsReward,
                     questions    = questions,
                     negativeMarkingEnabled = quiz.negativeMarkingEnabled,
@@ -372,7 +369,6 @@ class QuizViewModel @Inject constructor(
                             totalQuestions = data.total,
                             accuracy       = data.accuracy,
                             coinsEarned    = data.coinsEarned,
-                            isPassed       = data.isPassed,
                             timeTakenSecs  = data.timeTakenSecs,
                             answerDetails  = answerDetails,
                             negativeMarkingEnabled = data.negativeMarkingEnabled,

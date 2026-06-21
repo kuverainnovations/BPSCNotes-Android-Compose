@@ -305,11 +305,10 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                 }
                 if (quiz.isAttempted) {
                     val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
-                    val passed = lastScore >= quiz.passingScore
                     Text(
                         "Last score: $lastScore%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (passed) BpscColors.Success else Color(0xFFE74C3C),
+                        color = BpscColors.Success,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -655,9 +654,8 @@ internal fun QuizSummaryScreen(
                     Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(cs.background)) {
                         Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF64B5F6))), RoundedCornerShape(5.dp)))
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                         Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                        Text(if (result.isPassed) str.quizPassed2 else str.quizNotPassed, style = MaterialTheme.typography.bodyMedium, color = if (result.isPassed) BpscColors.Success else Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
