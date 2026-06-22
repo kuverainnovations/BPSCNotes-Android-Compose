@@ -46,6 +46,8 @@ data class CAArticle(
     val date: String,             // formatted for display e.g. "31 May 2026"
     val readMinutes: Int,
     val mcqCount: Int,
+    val mcqAttempted: Boolean = false,
+    val mcqLastScore: Double? = null,
     val isImportant: Boolean,
     val isPrelims: Boolean,
     val isMains: Boolean,
@@ -79,6 +81,8 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         date        = formatCaDate(date),
         readMinutes = readMins,
         mcqCount    = mcqCount,  // real count from API
+        mcqAttempted = mcqAttempted,
+        mcqLastScore = mcqLastScore,
         isImportant = this.isImportant,
         isPrelims   = isPrelims,
         isMains     = isMains,

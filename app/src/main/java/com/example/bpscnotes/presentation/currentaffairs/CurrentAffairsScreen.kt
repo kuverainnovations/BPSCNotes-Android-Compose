@@ -112,6 +112,7 @@ fun CurrentAffairsScreen(
     val cs = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("current_affairs") }
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
+    val mcqMarkingConfig by viewModel.mcqMarkingConfig.collectAsState()
 
     // ── Silent background time tracker ────────────────────────
     TrackStudyTime(
@@ -291,6 +292,7 @@ fun CurrentAffairsScreen(
                                 CAArticleCard(
                                     article     = article,
                                     isBookmarked = bookmarkedIds.contains(article.id),
+                                    markingConfig = mcqMarkingConfig,
                                     onBookmark  = { viewModel.toggleBookmark(article.id) },
                                     onShare     = {
                                         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
@@ -362,7 +364,7 @@ private fun DateGroupHeader(date: String, count: Int) {
 // ARTICLE CARD — unchanged
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit,   onStartMcq: () -> Unit) {
+private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConfig: com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto = com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto(), onBookmark: () -> Unit, onShare: () -> Unit, onReadMore: () -> Unit,   onStartMcq: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
@@ -394,40 +396,78 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, onBookmark:
 
                 val hasMcqs = article.mcqCount > 0
 
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (hasMcqs)
-                                BpscColors.PrimaryLight
-                            else
-                                Color(0xFFF1F5F9)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (hasMcqs)
+                                    BpscColors.PrimaryLight
+                                else
+                                    Color(0xFFF1F5F9)
+                            )
+                            .clickable(enabled = hasMcqs) {
+                                onStartMcq()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            if (hasMcqs) "❓" else "🚫",
+                            fontSize = 11.sp
                         )
-                        .clickable(enabled = hasMcqs) {
-                            onStartMcq()
-                        }
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        if (hasMcqs) "❓" else "🚫",
-                        fontSize = 11.sp
-                    )
 
-                    Text(
-                        if (hasMcqs)
-                            "${article.mcqCount} MCQs from this topic"
-                        else
-                            "No MCQs available",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (hasMcqs)
-                            BpscColors.Primary
-                        else
-                            BpscColors.TextHint,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 10.sp
-                    )
+                        Text(
+                            if (hasMcqs)
+                                "${article.mcqCount} MCQs from this topic"
+                            else
+                                "No MCQs available",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (hasMcqs)
+                                BpscColors.Primary
+                            else
+                                BpscColors.TextHint,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 10.sp
+                        )
+                    }
+                    if (hasMcqs && markingConfig.negativeMarkingEnabled) {
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFEE8E8))
+                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text("⚠️", fontSize = 10.sp)
+                            Text(
+                                "-${com.example.bpscnotes.presentation.quiz.formatMarks(markingConfig.marksPerWrong)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFC0392B),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                    if (article.mcqAttempted && article.mcqLastScore != null) {
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                .background(BpscColors.Success.copy(0.1f))
+                                .padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text("⭐", fontSize = 10.sp)
+                            Text(
+                                "Last: ${com.example.bpscnotes.presentation.quiz.formatMarks(article.mcqLastScore)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Success,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

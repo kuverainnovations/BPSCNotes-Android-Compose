@@ -329,6 +329,8 @@ data class CurrentAffairDto(
     @SerializedName("bookmark_count")  val bookmarkCount: Int = 0,
     @SerializedName("is_bookmarked")   val isBookmarked: Boolean = false,
     @SerializedName("mcq_count")       val mcqCount: Int = 0,
+    @SerializedName("mcq_attempted")    val mcqAttempted: Boolean = false,
+    @SerializedName("mcq_last_score")  val mcqLastScore: Double? = null,
     @SerializedName("read_time")       val readTime: Int = 0,
     val chapters: List<Chapter> = emptyList(),
 )
@@ -478,6 +480,7 @@ data class SubjectsResponseData(
 data class UserStatsData(
     @SerializedName("weekly_activity")     val weeklyActivity: List<WeeklyActivityDto> = emptyList(),
     @SerializedName("total_study_minutes") val totalStudyMinutes: Int = 0,
+    @SerializedName("today_study_minutes") val todayStudyMinutes: Int = 0,
     @SerializedName("current_streak")      val currentStreak: Int = 0,
     @SerializedName("longest_streak")      val longestStreak: Int = 0,
     val accuracy: Double = 0.0,
@@ -668,6 +671,33 @@ data class CaMcqMarkingConfigData(
     val config: CaMcqMarkingConfigDto = CaMcqMarkingConfigDto()
 )
 
+// ── MCQ attempt submission (persistence) ────────────────────────
+data class CaMcqAnswerSubmitDto(
+    val questionId: String,
+    val answer: String,
+)
+
+data class CaMcqSubmitRequest(
+    val answers: List<CaMcqAnswerSubmitDto>,
+)
+
+data class CaMcqSubmitResultData(
+    val attemptId: String = "",
+    val attemptedAt: String = "",
+    val total: Int = 0,
+    val correct: Int = 0,
+    val wrong: Int = 0,
+    val notAttempted: Int = 0,
+    val blank: Int = 0,
+    val negativeMarkingEnabled: Boolean = false,
+    val marksPerCorrect: Double = 1.0,
+    val marksPerWrong: Double = 0.0,
+    val marksObtained: Double = 0.0,
+    val negativeMarks: Double = 0.0,
+    val finalScore: Double = 0.0,
+    val totalMarks: Double = 0.0,
+)
+
 interface CurrentAffairsApiService {
     @GET("current-affairs")
     suspend fun getAffairs(
@@ -687,6 +717,10 @@ interface CurrentAffairsApiService {
 
     @GET("current-affairs/{id}/mcqs")
     suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
+
+    /** POST /current-affairs/{id}/mcqs/submit — persists a completed attempt; server re-scores from the submitted answers */
+    @POST("current-affairs/{id}/mcqs/submit")
+    suspend fun submitMcqAttempt(@Path("id") id: String, @Body body: CaMcqSubmitRequest): ApiResponse<CaMcqSubmitResultData>
 
     /** GET /current-affairs/mcq-config — global negative marking settings for CA/Practice MCQs */
     @GET("current-affairs/mcq-config")

@@ -717,6 +717,7 @@ private fun DashboardHeader(
     val streak       = stats?.currentStreak ?: user?.streak ?: 0
     val rank         = user?.rank
     val studyMinutes = stats?.totalStudyMinutes ?: user?.totalStudyMinutes ?: 0
+    val todayStudyMinutes = stats?.todayStudyMinutes ?: 0
     val accuracy     = stats?.accuracy ?: user?.accuracy ?: 0.0
     val str = LocalStrings.current
 
@@ -900,7 +901,13 @@ private fun DashboardHeader(
 
             // ── Stats strip — ALL values from API ─────────────────────────
             val rankText  = if (rank != null) "#$rank" else "--"
-            val hoursText = if (studyMinutes > 0) "${studyMinutes / 60}h" else "--"
+            // Today's study time — resets daily (backend computes live from
+            // study_sessions for CURRENT_DATE, not the cumulative lifetime total).
+            val hoursText = when {
+                todayStudyMinutes <= 0 -> "--"
+                todayStudyMinutes < 60 -> "${todayStudyMinutes}m"
+                else -> "${todayStudyMinutes / 60}h ${todayStudyMinutes % 60}m"
+            }
             val accuracyValue = stats?.accuracy
                 ?: user?.accuracy?.toDoubleOrNull()
                 ?: 0.0
@@ -933,7 +940,7 @@ private fun DashboardHeader(
                 HeaderStatDivider()
                 HeaderStat("🏆", rankText,  "Rank")
                 HeaderStatDivider()
-                HeaderStat("⏱️", hoursText,  str.profileStudy)
+                HeaderStat("⏱️", hoursText,  "Today")
                 HeaderStatDivider()
                 HeaderStat("✅", accText,   str.dashboardAccuracy)
             }

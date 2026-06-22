@@ -40,6 +40,7 @@ import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.AppQuitDialog
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.core.analytics.Event
 import com.example.bpscnotes.data.remote.api.CaMcqDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
@@ -49,6 +50,80 @@ data class CaMcqAnswerDto(
     val correct: String = "",
     val explanation: String? = null
 )
+
+/**
+ * Per-question scoring outcome — implements the exact BPSC negative
+ * marking rule as specified by the client, not the generic "skip = 0"
+ * convention used elsewhere in the app:
+ *
+ *   Correct                       → +marksPerCorrect
+ *   Wrong (attempted, incorrect)  → −marksPerWrong  (0 if negative marking is off)
+ *   Option E — Not Attempted      → 0  (always, regardless of negative marking)
+ *   Left completely blank         → −marksPerWrong  (SAME penalty as wrong —
+ *                                    this is the one place BPSC rules diverge
+ *                                    from "skip costs nothing")
+ *
+ * "Option E" here means the standardized not-attempting choice shown in
+ * place of a blank option_e slot (see QuizScreen) — not a genuine custom
+ * 5th answer an admin typed in, which scores like any other option.
+ */
+data class CaMcqQuestionResult(
+    val mcq: CaMcqDto,
+    val userAnswer: String?,
+    val correctLetter: String,
+    val isCorrect: Boolean,
+    val isNotAttempting: Boolean,
+    val isBlank: Boolean,
+    val marks: Double,
+)
+
+data class CaMcqMarksSummary(
+    val results: List<CaMcqQuestionResult>,
+    val correct: Int,
+    val wrong: Int,
+    val notAttempted: Int,
+    val blank: Int,
+    val negativeMarkingEnabled: Boolean,
+    val marksObtained: Double,
+    val negativeMarks: Double,
+    val finalScore: Double,
+    val totalMarks: Double,
+)
+
+fun computeCaMcqResults(
+    mcqs: List<CaMcqDto>,
+    answers: Map<String, String>,
+    serverAnswers: Map<String, CaMcqAnswerDto>,
+    markingConfig: com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto,
+): CaMcqMarksSummary {
+    val negEnabled = markingConfig.negativeMarkingEnabled
+    val results = mcqs.map { q ->
+        val userAnswer = answers[q.id]
+        val correctLetter = serverAnswers[q.id]?.correct?.takeIf { it.isNotBlank() } ?: q.correct
+        // Tapped the standardized "Option E — Not Attempting" slot, which
+        // only exists when the admin left option_e blank (see QuizScreen).
+        val isNotAttempting = userAnswer == "e" && q.optionE.isBlank()
+        val isBlank   = userAnswer == null
+        val isCorrect = !isBlank && !isNotAttempting && userAnswer == correctLetter
+        val marks = when {
+            isNotAttempting -> 0.0
+            isCorrect        -> markingConfig.marksPerCorrect
+            // Both "attempted but wrong" and "left fully blank" lose marks
+            // identically once negative marking is on — per BPSC rule.
+            else              -> if (negEnabled) -markingConfig.marksPerWrong else 0.0
+        }
+        CaMcqQuestionResult(q, userAnswer, correctLetter, isCorrect, isNotAttempting, isBlank, marks)
+    }
+    val correct      = results.count { it.isCorrect }
+    val notAttempted = results.count { it.isNotAttempting }
+    val blank         = results.count { it.isBlank && !it.isNotAttempting }
+    val wrong          = results.size - correct - notAttempted - blank
+    val marksObtained = correct * markingConfig.marksPerCorrect
+    val negativeMarks = results.sumOf { if (it.marks < 0) -it.marks else 0.0 }
+    val finalScore      = results.sumOf { it.marks }
+    val totalMarks       = mcqs.size * markingConfig.marksPerCorrect
+    return CaMcqMarksSummary(results, correct, wrong, notAttempted, blank, negEnabled, marksObtained, negativeMarks, finalScore, totalMarks)
+}
 
 // Inline study time tracker — starts timing when screen opens, logs on leave
 @androidx.compose.runtime.Composable
@@ -122,6 +197,26 @@ fun CaMcqQuizScreen(
             navController.popBackStackSafe()
     }
 
+    // Computed once here and shared by ResultScreen + ReviewScreen — previously
+    // each screen called computeCaMcqResults() independently from the same
+    // inputs, which is harmless today (pure function) but is the wrong shape
+    // if this summary is ever persisted, and is simply redundant work.
+    val summary = remember(mcqs, answers, mcqAnswers, mcqMarkingConfig) {
+        computeCaMcqResults(mcqs, answers, mcqAnswers, mcqMarkingConfig)
+    }
+
+    // Fire start/completion analytics — both were defined in Analytics.kt's
+    // Event object but never actually called anywhere in the app.
+    LaunchedEffect(mcqs) {
+        if (mcqs.isNotEmpty()) Event.caMcqStarted(affairId, mcqs.size)
+    }
+    LaunchedEffect(showResult) {
+        if (showResult) {
+            Event.caMcqCompleted(affairId, summary.correct, summary.results.size)
+            viewModel.submitMcqAttempt(affairId, answers)
+        }
+    }
+
     // Error dialog for load failure
     if (mcqError != null) {
         AppErrorDialog(
@@ -146,17 +241,13 @@ fun CaMcqQuizScreen(
             )
 
             showReview -> ReviewScreen(
-                mcqs      = mcqs,
-                answers   = answers,
+                summary       = summary,
                 serverAnswers = mcqAnswers,
-                onBack    = { showReview = false }
+                onBack        = { showReview = false }
             )
 
             showResult -> ResultScreen(
-                mcqs          = mcqs,
-                answers       = answers,
-                serverAnswers = mcqAnswers,
-                markingConfig = mcqMarkingConfig,
+                summary       = summary,
                 onRetry       = {
                     answers = emptyMap()
                     currentIndex = 0
@@ -175,6 +266,7 @@ fun CaMcqQuizScreen(
                 currentIndex  = currentIndex,
                 answers       = answers,
                 serverAnswers = mcqAnswers,
+                markingConfig = mcqMarkingConfig,
                 adManager     = adManager,
                 questionSecsLeft = questionSecsLeft,
                 onAnswer      = { qId, letter ->
@@ -197,6 +289,7 @@ private fun QuizScreen(
     currentIndex:     Int,
     answers:          Map<String, String>,
     serverAnswers:    Map<String, CaMcqAnswerDto>,
+    markingConfig:    com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto,
     adManager:        AdManager?,
     questionSecsLeft: Int = 30,
     onAnswer:         (String, String) -> Unit,
@@ -315,17 +408,32 @@ private fun QuizScreen(
                 )
             }
 
-            // Options — correct/wrong only revealed after server answer returns
-            val optionPairs = listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC,
-                "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }
+            // Options — correct/wrong only revealed after server answer returns.
+            // Option E: if the admin left it blank AND negative marking is on,
+            // show the standardized BPSC "Not Attempting" choice instead of
+            // hiding the slot — this is how a user avoids the new
+            // leave-it-blank penalty (see computeCaMcqResults).
+            val showNotAttempting = q.optionE.isBlank() && markingConfig.negativeMarkingEnabled
+            val optionPairs = (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC,
+                "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }) +
+                (if (showNotAttempting) listOf("e" to "Not Attempting This Question") else emptyList())
 
             optionPairs.forEach { (letter, text) ->
+                val isNotAttemptOption = letter == "e" && showNotAttempting
                 val isSelected = answered == letter
                 val correctLetter = serverAns?.correct
-                val isCorrect  = correctLetter != null && letter == correctLetter
-                val isWrong    = isSelected && correctLetter != null && letter != correctLetter
-                val bgColor    = when { isCorrect -> Color(0xFFE8FDF4); isWrong -> Color(0xFFFEE8E8); isSelected -> BpscColors.PrimaryLight; else -> Color.White }
-                val borderColor = when { isCorrect -> Color(0xFF2ECC71); isWrong -> Color(0xFFE74C3C); isSelected -> BpscColors.Primary; else -> BpscColors.Divider }
+                val isCorrect  = !isNotAttemptOption && correctLetter != null && letter == correctLetter
+                val isWrong    = !isNotAttemptOption && isSelected && correctLetter != null && letter != correctLetter
+                val bgColor    = when {
+                    isNotAttemptOption && isSelected -> Color(0xFFFFF3E0)
+                    isCorrect -> Color(0xFFE8FDF4); isWrong -> Color(0xFFFEE8E8); isSelected -> BpscColors.PrimaryLight
+                    else -> Color.White
+                }
+                val borderColor = when {
+                    isNotAttemptOption && isSelected -> Color(0xFFF57F17)
+                    isCorrect -> Color(0xFF2ECC71); isWrong -> Color(0xFFE74C3C); isSelected -> BpscColors.Primary
+                    else -> BpscColors.Divider
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth()
@@ -339,20 +447,57 @@ private fun QuizScreen(
                 ) {
                     Box(
                         modifier = Modifier.size(30.dp).clip(CircleShape).background(
-                            when { isCorrect -> Color(0xFF2ECC71); isWrong -> Color(0xFFE74C3C); isSelected -> BpscColors.Primary; else -> BpscColors.Surface }
+                            when {
+                                isNotAttemptOption && isSelected -> Color(0xFFF57F17)
+                                isCorrect -> Color(0xFF2ECC71); isWrong -> Color(0xFFE74C3C); isSelected -> BpscColors.Primary
+                                else -> BpscColors.Surface
+                            }
                         ), contentAlignment = Alignment.Center
                     ) {
-                        Text(letter.uppercase(),
+                        Text(if (isNotAttemptOption) "⊘" else letter.uppercase(),
                             style = MaterialTheme.typography.labelMedium,
                             color = if (isSelected || isCorrect || isWrong) Color.White else BpscColors.TextHint,
                             fontWeight = FontWeight.ExtraBold)
                     }
-                    Text(text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when { isCorrect -> Color(0xFF1A7A4A); isWrong -> Color(0xFFB71C1C); isSelected -> BpscColors.Primary; else -> BpscColors.TextPrimary },
-                        modifier = Modifier.weight(1f))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = when {
+                                isNotAttemptOption && isSelected -> Color(0xFFE65100)
+                                isCorrect -> Color(0xFF1A7A4A); isWrong -> Color(0xFFB71C1C); isSelected -> BpscColors.Primary
+                                else -> BpscColors.TextPrimary
+                            })
+                        if (isNotAttemptOption) {
+                            Text("0 marks — no penalty",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE65100).copy(alpha = 0.8f))
+                        }
+                    }
                     if (isCorrect) Icon(Icons.Rounded.Check, null, tint = Color(0xFF2ECC71), modifier = Modifier.size(18.dp))
                     if (isWrong) Icon(Icons.Rounded.Close, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(18.dp))
+                }
+            }
+
+            // Warn the user up front that a truly-blank question (timeout
+            // without choosing anything, including "Not Attempting") will
+            // be penalized like a wrong answer — per BPSC rules this is
+            // NOT the same as a free skip.
+            if (markingConfig.negativeMarkingEnabled && answered == null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFEE8E8)).padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("⚠️", fontSize = 13.sp)
+                    Text(
+                        if (showNotAttempting)
+                            "Letting time run out without choosing an option counts as wrong (-${com.example.bpscnotes.presentation.quiz.formatMarks(markingConfig.marksPerWrong)}). Tap \"Not Attempting\" instead if you don't know this one."
+                        else
+                            "Letting time run out without answering counts as wrong (-${com.example.bpscnotes.presentation.quiz.formatMarks(markingConfig.marksPerWrong)}).",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFC0392B),
+                        lineHeight = 16.sp
+                    )
                 }
             }
 
@@ -405,32 +550,27 @@ private fun QuizScreen(
 
 @Composable
 private fun ResultScreen(
-    mcqs:          List<CaMcqDto>,
-    answers:       Map<String, String>,
-    serverAnswers: Map<String, CaMcqAnswerDto>,
-    markingConfig: com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto = com.example.bpscnotes.data.remote.api.CaMcqMarkingConfigDto(),
-    onRetry:       () -> Unit,
-    onReview:      () -> Unit,
-    onBack:        () -> Unit,
-    adManager:     AdManager?,
-    activity:      Activity?,
+    summary:   CaMcqMarksSummary,
+    onRetry:   () -> Unit,
+    onReview:  () -> Unit,
+    onBack:    () -> Unit,
+    adManager: AdManager?,
+    activity:  Activity?,
 ) {
     val str     = LocalStrings.current
     val cs      = MaterialTheme.colorScheme
-    val correct = mcqs.count { q ->
-        val userAnswer = answers[q.id]
-        userAnswer != null && serverAnswers[q.id]?.correct == userAnswer
-    }
-    val skipped = mcqs.count { q -> answers[q.id] == null }
-    val wrong   = mcqs.size - correct - skipped
-    val pct     = if (mcqs.isNotEmpty()) (correct * 100) / mcqs.size else 0
+    val correct = summary.correct
+    val wrong = summary.wrong
+    val notAttempted = summary.notAttempted
+    val blank = summary.blank
+    val pct     = if (summary.results.isNotEmpty()) (correct * 100) / summary.results.size else 0
     val animPct by animateFloatAsState(pct / 100f, tween(1200), label = "pct")
 
-    val negativeMarkingEnabled = markingConfig.negativeMarkingEnabled
-    val marksObtained = correct * markingConfig.marksPerCorrect
-    val negativeMarks = wrong * markingConfig.marksPerWrong
-    val finalScore     = marksObtained - negativeMarks
-    val totalMarks      = mcqs.size * markingConfig.marksPerCorrect
+    val negativeMarkingEnabled = summary.negativeMarkingEnabled
+    val marksObtained = summary.marksObtained
+    val negativeMarks = summary.negativeMarks
+    val finalScore     = summary.finalScore
+    val totalMarks      = summary.totalMarks
 
     BackHandler { onBack() }
 
@@ -473,11 +613,24 @@ private fun ResultScreen(
         // Stats card
         Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
             shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                ResultStat("✅", "$correct", str.quizCorrect, Color(0xFF2ECC71))
-                ResultStat("❌", "$wrong",   str.quizWrong,   Color(0xFFE74C3C))
-                ResultStat("⏭️", "$skipped", "Skipped",       BpscColors.TextSecondary)
-                ResultStat("📝", "${mcqs.size}", "Total",      BpscColors.Primary)
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    ResultStat("✅", "$correct", str.quizCorrect, Color(0xFF2ECC71))
+                    ResultStat("❌", "$wrong",   str.quizWrong,   Color(0xFFE74C3C))
+                    ResultStat("📝", "${summary.results.size}", "Total",      BpscColors.Primary)
+                }
+                if (negativeMarkingEnabled && (notAttempted > 0 || blank > 0)) {
+                    HorizontalDivider(color = cs.outline)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ResultStat("⊘", "$notAttempted", "Not Attempted (0)", Color(0xFFF57F17))
+                        ResultStat("⏰", "$blank", "Left Blank (−)", Color(0xFFE74C3C))
+                    }
+                } else if (!negativeMarkingEnabled) {
+                    HorizontalDivider(color = cs.outline)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        ResultStat("⏭️", "$blank", "Skipped", BpscColors.TextSecondary)
+                    }
+                }
             }
         }
 
@@ -530,8 +683,7 @@ private fun ResultScreen(
 
 @Composable
 private fun ReviewScreen(
-    mcqs:          List<CaMcqDto>,
-    answers:       Map<String, String>,
+    summary:       CaMcqMarksSummary,
     serverAnswers: Map<String, CaMcqAnswerDto>,
     onBack:        () -> Unit,
 ) {
@@ -549,24 +701,23 @@ private fun ReviewScreen(
                 }
                 Column {
                     Text("Answer Review", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("${mcqs.size} questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                    Text("${summary.results.size} questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }
         }
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(mcqs) { index, q ->
-                val userAnswer   = answers[q.id]
-                val serverAns    = serverAnswers[q.id]
-                val correctLetter = serverAns?.correct
-                val isCorrect    = correctLetter != null && userAnswer == correctLetter
-                val isSkipped    = userAnswer == null
+            itemsIndexed(summary.results) { index, r ->
+                val q = r.mcq
+                val userAnswer = r.userAnswer
+                val correctLetter = r.correctLetter
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape    = RoundedCornerShape(16.dp),
                     colors   = CardDefaults.cardColors(containerColor = when {
-                        isSkipped -> Color.White
-                        isCorrect -> Color(0xFFF0FBF5)
-                        else      -> Color(0xFFFEF0F0)
+                        r.isNotAttempting -> Color(0xFFFFF8EC)
+                        r.isBlank          -> Color.White
+                        r.isCorrect       -> Color(0xFFF0FBF5)
+                        else               -> Color(0xFFFEF0F0)
                     }),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
@@ -575,19 +726,49 @@ private fun ReviewScreen(
                             Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
                                 Text("${index + 1}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                             }
-                            Text(
-                                when { isSkipped -> "⏭ Skipped"; isCorrect -> "✅ Correct"; else -> "❌ Wrong" },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = when { isSkipped -> BpscColors.TextSecondary; isCorrect -> Color(0xFF2ECC71); else -> Color(0xFFE74C3C) },
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    when {
+                                        r.isNotAttempting -> "⊘ Not Attempted"
+                                        r.isBlank          -> "⏰ Left Blank"
+                                        r.isCorrect       -> "✅ Correct"
+                                        else               -> "❌ Wrong"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = when {
+                                        r.isNotAttempting -> Color(0xFFF57F17)
+                                        r.isBlank          -> Color(0xFFE74C3C)
+                                        r.isCorrect       -> Color(0xFF2ECC71)
+                                        else               -> Color(0xFFE74C3C)
+                                    },
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (summary.negativeMarkingEnabled) {
+                                    Text(
+                                        if (r.marks > 0) "+${com.example.bpscnotes.presentation.quiz.formatMarks(r.marks)}"
+                                        else if (r.marks < 0) com.example.bpscnotes.presentation.quiz.formatMarks(r.marks)
+                                        else "0",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = when {
+                                            r.marks > 0  -> Color(0xFF2ECC71)
+                                            r.marks < 0  -> Color(0xFFE74C3C)
+                                            else          -> BpscColors.TextSecondary
+                                        },
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
                         }
                         Text(q.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
-                        // Show options with correct/wrong highlighting
-                        listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
-                            .filter { it.second.isNotBlank() }
+                        // Show options with correct/wrong highlighting — the
+                        // correct answer is always shown in green, regardless
+                        // of what the user picked, so mistakes are learnable.
+                        val showNotAttemptOpt = q.optionE.isBlank() && summary.negativeMarkingEnabled
+                        (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
+                            .filter { it.second.isNotBlank() } +
+                            (if (showNotAttemptOpt) listOf("e" to "Not Attempting This Question") else emptyList()))
                             .forEach { (letter, text) ->
-                                val isCrct = correctLetter != null && isCorrect && letter == correctLetter
+                                val isCrct = letter == correctLetter
                                 val isUser = letter == userAnswer
                                 val bg = when { isCrct -> Color(0xFFE8FDF4); isUser && !isCrct -> Color(0xFFFEE8E8); else -> Color.Transparent }
                                 val tc = when { isCrct -> Color(0xFF2ECC71); isUser && !isCrct -> Color(0xFFE74C3C); else -> BpscColors.TextSecondary }
@@ -596,13 +777,22 @@ private fun ReviewScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(letter.uppercase(), style = MaterialTheme.typography.labelSmall, color = tc, fontWeight = FontWeight.ExtraBold)
+                                    Text(if (letter == "e" && showNotAttemptOpt) "⊘" else letter.uppercase(), style = MaterialTheme.typography.labelSmall, color = tc, fontWeight = FontWeight.ExtraBold)
                                     Text(text, style = MaterialTheme.typography.bodyMedium, color = tc, modifier = Modifier.weight(1f))
                                     if (isCrct) Icon(Icons.Rounded.Check, null, tint = Color(0xFF2ECC71), modifier = Modifier.size(14.dp))
                                     if (isUser && !isCrct) Icon(Icons.Rounded.Close, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(14.dp))
                                 }
                             }
-                        val explanation = serverAns?.explanation ?: q.explanation
+                        if (r.isBlank) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("ℹ️", fontSize = 13.sp)
+                                Text(
+                                    "Timed out without an answer — counted as wrong, same as an incorrect attempt.",
+                                    style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary, lineHeight = 18.sp
+                                )
+                            }
+                        }
+                        val explanation = serverAnswers[q.id]?.explanation ?: q.explanation
                         if (!explanation.isNullOrBlank()) {
                             HorizontalDivider(color = cs.outline)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

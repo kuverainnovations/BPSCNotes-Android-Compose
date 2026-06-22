@@ -247,7 +247,7 @@ fun RoomsHubScreen(
                             .fillMaxWidth()
                             //  .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                             .background(cs.background)
-                            .padding(top = 8.dp)
+                          //  .padding(top = 8.dp)
                     ) {
 
                         // Moved out of the hero (redesign section 1): personal
@@ -256,11 +256,10 @@ fun RoomsHubScreen(
                         // compact gradient header. (Activity Feed removed.)
                         if (state.myTierData?.currentTier != null) {
                             MyRoomProgressCard(state)
-                            Spacer(Modifier.height(12.dp))
-                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
-                            Spacer(Modifier.height(12.dp))
-                            RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
-                            Spacer(Modifier.height(12.dp))
+//                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
+//                            Spacer(Modifier.height(12.dp))
+                           // RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
+                            //Spacer(Modifier.height(12.dp))
                         }
 
                         // Promotion ready banner
@@ -279,6 +278,14 @@ fun RoomsHubScreen(
                                 ProgressBreakdownCard(tierData = tierData)
                             }
                         }
+                        // ── Above Room list banner ad ──────────────────────────────
+                        if (adManager != null) {
+                            com.example.bpscnotes.core.ads.BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        } else {
+                            Spacer(Modifier.height(80.dp))
+                        }
 
                         // Section title
                         Text(
@@ -296,14 +303,7 @@ fun RoomsHubScreen(
                         )
 
 
-                        // ── Above Room list banner ad ──────────────────────────────
-                        if (adManager != null) {
-                            com.example.bpscnotes.core.ads.BannerAdView(
-                                adUnitId = adManager.getBannerAdUnitId()
-                            )
-                        } else {
-                            Spacer(Modifier.height(80.dp))
-                        }
+
 
                         // ── ROOMS LIST ────────────────────────────
                         if (state.isLoadingTiers) {
@@ -382,6 +382,16 @@ fun RoomsHubScreen(
                             }
                         }
 
+                        // Moved out of the hero (redesign section 1): personal
+                        // progress/stats, Room Champions, Room Insights —
+                        // normal scrollable cards now, not pinned inside the
+                        // compact gradient header. (Activity Feed removed.)
+                        if (state.myTierData?.currentTier != null) {
+                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
+//                            Spacer(Modifier.height(12.dp))
+                            // RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
+                            //Spacer(Modifier.height(12.dp))
+                        }
                         Spacer(Modifier.height(8.dp))
 
                         // Quick links — Leaderboard moved to top-right room

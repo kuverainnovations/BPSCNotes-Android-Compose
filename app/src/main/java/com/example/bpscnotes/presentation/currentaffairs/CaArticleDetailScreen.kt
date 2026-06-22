@@ -239,6 +239,7 @@ fun CaArticleDetailScreen(
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsState()
     val mcqs by viewModel.mcqs.collectAsState()
     val mcqLoading by viewModel.mcqLoading.collectAsState()
+    val mcqMarkingConfig by viewModel.mcqMarkingConfig.collectAsState()
     val isDownloadingPdf by viewModel.isDownloadingPdf.collectAsState()
     val pdfError by viewModel.pdfError.collectAsState()
 
@@ -385,6 +386,30 @@ fun CaArticleDetailScreen(
                                     },
                                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f)
                                 )
+                                if (mcqs.isNotEmpty() && mcqMarkingConfig.negativeMarkingEnabled) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("⚠️", fontSize = 10.sp)
+                                        Text(
+                                            "+${com.example.bpscnotes.presentation.quiz.formatMarks(mcqMarkingConfig.marksPerCorrect)} correct · -${com.example.bpscnotes.presentation.quiz.formatMarks(mcqMarkingConfig.marksPerWrong)} wrong",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFFFFCDD2),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                if (article.mcqAttempted && article.mcqLastScore != null) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("⭐", fontSize = 10.sp)
+                                        Text(
+                                            "Last score: ${com.example.bpscnotes.presentation.quiz.formatMarks(article.mcqLastScore)} marks",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFFC8FACC),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
                             }
                             if (mcqLoading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)

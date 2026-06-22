@@ -64,6 +64,7 @@ class CurrentAffairsViewModel @Inject constructor(
 
     init {
         loadArticles()
+        loadMcqMarkingConfig()
 
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
@@ -248,6 +249,28 @@ class CurrentAffairsViewModel @Inject constructor(
     }
 
     fun clearMcqError() { _mcqError.value = null }
+
+    /**
+     * Persists a completed CA MCQ attempt so the article list/detail can
+     * show "attempted" + last score. Fire-and-forget by design — the
+     * result/review screens already show the locally-computed summary
+     * immediately, so this call shouldn't block or visibly fail the UI if
+     * the network is briefly unavailable.
+     */
+    fun submitMcqAttempt(affairId: String, answers: Map<String, String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val payload = com.example.bpscnotes.data.remote.api.CaMcqSubmitRequest(
+                    answers = answers.map { (qId, ans) ->
+                        com.example.bpscnotes.data.remote.api.CaMcqAnswerSubmitDto(questionId = qId, answer = ans)
+                    }
+                )
+                api.submitMcqAttempt(affairId, payload)
+            } catch (e: Exception) {
+                Log.w("CurrentAffairsVM", "submitMcqAttempt failed (non-fatal): ${e.message}")
+            }
+        }
+    }
 
     /** Called by TrackStudyTime — logs time silently in background */
     fun logStudyTime(activityType: String, durationSecs: Int) {

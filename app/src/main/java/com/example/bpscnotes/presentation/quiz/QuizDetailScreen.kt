@@ -81,14 +81,14 @@ private fun QuizIntroContent(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val state by viewModel.uiState.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(cs.background)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // ── Hero header ─────────────────────────────────────────
+        // Pinned header + pinned Start button, scrollable middle — the
+        // hero no longer scrolls away and the Start button is always
+        // visible without hunting for it at the bottom of a long page.
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // ── Hero header (pinned) ─────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,13 +103,33 @@ private fun QuizIntroContent(
                     drawCircle(Color.White.copy(0.04f), 90.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.8f))
                 }
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                    Box(
-                        modifier = Modifier.size(36.dp).clip(CircleShape)
-                            .background(Color.White.copy(0.15f))
-                            .clickable { navController.popBackStackSafe() },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        Box(
+                            modifier = Modifier.size(36.dp).clip(CircleShape)
+                                .background(Color.White.copy(0.15f))
+                                .clickable { navController.popBackStackSafe() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        // Coin reward pill — matches the Mock Test detail
+                        // screen's top-right placement for consistency.
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                                .background(Color(0xFFF57F17).copy(0.25f))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("🪙", fontSize = 14.sp)
+                            Text("+${quiz.coinsReward} ${str.coins}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -139,104 +159,93 @@ private fun QuizIntroContent(
                         color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 30.sp)
                     Spacer(Modifier.height(6.dp))
                     Text(quiz.subject, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White.copy(0.12f))
-                            .padding(vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatChipWhite("📝", "${quiz.totalQuestions}", str.quizQuestions)
-                        VerticalDividerWhite()
-                        StatChipWhite("⏱️", "${quiz.durationMins}m", str.quizDuration)
-                        VerticalDividerWhite()
-                        StatChipWhite("🪙", "${quiz.coinsReward}", str.coins)
-                    }
                 }
             }
 
-            // ── Body ────────────────────────────────────────────────
+            // ── Body (scrollable) ─────────────────────────────────────
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-
-                    if (quiz.attemptCount > 0) {
-                        Row(
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.PrimaryLight)
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(Icons.Rounded.People, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
-                            Text("${quiz.attemptCount} attempts",
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                if (quiz.attemptCount > 0 || quiz.isAttempted) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (quiz.attemptCount > 0) {
+                            Row(
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                    .background(BpscColors.PrimaryLight)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(Icons.Rounded.People, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
+                                Text("${quiz.attemptCount} attempts",
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                            }
                         }
-                    }
-                    if (quiz.isAttempted) {
-                        val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
-                        Row(
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(BpscColors.Success.copy(0.1f))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Star,
-                                null,
-                                tint = BpscColors.Success,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                "Last score: $lastScore%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = BpscColors.Success,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        if (quiz.isAttempted) {
+                            val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()
+                            Row(
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                    .background(BpscColors.Success.copy(0.1f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Star,
+                                    null,
+                                    tint = BpscColors.Success,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    "Last score: $lastScore%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Success,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
 
+                // ── Test Overview — compact 2x2 grid, replaces the old
+                // verbose bulleted "Quiz Rules" list with the same cleaner
+                // pattern already used on the Mock Test detail screen.
                 Card(
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(str.quizRules, style = MaterialTheme.typography.titleLarge,
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(str.quizTestOverview, style = MaterialTheme.typography.titleLarge,
                             color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        HorizontalDivider(color = cs.outline)
-                        buildList {
-                            add("📝  ${quiz.totalQuestions} questions to answer")
-                            add("⏱️  ${quiz.durationMins} minutes total time limit")
-                            add("🪙  Earn ${quiz.coinsReward} coins on completing the quiz")
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            QuizInfoTile("📝", str.quizQuestions, "${quiz.totalQuestions}", Modifier.weight(1f))
+                            QuizInfoTile("⏱️", str.quizDuration, "${quiz.durationMins} min", Modifier.weight(1f))
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            QuizInfoTile("✅", "Marks/Q", "+${formatMarks(quiz.marksPerCorrect)}", Modifier.weight(1f))
                             if (quiz.negativeMarkingEnabled) {
-                                add("✅  Each correct answer carries +${formatMarks(quiz.marksPerCorrect)} marks")
-                                add("❌  Each incorrect answer carries -${formatMarks(quiz.marksPerWrong)} marks")
-                                add("⚪  No marks will be deducted for unanswered questions")
+                                QuizInfoTile("❌", "Negative", "-${formatMarks(quiz.marksPerWrong)}", Modifier.weight(1f))
+                            } else {
+                                QuizInfoTile("➖", "Negative", "None", Modifier.weight(1f))
                             }
-                            add("⏭️  " + str.quizSkip.trimEnd())
-                            add("📊  " + str.topicQuizReview)
-                            add("✅  " + str.quizSubmit)
-                        }.forEach { rule ->
-                            Text(rule, style = MaterialTheme.typography.bodyMedium,
-                                color = cs.onSurfaceVariant, lineHeight = 20.sp)
                         }
                     }
                 }
 
-                // ── Marking Scheme — shown clearly before the user starts ──
+                // ── Marking Scheme — full breakdown so the rules are
+                // unambiguous before the user commits to starting.
                 Card(
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = cs.surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Test Details", style = MaterialTheme.typography.titleLarge,
+                        Text("Marking Scheme", style = MaterialTheme.typography.titleLarge,
                             color = cs.onSurface, fontWeight = FontWeight.Bold)
                         HorizontalDivider(color = cs.outline)
                         MarkingSchemeRow("Total Questions", "${quiz.totalQuestions}")
@@ -275,17 +284,38 @@ private fun QuizIntroContent(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                // ── Quick rules — short, scannable, not a wall of text ──
+                Card(
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(str.quizRules, style = MaterialTheme.typography.titleLarge,
+                            color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        HorizontalDivider(color = cs.outline)
+                        listOf(
+                            "⏭️  " + str.quizSkip.trimEnd(),
+                            "📊  " + str.topicQuizReview,
+                            "✅  " + str.quizSubmit,
+                        ).forEach { rule ->
+                            Text(rule, style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant, lineHeight = 20.sp)
+                        }
+                    }
+                }
+            }
 
-                // Check if quiz is scheduled for a future date
-                val isFutureScheduled = quiz.scheduledFor?.let { scheduled ->
-                    try {
-                        val scheduledDate = scheduled.substring(0, 10) // "YYYY-MM-DD"
-                        val today = java.time.LocalDate.now().toString()
-                        scheduledDate > today
-                    } catch (e: Exception) { false }
-                } ?: false
+            // ── Start button (pinned) ──────────────────────────────────
+            val isFutureScheduled = quiz.scheduledFor?.let { scheduled ->
+                try {
+                    val scheduledDate = scheduled.substring(0, 10) // "YYYY-MM-DD"
+                    val today = java.time.LocalDate.now().toString()
+                    scheduledDate > today
+                } catch (e: Exception) { false }
+            } ?: false
 
+            Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(20.dp)) {
                 if (isFutureScheduled) {
                     Button(
                         onClick  = {},
@@ -330,17 +360,20 @@ private fun QuizIntroContent(
 }
 
 @Composable
-private fun StatChipWhite(icon: String, value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text(icon, fontSize = 15.sp)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f), fontSize = 9.sp)
+private fun QuizInfoTile(icon: String, label: String, value: String, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(cs.background).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(icon, fontSize = 18.sp)
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontSize = 10.sp)
+            Text(value, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        }
     }
-}
-
-@Composable
-private fun VerticalDividerWhite() {
-    Box(Modifier.width(1.dp).height(32.dp).background(Color.White.copy(0.2f)))
 }
 
 @Composable
@@ -357,6 +390,6 @@ internal fun MarkingSchemeRow(label: String, value: String, valueColor: Color? =
 }
 
 /** Formats a marks value without a trailing ".0" for whole numbers (2.0 → "2", 0.66 stays "0.66"). */
-internal fun formatMarks(value: Double): String =
-    if (value == value.toLong().toDouble()) value.toLong().toString()
-    else value.toString().trimEnd('0').trimEnd('.')
+internal fun formatMarks(value: Double): String {
+    return String.format("%.3f", value)
+}
