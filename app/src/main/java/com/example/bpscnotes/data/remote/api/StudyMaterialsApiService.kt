@@ -165,29 +165,29 @@ data class UploadResultData(
 data class MaterialDetailData(
     val id: String, val title: String, val description: String?,
     val subject: String,
-    @SerializedName("materialType")  val materialType: String,
+    @SerializedName("material_type")  val materialType: String,
     val author: String?,
     val tags: List<String> = emptyList(),
-    @SerializedName("fileSizeBytes") val fileSizeBytes: Long = 0,
-    @SerializedName("pageCount")     val pageCount: Int = 0,
-    @SerializedName("isPremium")     val isPremium: Boolean = false,
-    @SerializedName("isFeatured")    val isFeatured: Boolean = false,
-    @SerializedName("isTrending")    val isTrending: Boolean = false,
-    @SerializedName("isNew")         val isNew: Boolean = false,
-    @SerializedName("downloadCount") val downloadCount: Int = 0,
+    @SerializedName("file_size_bytes") val fileSizeBytes: Long = 0,
+    @SerializedName("page_count")      val pageCount: Int = 0,
+    @SerializedName("is_premium")      val isPremium: Boolean = false,
+    @SerializedName("is_featured")     val isFeatured: Boolean = false,
+    @SerializedName("is_trending")     val isTrending: Boolean = false,
+    @SerializedName("is_new")          val isNew: Boolean = false,
+    @SerializedName("download_count")  val downloadCount: Int = 0,
     val rating: Float = 0f,
-    @SerializedName("uploadedDate")  val uploadedDate: String?,
-    @SerializedName("uploaderName")  val uploaderName: String?,
-    @SerializedName("uploader_id")   val uploaderId: String? = null,
-    @SerializedName("is_bookmarked") val isBookmarked: Boolean = false,
+    @SerializedName("created_at")      val uploadedDate: String?,
+    @SerializedName("uploader_name")   val uploaderName: String?,
+    @SerializedName("uploader_id")     val uploaderId: String? = null,
+    @SerializedName("is_bookmarked")   val isBookmarked: Boolean = false,
     val fileUrl: String? = null,
     val downloadUrl: String? = null,
+    val language: String = "English",
     // Marketplace / PDF lock fields
     val price: Int = 0,
-    @SerializedName("free_pages")    val freePages: Int = 3,
-    @SerializedName("is_premium")    val isPremium2: Boolean = false,
-    @SerializedName("is_purchased")  val isPurchased: Boolean = false,
-    @SerializedName("buyer_count")   val buyerCount: Int = 0,
+    @SerializedName("free_pages")      val freePages: Int = 3,
+    @SerializedName("is_purchased")    val isPurchased: Boolean = false,
+    @SerializedName("buyer_count")     val buyerCount: Int = 0,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
@@ -272,7 +272,8 @@ data class DownloadHistoryItem(
     @SerializedName("uploaderName")  val uploaderName:  String? = null,
     @SerializedName("downloadedAt")  val downloadedAt:  String  = "",
     val fileUrl:       String? = null,
-    @SerializedName("isPurchased")   val isPurchased:   Boolean = false
+    @SerializedName("isPurchased")   val isPurchased:   Boolean = false,
+    val language:      String  = "English",
 )
 
 data class MyDownloadsData(val downloads: List<DownloadHistoryItem> = emptyList())

@@ -647,6 +647,7 @@ internal fun coinsPerHrLabel(multiplier: Double): String {
     else String.format("%.1f", rate)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)

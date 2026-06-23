@@ -426,13 +426,16 @@ private fun JobCard(
                     InfoChip(Icons.Rounded.School, job.qualification.orEmpty(), Modifier.weight(1f, fill = false))
             }
 
-            // Salary + age in second row if available
-            if (!job.salaryRange.isNullOrBlank() || !job.ageLimit.isNullOrBlank()) {
+            // Salary + age + experience in second row if available
+            val expCard = job.experienceRequired?.trim()
+            if (!job.salaryRange.isNullOrBlank() || !job.ageLimit.isNullOrBlank() || (!expCard.isNullOrBlank() && expCard != "Any")) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!job.salaryRange.isNullOrBlank())
                         InfoChip(Icons.Rounded.CurrencyRupee, job.salaryRange.orEmpty(), Modifier.weight(1f, fill = false))
                     if (!job.ageLimit.isNullOrBlank())
                         InfoChip(Icons.Rounded.Cake, "Age: ${job.ageLimit.orEmpty()}", Modifier.weight(1f, fill = false))
+                    if (!expCard.isNullOrBlank() && expCard != "Any")
+                        InfoChip(Icons.Rounded.WorkHistory, expCard, Modifier.weight(1f, fill = false))
                 }
             }
 
@@ -502,7 +505,7 @@ private fun JobDetailSheet(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
 
-                // Quick stats grid — FIXED: all 4 fields from DTO
+                // Quick stats: 4-column grid
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatBox("👥", "${if ((job.totalPosts ?: 0) > 0) job.totalPosts else "—"}", str.jobsPosts,  Modifier.weight(1f))
                     StatBox("📍", job.location?.ifBlank { "—" } ?: "—",                          "Location", Modifier.weight(1f))
@@ -510,25 +513,65 @@ private fun JobDetailSheet(
                     StatBox("🎂", job.ageLimit?.ifBlank { "—" } ?: "—",                          "Age Limit",Modifier.weight(1f))
                 }
 
-                // Description — FIXED: now wired to DTO field
+                // Experience Required — prominent display when set
+                val exp = job.experienceRequired?.trim()
+                if (!exp.isNullOrBlank() && exp != "Any") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF0F4FF))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.WorkHistory, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
+                        Column {
+                            Text("Experience Required", style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextHint, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(exp, style = MaterialTheme.typography.titleMedium,
+                                color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+                }
+
+                // Description
                 if (!job.description.isNullOrBlank()) {
                     SectionCard(title = str.jobsAboutJob) {
                         Text(job.description.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 24.sp)
                     }
                 }
-
-                // Brief description (short summary)
                 if (!job.briefDescription.isNullOrBlank()) {
                     SectionCard(title = "Brief Description") {
                         Text(job.briefDescription.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 24.sp)
                     }
                 }
 
-                // PDF notification download
+                // Advertisement PDF — top-level download button
+                if (!job.advertPdfUrl.isNullOrBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFFEE8E8))
+                            .clickable { openLink(job.advertPdfUrl.orEmpty()) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(22.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Advertisement PDF", style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold)
+                            Text("Tap to view or download the official advertisement",
+                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(Icons.Rounded.Download, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                // Notification PDF
                 if (!job.pdfUrl.isNullOrBlank()) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFFFEE8E8))
                             .clickable { openLink(job.pdfUrl.orEmpty()) }
@@ -538,18 +581,18 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Official Notification PDF", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
+                            Text("Official Notification PDF", style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
                             Text("Tap to download / view PDF", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.Download, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(18.dp))
                     }
                 }
 
-                // Direct Apply Link (if different from officialLink)
+                // Apply link
                 if (!job.officialLink.isNullOrBlank()) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(BpscColors.PrimaryLight)
                             .clickable { openLink(job.officialLink.orEmpty()) }
@@ -559,47 +602,35 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Apply Online", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
-                            Text(job.officialLink.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Apply Online", style = MaterialTheme.typography.titleMedium,
+                                color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                            Text(job.officialLink.orEmpty(), style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
                     }
                 }
 
-                // Eligibility — FIXED: all fields rendered
+                // Eligibility
                 SectionCard(title = str.jobsEligibility, accentColor = BpscColors.Primary, accentBg = BpscColors.PrimaryLight) {
                     if (!job.qualification.isNullOrBlank()) DetailRow("🎓", "Qualification", job.qualification.orEmpty())
+                    if (!exp.isNullOrBlank() && exp != "Any") DetailRow("⏱️", "Experience", exp)
                     if (!job.ageLimit.isNullOrBlank())      DetailRow("🎂", "Age Limit",     job.ageLimit.orEmpty())
                     if (!job.location.isNullOrBlank())      DetailRow("📍", "Location",      job.location.orEmpty())
                     if (!job.salaryRange.isNullOrBlank())   DetailRow("💰", "Salary",        job.salaryRange.orEmpty())
-                    if ((job.totalPosts ?: 0) > 0)             DetailRow("👥", "Total Posts",   "${job.totalPosts ?: 0}")
-                    if (!job.nearbyDistricts.isNullOrEmpty()) DetailRow("📌", "Districts",   job.nearbyDistricts?.joinToString(", ").orEmpty().orEmpty())
+                    if ((job.totalPosts ?: 0) > 0)          DetailRow("👥", "Total Posts",   "${job.totalPosts ?: 0}")
+                    if (!job.nearbyDistricts.isNullOrEmpty()) DetailRow("📌", "Districts",   job.nearbyDistricts?.joinToString(", ").orEmpty())
                 }
 
-                // Important dates — FIXED: all date fields
+                // Important dates
                 SectionCard(title = str.jobsImportantDates) {
                     val dates = buildList {
-                        if (!job.notificationDate.isNullOrBlank())
-                            add(Triple("📢", "Notification",  job.notificationDate.formatDisplay()))
-                        if (!job.applyStartDate.isNullOrBlank())
-                            add(Triple("▶️", str.jobsApplyStart,   job.applyStartDate.formatDisplay()))
-                        add(Triple("🔴", str.jobsLastDate,      job.applyEndDate.formatDisplay()))
-                        if (!job.examDate.isNullOrBlank())
-                            add(Triple("📝", "Exam Date",    job.examDate.formatDisplay()))
+                        if (!job.notificationDate.isNullOrBlank()) add(Triple("📢", "Notification", job.notificationDate.formatDisplay()))
+                        if (!job.applyStartDate.isNullOrBlank())   add(Triple("▶️", str.jobsApplyStart, job.applyStartDate.formatDisplay()))
+                        add(Triple("🔴", str.jobsLastDate, job.applyEndDate.formatDisplay()))
+                        if (!job.examDate.isNullOrBlank())         add(Triple("📝", "Exam Date", job.examDate.formatDisplay()))
                     }
                     TimelineView(dates)
-                }
-
-                // Exam tags
-                if (!job.officialLink.isNullOrBlank()) {
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cs.background).padding(12.dp),
-                        Arrangement.spacedBy(8.dp), Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Rounded.Link, null, tint = BpscColors.Primary, modifier = Modifier.size(16.dp))
-                        Text(job.officialLink, style = MaterialTheme.typography.bodySmall, color = BpscColors.Primary,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    }
                 }
             }
 

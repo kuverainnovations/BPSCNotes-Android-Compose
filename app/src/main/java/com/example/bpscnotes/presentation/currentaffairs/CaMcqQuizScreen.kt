@@ -167,16 +167,24 @@ fun CaMcqQuizScreen(
     var currentIndex  by remember { mutableIntStateOf(0) }
     var answers       by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var showResult    by remember { mutableStateOf(false) }
+    var showAdBreak   by remember { mutableStateOf(false) }   // shown between quiz end and result
     var showReview    by remember { mutableStateOf(false) }
     var retryKey      by remember { mutableIntStateOf(0) }  // increments on each retry to reset timer
     // Per-question 30-second countdown
     var questionSecsLeft by remember { mutableIntStateOf(30) }
 
+    // Helper: quiz is done → show ad break first (if adManager present), then result.
+    // Called from timer auto-advance and from onNext button when last question answered.
+    fun finishQuiz() {
+        if (adManager != null) showAdBreak = true
+        else                   showResult  = true
+    }
+
     // Per-question countdown — resets on each question AND on retry.
     // Stops counting (freezes) as soon as the current question is answered,
     // so it doesn't keep running and then auto-advance/jump unexpectedly.
     LaunchedEffect(currentIndex, retryKey) {
-        if (showResult || showReview) return@LaunchedEffect
+        if (showResult || showReview || showAdBreak) return@LaunchedEffect
         questionSecsLeft = 30
         val questionId = mcqs.getOrNull(currentIndex)?.id
         while (questionSecsLeft > 0 && answers[questionId] == null) {
@@ -184,18 +192,14 @@ fun CaMcqQuizScreen(
             questionSecsLeft--
         }
         // Time's up (and still unanswered) — auto-advance to next question
-        if (!showResult && !showReview && answers[questionId] == null) {
+        if (!showResult && !showReview && !showAdBreak && answers[questionId] == null) {
             if (currentIndex < mcqs.size - 1) currentIndex++
-            else showResult = true
+            else finishQuiz()
         }
     }
 
-    val navigateBack: () -> Unit = {
-        if (adManager != null && activity != null)
-            adManager.showInterstitialIfReady(activity) { navController.popBackStackSafe() }
-        else
-            navController.popBackStackSafe()
-    }
+    // Simple back navigation — no interstitial on back press (ads only on quiz completion)
+    val navigateBack: () -> Unit = { navController.popBackStackSafe() }
 
     // Computed once here and shared by ResultScreen + ReviewScreen — previously
     // each screen called computeCaMcqResults() independently from the same
@@ -205,13 +209,13 @@ fun CaMcqQuizScreen(
         computeCaMcqResults(mcqs, answers, mcqAnswers, mcqMarkingConfig)
     }
 
-    // Fire start/completion analytics — both were defined in Analytics.kt's
-    // Event object but never actually called anywhere in the app.
+    // Fire start/completion analytics — fire when quiz is truly done
+    // (i.e. showAdBreak goes true, or showResult if no ad manager)
     LaunchedEffect(mcqs) {
         if (mcqs.isNotEmpty()) Event.caMcqStarted(affairId, mcqs.size)
     }
-    LaunchedEffect(showResult) {
-        if (showResult) {
+    LaunchedEffect(showAdBreak, showResult) {
+        if (showAdBreak || showResult) {
             Event.caMcqCompleted(affairId, summary.correct, summary.results.size)
             viewModel.submitMcqAttempt(affairId, answers)
         }
@@ -246,19 +250,31 @@ fun CaMcqQuizScreen(
                 onBack        = { showReview = false }
             )
 
+            // ── Ad break: Quiz Completed → Ad → Result Screen ──────────
+            // Shown ONLY after all questions answered (not during quiz,
+            // not between questions). onAdBreakComplete transitions to
+            // the actual result screen.
+            showAdBreak -> McqAdBreakScreen(
+                adManager = adManager,
+                onAdBreakComplete = {
+                    showAdBreak = false
+                    showResult  = true
+                }
+            )
+
             showResult -> ResultScreen(
                 summary       = summary,
                 onRetry       = {
                     answers = emptyMap()
                     currentIndex = 0
                     showResult = false
+                    showAdBreak = false
                     retryKey++          // forces timer LaunchedEffect to re-run even if index stays 0
                     viewModel.loadMcqs(affairId)
                 },
                 onReview      = { showReview = true },
                 onBack        = navigateBack,
                 adManager     = adManager,
-                activity      = activity
             )
 
             else -> QuizScreen(
@@ -275,10 +291,129 @@ fun CaMcqQuizScreen(
                 },
                 onNext        = {
                     if (currentIndex < mcqs.size - 1) currentIndex++
-                    else showResult = true
+                    else finishQuiz()             // was: showResult = true
                 },
                 onBack        = { if (currentIndex > 0) currentIndex-- else navigateBack() }
             )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// MCQ AD BREAK SCREEN
+// Shown after the last question is answered and before the
+// result screen is revealed. A 15-second countdown wrapping an
+// AdMob banner. No skip button — auto-advances when done.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun McqAdBreakScreen(
+    adManager: AdManager?,
+    onAdBreakComplete: () -> Unit,
+) {
+    val AD_SECS = 15
+    var secondsLeft by remember { mutableIntStateOf(AD_SECS) }
+
+    LaunchedEffect(Unit) {
+        secondsLeft = AD_SECS
+        while (secondsLeft > 0) {
+            delay(1_000L)
+            secondsLeft--
+        }
+        onAdBreakComplete()
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A)),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // Top bar
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(Color(0xFF1A1A1A)).statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Calculating results…",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFFAAAAAA)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (secondsLeft <= 5) Color(0xFF8B0000) else Color(0xFF2A2A2A))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Rounded.Timer, null,
+                            tint = if (secondsLeft <= 5) Color(0xFFFF6B6B) else Color(0xFFAAAAAA),
+                            modifier = Modifier.size(13.dp))
+                        Text(
+                            "$secondsLeft",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (secondsLeft <= 5) Color(0xFFFF6B6B) else Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Progress bar — fills as countdown proceeds
+            val animProg by animateFloatAsState(
+                1f - (secondsLeft / AD_SECS.toFloat()), tween(800), label = "adprog"
+            )
+            Box(modifier = Modifier.fillMaxWidth().height(3.dp).background(Color(0xFF2A2A2A))) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(animProg).fillMaxHeight()
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF1565C0), Color(0xFF42A5F5))))
+                )
+            }
+
+            // Ad slot + countdown display
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    if (adManager != null) {
+                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF1565C0),
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            "Results ready in $secondsLeft seconds",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF888888)
+                        )
+                    }
+                }
+            }
+
+            // Bottom strip
+            Box(
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A))
+                    .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 14.dp)
+            ) {
+                Text(
+                    "Your quiz is being scored…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF666666)
+                )
+            }
         }
     }
 }
@@ -381,12 +516,8 @@ private fun QuizScreen(
             }
         }
 
-        // ── Banner Ad ──────────────────────────────────────────
-        adManager?.let {
-            BannerAdView(adUnitId = it.getBannerAdUnitId())
-        }
-
         // ── Scrollable content ─────────────────────────────────
+        // NOTE: No banner ads during the quiz — ads only after completion.
         Column(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -416,7 +547,7 @@ private fun QuizScreen(
             val showNotAttempting = q.optionE.isBlank() && markingConfig.negativeMarkingEnabled
             val optionPairs = (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC,
                 "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }) +
-                (if (showNotAttempting) listOf("e" to "Not Attempting This Question") else emptyList())
+                    (if (showNotAttempting) listOf("e" to "Not Attempting This Question") else emptyList())
 
             optionPairs.forEach { (letter, text) ->
                 val isNotAttemptOption = letter == "e" && showNotAttempting
@@ -555,7 +686,6 @@ private fun ResultScreen(
     onReview:  () -> Unit,
     onBack:    () -> Unit,
     adManager: AdManager?,
-    activity:  Activity?,
 ) {
     val str     = LocalStrings.current
     val cs      = MaterialTheme.colorScheme
@@ -766,7 +896,7 @@ private fun ReviewScreen(
                         val showNotAttemptOpt = q.optionE.isBlank() && summary.negativeMarkingEnabled
                         (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() } +
-                            (if (showNotAttemptOpt) listOf("e" to "Not Attempting This Question") else emptyList()))
+                                (if (showNotAttemptOpt) listOf("e" to "Not Attempting This Question") else emptyList()))
                             .forEach { (letter, text) ->
                                 val isCrct = letter == correctLetter
                                 val isUser = letter == userAnswer

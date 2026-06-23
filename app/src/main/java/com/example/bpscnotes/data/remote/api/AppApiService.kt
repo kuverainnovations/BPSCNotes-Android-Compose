@@ -318,7 +318,10 @@ data class CurrentAffairDto(
     val id: String,
     val title: String,
     val summary: String = "",
-    @SerializedName("full_content") val fullContent: String? = null,
+    @SerializedName("full_content")     val fullContent:    String? = null,
+    @SerializedName("key_points")       val keyPoints:      String? = null,
+    @SerializedName("exam_relevance")   val examRelevance:  String? = null,
+    @SerializedName("important_facts")  val importantFacts: String? = null,
     val category: String = "",
     val source: String? = null,
     val date: String = "",
@@ -864,23 +867,30 @@ data class JobVacancyDto(
     val category: String? = null,
     @SerializedName("total_posts") val totalPosts: Int? = null,
     val location: String? = null,
+    // Location hierarchy fields
+    @SerializedName("job_state")    val jobState:    String? = null,
+    @SerializedName("job_district") val jobDistrict: String? = null,
+    @SerializedName("job_city")     val jobCity:     String? = null,
+    @SerializedName("is_remote")    val isRemote:    Boolean = false,
     @SerializedName("salary_range") val salaryRange: String? = null,
     val qualification: String? = null,
-    @SerializedName("age_limit") val ageLimit: String? = null,
+    @SerializedName("age_limit")        val ageLimit: String? = null,
+    @SerializedName("experience_required") val experienceRequired: String? = "Any",
     @SerializedName("apply_end_date", alternate = ["last_date"]) val applyEndDate: String? = null,
     @SerializedName("notification_date") val notificationDate: String? = null,
     @SerializedName("apply_start_date") val applyStartDate: String? = null,
     @SerializedName("exam_date") val examDate: String? = null,
     @SerializedName("official_link", alternate = ["application_link"]) val officialLink: String? = null,
     val description: String? = null,
-    @SerializedName("is_new") val isNew: Boolean = false,
+    @SerializedName("is_new")      val isNew:      Boolean = false,
     @SerializedName("is_featured") val isFeatured: Boolean = false,
-    @SerializedName("is_urgent") val isUrgent: Boolean = false,
+    @SerializedName("is_urgent")   val isUrgent:   Boolean = false,
     @SerializedName("nearby_districts") val nearbyDistricts: List<String>? = null,
-    @SerializedName("is_saved") val isSaved: Boolean = false,
+    @SerializedName("is_saved")    val isSaved:    Boolean = false,
     val status: String? = null,
     @SerializedName("brief_description") val briefDescription: String? = null,
-    @SerializedName("pdf_url") val pdfUrl: String? = null
+    @SerializedName("pdf_url")        val pdfUrl:       String? = null,  // notification PDF
+    @SerializedName("advert_pdf_url") val advertPdfUrl: String? = null,  // advertisement PDF
 )
 
 data class JobsResponseData(
@@ -902,7 +912,19 @@ interface JobsApiService {
     suspend fun toggleSaveJob(
         @Path("id") jobId: String
     ): ApiResponse<Any>
+
+    /** Sync user's job alert category subscriptions to the server */
+    @POST("jobs/alert-prefs")
+    suspend fun syncAlertPrefs(
+        @Body body: Map<String, List<String>>
+    ): ApiResponse<AlertPrefsData>
+
+    /** Fetch current alert subscriptions (called on VM init for server-side truth) */
+    @GET("jobs/alert-prefs")
+    suspend fun getAlertPrefs(): ApiResponse<AlertPrefsData>
 }
+
+data class AlertPrefsData(val subscribed: List<String> = emptyList())
 
 // ══════════════════════════════════════════════════════════════
 // STUDY ROOMS DTOs  — GET /study-rooms
@@ -1247,6 +1269,10 @@ interface CoinsApiService {
         val streak:      Int = 0
     )
 
+    data class FlashcardNotifPrefsData(
+        val subscribed: List<String> = emptyList()
+    )
+
     interface FlashcardsApiService {
         @GET("flashcards")
         suspend fun getFlashcards(
@@ -1261,12 +1287,19 @@ interface CoinsApiService {
         /** POST /flashcards/progress — save a card rating to backend */
         @POST("flashcards/progress")
         suspend fun saveProgress(@Body request: SaveProgressRequest): ApiResponse<Any>
-    }
+
+        /** POST /flashcards/notif-prefs — sync subject notification subscriptions */
+        @POST("flashcards/notif-prefs")
+        suspend fun syncNotifPrefs(@Body body: Map<String, List<String>>): ApiResponse<FlashcardNotifPrefsData>
+
+        /** GET /flashcards/notif-prefs — load current notification subscriptions */
+        @GET("flashcards/notif-prefs")
+        suspend fun getNotifPrefs(): ApiResponse<FlashcardNotifPrefsData>
+    }   // end FlashcardsApiService
+}   // end CoinsApiService
 
 
 
-
-}
 
 // ── Exam DTOs ──────────────────────────────────────────────────
 

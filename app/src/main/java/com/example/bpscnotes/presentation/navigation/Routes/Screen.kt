@@ -46,11 +46,6 @@ sealed class Screen(val route: String) {
     object CaArticleDetail : Screen("ca_article_detail/{affairId}") {
         fun createRoute(id: String) = "ca_article_detail/$id"
     }
-    object CaAdGate : Screen("ca_ad_gate/{affairId}/{target}") {
-        // target = "article" (default) or "mcq" — which screen the gate
-        // unlocks into once the 15s countdown finishes.
-        fun createRoute(id: String, target: String = "article") = "ca_ad_gate/$id/$target"
-    }
     object DailyQuiz      : Screen("daily_quiz/{date}") {
         fun createRoute(date: String) = "daily_quiz/$date"
     }

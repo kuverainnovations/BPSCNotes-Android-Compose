@@ -72,6 +72,7 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
             "payment", "subscription"            -> CHANNEL_PAYMENTS
             "new_job"                            -> CHANNEL_JOBS
             "ca_update"                          -> CHANNEL_CURRENT_AFFAIRS
+            "new_flashcards"                     -> CHANNEL_FLASHCARDS
             else                                 -> CHANNEL_GENERAL
         }
 
@@ -115,6 +116,7 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
             Triple(CHANNEL_PAYMENTS,        "Payments",          "Payment confirmations and subscription alerts"),
             Triple(CHANNEL_JOBS,            "Job Alerts",        "New government job vacancies"),
             Triple(CHANNEL_CURRENT_AFFAIRS, "Current Affairs",   "Daily current affairs updates"),
+            Triple(CHANNEL_FLASHCARDS,      "Flashcards",        "New flashcard sets for Active Recall"),
         )
 
         channels.forEach { (id, name, desc) ->
@@ -138,5 +140,6 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
         const val CHANNEL_PAYMENTS         = "payments"
         const val CHANNEL_JOBS             = "jobs"
         const val CHANNEL_CURRENT_AFFAIRS  = "current_affairs"
+        const val CHANNEL_FLASHCARDS       = "flashcards"
     }
 }

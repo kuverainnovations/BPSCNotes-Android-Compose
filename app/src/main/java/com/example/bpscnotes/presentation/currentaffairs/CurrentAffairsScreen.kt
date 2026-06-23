@@ -302,20 +302,19 @@ fun CurrentAffairsScreen(
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
-                                    onReadMore  = { navController.navigate(Screen.CaAdGate.createRoute(article.id)) },
+                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) },
                                     onStartMcq = {
-//                                        navController.navigate("ca_mcq_quiz/${article.id}")
-                                        navController.navigate(Screen.CaAdGate.createRoute(article.id, "mcq"))
+                                        navController.navigate("ca_mcq_quiz/${article.id}")
                                     }
 
                                 )
                                 Spacer(Modifier.height(10.dp))
 
-                                // Banner every 5 articles — counted across the whole
-                                // flattened list, not reset per date group, so a long
+                                // Banner every 7 articles (requirement: every 7 items)
+                                // Counted across the whole flattened list so a long
                                 // single-date group still gets ads at a steady cadence.
                                 globalArticleIndex++
-                                if (adManager != null && globalArticleIndex % 5 == 0) {
+                                if (adManager != null && globalArticleIndex % 7 == 0) {
                                     BannerAdView(adUnitId = adManager.getBannerAdUnitId())
                                     Spacer(Modifier.height(10.dp))
                                 }

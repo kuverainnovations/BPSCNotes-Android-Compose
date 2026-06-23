@@ -46,7 +46,7 @@ import androidx.activity.compose.BackHandler
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-private const val ADS_EVERY_N_CARDS = 5        // show ad break after every 5 cards
+private const val ADS_EVERY_N_CARDS = 10       // show ad break after every 10 cards
 private const val ADS_PER_BREAK     = 1        // show 1 ad per break
 private const val AD_DURATION_SECS  = 30       // 30 seconds per ad (auto-advance)
 
@@ -127,7 +127,8 @@ fun ActiveRecallScreen(
             // "Retry Weak Cards" (retryWeak=true) is unaffected — it
             // already filters baseCards to weak-only cards above, in
             // their natural relative order.
-            val sessionCards = remember(activeSubject, retryWeak, baseCards) { baseCards }
+            // RANDOMIZE: shuffle the deck each session for varied learning
+            val sessionCards = remember(activeSubject, retryWeak, baseCards) { baseCards.shuffled() }
 
             if (sessionCards.isEmpty()) {
                 LaunchedEffect(Unit) { activeSubject = null; retryWeak = false }
@@ -545,7 +546,29 @@ private fun FlashcardSessionScreen(
                     Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(0.2f))) {
                         Box(modifier = Modifier.fillMaxWidth(animProg).fillMaxHeight().background(Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)), RoundedCornerShape(3.dp)))
                     }
-                    // Show next-ad counter
+                    // "Tap card to reveal answer" — always visible in header, clearly readable
+                    // Requirement: move hint to top section, make clearly visible
+                    if (!isFlipped) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(0.12f))
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("👆", fontSize = 13.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                str.recallTapReveal,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(0.9f),
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    // Ad break countdown (only when close)
                     val cardsUntilAd = ADS_EVERY_N_CARDS - (cardsCompleted % ADS_EVERY_N_CARDS)
                     if (cardsUntilAd <= 3 && currentIndex < cards.size - 1) {
                         Text(
@@ -692,9 +715,7 @@ private fun FlashcardSessionScreen(
                     }
                 }
 
-                if (!isFlipped) {
-                    Text(str.recallTapReveal, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
-                }
+                // Hint is now shown in header row (above the card) — not here
             }
 
             // Bottom actions
@@ -796,9 +817,10 @@ private fun FlashcardLobbyScreen(
                             Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Brush.horizontalGradient(listOf(Color(0xFF64B5F6), Color.White)), RoundedCornerShape(4.dp)))
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Stats: Mastered + Needs Work only (Unseen removed per spec)
                             StatPill("✅", "$masteredCount", str.recallMastered, Color(0xFF2ECC71))
                             StatPill("🔄", "$weakCount", "Needs Work", Color(0xFFE74C3C))
-                            StatPill("📚", "${totalCards - masteredCount - weakCount}", "Unseen", Color.White.copy(0.6f))
+                            StatPill("📊", "${(progress * 100).toInt()}%", "Progress", Color.White)
                         }
                     }
                 }
@@ -867,6 +889,7 @@ private fun FlashcardLobbyScreen(
                             }
 
                             // Stats row
+                            // Stats row: Mastered + Needs Work only (Total/Unseen removed per spec)
                             Row(
                                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                                     .background(cs.background).padding(12.dp),
@@ -887,10 +910,10 @@ private fun FlashcardLobbyScreen(
                                 }
                                 Box(Modifier.width(1.dp).height(40.dp).background(cs.outline))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("📖", fontSize = 18.sp)
-                                    Text("$unseenCount", style = MaterialTheme.typography.titleMedium,
+                                    Text("📊", fontSize = 18.sp)
+                                    Text("${(progress2 * 100).toInt()}%", style = MaterialTheme.typography.titleMedium,
                                         color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                                    Text("Unseen", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    Text("Progress", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
                             }
 

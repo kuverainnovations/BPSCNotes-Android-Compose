@@ -20,9 +20,10 @@ data class ActiveRecallUiState(
     val allCards:    List<CoinsApiService.FlashcardDto> = emptyList(),
     val isLoading:   Boolean           = true,
     val error:       String?           = null,
-    // Persisted mastery — loaded from backend on init, saved on every rating
     val masteredIds: Set<String>       = emptySet(),
-    val weakIds:     Set<String>       = emptySet()
+    val weakIds:     Set<String>       = emptySet(),
+    // Notification subject subscriptions (e.g. "all", "Polity", "History")
+    val notifTopics: Set<String>       = emptySet()
 )
 
 @HiltViewModel
@@ -36,9 +37,9 @@ class ActiveRecallViewModel @Inject constructor(
 
     init {
         loadAll()
-        loadProgress()   // FIX: load persisted progress from backend on startup
+        loadProgress()
+        loadNotifPrefs()
 
-        // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
             bus.events.collect { event ->
                 when (event) {
@@ -50,7 +51,6 @@ class ActiveRecallViewModel @Inject constructor(
         }
     }
 
-    /** Load all flashcards (cached in backend for 5 min). */
     fun loadAll() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = it.allCards.isEmpty(), error = null) }
@@ -65,7 +65,6 @@ class ActiveRecallViewModel @Inject constructor(
         }
     }
 
-    /** FIX: Load mastered/weak IDs from backend so progress survives app restarts. */
     private fun loadProgress() {
         viewModelScope.launch {
             try {
@@ -75,10 +74,38 @@ class ActiveRecallViewModel @Inject constructor(
                     masteredIds = data.mastered.toSet(),
                     weakIds     = data.weak.toSet()
                 )}
-                Log.d("ActiveRecallVM", "Progress loaded: ${data.mastered.size} mastered, ${data.weak.size} weak")
             } catch (e: Exception) {
-                // Non-fatal — progress just won't be restored if offline
                 Log.w("ActiveRecallVM", "Progress load failed: ${e.message}")
+            }
+        }
+    }
+
+    // ── Notification prefs ─────────────────────────────────────
+    private fun loadNotifPrefs() {
+        viewModelScope.launch {
+            try {
+                val res = api.getNotifPrefs()
+                val topics = res.data?.subscribed?.toSet() ?: return@launch
+                _uiState.update { it.copy(notifTopics = topics) }
+            } catch (e: Exception) {
+                Log.w("ActiveRecallVM", "Notif prefs load failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Toggle a notification topic (subject name or "all").
+     * Syncs to server immediately so admin can target users by subject.
+     */
+    fun toggleNotifTopic(topic: String) {
+        val current = _uiState.value.notifTopics
+        val updated = if (current.contains(topic)) current - topic else current + topic
+        _uiState.update { it.copy(notifTopics = updated) }
+        viewModelScope.launch {
+            try {
+                api.syncNotifPrefs(mapOf("topics" to updated.toList()))
+            } catch (e: Exception) {
+                Log.w("ActiveRecallVM", "syncNotifPrefs: ${e.message}")
             }
         }
     }
@@ -88,46 +115,26 @@ class ActiveRecallViewModel @Inject constructor(
         return if (subject == "All") all else all.filter { it.subject == subject }
     }
 
-    // FIX: All flashcards shown as one combined session — no separate subject breakdown
     fun subjects(): List<String> = listOf("All")
 
-    // ── Mastery — optimistic update + backend persist ──────────────
-
     fun markMastered(id: String, streak: Int = 0) {
-        _uiState.update { it.copy(
-            masteredIds = it.masteredIds + id,
-            weakIds     = it.weakIds - id
-        )}
+        _uiState.update { it.copy(masteredIds = it.masteredIds + id, weakIds = it.weakIds - id) }
         saveProgressToBackend(id, "mastered", streak)
     }
 
     fun markWeak(id: String) {
-        _uiState.update { it.copy(
-            weakIds     = it.weakIds + id,
-            masteredIds = it.masteredIds - id
-        )}
+        _uiState.update { it.copy(weakIds = it.weakIds + id, masteredIds = it.masteredIds - id) }
         saveProgressToBackend(id, "weak", 0)
     }
 
-    fun markSkipped(id: String) {
-        // Skipped doesn't change mastery — no backend call needed
-        Log.d("ActiveRecallVM", "Skipped: $id")
-    }
+    fun markSkipped(id: String) { Log.d("ActiveRecallVM", "Skipped: $id") }
 
     private fun saveProgressToBackend(flashcardId: String, rating: String, streak: Int) {
         viewModelScope.launch {
             try {
-                api.saveProgress(
-                    CoinsApiService.SaveProgressRequest(
-                        flashcardId = flashcardId,
-                        rating      = rating,
-                        streak      = streak
-                    )
-                )
-                Log.d("ActiveRecallVM", "Saved: $flashcardId → $rating (streak=$streak)")
+                api.saveProgress(CoinsApiService.SaveProgressRequest(flashcardId, rating, streak))
             } catch (e: Exception) {
-                Log.w("ActiveRecallVM", "Progress save failed (offline?): ${e.message}")
-                // Don't update UI — optimistic update already applied above
+                Log.w("ActiveRecallVM", "Progress save failed: ${e.message}")
             }
         }
     }

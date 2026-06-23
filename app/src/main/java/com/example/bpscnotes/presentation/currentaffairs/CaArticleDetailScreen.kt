@@ -124,11 +124,31 @@ private fun buildArticleHtml(
     } else ""
 
     // Summary as an italic lead paragraph before the full body.
-    // Uses the raw HTML (may contain inline marks from TipTap) — the WebView
-    // renders HTML natively so colours/bold in the summary appear correctly.
-    // Only shown if summary has actual content after stripping tags.
     val summaryHtml = if (article.summary.stripHtmlTags().isNotBlank()) {
         "<p class=\"lead\">${article.summary}</p><hr class=\"lead-rule\">"
+    } else ""
+
+    // ── New content sections — each wrapped in a labelled section div ──
+    // Only rendered if the admin populated the field (non-empty after strip).
+    val keyPointsHtml = if (article.keyPoints.stripHtmlTags().isNotBlank()) {
+        """<div class="section-block key-points">
+          <div class="section-label">🔑 Key Points</div>
+          ${article.keyPoints}
+        </div>"""
+    } else ""
+
+    val examRelevanceHtml = if (article.examRelevance.stripHtmlTags().isNotBlank()) {
+        """<div class="section-block exam-relevance">
+          <div class="section-label">🎯 Exam Relevance</div>
+          ${article.examRelevance}
+        </div>"""
+    } else ""
+
+    val importantFactsHtml = if (article.importantFacts.stripHtmlTags().isNotBlank()) {
+        """<div class="section-block important-facts">
+          <div class="section-label">📊 Important Facts &amp; Figures</div>
+          ${article.importantFacts}
+        </div>"""
     } else ""
 
     return """
@@ -185,9 +205,26 @@ private fun buildArticleHtml(
                        background: $primaryLight; border-radius: 6px;
                        padding: 4px 10px; margin: 0 6px 6px 0; font-weight: 600; }
           .source { margin-top: 14px; font-size: 0.85em; color: $onSurfaceVariant; font-style: italic; }
+
+          /* ── New content section blocks ───────────────────────── */
+          .section-block { margin: 20px 0; padding: 14px 16px 12px;
+                           border-radius: 10px; border-left: 4px solid; }
+          .section-label { font-size: 0.78em; font-weight: 800; letter-spacing: 0.04em;
+                           text-transform: uppercase; margin-bottom: 10px; opacity: 0.85; }
+          .key-points      { background: #F0F7FF; border-color: #1565C0; color: $onSurface; }
+          .key-points .section-label      { color: #1565C0; }
+          .exam-relevance  { background: #FFF8E6; border-color: #E65100; color: $onSurface; }
+          .exam-relevance .section-label  { color: #E65100; }
+          .important-facts { background: #F3F9F3; border-color: #2E7D32; color: $onSurface; }
+          .important-facts .section-label { color: #2E7D32; }
+          /* Lists inside section blocks */
+          .section-block ul { list-style-type: disc !important; padding-left: 1.4em !important; margin: 6px 0; }
+          .section-block ol { list-style-type: decimal !important; padding-left: 1.4em !important; margin: 6px 0; }
+          .section-block li { margin: 4px 0; }
+          .section-block p  { margin: 0 0 8px; }
         </style>
         </head>
-        <body>$summaryHtml${article.fullContent}$sourceHtml$tagsHtml</body>
+        <body>$summaryHtml$keyPointsHtml${article.fullContent}$examRelevanceHtml$importantFactsHtml$sourceHtml$tagsHtml</body>
         </html>
     """.trimIndent()
 }
@@ -461,7 +498,7 @@ fun CaArticleDetailScreen(
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
                             } else {
                                 Button(
-                                    onClick = { navController.navigate(Screen.CaAdGate.createRoute(article.id, "mcq")) },
+                                    onClick = { navController.navigate("ca_mcq_quiz/${article.id}") },
                                     enabled = mcqs.isNotEmpty(),
                                     shape = RoundedCornerShape(10.dp),
                                     colors = ButtonDefaults.buttonColors(

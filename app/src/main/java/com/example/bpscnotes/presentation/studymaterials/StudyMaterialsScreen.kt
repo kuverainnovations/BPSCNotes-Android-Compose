@@ -1119,13 +1119,18 @@ private fun LibraryItemCard(
                         TypeBadge(item.type); if (item.isNew) NewBadge()
                         if (item.isTrending) Text("🔥", fontSize = 12.sp)
                         if (!item.isPremium) FreeBadge()
-                        if (item.language.isNotEmpty() && item.language != "English") {
-                            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFE0F2F1))
-                                .padding(horizontal = 5.dp, vertical = 2.dp)) {
-                                Text("🌐 ${item.language}", style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF00796B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            }
+                        // Language badge — always shown; colour varies by language
+                        val lang = item.language.ifEmpty { "English" }
+                        val (langBg, langFg) = when (lang) {
+                            "Hindi"          -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
+                            "Hindi + English" -> Pair(Color(0xFFEDE7F6), Color(0xFF6A1B9A))
+                            else             -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
+                        }
+                        Box(modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(langBg)
+                            .padding(horizontal = 5.dp, vertical = 2.dp)) {
+                            Text(lang, style = MaterialTheme.typography.labelSmall,
+                                color = langFg, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
@@ -1163,8 +1168,8 @@ private fun LibraryItemCard(
                 if ((item.price ?: 0) > 0) {
                     Row(
                         modifier = Modifier
-                         //   .clip(RoundedCornerShape(12.dp))
-                        //    .background(Color(0xFFFFF8E1))
+                            //   .clip(RoundedCornerShape(12.dp))
+                            //    .background(Color(0xFFFFF8E1))
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                         horizontalArrangement = Arrangement.spacedBy(3.dp),
                         verticalAlignment     = Alignment.CenterVertically
@@ -1721,6 +1726,18 @@ private fun MaterialDetailSheet(
                         Text(material.type.emoji, fontSize = 22.sp)
                         TypeBadgeWhite(material.type.label)
                         if (!material.isPremium) FreeBadgeWhite() else ProBadge()
+                        // Language badge — always shown in detail sheet
+                        val detailLang = material.language.ifEmpty { "English" }
+                        val (dlBg, dlFg) = when (detailLang) {
+                            "Hindi"           -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
+                            "Hindi + English" -> Pair(Color(0xFFEDE7F6), Color(0xFF6A1B9A))
+                            else              -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
+                        }
+                        Box(modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(dlBg).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                            Text(detailLang, style = MaterialTheme.typography.labelSmall,
+                                color = dlFg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                     Text(material.title, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
@@ -2449,28 +2466,15 @@ fun MyUploadsTab(
                                         Text("₹${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
-                               /* if (item.language.isNotEmpty() && item.language != "English") {
-                                    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE0F2F1)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                        Text("🌐 ${item.language}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00796B), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                                    }
-                                }*/
-                                val language = item.language.orEmpty()
-
-                                if (language.isNotEmpty() && language != "English") {
-                                    Box(
-                                        Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFE0F2F1))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            "🌐 $language",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color(0xFF00796B),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp
-                                        )
-                                    }
+                                // Language badge — always shown
+                                val uploadLang = item.language.ifEmpty { "English" }
+                                val (ulBg, ulFg) = when (uploadLang) {
+                                    "Hindi"           -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
+                                    "Hindi + English" -> Pair(Color(0xFFEDE7F6), Color(0xFF6A1B9A))
+                                    else              -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
+                                }
+                                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(ulBg).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                    Text(uploadLang, style = MaterialTheme.typography.labelSmall, color = ulFg, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
                             }
                             // Show rejection reason if rejected
@@ -2635,6 +2639,17 @@ fun DownloadsTab(
                                 if (item.pageCount > 0) {
                                     Text("• ${item.pageCount} pages", style = MaterialTheme.typography.labelSmall,
                                         color = BpscColors.TextHint)
+                                }
+                                // Language badge — always shown
+                                val dlLang = item.language.ifEmpty { "English" }
+                                val (dlBg2, dlFg2) = when (dlLang) {
+                                    "Hindi"           -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
+                                    "Hindi + English" -> Pair(Color(0xFFEDE7F6), Color(0xFF6A1B9A))
+                                    else              -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
+                                }
+                                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dlBg2).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                    Text(dlLang, style = MaterialTheme.typography.labelSmall,
+                                        color = dlFg2, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             // Lock indicator

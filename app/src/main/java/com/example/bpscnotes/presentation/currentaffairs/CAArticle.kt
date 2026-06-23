@@ -61,6 +61,9 @@ data class CAArticle(
     val headline: String,
     val summary: String,
     val fullContent: String,
+    val keyPoints: String,          // TipTap HTML — key takeaways
+    val examRelevance: String,      // TipTap HTML — which exam + why
+    val importantFacts: String,     // TipTap HTML — numbers/names/dates
     val category: String,
     val rawDate: String,      // original ISO string — used for grouping/sorting
     val date: String,             // formatted for display e.g. "31 May 2026"
@@ -100,6 +103,9 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         headline    = title,
         summary     = summary,
         fullContent = fullContent ?: summary,
+        keyPoints      = keyPoints      ?: "",
+        examRelevance  = examRelevance  ?: "",
+        importantFacts = importantFacts ?: "",
         category    = category,
         rawDate     = date,
         date        = formatCaDate(date),
