@@ -119,6 +119,7 @@ class DashboardViewModel @Inject constructor(
 
     // ── Full dashboard load ───────────────────────────────────
     fun loadDashboard() {
+        lastLoadMs = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
@@ -521,6 +522,41 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refresh() = loadDashboard()
+
+    // Tracks when the last full loadDashboard() started — used by refreshOnResume()
+    // to avoid re-fetching if the user just briefly left the screen.
+    @Volatile private var lastLoadMs = 0L
+
+    /**
+     * Called on every Lifecycle.State.RESUMED event. Refreshes:
+     *  - Targets and notif count (lightweight — always)
+     *  - Full stats + user + graph (full reload) only if the last full load
+     *    was more than [STALE_MS] ago — prevents hammering the API when the
+     *    user navigates away and immediately back, while still keeping the
+     *    dashboard fresh after returning from a study session / quiz / etc.
+     */
+    fun refreshOnResume() {
+        viewModelScope.launch {
+            // Always refresh targets and notif badge — these are lightweight
+            // (single-table queries, no Redis cache) and are the most likely
+            // to have changed from a quick action on another screen.
+            launch { refreshTargets() }
+            launch { refreshNotifCount() }
+
+            // Full reload only if data is stale. 30s covers: end a study
+            // session (takes ~1-2s), navigate back to Dashboard and see
+            // fresh hours/graph/coins. Skips the reload if the user just
+            // tapped into Settings and came straight back.
+            val ageMs = System.currentTimeMillis() - lastLoadMs
+            if (ageMs > STALE_MS) {
+                loadDashboard()
+            }
+        }
+    }
+
+    companion object {
+        private const val STALE_MS = 30_000L // 30 seconds
+    }
 
     /**
      * Lightweight refresh — only re-fetches daily targets.

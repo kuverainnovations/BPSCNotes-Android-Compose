@@ -144,8 +144,8 @@ fun CurrentAffairsScreen(
         }
         val matchesCat = selectedCategory == str.filterAll || article.category == selectedCategory
         val matchesSearch = searchQuery.isNullOrEmpty() ||
-                article.headline.contains(searchQuery, ignoreCase = true) ||
-                article.summary.contains(searchQuery, ignoreCase = true) ||
+                article.headline.stripHtmlTags().contains(searchQuery, ignoreCase = true) ||
+                article.summary.stripHtmlTags().contains(searchQuery, ignoreCase = true) ||
                 article.tags.any { it.contains(searchQuery, ignoreCase = true) }
         matchesTab && matchesCat && matchesSearch
     }
@@ -297,8 +297,8 @@ fun CurrentAffairsScreen(
                                     onShare     = {
                                         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                             type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline)
-                                            putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app")
+                                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
+                                            putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app")
                                         }
                                         context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                     },
@@ -387,9 +387,9 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) { Icon(Icons.Rounded.Schedule, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp)); Text("${article.readMinutes} min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp) }
             }
             Spacer(Modifier.height(10.dp))
-            Text(article.headline, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
+            RichHtmlText(article.headline, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(6.dp))
-            Text(article.summary, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            RichHtmlText(article.summary, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(str.caReadMore, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp).clickable { onReadMore() })
             Spacer(Modifier.height(12.dp)); HorizontalDivider(color = cs.outline); Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {

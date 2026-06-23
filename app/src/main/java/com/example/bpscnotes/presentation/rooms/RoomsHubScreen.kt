@@ -247,7 +247,7 @@ fun RoomsHubScreen(
                             .fillMaxWidth()
                             //  .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                             .background(cs.background)
-                          //  .padding(top = 8.dp)
+                            .padding(top = 8.dp)
                     ) {
 
                         // Moved out of the hero (redesign section 1): personal
@@ -256,10 +256,11 @@ fun RoomsHubScreen(
                         // compact gradient header. (Activity Feed removed.)
                         if (state.myTierData?.currentTier != null) {
                             MyRoomProgressCard(state)
-//                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
-//                            Spacer(Modifier.height(12.dp))
-                           // RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
-                            //Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(12.dp))
+                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
+                            RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
                         }
 
                         // Promotion ready banner
@@ -278,14 +279,6 @@ fun RoomsHubScreen(
                                 ProgressBreakdownCard(tierData = tierData)
                             }
                         }
-                        // ── Above Room list banner ad ──────────────────────────────
-                        if (adManager != null) {
-                            com.example.bpscnotes.core.ads.BannerAdView(
-                                adUnitId = adManager.getBannerAdUnitId()
-                            )
-                        } else {
-                            Spacer(Modifier.height(80.dp))
-                        }
 
                         // Section title
                         Text(
@@ -303,7 +296,14 @@ fun RoomsHubScreen(
                         )
 
 
-
+                        // ── Above Room list banner ad ──────────────────────────────
+                        if (adManager != null) {
+                            com.example.bpscnotes.core.ads.BannerAdView(
+                                adUnitId = adManager.getBannerAdUnitId()
+                            )
+                        } else {
+                            Spacer(Modifier.height(80.dp))
+                        }
 
                         // ── ROOMS LIST ────────────────────────────
                         if (state.isLoadingTiers) {
@@ -382,16 +382,6 @@ fun RoomsHubScreen(
                             }
                         }
 
-                        // Moved out of the hero (redesign section 1): personal
-                        // progress/stats, Room Champions, Room Insights —
-                        // normal scrollable cards now, not pinned inside the
-                        // compact gradient header. (Activity Feed removed.)
-                        if (state.myTierData?.currentTier != null) {
-                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
-//                            Spacer(Modifier.height(12.dp))
-                            // RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
-                            //Spacer(Modifier.height(12.dp))
-                        }
                         Spacer(Modifier.height(8.dp))
 
                         // Quick links — Leaderboard moved to top-right room
@@ -549,7 +539,7 @@ private fun RoomsHeroHeader(
                         .clip(RoundedCornerShape(10.dp))
                         .background(BpscColors.CoinGold.copy(0.2f))
                         .padding(horizontal = 10.dp, vertical = 5.dp)) {
-                        Text("🪙 ${myTier.coinMultiplier}×/hr",
+                        Text("🪙 ${coinsPerHrLabel(myTier.coinMultiplier)} coins/hr",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
                 }
@@ -647,6 +637,16 @@ private fun StatPillLight(icon: String, value: String, label: String) {
 // + perks, reusing fields RoomTierDto already carries rather than a new
 // endpoint.
 @OptIn(ExperimentalMaterial3Api::class)
+/** Converts a tier coin multiplier to a user-readable "X coins/hr" string.
+ *  BASE_COINS_PER_HOUR = 6 (matches the backend constant).
+ *  Formats as integer when exact (e.g. 1.0 → "6"), one decimal otherwise (1.75 → "10.5").
+ *  Internal so TierPromotionOverlay (same package) can reuse it. */
+internal fun coinsPerHrLabel(multiplier: Double): String {
+    val rate = 6.0 * multiplier
+    return if (rate == kotlin.math.floor(rate)) rate.toLong().toString()
+    else String.format("%.1f", rate)
+}
+
 @Composable
 private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -684,7 +684,7 @@ private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
                     .clip(RoundedCornerShape(10.dp))
                     .background(BpscColors.CoinGold.copy(0.15f))
                     .padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text("🪙 Earn ${tier.coinMultiplier}× coins per hour studied in this room",
+                    Text("🪙 Earn ${coinsPerHrLabel(tier.coinMultiplier)} coins per hour (${tier.coinMultiplier}× base rate)",
                         style = MaterialTheme.typography.labelMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -883,7 +883,7 @@ private fun RoomCard(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("🪙 ${tier.coinMultiplier}×/hr",
+                    Text("🪙 ${coinsPerHrLabel(tier.coinMultiplier)}/hr",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isLocked) Color(0xFFCCCCCC) else tierColor,
                         fontWeight = FontWeight.SemiBold)

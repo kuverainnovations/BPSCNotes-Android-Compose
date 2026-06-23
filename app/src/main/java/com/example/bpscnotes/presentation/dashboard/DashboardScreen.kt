@@ -98,15 +98,14 @@ fun DashboardScreen(
 
     val pullRefreshState = rememberPullToRefreshState()
 
-    // Single resume observer — no full refresh race condition
+    // On every resume: lightweight always-refresh (targets + notif badge) plus
+    // a debounced full reload for stats, graph, hours, coins — so coming back
+    // from a study session or quiz always shows fresh data without hammering
+    // the API on every 2-second navigation hop.
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            // Run in parallel — notif count must never wait for targets
-            kotlinx.coroutines.coroutineScope {
-                launch { dashboardViewModel.refreshTargets() }
-                launch { dashboardViewModel.refreshNotifCount() }
-            }
+            dashboardViewModel.refreshOnResume()
         }
     }
     PullToRefreshBox(

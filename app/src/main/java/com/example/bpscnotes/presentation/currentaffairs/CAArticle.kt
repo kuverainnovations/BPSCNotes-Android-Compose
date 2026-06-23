@@ -31,6 +31,26 @@ fun formatCaDate(raw: String?): String {
 }
 
 /**
+ * Strips HTML tags and decodes common HTML entities to plain text.
+ * Used at specific call sites that need plain text from a rich HTML field:
+ *  - Search filtering (so searching "India" finds it regardless of <span> tags)
+ *  - Share intents / notifications (HTML renders as literal tags in those contexts)
+ *  - PDF filename generation
+ * NOT applied in toUiModel() — the UI model keeps raw HTML so that
+ * RichHtmlText composables can render colors, bold, highlights, etc.
+ */
+fun String.stripHtmlTags(): String =
+    this.replace(Regex("<[^>]+>"), "")
+        .replace("&amp;",  "&")
+        .replace("&lt;",   "<")
+        .replace("&gt;",   ">")
+        .replace("&nbsp;", " ")
+        .replace("&quot;", "\"")
+        .replace("&#39;",  "'")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+/**
  * UI model for a Current Affairs article.
  *
  * Mapped from [CurrentAffairDto] in [CurrentAffairsViewModel].
@@ -73,6 +93,10 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
 
     return CAArticle(
         id          = id,
+        // Headline and Summary are kept as raw HTML from the admin TipTap editor
+        // so RichHtmlText composables can render colors, bold, highlights etc.
+        // Use .stripHtmlTags() at the specific call sites that need plain text
+        // (search filter, share intents, PDF filename).
         headline    = title,
         summary     = summary,
         fullContent = fullContent ?: summary,

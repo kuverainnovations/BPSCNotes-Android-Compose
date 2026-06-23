@@ -120,7 +120,15 @@ private fun buildArticleHtml(
         "<div class=\"tags\">" + article.tags.joinToString("") { "<span>#${escapeHtml(it)}</span>" } + "</div>"
     } else ""
     val sourceHtml = if (!article.source.isNullOrBlank()) {
-        "<p class=\"source\">Source: ${escapeHtml(article.source)}</p>"
+        "<p class=\"source\">📌 Source: ${escapeHtml(article.source)}</p>"
+    } else ""
+
+    // Summary as an italic lead paragraph before the full body.
+    // Uses the raw HTML (may contain inline marks from TipTap) — the WebView
+    // renders HTML natively so colours/bold in the summary appear correctly.
+    // Only shown if summary has actual content after stripping tags.
+    val summaryHtml = if (article.summary.stripHtmlTags().isNotBlank()) {
+        "<p class=\"lead\">${article.summary}</p><hr class=\"lead-rule\">"
     } else ""
 
     return """
@@ -128,30 +136,58 @@ private fun buildArticleHtml(
         <html>
         <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
         <style>
           * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
           html, body { margin: 0; padding: 0; background: $surface; }
-          body { padding: 2px 2px 40px; font-family: -apple-system, Roboto, sans-serif; font-size: 16px; line-height: 1.75; color: $onSurface; }
-          p { margin: 0 0 14px; }
-          h1 { font-size: 1.5em; font-weight: 800; margin: 22px 0 12px; }
-          h2 { font-size: 1.3em; font-weight: 800; margin: 20px 0 10px; }
-          h3 { font-size: 1.15em; font-weight: 700; margin: 18px 0 8px; }
-          ul, ol { padding-left: 1.4em; margin: 0 0 14px; }
-          li { margin-bottom: 6px; }
-          blockquote { border-left: 3px solid $primary; padding: 6px 16px; margin: 14px 0; background: $primaryLight; border-radius: 0 10px 10px 0; color: $onSurfaceVariant; font-style: italic; }
+          body { padding: 4px 4px 48px; font-family: -apple-system, Roboto, 'Segoe UI', sans-serif;
+                 font-size: 16px; line-height: 1.8; color: $onSurface; word-break: break-word; }
+          p { margin: 0 0 16px; }
+          h1 { font-size: 1.5em; font-weight: 800; margin: 28px 0 12px; color: $primary; line-height: 1.3; }
+          h2 { font-size: 1.3em; font-weight: 800; margin: 24px 0 10px; color: $primary; line-height: 1.35; }
+          h3 { font-size: 1.12em; font-weight: 700; margin: 20px 0 8px; color: $primary; line-height: 1.4; }
+          ul, ol { padding-left: 1.5em; margin: 0 0 16px; }
+          li { margin-bottom: 8px; }
+          li::marker { color: $primary; font-weight: 700; }
+          blockquote {
+            border-left: 3.5px solid $primary;
+            padding: 8px 16px;
+            margin: 18px 0;
+            background: $primaryLight;
+            border-radius: 0 10px 10px 0;
+            color: $onSurfaceVariant;
+            font-style: italic;
+          }
           a { color: $primary; text-decoration: underline; }
-          table { border-collapse: collapse; width: 100%; margin: 16px 0; display: block; overflow-x: auto; }
-          th, td { border: 1px solid $outline; padding: 8px 12px; text-align: left; }
-          th { background: $primaryLight; font-weight: 700; }
-          img { max-width: 100%; height: auto; border-radius: 10px; }
-          mark { border-radius: 3px; padding: 0 2px; }
-          .tags { margin-top: 24px; padding-top: 14px; border-top: 1px solid $outline; }
-          .tags span { display: inline-block; font-size: 0.8em; color: $primary; background: $primaryLight; border-radius: 6px; padding: 4px 8px; margin: 0 6px 6px 0; }
-          .source { margin-top: 10px; font-size: 0.85em; color: $onSurfaceVariant; }
+          table { border-collapse: collapse; width: 100%; margin: 20px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          th, td { border: 1px solid $outline; padding: 10px 14px; text-align: left; min-width: 80px; }
+          th { background: $primaryLight; font-weight: 700; color: $primary; }
+          img { max-width: 100%; height: auto; border-radius: 10px; display: block; margin: 16px auto; }
+          mark { border-radius: 3px; padding: 1px 3px; }
+          strong { font-weight: 700; }
+          em { font-style: italic; }
+          u { text-decoration: underline; }
+          s { text-decoration: line-through; }
+          hr.lead-rule { border: none; border-top: 1px solid $outline; margin: 18px 0 16px; }
+          .lead {
+            font-style: italic;
+            color: $onSurfaceVariant;
+            font-size: 1.05em;
+            line-height: 1.75;
+            margin: 0 0 0;
+            padding: 12px 16px;
+            background: $primaryLight;
+            border-radius: 10px;
+            border-left: 3px solid $primary;
+          }
+          .tags { margin-top: 28px; padding-top: 16px; border-top: 1px solid $outline; }
+          .tags span { display: inline-block; font-size: 0.82em; color: $primary;
+                       background: $primaryLight; border-radius: 6px;
+                       padding: 4px 10px; margin: 0 6px 6px 0; font-weight: 600; }
+          .source { margin-top: 14px; font-size: 0.85em; color: $onSurfaceVariant; font-style: italic; }
         </style>
         </head>
-        <body>${article.fullContent}$sourceHtml$tagsHtml</body>
+        <body>$summaryHtml${article.fullContent}$sourceHtml$tagsHtml</body>
         </html>
     """.trimIndent()
 }
@@ -193,14 +229,24 @@ private fun ArticleContentWebView(html: String, modifier: Modifier = Modifier) {
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            // With width=device-width / initial-scale=1.0 and
-                            // useWideViewPort=false, 1 CSS px == 1 dp here, so the
-                            // measured value can be used directly as a dp height.
-                            view?.evaluateJavascript("document.body.scrollHeight.toString()") { result ->
-                                val px = result?.trim('"')?.toFloatOrNull()
-                                if (px != null && px > 0f) contentHeight = px + 16f
-                                measuring = false
-                            }
+                            // Wait briefly for images to finish loading before
+                            // measuring scrollHeight — images are the main reason
+                            // the initial measurement is shorter than the real content.
+                            // evaluateJavascript schedules after the JS engine has
+                            // processed the page, so 250ms covers most inline images.
+                            view?.postDelayed({
+                                view.evaluateJavascript("""
+                                    (function() {
+                                        // Force layout reflow so all images are sized
+                                        document.body.offsetHeight;
+                                        return document.body.scrollHeight.toString();
+                                    })()
+                                """.trimIndent()) { result ->
+                                    val px = result?.trim('"')?.toFloatOrNull()
+                                    if (px != null && px > 0f) contentHeight = px + 32f
+                                    measuring = false
+                                }
+                            }, 250)
                         }
                         // Article links open in the user's browser instead of
                         // navigating away inside this WebView.
@@ -309,7 +355,7 @@ fun CaArticleDetailScreen(
                                     modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
                                         .clickable(enabled = !isDownloadingPdf) {
                                             scope.launch {
-                                                val uri = viewModel.downloadArticlePdf(article.id, article.headline)
+                                                val uri = viewModel.downloadArticlePdf(article.id, article.headline.stripHtmlTags())
                                                 uri?.let {
                                                     val viewIntent = Intent(Intent.ACTION_VIEW).apply {
                                                         setDataAndType(it, "application/pdf")
@@ -341,10 +387,10 @@ fun CaArticleDetailScreen(
                                 Box(
                                     modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
                                         .clickable {
-                                            val shareText = "${article.headline}\n\n${article.summary}\n\nRead more on BPSCNotes app"
+                                            val shareText = "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app"
                                             val intent = Intent(Intent.ACTION_SEND).apply {
                                                 type = "text/plain"
-                                                putExtra(Intent.EXTRA_SUBJECT, article.headline)
+                                                putExtra(Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
                                                 putExtra(Intent.EXTRA_TEXT, shareText)
                                             }
                                             context.startActivity(Intent.createChooser(intent, str.caShare))
@@ -471,7 +517,7 @@ fun CaArticleDetailScreen(
                                 if (article.isMains) Text(str.filterMains, style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
-                            Text(article.headline, style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp)
+                            RichHtmlText(article.headline, style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
 
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(article.date, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)

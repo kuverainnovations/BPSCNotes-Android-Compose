@@ -101,7 +101,7 @@ fun TierPromotionOverlay(
             Text(str.promotionCongrats, style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
             Text(str.promotionPromotedTo, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.8f))
             Text(newTier.name?:"", style = MaterialTheme.typography.displaySmall, color = tierColor, fontWeight = FontWeight.ExtraBold)
-            Text("${newTier.coinMultiplier}× coins/hour · ${newTier.xpMultiplier}× XP", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+            Text("🪙 ${coinsPerHrLabel(newTier.coinMultiplier)} coins/hour (${newTier.coinMultiplier}× rate) · ⚡ ${newTier.xpMultiplier}× XP", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
 
             // Perks
             if (newTier.perks.isNotEmpty()) {
