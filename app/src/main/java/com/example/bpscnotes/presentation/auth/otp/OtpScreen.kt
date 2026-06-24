@@ -11,7 +11,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Sms
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,7 +42,6 @@ fun OtpScreen(
     navController: NavHostController,
     mobile: String,
     otpContext: String = "registration",   // "registration" | "forgot_mpin"
-    devOtp: String? = null,                 // TEMP: auto-fill while DLT template approval is pending
     viewModel: OtpViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -51,43 +50,17 @@ fun OtpScreen(
     val focusRequesters = remember { List(6) { FocusRequester() } }
     val isLoading       by viewModel.isLoading.observeAsState(false)
     val error           by viewModel.error.observeAsState()
-
-    // TEMP: SMS delivery is unreliable pending MSG91 DLT template approval -
-    // the backend returns the real OTP in the send-otp response so the user
-    // isn't blocked. Pre-fill it here. Remove once DLT is sorted.
-    /*LaunchedEffect(devOtp) {
-        if (devOtp?.length == 6 && devOtp.all(Char::isDigit)) {
-            devOtp.forEachIndexed { i, c -> otpValues[i].value = c.toString() }
-        }
-    }*/
-
-    LaunchedEffect(devOtp) {
-        if (devOtp?.length == 6 && devOtp.all(Char::isDigit)) {
-
-            delay(2000)
-
-            devOtp.forEachIndexed { index, c ->
-                otpValues[index].value = c.toString()
-                delay(120)
-            }
-
-            delay(1000)
-
-            viewModel.verifyOtp(mobile, devOtp, otpContext)
-        }
-    }
-
-    val result by viewModel.result.observeAsState()
-
+    val result          by viewModel.result.observeAsState()
     val resendSuccess   by viewModel.resendSuccess.observeAsState(false)
 
-    // For forgot_mpin: send OTP on screen entry (no one sent it before navigating here)
+    // For forgot_mpin: send OTP on screen entry (LoginViewModel doesn't send it)
     LaunchedEffect(Unit) {
         if (otpContext == "forgot_mpin") {
             viewModel.sendForgotMpinOtp(mobile)
         }
     }
-    // Countdown timer
+
+    // Countdown timer — resets on each successful send/resend
     var secondsLeft by remember { mutableIntStateOf(30) }
     var canResend   by remember { mutableStateOf(false) }
     LaunchedEffect(resendSuccess) {
@@ -100,19 +73,19 @@ fun OtpScreen(
     // Navigate based on OTP verification result
     LaunchedEffect(result) {
         when (val r = result) {
-            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToMain -> {
+            is OtpResult.NavigateToMain -> {
                 viewModel.onResultConsumed()
                 navController.navigate(Screen.Main.route) { popUpTo(0) { inclusive = true } }
             }
-            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToRegister -> {
+            is OtpResult.NavigateToRegister -> {
                 viewModel.onResultConsumed()
                 navController.navigate(Screen.Register.createRoute(r.tempToken))
             }
-            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToCreateMpin -> {
+            is OtpResult.NavigateToCreateMpin -> {
                 viewModel.onResultConsumed()
                 navController.navigate(Screen.CreateMpin.route) { popUpTo(0) { inclusive = true } }
             }
-            is com.example.bpscnotes.presentation.auth.otp.OtpResult.NavigateToResetMpin -> {
+            is OtpResult.NavigateToResetMpin -> {
                 viewModel.onResultConsumed()
                 navController.navigate(Screen.ResetMpin.createRoute(r.mobile, r.otp)) {
                     popUpTo(Screen.Login.route) { inclusive = false }
@@ -122,11 +95,7 @@ fun OtpScreen(
         }
     }
 
-    // Auto-submit when 6 digits entered
     val fullOtp = otpValues.joinToString("") { it.value }
-   /* LaunchedEffect(fullOtp) {
-        if (fullOtp.length == 6) viewModel.verifyOtp(mobile, fullOtp, otpContext)
-    }*/
 
     Column(
         modifier            = Modifier.fillMaxSize().background(cs.background).statusBarsPadding().imePadding(),
@@ -151,36 +120,47 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // WhatsApp icon badge
         Box(
             modifier         = Modifier.size(90.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Rounded.Sms, null, tint = BpscColors.Primary, modifier = Modifier.size(44.dp))
+            Icon(Icons.Rounded.Forum, null, tint = BpscColors.Primary, modifier = Modifier.size(44.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(str.otpTitle,
+        Text(
+            str.otpTitle,
             style      = MaterialTheme.typography.headlineSmall,
             color      = BpscColors.TextPrimary,
-            fontWeight = FontWeight.Bold)
+            fontWeight = FontWeight.Bold
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("OTP sent to +91 $mobile",
-            style = MaterialTheme.typography.bodyMedium,
-            color = cs.onSurfaceVariant)
+        Text(
+            str.otpSentTo + mobile,
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = cs.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier  = Modifier.padding(horizontal = 32.dp)
+        )
 
-        if (devOtp?.length == 6) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Auto-filled for now — SMS delivery pending",
-                style = MaterialTheme.typography.labelMedium,
-                color = BpscColors.CoinGold)
-        }
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // WhatsApp delivery hint
+        Text(
+            "Check your WhatsApp for the 6-digit code",
+            style      = MaterialTheme.typography.labelMedium,
+            color      = BpscColors.Primary.copy(alpha = 0.7f),
+            textAlign  = TextAlign.Center,
+            modifier   = Modifier.padding(horizontal = 32.dp)
+        )
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // 6 OTP boxes
+        // 6 OTP input boxes
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier              = Modifier.padding(horizontal = 24.dp)
@@ -195,6 +175,7 @@ fun OtpScreen(
                             if (index > 0) focusRequesters[index - 1].requestFocus()
                         } else {
                             if (newVal.length > 1) {
+                                // Paste handling — distribute digits across boxes
                                 val digits = newVal.filter(Char::isDigit).take(6)
                                 digits.forEachIndexed { i, c ->
                                     if (index + i < 6) otpValues[index + i].value = c.toString()
@@ -216,10 +197,10 @@ fun OtpScreen(
 
         AnimatedVisibility(visible = error != null) {
             Text(
-                text     = error ?: "",
-                color    = MaterialTheme.colorScheme.error,
-                style    = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 12.dp, start = 24.dp, end = 24.dp),
+                text      = error ?: "",
+                color     = MaterialTheme.colorScheme.error,
+                style     = MaterialTheme.typography.bodyMedium,
+                modifier  = Modifier.padding(top = 12.dp, start = 24.dp, end = 24.dp),
                 textAlign = TextAlign.Center
             )
         }
@@ -227,19 +208,25 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(str.otpDidntReceive + " ",
+            Text(
+                str.otpDidntReceive + " ",
                 style = MaterialTheme.typography.bodyMedium,
-                color = cs.onSurfaceVariant)
+                color = cs.onSurfaceVariant
+            )
             if (canResend) {
-                Text(str.otpResend,
+                Text(
+                    str.otpResend,
                     style      = MaterialTheme.typography.bodyMedium,
                     color      = BpscColors.Primary,
                     fontWeight = FontWeight.SemiBold,
-                    modifier   = Modifier.clickable { viewModel.resendOtp(mobile) })
+                    modifier   = Modifier.clickable { viewModel.resendOtp(mobile) }
+                )
             } else {
-                Text("Resend in ${secondsLeft}s",
+                Text(
+                    "Resend in ${secondsLeft}s",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.TextHint)
+                    color = BpscColors.TextHint
+                )
             }
         }
 
@@ -255,8 +242,7 @@ fun OtpScreen(
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
             } else {
-                Text(str.otpVerify,
-                    style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Text(str.otpVerify, style = MaterialTheme.typography.titleMedium, color = Color.White)
             }
         }
 
@@ -270,9 +256,7 @@ fun OtpScreen(
                 }
             }
         ) {
-            Text(str.otpChangeNumber,
-                color = cs.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium)
+            Text(str.otpChangeNumber, color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -294,9 +278,9 @@ private fun OtpBox(
         else               -> cs.outline
     }
     BasicTextField(
-        value          = value,
-        onValueChange  = onValueChange,
-        modifier       = modifier
+        value         = value,
+        onValueChange = onValueChange,
+        modifier      = modifier
             .focusRequester(focusRequester)
             .onFocusChanged { isFocused.value = it.isFocused }
             .height(54.dp)
@@ -309,7 +293,7 @@ private fun OtpBox(
                 if (value.isNotEmpty()) BpscColors.PrimaryLight else BpscColors.CardBg,
                 shape = RoundedCornerShape(12.dp)
             ),
-        textStyle      = TextStyle(
+        textStyle     = TextStyle(
             fontSize   = 22.sp,
             fontWeight = FontWeight.Bold,
             textAlign  = TextAlign.Center,
@@ -319,8 +303,8 @@ private fun OtpBox(
             keyboardType = KeyboardType.NumberPassword,
             imeAction    = ImeAction.Next
         ),
-        singleLine     = true,
-        decorationBox  = { inner ->
+        singleLine    = true,
+        decorationBox = { inner ->
             Box(contentAlignment = Alignment.Center) { inner() }
         }
     )

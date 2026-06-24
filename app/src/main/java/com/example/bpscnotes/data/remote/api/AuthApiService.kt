@@ -132,9 +132,7 @@ data class SendOtpResponse(val success: Boolean, val message: String, val data: 
 
 data class SendOtpData(
     val isNewUser: Boolean = false,
-    // TEMP: backend returns the real OTP while MSG91/DLT template approval is
-    // pending, so the app isn't blocked on SMS delivery. Remove once DLT is sorted.
-    val otp: String? = null,
+    // WhatsApp delivers the OTP — no otp field in response
 )
 
 data class VerifyOtpRequest(val mobile: String, val otp: String)

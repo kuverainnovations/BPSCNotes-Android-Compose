@@ -6,12 +6,11 @@ sealed class Screen(val route: String) {
     object LanguageSelection   : Screen("language_selection")
     object Onboarding          : Screen("onboarding")
     object Login        : Screen("login")
-    object Otp : Screen("otp/{mobile}?context={context}&devOtp={devOtp}") {
+    object Otp : Screen("otp/{mobile}?context={context}") {
         fun createRoute(mobile: String) = "otp/$mobile"
         /** context: "registration" (default) or "forgot_mpin" */
-        fun createRouteWithContext(mobile: String, context: String = "registration", devOtp: String? = null) =
-            "otp/${mobile.encodeUrl()}?context=${context.encodeUrl()}" +
-                    (devOtp?.let { "&devOtp=${it.encodeUrl()}" } ?: "")
+        fun createRouteWithContext(mobile: String, context: String = "registration") =
+            "otp/${mobile.encodeUrl()}?context=${context.encodeUrl()}"
     }
     object Register     : Screen("register/{tempToken}") {
         fun createRoute(tempToken: String) = "register/${tempToken.encodeUrl()}"
