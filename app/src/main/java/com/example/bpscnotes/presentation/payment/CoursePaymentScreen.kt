@@ -30,8 +30,7 @@ fun CoursePaymentScreen(
     courseId: String,
     courseTitle: String,
     price: Int,
-    razorpayOrderId: String? = null,
-    razorpayKeyId: String? = null,
+    paymentSessionId: String? = null,
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -41,36 +40,26 @@ fun CoursePaymentScreen(
 
     // Initialize with course details
     LaunchedEffect(courseId) {
-        viewModel.initCoursePurchase(courseId, courseTitle, price, razorpayOrderId, razorpayKeyId)
+        viewModel.initCoursePurchase(courseId, courseTitle, price, paymentSessionId)
     }
 
-    // Launch Razorpay when order is ready.
-    // We consume the orderId immediately after launching so rotation/recompose
-    // does NOT re-trigger Razorpay on the same (already-used) order.
-    LaunchedEffect(state.razorpayOrderId) {
-        val orderId = state.razorpayOrderId ?: return@LaunchedEffect
-        val keyId   = state.razorpayKeyId   ?: return@LaunchedEffect
-        if (orderId.isBlank() || keyId.isBlank()) return@LaunchedEffect
+    // Launch Cashfree SDK when payment_session_id is ready.
+    // Consume immediately — prevents double-launch on recompose.
+    LaunchedEffect(state.paymentSessionId) {
+        val sessionId = state.paymentSessionId ?: return@LaunchedEffect
+        if (sessionId.isBlank()) return@LaunchedEffect
 
-        // Consume immediately — prevents a second launch if state recomposes
-        viewModel.consumeRazorpayOrderId()
+        viewModel.consumePaymentSessionId()
 
-        launchRazorpay(
-            context     = context,
-            orderId     = orderId,
-            keyId       = keyId,
-            amount      = price,
-            description = "${str.courseEnrollTitle} $courseTitle",
-            userName    = state.userName,
-            userEmail   = state.userEmail,
-            userPhone   = state.userPhone,
-            onSuccess   = { paymentId, signature ->
-                viewModel.confirmCoursePurchase(paymentId, orderId, signature)
+        launchCashfree(
+            context   = context,
+            sessionId = sessionId,
+            onSuccess = { cfPaymentId ->
+                viewModel.confirmCoursePurchase(cfPaymentId)
             },
-            onFailure   = { code, msg ->
+            onFailure = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
-            },
-            str
+            }
         )
     }
 
@@ -150,11 +139,10 @@ fun CoursePaymentScreen(
 
                         Button(
                             onClick = {
-                                // Re-trigger Razorpay by setting the order ID in state
-                                // (LaunchedEffect watches state.razorpayOrderId)
+                                // Moves pending session ID into state to trigger LaunchedEffect
                                 viewModel.triggerCoursePayment()
                             },
-                            enabled  = !state.isConfirming && !razorpayOrderId.isNullOrBlank(),
+                            enabled  = !state.isConfirming && !paymentSessionId.isNullOrBlank(),
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape    = RoundedCornerShape(14.dp),
                             colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)

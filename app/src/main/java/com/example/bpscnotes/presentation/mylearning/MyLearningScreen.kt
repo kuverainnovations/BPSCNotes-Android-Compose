@@ -1649,14 +1649,14 @@ private fun CourseDetailSheet(
         )
     } else {
 
-        // Paid course: enroll() hit a 402 -> navigate to real Razorpay payment screen
+        // Paid course: enroll() hit a 402 -> navigate to CoursePaymentScreen (Cashfree)
         LaunchedEffect(state.purchaseRequired) {
             if (state.purchaseRequired && state.purchaseCourseId == course.id) {
                 onDismiss()
                 navController.navigate(
                     Screen.CoursePayment.createRoute(
                         state.purchaseCourseId!!, state.purchaseCourseTitle, state.purchasePrice,
-                        state.purchaseOrderId, state.purchaseKeyId
+                        state.purchaseSessionId
                     )
                 )
                 viewModel.clearPurchaseRequired()

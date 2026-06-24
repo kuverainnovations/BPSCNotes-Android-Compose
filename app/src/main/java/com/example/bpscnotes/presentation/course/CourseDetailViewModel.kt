@@ -38,8 +38,7 @@ data class CourseDetailUiState(
     // Payment required
     val purchaseRequired: Boolean = false,
     val purchasePrice: Int = 0,
-    val purchaseOrderId: String? = null,
-    val purchaseKeyId: String? = null,
+    val purchaseSessionId: String? = null,   // paymentSessionId → Cashfree SDK
     // Rating
     val showRatingSheet: Boolean = false,
     val isSubmittingRating: Boolean = false,
@@ -168,15 +167,13 @@ class CourseDetailViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price   = data.optInt("price", 0)
-                        val orderId = data.optString("razorpayOrderId").takeIf { it.isNotBlank() }
-                        val keyId   = data.optString("razorpayKeyId").takeIf { it.isNotBlank() }
+                        val price     = data.optInt("price", 0)
+                        val sessionId = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
                         _uiState.update { it.copy(
                             isEnrolling      = false,
                             purchaseRequired = true,
                             purchasePrice    = price,
-                            purchaseOrderId  = orderId,
-                            purchaseKeyId    = keyId
+                            purchaseSessionId = sessionId
                         )}
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }

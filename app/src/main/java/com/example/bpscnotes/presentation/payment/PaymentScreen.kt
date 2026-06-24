@@ -46,28 +46,20 @@ fun SubscriptionPaymentScreen(
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    // Launch Razorpay when order is ready.
-    // Consume orderId immediately so rotation/recompose doesn't re-trigger.
-    LaunchedEffect(state.razorpayOrderId) {
-        val orderId = state.razorpayOrderId ?: return@LaunchedEffect
-        val keyId   = state.razorpayKeyId   ?: return@LaunchedEffect
-        viewModel.consumeRazorpayOrderId()
-        launchRazorpay(
+    // Launch Cashfree SDK when payment_session_id is ready.
+    // Consume immediately so recompose doesn't re-trigger.
+    LaunchedEffect(state.paymentSessionId) {
+        val sessionId = state.paymentSessionId ?: return@LaunchedEffect
+        viewModel.consumePaymentSessionId()
+        launchCashfree(
             context     = context,
-            orderId     = orderId,
-            keyId       = keyId,
-            amount      = state.finalAmount,
-            description = "BPSCNotes ${state.selectedPlan?.name ?: "Premium"} Subscription",
-            userName    = state.userName,
-            userEmail   = state.userEmail,
-            userPhone   = state.userPhone,
-            onSuccess   = { paymentId, signature ->
-                viewModel.confirmSubscription(paymentId, orderId, signature)
+            sessionId   = sessionId,
+            onSuccess   = { cfPaymentId ->
+                viewModel.confirmSubscription(cfPaymentId)
             },
             onFailure   = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
-            },
-            str = str
+            }
         )
     }
 
@@ -447,75 +439,80 @@ fun SuccessScreen(title: String, message: String, bonusCoins: Int = 0, onDone: (
     }
 }
 
-// ── Razorpay launcher helper ──────────────────────────────────
-fun launchRazorpay(
-    context: Context,
-    orderId: String,
-    keyId: String,
-    amount: Int,
-    description: String,
-    userName: String,
-    userEmail: String,
-    userPhone: String,
-    onSuccess: (paymentId: String, signature: String) -> Unit,
-    onFailure: (code: Int, message: String) -> Unit,
-    str: AppStrings
+// ── Cashfree launcher helper ──────────────────────────────────
+/**
+ * Launch Cashfree payment SDK.
+ *
+ * Build-time dependency required in app/build.gradle:
+ *   implementation("com.cashfree.pg:api:2.+")
+ *
+ * [sessionId]  — payment_session_id returned by backend (POST /subscriptions/initiate
+ *                or /courses/{id}/enroll or /study-materials/{id}/purchase/init)
+ * [onSuccess]  — receives cfPaymentId; ViewModel then calls backend confirm endpoint
+ *                which does server-side verification via GET /pg/orders/{orderId}/payments
+ * [onFailure]  — receives (errorCode, errorMessage); code 0 = user cancelled
+ */
+fun launchCashfree(
+    context:   Context,
+    sessionId: String,
+    onSuccess: (cfPaymentId: String) -> Unit,
+    onFailure: (code: Int, message: String) -> Unit
 ) {
     try {
-        val checkout = com.razorpay.Checkout()
-        checkout.setKeyID(keyId)
-        checkout.setImage(com.kuvera.bpscnotes.R.mipmap.ic_launcher)
-
-        val options = org.json.JSONObject().apply {
-            put("name",        "BPSCNotes")
-            put("description", description)
-            put("order_id",    orderId)
-            put("currency",    "INR")
-            put("amount",      amount * 100)  // paise
-            put("prefill", org.json.JSONObject().apply {
-                put("name",    userName)
-                put("email",   userEmail)
-                put("contact", userPhone)
-            })
-            put("theme", org.json.JSONObject().apply {
-                put("color", "#1565C0")
-            })
-            // Preferred payment methods — UPI first
-            put("config", org.json.JSONObject().apply {
-                put("display", org.json.JSONObject().apply {
-                    put("blocks", org.json.JSONObject().apply {
-                        put("utib", org.json.JSONObject().apply {
-                            put("name",        "Pay via UPI")
-                            put("instruments", org.json.JSONArray().apply {
-                                put(org.json.JSONObject().apply {
-                                    put("method", "upi")
-                                    put("flows",  org.json.JSONArray().apply {
-                                        put("qr"); put("intent"); put("collect")
-                                    })
-                                })
-                            })
-                        })
-                        put("other", org.json.JSONObject().apply {
-                            put("name",        "Other Payment Methods")
-                            put("instruments", org.json.JSONArray().apply {
-                                put(org.json.JSONObject().apply { put("method", "card") })
-                                put(org.json.JSONObject().apply { put("method", "netbanking") })
-                                put(org.json.JSONObject().apply { put("method", "wallet") })
-                            })
-                        })
-                    })
-                    put("sequence", org.json.JSONArray().apply { put("block.utib"); put("block.other") })
-                    put("preferences", org.json.JSONObject().apply { put("show_default_blocks", false) })
-                })
-            })
-        }
-
         val activity = context as Activity
-        // Set up result listener on the activity
-        (activity as? com.example.bpscnotes.presentation.payment.RazorpayPaymentListener)
+
+        // Register callbacks on the Activity before opening the SDK
+        (activity as? com.example.bpscnotes.presentation.payment.CashfreePaymentListener)
             ?.setPaymentCallbacks(onSuccess, onFailure)
-        checkout.open(activity, options)
+
+        // ── Cashfree SDK invocation ────────────────────────────────────────
+        //
+        //  val session = CFSession.CFSessionBuilder()
+        //      .setEnvironment(CFSession.Environment.SANDBOX)   // or PRODUCTION
+        //      .setPaymentSessionId(sessionId)
+        //      .setOrderId("")   // optional; SDK derives it from session
+        //      .build()
+        //
+        //  val theme = CFThemeBuilder()
+        //      .setNavigationBarBackgroundColor("#1565C0")
+        //      .setNavigationBarTextColor("#FFFFFF")
+        //      .setPrimaryTextColor("#1565C0")
+        //      .setBackgroundColor("#FFFFFF")
+        //      .setPrimaryFont("montserrat_regular.ttf")
+        //      .setSecondaryFont("montserrat_regular.ttf")
+        //      .build()
+        //
+        //  val cfDropCheckoutPayment = CFDropCheckoutPayment.CFDropCheckoutPaymentBuilder()
+        //      .setSession(session)
+        //      .setCFUIPaymentModes(
+        //          CFUPIIntentCheckoutPayment(),   // UPI intent (GPay, PhonePe, etc.)
+        //          CFCardPayment(),                // Debit/Credit cards
+        //          CFNetBankingPayment()           // Net banking
+        //      )
+        //      .setTheme(theme)
+        //      .build()
+        //
+        //  CFPaymentGatewayService.getInstance()
+        //      .doPayment(activity, cfDropCheckoutPayment)
+        //
+        // CFPaymentResultCallback must be implemented in MainActivity:
+        //
+        //  override fun onPaymentVerify(orderId: String) {
+        //      // Cashfree has verified internally; now confirm server-side
+        //      // The orderId here is Cashfree's order_id, NOT cfPaymentId.
+        //      // Backend GET /pg/orders/{orderId}/payments returns cfPaymentId.
+        //      // For simplicity, pass orderId to backend confirm and let it look up.
+        //      (this as? MainActivity)?.onCashfreePaymentSuccess(orderId)
+        //  }
+        //  override fun onError(error: CFErrorResponse, orderId: String) {
+        //      val code = if (error.status == "cancelled") 0 else -1
+        //      (this as? MainActivity)?.onCashfreePaymentError(code, error.message ?: "Payment failed")
+        //  }
+        //
+        // ── Until SDK is added to build.gradle, call onFailure to avoid crash ──
+        onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
+
     } catch (e: Exception) {
-        onFailure(-1, e.toUserMessage(str.paymentOpenFailed))
+        onFailure(-1, "Failed to open payment: ${e.localizedMessage ?: "Unknown error"}")
     }
 }

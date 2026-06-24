@@ -122,8 +122,8 @@ data class CreateSubscriptionRequest(
 
 data class CreateSubscriptionResponse(
     val subscriptionId: String,
-    val razorpayOrderId: String?,
-    val razorpayKeyId: String?,
+    val paymentSessionId: String?,      // → Cashfree Android SDK
+    val providerOrderId: String?,       // Cashfree order_id (for webhook lookup)
     val breakdown: PaymentBreakdown
 )
 
@@ -137,17 +137,15 @@ data class PaymentBreakdown(
 )
 
 data class ConfirmSubscriptionRequest(
-    val razorpayOrderId: String,
-    val transactionId: String,        // razorpayPaymentId
-    val razorpaySignature: String,
+    val cfPaymentId: String,            // from Cashfree SDK onPaymentSuccess
     val paymentMethod: String = "upi",
     val upiId: String? = null
 )
 
 data class CoursePurchaseRequiredData(
     val price: Int,
-    val razorpayOrderId: String?,
-    val razorpayKeyId: String?,
+    val paymentSessionId: String?,      // → Cashfree Android SDK
+    val providerOrderId: String?,
     val courseTitle: String?,
     val courseId: String?,
     val code: String?
@@ -158,9 +156,7 @@ data class EnrollCourseRequest(
 )
 
 data class ConfirmCoursePurchaseRequest(
-    val razorpayOrderId: String,
-    val razorpayPaymentId: String,
-    val razorpaySignature: String,
+    val cfPaymentId: String,            // from Cashfree SDK
     val paymentMethod: String = "upi"
 )
 
@@ -595,7 +591,7 @@ interface CoursesApiService {
     @GET("subscriptions/plans")
     suspend fun getSubscriptionPlans(): ApiResponse<SubscriptionPlansData>
 
-    /** POST /subscriptions/create — create order + get Razorpay order ID */
+    /** POST /subscriptions/create — create Cashfree order, get payment_session_id */
     @POST("subscriptions/create")
     suspend fun createSubscription(@Body dto: CreateSubscriptionRequest): ApiResponse<CreateSubscriptionResponse>
 

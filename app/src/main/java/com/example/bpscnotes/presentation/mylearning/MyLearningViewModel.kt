@@ -34,14 +34,12 @@ data class MyLearningUiState(
     val justEnrolledId:  String?         = null,   // triggers tab switch in Screen
     val saveToast:       String?         = null,
     val error:           String?         = null,
-    // Set when enroll() hits a 402 for a paid course — sheet should
-    // navigate to CoursePaymentScreen with these details.
-    val purchaseRequired: Boolean = false,
-    val purchasePrice:    Int     = 0,
-    val purchaseOrderId:  String? = null,
-    val purchaseKeyId:    String? = null,
-    val purchaseCourseId: String? = null,
-    val purchaseCourseTitle: String = "",
+    // Set when enroll() hits a 402 for a paid course — navigate to CoursePaymentScreen.
+    val purchaseRequired:    Boolean = false,
+    val purchasePrice:       Int     = 0,
+    val purchaseSessionId:   String? = null,   // paymentSessionId → Cashfree SDK
+    val purchaseCourseId:    String? = null,
+    val purchaseCourseTitle: String  = "",
 )
 
 @HiltViewModel
@@ -169,17 +167,15 @@ class MyLearningViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price   = data.optInt("price", 0)
-                        val orderId = data.optString("razorpayOrderId").takeIf { it.isNotBlank() }
-                        val keyId   = data.optString("razorpayKeyId").takeIf { it.isNotBlank() }
+                        val price     = data.optInt("price", 0)
+                        val sessionId = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
                         _uiState.update { it.copy(
-                            isEnrolling         = false,
-                            purchaseRequired    = true,
-                            purchasePrice       = price,
-                            purchaseOrderId     = orderId,
-                            purchaseKeyId       = keyId,
-                            purchaseCourseId    = courseId,
-                            purchaseCourseTitle = courseTitle
+                            isEnrolling          = false,
+                            purchaseRequired     = true,
+                            purchasePrice        = price,
+                            purchaseSessionId    = sessionId,
+                            purchaseCourseId     = courseId,
+                            purchaseCourseTitle  = courseTitle
                         )}
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }

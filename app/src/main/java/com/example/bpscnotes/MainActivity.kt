@@ -22,20 +22,17 @@ import com.example.bpscnotes.core.ui.t.BPSCNotesTheme
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
-import com.example.bpscnotes.presentation.payment.RazorpayPaymentListener
+import com.example.bpscnotes.presentation.payment.CashfreePaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
 import com.example.bpscnotes.core.config.AppConfigRepository
 import com.example.bpscnotes.core.config.CoinsConfigRepository
 import kotlinx.coroutines.launch
-import com.razorpay.PaymentData
-import com.razorpay.PaymentResultWithDataListener
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(),
-    PaymentResultWithDataListener,
-    RazorpayPaymentListener {
+    CashfreePaymentListener {
 
     @Inject lateinit var adManager: com.example.bpscnotes.core.ads.AdManager
     private val settingsViewModel: SettingsViewModel by viewModels()
@@ -46,34 +43,33 @@ class MainActivity : ComponentActivity(),
     @Inject lateinit var appConfigRepo: AppConfigRepository
     @Inject lateinit var coinsConfigRepo: CoinsConfigRepository
 
-    // Callbacks registered by PaymentScreen before launching Razorpay checkout
-    private var onPaymentSuccessCallback: ((String, String) -> Unit)? = null
+    // Callbacks registered by payment screens before launching Cashfree SDK
+    private var onPaymentSuccessCallback: ((String) -> Unit)? = null
     private var onPaymentFailureCallback: ((Int, String) -> Unit)? = null
 
-    // ── RazorpayPaymentListener ─────────────────────────────
+    // ── CashfreePaymentListener ──────────────────────────────
     override fun setPaymentCallbacks(
-        onSuccess: (paymentId: String, signature: String) -> Unit,
+        onSuccess: (cfPaymentId: String) -> Unit,
         onFailure: (code: Int, message: String) -> Unit
     ) {
         onPaymentSuccessCallback = onSuccess
         onPaymentFailureCallback = onFailure
     }
 
-    // ── PaymentResultWithDataListener ───────────────────────
-    override fun onPaymentSuccess(paymentId: String?, response: PaymentData?) {
-        Log.d("Razorpay", "Payment success: paymentId=$paymentId orderId=${response?.orderId}")
-        val id        = paymentId ?: ""
-        val signature = response?.signature ?: ""
-        Event.paymentSuccess("subscription", 0, response?.paymentId ?: "upi")
-        onPaymentSuccessCallback?.invoke(id, signature)
+    /** Called by CashfreePaymentResultCallback after a successful payment. */
+    fun onCashfreePaymentSuccess(cfPaymentId: String) {
+        Log.d("Cashfree", "Payment success: cfPaymentId=$cfPaymentId")
+        Event.paymentSuccess("subscription", 0, "cashfree")
+        onPaymentSuccessCallback?.invoke(cfPaymentId)
         onPaymentSuccessCallback = null
         onPaymentFailureCallback = null
     }
 
-    override fun onPaymentError(code: Int, response: String?, paymentData: PaymentData?) {
-        Log.e("Razorpay", "Payment error: code=$code msg=$response")
-        if (code != 0) Event.paymentFailed("subscription", code, response ?: "Payment failed")
-        onPaymentFailureCallback?.invoke(code, response ?: "Payment failed")
+    /** Called by CashfreePaymentResultCallback after a failed/cancelled payment. */
+    fun onCashfreePaymentError(code: Int, message: String) {
+        Log.e("Cashfree", "Payment error: code=$code msg=$message")
+        if (code != 0) Event.paymentFailed("subscription", code, message)
+        onPaymentFailureCallback?.invoke(code, message)
         onPaymentSuccessCallback = null
         onPaymentFailureCallback = null
     }

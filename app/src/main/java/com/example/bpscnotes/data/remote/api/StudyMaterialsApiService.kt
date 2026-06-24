@@ -278,7 +278,7 @@ data class DownloadHistoryItem(
 
 data class MyDownloadsData(val downloads: List<DownloadHistoryItem> = emptyList())
 
-// ── Marketplace purchase — hybrid coins + Razorpay (Phase 3) ──
+// ── Marketplace purchase — hybrid coins + Cashfree (Phase 3) ──
 data class InitPurchaseRequest(val coinsToApply: Int = 0)
 
 data class InitPurchaseData(
@@ -290,8 +290,8 @@ data class InitPurchaseData(
     val coinsApplied:     Int     = 0,
     val coinDiscountInr:  Int     = 0,
     val amountDueInr:     Int     = 0,
-    val razorpayOrderId:  String? = null,
-    val razorpayKeyId:    String? = null,
+    val paymentSessionId: String? = null,   // → Cashfree Android SDK
+    val providerOrderId:  String? = null,
     val materialTitle:    String? = null,
     // present when purchase completed immediately (free or fully coin-covered)
     val coinsSpent:       Int     = 0,
@@ -301,10 +301,9 @@ data class InitPurchaseData(
 )
 
 data class ConfirmPurchaseRequest(
-    val purchaseOrderId:    String,
-    val razorpayPaymentId:  String,
-    val razorpaySignature:  String,
-    val paymentMethod:      String? = null,
+    val purchaseOrderId: String,
+    val cfPaymentId:     String,            // from Cashfree SDK
+    val paymentMethod:   String? = null,
 )
 
 data class PurchaseResultData(
@@ -456,14 +455,14 @@ interface StudyMaterialsApiService {
     /**
      * POST /study-materials/:id/purchase/init — start a marketplace purchase.
      * Buyer may apply up to `max_coins_per_purchase` coins as a discount;
-     * remaining ₹ balance (if any) must be paid via Razorpay using the
-     * returned razorpayOrderId. If amountDueInr is 0, purchased=true
+     * remaining ₹ balance (if any) must be paid via Cashfree using the
+     * returned paymentSessionId. If amountDueInr is 0, purchased=true
      * immediately (free or fully coin-covered).
      */
     @POST("study-materials/{id}/purchase/init")
     suspend fun initPurchase(@Path("id") id: String, @Body body: InitPurchaseRequest): ApiResponse<InitPurchaseData>
 
-    /** POST /study-materials/:id/purchase/confirm — finalize after Razorpay payment succeeds */
+    /** POST /study-materials/:id/purchase/confirm — finalize after Cashfree payment succeeds */
     @POST("study-materials/{id}/purchase/confirm")
     suspend fun confirmPurchase(@Path("id") id: String, @Body body: ConfirmPurchaseRequest): ApiResponse<PurchaseResultData>
 

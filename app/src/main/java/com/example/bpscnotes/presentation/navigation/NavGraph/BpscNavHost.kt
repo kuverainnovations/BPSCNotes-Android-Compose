@@ -224,21 +224,19 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             }
 
             composable(
-                route     = "course_payment/{courseId}/{courseTitle}/{price}/{orderId}/{keyId}",
+                route     = "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}",
                 arguments = listOf(
                     navArgument("courseId")    { type = NavType.StringType },
                     navArgument("courseTitle") { type = NavType.StringType },
                     navArgument("price")       { type = NavType.IntType    },
-                    navArgument("orderId")     { type = NavType.StringType },
-                    navArgument("keyId")       { type = NavType.StringType }
+                    navArgument("sessionId")   { type = NavType.StringType }
                 )
             ) { back ->
-                val courseId    = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
-                val courseTitle = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
-                val price       = back.arguments?.getInt("price")          ?: 0
-                val orderId     = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
-                val keyId       = java.net.URLDecoder.decode(back.arguments?.getString("keyId") ?: "none", "UTF-8").takeIf   { it != "none" }
-                CoursePaymentScreen(navController, courseId, courseTitle, price, orderId, keyId)
+                val courseId       = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
+                val courseTitle    = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
+                val price          = back.arguments?.getInt("price") ?: 0
+                val paymentSession = java.net.URLDecoder.decode(back.arguments?.getString("sessionId") ?: "none", "UTF-8").takeIf { it != "none" }
+                CoursePaymentScreen(navController, courseId, courseTitle, price, paymentSession)
             }
 
             composable(

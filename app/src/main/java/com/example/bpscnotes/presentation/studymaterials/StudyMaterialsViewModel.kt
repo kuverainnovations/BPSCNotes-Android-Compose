@@ -59,19 +59,14 @@ data class StudyMaterialsUiState(
     val purchasingId:      String? = null,
     val purchaseSuccess:   String? = null,
     val purchaseError:     String? = null,
-    // Razorpay payment for marketplace purchase (Phase 3)
-    val pendingPurchase:   InitPurchaseData? = null,  // set when requiresPayment=true — triggers Razorpay launch
+    // Cashfree payment for marketplace purchase (Phase 3)
+    val pendingPurchase:          InitPurchaseData? = null,  // set when requiresPayment=true — triggers Cashfree SDK
     val pendingPurchaseMaterialId: String? = null,
-    val pendingPurchaseTitle: String? = null,
+    val pendingPurchaseTitle:      String? = null,
     // Retained separately from pendingPurchase so confirmMaterialPurchase()
-    // still has the order ID after consumePendingPurchase() clears pendingPurchase
-    // (consume happens immediately on Razorpay launch to avoid double-launch on recompose).
-    val pendingPurchaseOrderId: String? = null,
+    // still has the order ID after consumePendingPurchase() clears pendingPurchase.
+    val pendingPurchaseOrderId:    String? = null,
     val isConfirmingPurchase: Boolean = false,
-    // Prefill data for Razorpay checkout
-    val userName: String = "",
-    val userEmail: String = "",
-    val userPhone: String = "",
     val userCoins: Int = 0,
     // List
     val materials:          List<StudyMaterialDto> = emptyList(),
@@ -918,18 +913,15 @@ fun loadMyUploads() {
     }
 }
 
-// ── User info for Razorpay prefill ─────────────────────────
+// ── Load user coin balance ───────────────────────────────────
 private fun loadUserInfo() {
     viewModelScope.launch {
         try {
             val user = authApi.getMe().data?.user
             _state.update { it.copy(
-                userName  = user?.name ?: tokenStore.getUserName() ?: "",
-                userEmail = user?.email ?: "",
                 userCoins = user?.coins ?: 0,
-                userPhone = user?.mobile ?: tokenStore.getUserMobile() ?: "",
             )}
-        } catch (_: Exception) { /* non-blocking — Razorpay still works with empty prefill */ }
+        } catch (_: Exception) {}
     }
 }
 
@@ -1047,7 +1039,7 @@ fun loadDownloadHistory() {
     }
 }
 
-// ── Purchase locked material (Phase 3: hybrid coins + Razorpay) ──
+// ── Purchase locked material (Phase 3: hybrid coins + Cashfree) ──
 // coinsToApply: how many coins the user chose to apply as a discount
 // (capped server-side by max_coins_per_purchase).
 fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply: Int = 0) {
@@ -1075,7 +1067,7 @@ fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply
                     )}
                     loadStats()
                 }
-                // Remaining ₹ balance needs Razorpay — hand off to UI to launch checkout
+                // Remaining ₹ balance needs Cashfree — hand off to UI to launch SDK
                 else -> {
                     _state.update { it.copy(
                         purchasingId = null,
@@ -1100,52 +1092,51 @@ fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply
     }
 }
 
-// Called by the screen once Razorpay has consumed the order (prevents
-// re-launching on recomposition) — mirrors consumeRazorpayOrderId() pattern.
+// Called by the screen once Cashfree SDK has launched (prevents
+// re-launching on recomposition).
 fun consumePendingPurchase() {
     _state.update { it.copy(pendingPurchase = null) }
 }
 
-// Called by the screen's Razorpay onSuccess callback.
-fun confirmMaterialPurchase(paymentId: String, signature: String) {
-    val materialId = _state.value.pendingPurchaseMaterialId ?: return
-    val purchaseOrderId = _state.value.pendingPurchaseOrderId ?: return
-    val title = _state.value.pendingPurchaseTitle ?: ""
+// Called by the screen's Cashfree onSuccess callback.
+fun confirmMaterialPurchase(cfPaymentId: String) {
+    val materialId      = _state.value.pendingPurchaseMaterialId ?: return
+    val purchaseOrderId = _state.value.pendingPurchaseOrderId    ?: return
+    val title           = _state.value.pendingPurchaseTitle      ?: ""
     viewModelScope.launch {
         _state.update { it.copy(isConfirmingPurchase = true) }
         try {
             val res = api.confirmPurchase(materialId, ConfirmPurchaseRequest(
-                purchaseOrderId   = purchaseOrderId,
-                razorpayPaymentId = paymentId,
-                razorpaySignature = signature,
+                purchaseOrderId = purchaseOrderId,
+                cfPaymentId     = cfPaymentId,
             ))
             tokenStore.addPurchasedId(materialId)
             _state.update { it.copy(
-                isConfirmingPurchase = false,
-                purchaseSuccess = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
-                purchasedIds = it.purchasedIds + materialId,
+                isConfirmingPurchase      = false,
+                purchaseSuccess           = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
+                purchasedIds              = it.purchasedIds + materialId,
                 pendingPurchaseMaterialId = null,
-                pendingPurchaseTitle = null,
-                pendingPurchaseOrderId = null,
+                pendingPurchaseTitle      = null,
+                pendingPurchaseOrderId    = null,
             )}
             loadStats()
         } catch (e: Exception) {
             _state.update { it.copy(
-                isConfirmingPurchase = false,
-                purchaseError = "Payment received but unlock failed. Contact support — payment ID: $paymentId",
+                isConfirmingPurchase   = false,
+                purchaseError          = "Payment received but unlock failed. Contact support — payment ID: $cfPaymentId",
                 pendingPurchaseOrderId = null,
             )}
         }
     }
 }
 
-// Called by the screen's Razorpay onFailure callback.
+// Called by the screen's Cashfree onFailure callback.
 fun handleMaterialPaymentFailure(code: Int, message: String) {
     _state.update { it.copy(
-        purchaseError = "Payment failed: $message",
+        purchaseError             = "Payment failed: $message",
         pendingPurchaseMaterialId = null,
-        pendingPurchaseTitle = null,
-        pendingPurchaseOrderId = null,
+        pendingPurchaseTitle      = null,
+        pendingPurchaseOrderId    = null,
     )}
 }
 

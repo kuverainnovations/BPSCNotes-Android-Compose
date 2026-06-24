@@ -37,15 +37,14 @@ data class PaymentState(
     val coinsToUse: Int                     = 0,
     val coinDiscount: Int                   = 0,
 
-    // Order
+    // Order — Cashfree
     val subscriptionId: String?             = null,
-    val razorpayOrderId: String?            = null,
-    val razorpayKeyId: String?              = null,
+    val paymentSessionId: String?           = null,   // → Cashfree Android SDK
     val finalAmount: Int                    = 0,
     val isCreatingOrder: Boolean            = false,
     val isConfirming: Boolean               = false,
 
-    // User info for Razorpay prefill
+    // User info (phone required by Cashfree customer_details)
     val userName: String                    = "",
     val userEmail: String                   = "",
     val userPhone: String                   = "",
@@ -54,7 +53,7 @@ data class PaymentState(
     val courseId: String?                   = null,
     val courseTitle: String?                = null,
     val coursePrice: Int                    = 0,
-    val _pendingOrderId: String?            = null,  // stored until user taps Pay
+    val _pendingSessionId: String?          = null,   // stored until user taps Pay
 
     // Result
     val isSuccess: Boolean                  = false,
@@ -78,16 +77,11 @@ class PaymentViewModel @Inject constructor(
         loadUserInfo()
     }
 
-    // Mirrors SubscriptionsService.initiate() on the backend: coins are
-    // worth coinToInrRate rupees each, capped so the coin discount never
-    // exceeds maxCoinDiscountPctSubscription% of the plan price. Both
-    // numbers are admin-configurable on the Coins page (Economy
-    // Settings) — keeping this in sync avoids the preview here ever
-    // disagreeing with what the backend actually charges.
+    // Mirrors SubscriptionsService.initiate() — keeps preview in sync with backend math.
     private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Int> {
         val rate   = coinsConfig.economy.coinToInrRate
         val maxPct = coinsConfig.economy.maxCoinDiscountPctSubscription
-        val maxDiscountInr = (base * maxPct / 100.0).toInt()  // Math.floor equivalent (non-negative)
+        val maxDiscountInr = (base * maxPct / 100.0).toInt()
         val maxCoinsUsable = if (rate > 0) (maxDiscountInr / rate).toInt() else 0
         val coinsToUse = minOf(requestedCoins, coinsAvailable, maxCoinsUsable).coerceAtLeast(0)
         val discount   = minOf((coinsToUse * rate).toInt(), ceiling.coerceAtLeast(0))
@@ -101,10 +95,10 @@ class PaymentViewModel @Inject constructor(
                 val plans = api.getSubscriptionPlans().data?.plans ?: emptyList()
                 val first = plans.firstOrNull()
                 _state.update { it.copy(
-                    plans = plans,
+                    plans          = plans,
                     isLoadingPlans = false,
-                    selectedPlan = first,
-                    finalAmount  = first?.price ?: 0
+                    selectedPlan   = first,
+                    finalAmount    = first?.price ?: 0
                 )}
             } catch (e: Exception) {
                 _state.update { it.copy(isLoadingPlans = false, error = "Failed to load plans") }
@@ -117,10 +111,10 @@ class PaymentViewModel @Inject constructor(
             try {
                 val user = authApi.getMe().data?.user
                 _state.update { it.copy(
-                    userName       = user?.name ?: "",
-                    userEmail      = user?.email ?: "",
+                    userName       = user?.name   ?: "",
+                    userEmail      = user?.email  ?: "",
                     userPhone      = user?.mobile ?: "",
-                    coinsAvailable = user?.coins ?: 0
+                    coinsAvailable = user?.coins  ?: 0
                 )}
             } catch (_: Exception) {}
         }
@@ -134,7 +128,7 @@ class PaymentViewModel @Inject constructor(
                 selectedPlan   = plan,
                 coinsToUse     = coinsToUse,
                 coinDiscount   = coinDis,
-                couponDiscount = 0,   // reset coupon when plan changes
+                couponDiscount = 0,
                 couponCode     = "",
                 couponApplied  = false,
                 finalAmount    = maxOf(1, base - coinDis)
@@ -150,11 +144,10 @@ class PaymentViewModel @Inject constructor(
         val code = _state.value.couponCode.trim()
         if (code.isBlank()) return
         viewModelScope.launch {
-            // Validate coupon via API (using create with coupon to preview discount)
             try {
                 val plan = _state.value.selectedPlan ?: return@launch
                 val res = api.createSubscription(CreateSubscriptionRequest(
-                    plan = plan.id ?: "monthly",
+                    plan       = plan.id ?: "monthly",
                     couponCode = code,
                     coinsToUse = 0
                 ))
@@ -166,14 +159,7 @@ class PaymentViewModel @Inject constructor(
                         couponError    = null,
                         finalAmount    = maxOf(1, breakdown.finalAmount)
                     )}
-                    // Cancel the pending order immediately (we'll create real one on pay tap)
-                    res.data?.subscriptionId?.let { sid ->
-                        try { api.confirmSubscription(sid, ConfirmSubscriptionRequest(
-                            razorpayOrderId  = "",
-                            transactionId    = "COUPON_VALIDATION_ONLY",
-                            razorpaySignature = ""
-                        )) } catch (_: Exception) {}
-                    }
+                    // Abandon the preview order — real order created on Pay tap
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(couponError = "Invalid or expired coupon code") }
@@ -195,86 +181,80 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
+    /** Called when user taps "Pay Now" — creates Cashfree order on backend. */
     fun createOrder() {
         val s    = _state.value
         val plan = s.selectedPlan ?: return
         viewModelScope.launch {
-            _state.update { it.copy(isCreatingOrder = true, error = null, razorpayOrderId = null) }
-            val planId = _state.value.selectedPlan?.id ?: ""
-            val amount = _state.value.finalAmount
-            Event.paymentInitiated(planId, amount)
+            _state.update { it.copy(isCreatingOrder = true, error = null, paymentSessionId = null) }
+            Event.paymentInitiated(plan.id ?: "", s.finalAmount)
             try {
                 val res = api.createSubscription(CreateSubscriptionRequest(
-                    plan        = plan.id ?: "monthly",
-                    couponCode  = if (s.couponApplied) s.couponCode else null,
-                    coinsToUse  = s.coinsToUse
+                    plan       = plan.id ?: "monthly",
+                    couponCode = if (s.couponApplied) s.couponCode else null,
+                    coinsToUse = s.coinsToUse
                 ))
                 val data = res.data ?: throw Exception("Invalid response from server")
-                val finalAmt  = data.breakdown.finalAmount
-                val orderId   = data.razorpayOrderId
-                val keyId     = data.razorpayKeyId
+                val finalAmt       = data.breakdown.finalAmount
+                val sessionId      = data.paymentSessionId
 
                 when {
-                    // Case 1: Fully covered by coins — auto-confirm, no payment needed
+                    // Case 1: Fully covered by coins — auto-confirm, no SDK needed
                     finalAmt == 0 -> {
                         _state.update { it.copy(isCreatingOrder = false, subscriptionId = data.subscriptionId) }
-                        confirmSubscription("FREE_COINS_DISCOUNT", "", "")
+                        confirmSubscription("FREE_COINS_DISCOUNT")
                     }
 
-                    // Case 2: Payment needed but Razorpay not configured on server
-                    orderId.isNullOrBlank() || keyId.isNullOrBlank() -> {
+                    // Case 2: Gateway not configured on server
+                    sessionId.isNullOrBlank() -> {
                         _state.update { it.copy(
                             isCreatingOrder = false,
                             subscriptionId  = data.subscriptionId,
                             finalAmount     = finalAmt,
-                            error           = "Payment gateway is not configured yet. Please contact support or try again later. " +
-                                    "(Order ID: ${data.subscriptionId.take(8)})"
+                            error           = "Payment gateway is not configured yet. Please contact support. " +
+                                    "(Ref: ${data.subscriptionId.take(8)})"
                         )}
                     }
 
-                    // Case 3: Normal Razorpay flow
+                    // Case 3: Normal Cashfree flow — SDK picks up paymentSessionId
                     else -> {
                         _state.update { it.copy(
-                            isCreatingOrder = false,
-                            subscriptionId  = data.subscriptionId,
-                            razorpayOrderId = orderId,
-                            razorpayKeyId   = keyId,
-                            finalAmount     = finalAmt
+                            isCreatingOrder  = false,
+                            subscriptionId   = data.subscriptionId,
+                            paymentSessionId = sessionId,
+                            finalAmount      = finalAmt
                         )}
                     }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(
-                    isCreatingOrder = false,
-                    error = parseError(e.message)
-                )}
+                _state.update { it.copy(isCreatingOrder = false, error = parseError(e.message)) }
             }
         }
     }
 
-    fun confirmSubscription(paymentId: String, orderId: String, signature: String) {
+    /**
+     * Called after Cashfree SDK returns success.
+     * [cfPaymentId] is the Cashfree payment ID returned by the SDK or
+     * fetched server-side — backend verifies via GET /pg/orders/{orderId}/payments.
+     */
+    fun confirmSubscription(cfPaymentId: String) {
         val subId = _state.value.subscriptionId ?: return
         viewModelScope.launch {
-            _state.update { it.copy(isConfirming = true, razorpayOrderId = null) }
+            _state.update { it.copy(isConfirming = true, paymentSessionId = null) }
             try {
                 api.confirmSubscription(subId, ConfirmSubscriptionRequest(
-                    razorpayOrderId   = orderId,
-                    transactionId     = paymentId,
-                    razorpaySignature = signature,
-                    paymentMethod     = "upi"
+                    cfPaymentId   = cfPaymentId,
+                    paymentMethod = "upi"
                 ))
                 val bonusCoins = _state.value.selectedPlan?.bonusCoins ?: 0
-                val plan = _state.value.selectedPlan?.id ?: "subscription"
-                Event.paymentSuccess(plan, _state.value.finalAmount, "razorpay")
-                _state.update { it.copy(
-                    isConfirming = false,
-                    isSuccess    = true,
-                    bonusCoins   = bonusCoins
-                )}
+                val plan       = _state.value.selectedPlan?.id ?: "subscription"
+                Event.paymentSuccess(plan, _state.value.finalAmount, "cashfree")
+               // bus.emit(RefreshEvent.SubscriptionChanged)
+                _state.update { it.copy(isConfirming = false, isSuccess = true, bonusCoins = bonusCoins) }
             } catch (e: Exception) {
                 _state.update { it.copy(
                     isConfirming = false,
-                    error        = "Payment received but activation failed. Contact support with payment ID: $paymentId"
+                    error        = "Payment received but activation failed. Contact support with payment ID: $cfPaymentId"
                 )}
             }
         }
@@ -282,57 +262,53 @@ class PaymentViewModel @Inject constructor(
 
     fun handlePaymentFailure(code: Int, message: String) {
         if (code == 0) {
-            // User cancelled — don't show error
-            _state.update { it.copy(razorpayOrderId = null) }
+            // User cancelled — clear session, no error shown
+            _state.update { it.copy(paymentSessionId = null) }
             return
         }
         _state.update { it.copy(
-            razorpayOrderId = null,
-            error = when (code) {
-                -1   -> "Payment failed: $message"
-                BAD_REQUEST_CODE -> "Invalid payment request. Please try again."
-                else -> "Payment failed (code: $code). Please try again or use a different payment method."
-            }
+            paymentSessionId = null,
+            error = "Payment failed (code: $code): $message. Please try again."
         )}
     }
 
     // ── Course purchase ─────────────────────────────────────────
-    fun initCoursePurchase(courseId: String, courseTitle: String, price: Int,
-                           razorpayOrderId: String?, razorpayKeyId: String?) {
+    fun initCoursePurchase(
+        courseId: String, courseTitle: String, price: Int,
+        paymentSessionId: String?
+    ) {
         _state.update { it.copy(
-            courseId        = courseId,
-            courseTitle     = courseTitle,
-            coursePrice     = price,
-            // Don't set razorpayOrderId here — wait for triggerCoursePayment()
-            // so LaunchedEffect fires only when user taps Pay button
-            razorpayKeyId   = razorpayKeyId,
-            finalAmount     = price,
-            // Store it separately so we can set it on demand
-            _pendingOrderId = razorpayOrderId
+            courseId          = courseId,
+            courseTitle       = courseTitle,
+            coursePrice       = price,
+            finalAmount       = price,
+            // Store separately — LaunchedEffect triggers only when user taps Pay
+            _pendingSessionId = paymentSessionId
         )}
     }
 
-    // Call this when user taps "Pay" — sets orderId in state to fire LaunchedEffect
+    /** Call when user taps "Pay" — moves session ID into state to trigger LaunchedEffect. */
     fun triggerCoursePayment() {
-        val pendingId = _state.value._pendingOrderId ?: return
-        _state.update { it.copy(razorpayOrderId = pendingId) }
+        val pending = _state.value._pendingSessionId ?: return
+        _state.update { it.copy(paymentSessionId = pending) }
     }
 
-    fun confirmCoursePurchase(paymentId: String, orderId: String, signature: String) {
+    /** Called after Cashfree SDK success for a course purchase. */
+    fun confirmCoursePurchase(cfPaymentId: String) {
         val courseId = _state.value.courseId ?: return
         viewModelScope.launch {
             _state.update { it.copy(isConfirming = true) }
             try {
                 api.confirmCoursePurchase(courseId, ConfirmCoursePurchaseRequest(
-                    razorpayOrderId   = orderId,
-                    razorpayPaymentId = paymentId,
-                    razorpaySignature = signature
+                    cfPaymentId   = cfPaymentId,
+                    paymentMethod = "upi"
                 ))
+                bus.emit(RefreshEvent.CourseEnrolled)
                 _state.update { it.copy(isConfirming = false, isSuccess = true) }
             } catch (e: Exception) {
                 _state.update { it.copy(
                     isConfirming = false,
-                    error        = "Payment received but course unlock failed. Contact support: $paymentId"
+                    error        = "Payment received but course unlock failed. Contact support: $cfPaymentId"
                 )}
             }
         }
@@ -340,21 +316,19 @@ class PaymentViewModel @Inject constructor(
 
     fun clearError() { _state.update { it.copy(error = null) } }
 
-    /** Called immediately after Razorpay launches — prevents double-launch on recompose. */
-    fun consumeRazorpayOrderId() {
-        _state.update { it.copy(razorpayOrderId = null) }
+    /** Called immediately after Cashfree SDK launches — prevents double-launch on recompose. */
+    fun consumePaymentSessionId() {
+        _state.update { it.copy(paymentSessionId = null) }
     }
 
     private fun parseError(msg: String?): String {
         if (msg == null) return "Something went wrong. Please try again."
         return when {
-            msg.contains("network", true)   -> "No internet connection. Please check your connection."
-            msg.contains("timeout", true)   -> "Request timed out. Please try again."
-            msg.contains("coupon", true)    -> "Invalid coupon code."
-            msg.contains("coins", true)     -> "Insufficient coins."
-            else                             -> msg
+            msg.contains("network", true) -> "No internet connection. Please check your connection."
+            msg.contains("timeout", true) -> "Request timed out. Please try again."
+            msg.contains("coupon",  true) -> "Invalid coupon code."
+            msg.contains("coins",   true) -> "Insufficient coins."
+            else                           -> msg
         }
     }
-
-    companion object { private const val BAD_REQUEST_CODE = 2 }
 }

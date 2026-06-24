@@ -113,14 +113,14 @@ fun CourseDetailScreen(
     }
 
     // If the course is paid and the user hasn't purchased it, the backend
-    // responds with a Razorpay order — navigate to the real payment screen.
+    // responds with a Cashfree session — navigate to CoursePaymentScreen.
     LaunchedEffect(state.purchaseRequired) {
         if (state.purchaseRequired) {
             val title = state.course?.title ?: ""
             nav.navigate(
                 Screen.CoursePayment.createRoute(
                     courseId, title, state.purchasePrice,
-                    state.purchaseOrderId, state.purchaseKeyId
+                    state.purchaseSessionId
                 )
             )
             viewModel.clearPurchaseRequired()

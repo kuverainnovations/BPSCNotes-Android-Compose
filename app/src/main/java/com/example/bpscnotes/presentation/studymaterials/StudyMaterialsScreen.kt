@@ -49,7 +49,7 @@ import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
-import com.example.bpscnotes.presentation.payment.launchRazorpay
+import com.example.bpscnotes.presentation.payment.launchCashfree
 
 // ════════════════════════════════════════════════════════════
 // FILE: presentation/studymaterials/StudyMaterialsScreen.kt
@@ -177,34 +177,25 @@ fun StudyMaterialsScreen(
         navController.navigate(Screen.MaterialChat.createRoute(chatId))
     }
 
-    // Launch Razorpay when a purchase requires payment for the remaining ₹ balance.
-    // Consume the pending purchase immediately to avoid re-launching on recompose
-    // (same pattern as CoursePaymentScreen).
+    // Launch Cashfree SDK when a purchase requires payment for the remaining ₹ balance.
+    // Consume the pending purchase immediately to avoid re-launching on recompose.
     LaunchedEffect(state.pendingPurchase) {
-        val pending = state.pendingPurchase ?: return@LaunchedEffect
-        val orderId = pending.razorpayOrderId ?: return@LaunchedEffect
-        val keyId   = pending.razorpayKeyId ?: return@LaunchedEffect
-        if (orderId.isBlank() || keyId.isBlank()) return@LaunchedEffect
+        val pending   = state.pendingPurchase ?: return@LaunchedEffect
+        val sessionId = pending.paymentSessionId ?: return@LaunchedEffect
+        if (sessionId.isBlank()) return@LaunchedEffect
 
         viewModel.consumePendingPurchase()
         showPurchaseDialog = null
 
-        launchRazorpay(
-            context     = context,
-            orderId     = orderId,
-            keyId       = keyId,
-            amount      = pending.amountDueInr,
-            description = "Study material: ${pending.materialTitle ?: ""}",
-            userName    = state.userName,
-            userEmail   = state.userEmail,
-            userPhone   = state.userPhone,
-            onSuccess   = { paymentId, signature ->
-                viewModel.confirmMaterialPurchase(paymentId, signature)
+        launchCashfree(
+            context   = context,
+            sessionId = sessionId,
+            onSuccess = { cfPaymentId ->
+                viewModel.confirmMaterialPurchase(cfPaymentId)
             },
-            onFailure   = { code, msg ->
+            onFailure = { code, msg ->
                 viewModel.handleMaterialPaymentFailure(code, msg)
-            },
-            str
+            }
         )
     }
 
