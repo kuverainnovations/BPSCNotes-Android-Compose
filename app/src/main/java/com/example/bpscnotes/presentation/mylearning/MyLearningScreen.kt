@@ -1592,7 +1592,7 @@ private fun CourseDetailSheet(
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val state by viewModel.uiState.collectAsState()
-    var coinsToUse by remember { mutableIntStateOf(0) }
+    // FIX: coinsToUse removed — no coin discount on purchases
     var showEnrollSuccessDialog by remember { mutableStateOf(false) }
 
     // Show success dialog when enrollment succeeds for this specific course
@@ -1655,8 +1655,11 @@ private fun CourseDetailSheet(
                 onDismiss()
                 navController.navigate(
                     Screen.CoursePayment.createRoute(
-                        state.purchaseCourseId!!, state.purchaseCourseTitle, state.purchasePrice,
-                        state.purchaseSessionId
+                        state.purchaseCourseId!!,
+                        state.purchaseCourseTitle,
+                        state.purchasePrice,
+                        state.purchaseSessionId,
+                        state.purchaseProviderOrderId,  // FIX: pass orderId so Pay button is enabled
                     )
                 )
                 viewModel.clearPurchaseRequired()
@@ -1889,72 +1892,7 @@ private fun CourseDetailSheet(
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Mirrors the backend's Math.min(price, floor(coins *
-                    // coin_to_inr_rate)) exactly (coursesService.enroll) — used
-                    // for both the slider's discount preview and the Buy Now price.
-                    val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
-                    val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
-                    if (course.isPaid && userCoins > 0) {
-                        // Server resolves maxCoinsRedeemable to either the
-                        // per-course override or the global default — always a
-                        // concrete number, no client-side guessing. The slider
-                        // cap is in coins, so convert the price ceiling from
-                        // rupees to coins via the live rate (admin: Coins page ->
-                        // Economy Settings).
-                        val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
-                        val maxCoins = minOf(course.maxCoinsRedeemable ?: viewModel.coinsConfig.economy.maxCoinsPerPurchase, userCoins, priceInCoins)
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(BpscColors.CoinGold.copy(0.08f))
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "🪙 Use coins for discount",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = cs.onSurface
-                                )
-                                Text(
-                                    "$coinsToUse / $maxCoins",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = BpscColors.CoinGold,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            if (maxCoins < userCoins) {
-                                Text(
-                                    "Max $maxCoins coins redeemable on this course (you have $userCoins)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.TextHint
-                                )
-                            }
-                            Slider(
-                                value = coinsToUse.toFloat(),
-                                onValueChange = { coinsToUse = it.toInt() },
-                                valueRange = 0f..maxCoins.toFloat(),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = BpscColors.CoinGold,
-                                    activeTrackColor = BpscColors.CoinGold
-                                )
-                            )
-                            if (coinsToUse > 0) {
-                                Text(
-                                    "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = BpscColors.Success,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
+                    // FIX: Coin slider removed — real-money Cashfree payment only
                     OutlinedButton(
                         onClick = {
                             onDismiss()
@@ -1989,9 +1927,9 @@ private fun CourseDetailSheet(
                         Button(
                             onClick = {
                                 if (course.isPaid) {
-                                    // enroll() will hit 402 -> purchaseRequired -> LaunchedEffect
-                                    // above navigates to CoursePaymentScreen with real price/order.
-                                    viewModel.enroll(course.id, course.title, coinsToUse)
+                                    // FIX: No coinsToUse — enroll() hits 402 ->
+                                    // purchaseRequired -> LaunchedEffect navigates to Cashfree
+                                    viewModel.enroll(course.id, course.title)
                                 } else {
                                     viewModel.enroll(course.id, course.title)
                                     onDismiss()
@@ -2015,7 +1953,7 @@ private fun CourseDetailSheet(
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     if (!course.isPaid) str.courseEnrollFree
-                                    else "Buy Now — ₹${maxOf(0, course.price - coinDiscountInr)}",
+                                    else "Buy Now — ₹${course.price}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }

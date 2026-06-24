@@ -1040,13 +1040,12 @@ fun loadDownloadHistory() {
 }
 
 // ── Purchase locked material (Phase 3: hybrid coins + Cashfree) ──
-// coinsToApply: how many coins the user chose to apply as a discount
-// (capped server-side by max_coins_per_purchase).
-fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply: Int = 0) {
+// FIX Issue 5: No coins allowed for purchases. Real-money Cashfree only.
+fun purchaseMaterial(materialId: String, price: Int, title: String) {
     viewModelScope.launch {
         _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
         try {
-            val res = api.initPurchase(materialId, InitPurchaseRequest(coinsToApply))
+            val res = api.initPurchase(materialId, InitPurchaseRequest())
             val data = res.data
 
             when {
@@ -1057,7 +1056,9 @@ fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply
                         purchasedIds    = it.purchasedIds + materialId
                     )}
                 }
-                // Free or fully covered by coins — already completed by initPurchase
+                // Free material — already completed by initPurchase (requiresPayment=false only for free)
+                // FIX Issue 4: Paid materials ALWAYS return requiresPayment=true now
+                // (coin-coverage path removed). This branch is ONLY for price=0 materials.
                 data?.requiresPayment != true -> {
                     tokenStore.addPurchasedId(materialId)
                     _state.update { it.copy(
@@ -1082,11 +1083,7 @@ fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply
             val msg = e.toUserMessage("Purchase failed")
             _state.update { it.copy(
                 purchasingId  = null,
-                purchaseError = when {
-                    msg.contains("insufficient", true) || msg.contains("coins", true) ->
-                        "Not enough coins. Watch an ad or complete daily tasks to earn more."
-                    else -> msg
-                }
+                purchaseError = msg
             )}
         }
     }

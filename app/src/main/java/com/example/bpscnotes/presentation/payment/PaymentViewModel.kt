@@ -278,7 +278,8 @@ class PaymentViewModel @Inject constructor(
     // ── Course purchase ─────────────────────────────────────────
     fun initCoursePurchase(
         courseId: String, courseTitle: String, price: Int,
-        paymentSessionId: String?
+        paymentSessionId: String?,
+        providerOrderId: String? = null,
     ) {
         _state.update { it.copy(
             courseId          = courseId,
@@ -286,14 +287,19 @@ class PaymentViewModel @Inject constructor(
             coursePrice       = price,
             finalAmount       = price,
             // Store separately — LaunchedEffect triggers only when user taps Pay
-            _pendingSessionId = paymentSessionId
+            _pendingSessionId = paymentSessionId,
+            // Also store providerOrderId so LaunchedEffect(paymentSessionId, providerOrderId)
+            // can fire correctly when triggerCoursePayment() sets paymentSessionId.
+            providerOrderId   = providerOrderId,
         )}
     }
 
     /** Call when user taps "Pay" — moves session ID into state to trigger LaunchedEffect. */
     fun triggerCoursePayment() {
         val pending = _state.value._pendingSessionId ?: return
-        _state.update { it.copy(paymentSessionId = pending) }
+        // FIX: providerOrderId was already stored in initCoursePurchase.
+        // Moving paymentSessionId into state triggers the LaunchedEffect in CoursePaymentScreen.
+        _state.update { it.copy(paymentSessionId = pending, _pendingSessionId = null) }
     }
 
     /** Called after Cashfree SDK success for a course purchase. */

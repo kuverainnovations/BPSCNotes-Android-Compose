@@ -31,6 +31,7 @@ fun CoursePaymentScreen(
     courseTitle: String,
     price: Int,
     paymentSessionId: String? = null,
+    providerOrderId: String? = null,     // FIX: passed from CourseDetail 402 response
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -38,9 +39,9 @@ fun CoursePaymentScreen(
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    // Initialize with course details
+    // Initialize with course details including providerOrderId for LaunchedEffect
     LaunchedEffect(courseId) {
-        viewModel.initCoursePurchase(courseId, courseTitle, price, paymentSessionId)
+        viewModel.initCoursePurchase(courseId, courseTitle, price, paymentSessionId, providerOrderId)
     }
 
     // Launch Cashfree SDK when payment_session_id is ready.
@@ -57,7 +58,10 @@ fun CoursePaymentScreen(
             sessionId = sessionId,
             orderId = orderId,
             onSuccess = { cfPaymentId ->
-                viewModel.confirmSubscription(cfPaymentId)
+                // FIX: Must call confirmCoursePurchase (not confirmSubscription).
+                // confirmSubscription requires subscriptionId in state which is null
+                // for course purchases, causing the unlock to silently fail.
+                viewModel.confirmCoursePurchase(cfPaymentId)
             },
             onFailure = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
@@ -145,7 +149,11 @@ fun CoursePaymentScreen(
                                 // Moves pending session ID into state to trigger LaunchedEffect
                                 viewModel.triggerCoursePayment()
                             },
-                            enabled  = !state.isConfirming && !paymentSessionId.isNullOrBlank(),
+                            // FIX: enabled when either the pending session (not yet triggered)
+                            // OR a live session ID exists. Using the route param alone caused
+                            // the button to be permanently disabled when sessionId was null.
+                            enabled  = !state.isConfirming &&
+                                       (!state._pendingSessionId.isNullOrBlank() || !state.paymentSessionId.isNullOrBlank()),
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape    = RoundedCornerShape(14.dp),
                             colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)

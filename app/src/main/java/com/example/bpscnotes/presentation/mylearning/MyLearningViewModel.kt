@@ -37,9 +37,10 @@ data class MyLearningUiState(
     // Set when enroll() hits a 402 for a paid course — navigate to CoursePaymentScreen.
     val purchaseRequired:    Boolean = false,
     val purchasePrice:       Int     = 0,
-    val purchaseSessionId:   String? = null,   // paymentSessionId → Cashfree SDK
-    val purchaseCourseId:    String? = null,
-    val purchaseCourseTitle: String  = "",
+    val purchaseSessionId:      String? = null,   // paymentSessionId → Cashfree SDK
+    val purchaseProviderOrderId: String? = null,   // FIX: Cashfree orderId for Pay button
+    val purchaseCourseId:        String? = null,
+    val purchaseCourseTitle:     String  = "",
 )
 
 @HiltViewModel
@@ -147,11 +148,12 @@ class MyLearningViewModel @Inject constructor(
     fun retry() = load()
 
     // ── Enroll ─────────────────────────────────────────────────
-    fun enroll(courseId: String, courseTitle: String = "", coinsToApply: Int = 0) {
+    // FIX: coinsToApply removed — real-money Cashfree payment only
+    fun enroll(courseId: String, courseTitle: String = "") {
         viewModelScope.launch {
             _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
-                coursesApi.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply))
+                coursesApi.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply = 0))
                 cacheInvalidator.evict()           // stale enrollment data must not be served
                 load()
                 _uiState.update { s ->
@@ -167,15 +169,17 @@ class MyLearningViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price     = data.optInt("price", 0)
-                        val sessionId = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                        val price           = data.optInt("price", 0)
+                        val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                        val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
                         _uiState.update { it.copy(
-                            isEnrolling          = false,
-                            purchaseRequired     = true,
-                            purchasePrice        = price,
-                            purchaseSessionId    = sessionId,
-                            purchaseCourseId     = courseId,
-                            purchaseCourseTitle  = courseTitle
+                            isEnrolling             = false,
+                            purchaseRequired        = true,
+                            purchasePrice           = price,
+                            purchaseSessionId       = sessionId,
+                            purchaseProviderOrderId = providerOrderId,  // FIX
+                            purchaseCourseId        = courseId,
+                            purchaseCourseTitle     = courseTitle
                         )}
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }

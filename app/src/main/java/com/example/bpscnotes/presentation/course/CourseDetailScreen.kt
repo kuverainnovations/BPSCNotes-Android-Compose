@@ -120,7 +120,8 @@ fun CourseDetailScreen(
             nav.navigate(
                 Screen.CoursePayment.createRoute(
                     courseId, title, state.purchasePrice,
-                    state.purchaseSessionId
+                    state.purchaseSessionId,
+                    state.purchaseProviderOrderId,
                 )
             )
             viewModel.clearPurchaseRequired()
@@ -292,10 +293,7 @@ fun CourseDetailScreen(
                     isEnrolled  = isEnrolled,
                     allDone     = allDone,
                     isEnrolling = state.isEnrolling,
-                    userCoins   = state.userCoins,
-                    maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
-                    coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate,
-                    onEnroll    = { coins -> viewModel.enroll(courseId, coins) },
+                    onEnroll    = { viewModel.enroll(courseId) },
                     // FIX 3: Correct route — same LessonViewer used by lesson tap
                     onContinue  = {
                         val next = chapters
@@ -1125,17 +1123,13 @@ private fun BottomCta(
     course:      CourseDto,
     accent:      Color,
     isEnrolled:  Boolean,
-    allDone:     Boolean,            // NEW param
+    allDone:     Boolean,
     isEnrolling: Boolean,
-    userCoins:   Int,
-    maxCoinsPerPurchase: Int,
-    coinToInrRate: Double,
-    onEnroll:    (coinsToApply: Int) -> Unit,
+    onEnroll:    () -> Unit,          // FIX Issue 5: no coins param
     onContinue:  () -> Unit,
     completedLessons: Int
 ) {
     val str = LocalStrings.current
-    var coinsToUse by remember { mutableIntStateOf(0) }
     Surface(Modifier.fillMaxWidth(), shadowElevation = 16.dp, color = Color.White) {
         Box(
             Modifier.fillMaxWidth()
@@ -1188,92 +1182,25 @@ private fun BottomCta(
                     }
                 }
 
-                // ── Not enrolled: Enroll button ──
+                // ── Not enrolled: Enroll / Buy button ──
+                // FIX Issue 5: No coin slider. Real-money purchase only.
                 else -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Mirrors the backend's Math.min(price, floor(coins *
-                        // coin_to_inr_rate)) exactly (coursesService.enroll) —
-                        // used for both the slider's discount preview below
-                        // and the Enroll button price.
-                        val coinDiscountInr = minOf(course.price, (coinsToUse * coinToInrRate).toInt())
-                        if (course.isPaid && userCoins > 0) {
-                            // Server resolves maxCoinsRedeemable to either the
-                            // per-course override or the global default —
-                            // always a concrete number, no client-side guessing.
-                            // The slider cap is expressed in coins, so convert
-                            // the price ceiling from rupees to coins via the
-                            // live coin_to_inr_rate (admin: Coins page ->
-                            // Economy Settings).
-                            val priceInCoins = if (coinToInrRate > 0) (course.price / coinToInrRate).toInt() else 0
-                            val maxCoins = minOf(course.maxCoinsRedeemable ?: maxCoinsPerPurchase, userCoins, priceInCoins)
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(BpscColors.CoinGold.copy(0.08f))
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "🪙 Use coins for discount",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        "$coinsToUse / $maxCoins",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = BpscColors.CoinGold,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                if (maxCoins < userCoins) {
-                                    Text(
-                                        "Max $maxCoins coins redeemable on this course (you have $userCoins)",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.TextHint
-                                    )
-                                }
-                                Slider(
-                                    value = coinsToUse.toFloat(),
-                                    onValueChange = { coinsToUse = it.toInt() },
-                                    valueRange = 0f..maxCoins.toFloat(),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = BpscColors.CoinGold,
-                                        activeTrackColor = BpscColors.CoinGold
-                                    )
-                                )
-                                if (coinsToUse > 0) {
-                                    Text(
-                                        "−₹$coinDiscountInr discount · You'll pay ₹${course.price - coinDiscountInr}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = BpscColors.Success,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                        Button(
-                            onClick  = { onEnroll(coinsToUse) },
-                            enabled  = !isEnrolling,
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
-                            shape    = RoundedCornerShape(14.dp),
-                            colors   = ButtonDefaults.buttonColors(containerColor = accent)
-                        ) {
-                            if (isEnrolling) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    if (course.isPaid) "Enroll — ₹${maxOf(0, course.price - coinDiscountInr)}" else str.courseEnrollFree,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
+                    Button(
+                        onClick  = { onEnroll() },
+                        enabled  = !isEnrolling,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        shape    = RoundedCornerShape(14.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = accent)
+                    ) {
+                        if (isEnrolling) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (course.isPaid) "Buy — ₹${course.price}" else str.courseEnrollFree,
+                                style = MaterialTheme.typography.titleMedium
+                            )
                         }
                     }
                 }

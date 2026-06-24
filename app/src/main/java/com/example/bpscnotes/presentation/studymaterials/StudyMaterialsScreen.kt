@@ -158,7 +158,6 @@ fun StudyMaterialsScreen(
 
     // Purchase dialog
     var showPurchaseDialog by remember { mutableStateOf<StudyMaterialDto?>(null) }
-    var coinsToApply by remember { mutableStateOf(0) }
     LaunchedEffect(state.purchaseSuccess) {
         state.purchaseSuccess?.let {
             snackbarHost.showSnackbar(it)
@@ -205,15 +204,11 @@ fun StudyMaterialsScreen(
 
     showPurchaseDialog?.let { item ->
         PurchaseConfirmDialog(
-            item      = item,
+            item         = item,
             isPurchasing = state.purchasingId == item.id || state.isConfirmingPurchase,
-            coinsToApply = coinsToApply,
-            onCoinsToApplyChange = { coinsToApply = it },
-            userCoins = state.userCoins,
-            maxCoinsPerPurchase = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
-            coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate,
-            onConfirm = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, coinsToApply) },
-            onDismiss = { showPurchaseDialog = null; coinsToApply = 0; viewModel.clearPurchaseMessages() }
+            // FIX Issue 5: no coin params — real-money only
+            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title) },
+            onDismiss    = { showPurchaseDialog = null; viewModel.clearPurchaseMessages() }
         )
     }
 
@@ -1850,6 +1845,22 @@ private fun MaterialDetailSheet(
                             Text(str.materialsUnlockPro2, style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant)
                         }
+                        // FIX Issue 3: Show actual price so user knows what they pay
+                        if (!isPurchased && material.price > 0) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    "₹${material.price}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = BpscColors.CoinGold,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    "one-time",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = cs.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1871,8 +1882,11 @@ private fun MaterialDetailSheet(
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(when {
-                        isDownloaded -> str.materialsDownloadedDone
-                        material.isPremium -> str.materialsUnlockPro
+                        isDownloaded   -> str.materialsDownloadedDone
+                        // FIX Issue 3: Show price in Unlock button so user sees it before tapping
+                        material.isPremium && !isPurchased && material.price > 0 ->
+                            "Unlock — ₹${material.price}"
+                        material.isPremium && !isPurchased -> str.materialsUnlockPro
                         !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                         else -> str.materialsDownloadFree
                     }, style = MaterialTheme.typography.titleMedium)
@@ -2734,30 +2748,16 @@ fun DownloadsTab(
 // Shows price, preview page count, and commission notice
 // ════════════════════════════════════════════════════════════
 @Composable
+// FIX Issue 5: No coin params. Real-money Cashfree payment only.
 fun PurchaseConfirmDialog(
     item:         StudyMaterialDto,
     isPurchasing: Boolean,
-    coinsToApply: Int = 0,
-    onCoinsToApplyChange: (Int) -> Unit = {},
-    userCoins:    Int = 0,
-    maxCoinsPerPurchase: Int = 50,
-    coinToInrRate: Double = 1.0,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-
     val price = item.price ?: 0
-    // Mirrors the backend's Math.min(price, floor(coins * coin_to_inr_rate))
-    // exactly (studyMaterialsService.initPurchase) — coinDiscount is in
-    // rupees, coinsToApply is in coins.
-    val coinDiscount = minOf(price, (coinsToApply * coinToInrRate).toInt())
-    // Slider cap is in coins, so convert the price ceiling from rupees to
-    // coins via the live rate (admin: Coins page -> Economy Settings).
-    val priceInCoins = if (coinToInrRate > 0) (price / coinToInrRate).toInt() else 0
-    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) { minOf(maxCoinsPerPurchase, userCoins, priceInCoins) }
-    val amountDue = (price - coinDiscount).coerceAtLeast(0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2804,43 +2804,23 @@ fun PurchaseConfirmDialog(
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 }
 
-                if (maxApplicable > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                            Text("Use coins for discount", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("🪙", fontSize = 14.sp)
-                                Text("$coinsToApply / $maxApplicable", style = MaterialTheme.typography.labelLarge,
-                                    color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Slider(
-                            value = coinsToApply.toFloat(),
-                            onValueChange = { onCoinsToApplyChange(it.toInt()) },
-                            valueRange = 0f..maxApplicable.toFloat(),
-                            steps = if (maxApplicable > 1) maxApplicable - 1 else 0,
-                            colors = SliderDefaults.colors(thumbColor = BpscColors.CoinGold, activeTrackColor = BpscColors.CoinGold)
-                        )
-                    }
-                }
-
                 HorizontalDivider(color = cs.outline)
 
+                // FIX Issue 3+5: Show price clearly; no coin discount
                 Row(
                     Modifier.fillMaxWidth(),
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
                     Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("₹$amountDue", style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                        if (coinsToApply > 0) {
-                            Text("🪙 $coinsToApply coins applied (−₹$coinDiscount)",
-                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                        }
-                    }
+                    Text("₹$price", style = MaterialTheme.typography.titleLarge,
+                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                 }
+                Text(
+                    "Secure payment via Cashfree · One-time purchase",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cs.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -2856,11 +2836,8 @@ fun PurchaseConfirmDialog(
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(str.courseProcessing)
-                } else if (amountDue == 0) {
-                    Text(if (coinsToApply > 0) "🪙 Pay with $coinsToApply coins" else "Unlock for free",
-                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 } else {
-                    Text("Pay ₹$amountDue",
+                    Text("Pay ₹$price",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
