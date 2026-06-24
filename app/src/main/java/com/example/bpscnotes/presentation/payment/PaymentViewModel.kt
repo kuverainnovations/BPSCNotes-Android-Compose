@@ -39,7 +39,8 @@ data class PaymentState(
 
     // Order — Cashfree
     val subscriptionId: String?             = null,
-    val paymentSessionId: String?           = null,   // → Cashfree Android SDK
+    val paymentSessionId: String?           = null,
+    val providerOrderId: String?            = null,
     val finalAmount: Int                    = 0,
     val isCreatingOrder: Boolean            = false,
     val isConfirming: Boolean               = false,
@@ -195,8 +196,9 @@ class PaymentViewModel @Inject constructor(
                     coinsToUse = s.coinsToUse
                 ))
                 val data = res.data ?: throw Exception("Invalid response from server")
-                val finalAmt       = data.breakdown.finalAmount
-                val sessionId      = data.paymentSessionId
+                val finalAmt        = data.breakdown.finalAmount
+                val sessionId       = data.paymentSessionId
+                val providerOrderId = data.providerOrderId
 
                 when {
                     // Case 1: Fully covered by coins — auto-confirm, no SDK needed
@@ -222,6 +224,7 @@ class PaymentViewModel @Inject constructor(
                             isCreatingOrder  = false,
                             subscriptionId   = data.subscriptionId,
                             paymentSessionId = sessionId,
+                            providerOrderId  = providerOrderId,
                             finalAmount      = finalAmt
                         )}
                     }
@@ -318,7 +321,12 @@ class PaymentViewModel @Inject constructor(
 
     /** Called immediately after Cashfree SDK launches — prevents double-launch on recompose. */
     fun consumePaymentSessionId() {
-        _state.update { it.copy(paymentSessionId = null) }
+        _state.update {
+            it.copy(
+                paymentSessionId = null,
+                providerOrderId = null
+            )
+        }
     }
 
     private fun parseError(msg: String?): String {

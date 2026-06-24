@@ -109,6 +109,8 @@ dependencies {
     implementation("com.posthog:posthog-android:3.+")
 //    implementation("com.posthog.android:posthog-android:3.4.0")
 
+    implementation("com.cashfree.pg:api:2.+")
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

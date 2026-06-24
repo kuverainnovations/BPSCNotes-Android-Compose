@@ -45,22 +45,25 @@ fun CoursePaymentScreen(
 
     // Launch Cashfree SDK when payment_session_id is ready.
     // Consume immediately — prevents double-launch on recompose.
-    LaunchedEffect(state.paymentSessionId) {
+    LaunchedEffect(state.paymentSessionId, state.providerOrderId) {
+
         val sessionId = state.paymentSessionId ?: return@LaunchedEffect
-        if (sessionId.isBlank()) return@LaunchedEffect
+        val orderId   = state.providerOrderId ?: return@LaunchedEffect
 
         viewModel.consumePaymentSessionId()
 
         launchCashfree(
-            context   = context,
+            context = context,
             sessionId = sessionId,
+            orderId = orderId,
             onSuccess = { cfPaymentId ->
-                viewModel.confirmCoursePurchase(cfPaymentId)
+                viewModel.confirmSubscription(cfPaymentId)
             },
             onFailure = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
             }
         )
+
     }
 
     Box(modifier = Modifier.fillMaxSize()

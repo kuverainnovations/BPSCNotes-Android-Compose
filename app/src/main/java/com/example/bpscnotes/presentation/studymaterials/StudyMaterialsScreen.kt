@@ -180,8 +180,11 @@ fun StudyMaterialsScreen(
     // Launch Cashfree SDK when a purchase requires payment for the remaining ₹ balance.
     // Consume the pending purchase immediately to avoid re-launching on recompose.
     LaunchedEffect(state.pendingPurchase) {
+
         val pending   = state.pendingPurchase ?: return@LaunchedEffect
         val sessionId = pending.paymentSessionId ?: return@LaunchedEffect
+        val orderId   = pending.providerOrderId ?: return@LaunchedEffect
+
         if (sessionId.isBlank()) return@LaunchedEffect
 
         viewModel.consumePendingPurchase()
@@ -190,6 +193,7 @@ fun StudyMaterialsScreen(
         launchCashfree(
             context   = context,
             sessionId = sessionId,
+            orderId   = orderId,
             onSuccess = { cfPaymentId ->
                 viewModel.confirmMaterialPurchase(cfPaymentId)
             },

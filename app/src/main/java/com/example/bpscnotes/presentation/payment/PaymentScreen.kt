@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.payment
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.example.bpscnotes.core.network.toUserMessage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,13 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
+import com.cashfree.pg.api.CFPaymentGatewayService
+import com.cashfree.pg.core.api.CFSession
+import com.cashfree.pg.core.api.CFTheme
+import com.cashfree.pg.core.api.callback.CFCheckoutResponseCallback
+import com.cashfree.pg.core.api.exception.CFException
+import com.cashfree.pg.ui.api.CFDropCheckoutPayment
+
 // ─────────────────────────────────────────────────────────────
 // SUBSCRIPTION PAYMENT SCREEN
 // ─────────────────────────────────────────────────────────────
@@ -48,16 +56,21 @@ fun SubscriptionPaymentScreen(
 
     // Launch Cashfree SDK when payment_session_id is ready.
     // Consume immediately so recompose doesn't re-trigger.
-    LaunchedEffect(state.paymentSessionId) {
+    LaunchedEffect(state.paymentSessionId, state.providerOrderId) {
+
         val sessionId = state.paymentSessionId ?: return@LaunchedEffect
+        val orderId   = state.providerOrderId ?: return@LaunchedEffect
+
         viewModel.consumePaymentSessionId()
+
         launchCashfree(
-            context     = context,
-            sessionId   = sessionId,
-            onSuccess   = { cfPaymentId ->
+            context = context,
+            sessionId = sessionId,
+            orderId = orderId,
+            onSuccess = { cfPaymentId ->
                 viewModel.confirmSubscription(cfPaymentId)
             },
-            onFailure   = { code, msg ->
+            onFailure = { code, msg ->
                 viewModel.handlePaymentFailure(code, msg)
             }
         )
@@ -453,11 +466,12 @@ fun SuccessScreen(title: String, message: String, bonusCoins: Int = 0, onDone: (
  * [onFailure]  — receives (errorCode, errorMessage); code 0 = user cancelled
  */
 fun launchCashfree(
-    context:   Context,
+    context: Context,
     sessionId: String,
-    onSuccess: (cfPaymentId: String) -> Unit,
-    onFailure: (code: Int, message: String) -> Unit
-) {
+    orderId: String,
+    onSuccess: (String) -> Unit,
+    onFailure: (Int, String) -> Unit
+){
     try {
         val activity = context as Activity
 
@@ -510,7 +524,36 @@ fun launchCashfree(
         //  }
         //
         // ── Until SDK is added to build.gradle, call onFailure to avoid crash ──
-        onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
+     //   onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
+
+        Log.e("CF_DEBUG", "======================")
+        Log.e("CF_DEBUG", "sessionId = $sessionId")
+        Log.e("CF_DEBUG", "orderId   = $orderId")
+        Log.e("CF_DEBUG", "activity  = ${activity::class.java.simpleName}")
+        Log.e("CF_DEBUG", "======================")
+        try {
+            val session = CFSession.CFSessionBuilder()
+                .setEnvironment(CFSession.Environment.SANDBOX)
+                .setPaymentSessionID(sessionId)
+                .setOrderId(orderId)
+                .build()
+
+            val theme = CFTheme.CFThemeBuilder()
+                .setNavigationBarBackgroundColor("#1565C0")
+                .setNavigationBarTextColor("#FFFFFF")
+                .build()
+
+            val checkout = CFDropCheckoutPayment.CFDropCheckoutPaymentBuilder()
+                .setSession(session)
+                //.setTheme(theme)
+                .build()
+
+            CFPaymentGatewayService.getInstance()
+                .doPayment(activity, checkout)
+
+        } catch (e: CFException) {
+            onFailure(-1, e.message ?: "Cashfree launch failed")
+        }
 
     } catch (e: Exception) {
         onFailure(-1, "Failed to open payment: ${e.localizedMessage ?: "Unknown error"}")

@@ -29,10 +29,13 @@ import com.example.bpscnotes.core.config.CoinsConfigRepository
 import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import com.cashfree.pg.core.api.callback.CFCheckoutResponseCallback
+import com.cashfree.pg.core.api.utils.CFErrorResponse
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(),
-    CashfreePaymentListener {
+    CashfreePaymentListener,
+    CFCheckoutResponseCallback {
 
     @Inject lateinit var adManager: com.example.bpscnotes.core.ads.AdManager
     private val settingsViewModel: SettingsViewModel by viewModels()
@@ -147,5 +150,22 @@ class MainActivity : ComponentActivity(),
                 )
             }
         }
+    }
+
+    override fun onPaymentVerify(orderId: String) {
+        Log.d("Cashfree", "Verified orderId=$orderId")
+        onCashfreePaymentSuccess(orderId)
+    }
+
+    override fun onPaymentFailure(
+        errorResponse: CFErrorResponse,
+        orderId: String
+    ) {
+        val code = if (errorResponse.status == "cancelled") 0 else -1
+
+        onCashfreePaymentError(
+            code,
+            errorResponse.message ?: "Payment failed"
+        )
     }
 }
