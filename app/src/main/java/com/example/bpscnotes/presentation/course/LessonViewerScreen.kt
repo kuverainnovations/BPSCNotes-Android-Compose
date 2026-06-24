@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
@@ -365,32 +366,72 @@ private fun VideoPlayer(videoUrl: String?) {
     }
 
     var loading by remember { mutableStateOf(true) }
+    var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var showSpeedMenu by remember { mutableStateOf(false) }
+    val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
 
     // Build embeddable URL
     val embedUrl = remember(videoUrl) {
         when {
             videoUrl.contains("youtube.com/watch") -> {
                 val id = videoUrl.substringAfter("v=").substringBefore("&")
-                "https://www.youtube.com/embed/$id?autoplay=1&rel=0&playsinline=1"
+                "https://www.youtube.com/embed/$id?autoplay=1&rel=0&playsinline=1&enablejsapi=1"
             }
             videoUrl.contains("youtu.be/") -> {
                 val id = videoUrl.substringAfter("youtu.be/").substringBefore("?")
-                "https://www.youtube.com/embed/$id?autoplay=1&rel=0&playsinline=1"
+                "https://www.youtube.com/embed/$id?autoplay=1&rel=0&playsinline=1&enablejsapi=1"
             }
             else -> videoUrl  // direct mp4 / other
         }
     }
 
     val isYoutube = remember(embedUrl) { embedUrl.contains("youtube.com/embed") }
+
+    // HTML for YouTube with speed control via YT IFrame API
+    // HTML5 video for direct mp4 with native playbackRate
     val html = if (isYoutube) """
         <!DOCTYPE html><html>
         <head><meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <style>body{margin:0;padding:0;background:#000}
-        iframe{width:100%;height:100%;position:fixed;top:0;left:0;border:0}</style>
+        <style>
+          body{margin:0;padding:0;background:#000}
+          iframe{width:100%;height:100%;position:fixed;top:0;left:0;border:0}
+        </style>
         </head>
-        <body><iframe src='$embedUrl' allowfullscreen allow='autoplay'></iframe></body>
-        </html>
+        <body>
+        <iframe id='player' src='$embedUrl' allowfullscreen allow='autoplay'></iframe>
+        <script>
+          function setSpeed(r) {
+            try {
+              document.getElementById('player').contentWindow.postMessage(
+                JSON.stringify({event:'command',func:'setPlaybackRate',args:[r]}), '*'
+              );
+            } catch(e) {}
+          }
+        </script>
+        </body></html>
+    """.trimIndent() else if (!isYoutube) """
+        <!DOCTYPE html><html>
+        <head><meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <style>body{margin:0;padding:0;background:#000}
+        video{width:100%;height:100%;position:fixed;top:0;left:0;object-fit:contain}</style>
+        </head>
+        <body>
+        <video id='v' src='$embedUrl' autoplay controls playsinline></video>
+        <script>
+          function setSpeed(r) {
+            var v = document.getElementById('v');
+            if (v) v.playbackRate = r;
+          }
+        </script>
+        </body></html>
     """.trimIndent() else null
+
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    // Inject speed change whenever playbackSpeed changes
+    LaunchedEffect(playbackSpeed) {
+        webViewRef?.evaluateJavascript("setSpeed($playbackSpeed);", null)
+    }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
@@ -409,17 +450,81 @@ private fun VideoPlayer(videoUrl: String?) {
                         allowContentAccess   = true
                     }
                     webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) { loading = false }
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            loading = false
+                            // Apply initial speed after page loads
+                            if (playbackSpeed != 1.0f) {
+                                view?.evaluateJavascript("setSpeed($playbackSpeed);", null)
+                            }
+                        }
                     }
                     webChromeClient = WebChromeClient()
                     if (html != null) loadData(html, "text/html", "UTF-8")
                     else loadUrl(embedUrl)
+                    webViewRef = this
                 }
             },
+            update = { view -> webViewRef = view },
             modifier = Modifier.fillMaxSize()
         )
         if (loading) {
             AppLoader()
+        }
+
+        // ── Speed control button (top-right overlay) ──────────
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(12.dp)
+        ) {
+            // Speed button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(0.7f))
+                    .clickable { showSpeedMenu = !showSpeedMenu }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "${if (playbackSpeed == playbackSpeed.toLong().toFloat()) "${playbackSpeed.toLong()}x" else "${playbackSpeed}x"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Speed picker dropdown
+            DropdownMenu(
+                expanded   = showSpeedMenu,
+                onDismissRequest = { showSpeedMenu = false },
+                modifier   = Modifier.background(Color(0xFF1A1A1A))
+            ) {
+                speeds.forEach { speed ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (speed == playbackSpeed) {
+                                    Text("✓", color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                                } else {
+                                    Spacer(Modifier.width(14.dp))
+                                }
+                                Text(
+                                    "${if (speed == speed.toLong().toFloat()) "${speed.toLong()}x" else "${speed}x"}",
+                                    color = if (speed == playbackSpeed) BpscColors.Primary else Color.White,
+                                    fontWeight = if (speed == playbackSpeed) FontWeight.ExtraBold else FontWeight.Normal
+                                )
+                            }
+                        },
+                        onClick = {
+                            playbackSpeed = speed
+                            showSpeedMenu = false
+                        }
+                    )
+                }
+            }
         }
     }
 }

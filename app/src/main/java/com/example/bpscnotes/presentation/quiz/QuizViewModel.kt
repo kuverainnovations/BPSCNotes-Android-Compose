@@ -85,6 +85,9 @@ data class QuizResult(
     val coinsEarned: Int,
     val timeTakenSecs: Int,
     val answerDetails: List<QuizAnswerDetail>,
+    // ── Rank / percentile from backend ───────────────────────
+    val rank: Int = 0,
+    val percentile: Double = 0.0,
     // ── Negative marking breakdown ────────────────────────────
     val negativeMarkingEnabled: Boolean = false,
     val marksPerCorrect: Double = 1.0,
@@ -101,12 +104,17 @@ data class QuizResult(
 
 data class QuizUiState(
     // ── List / Lobby ──────────────────────────────────────────
+    // allQuizzes: full unfiltered list — client-side search/filter derived from this
+    val allQuizzes: List<QuizPreviewDto>      = emptyList(),
     val dailyQuizzes: List<QuizPreviewDto>    = emptyList(),
     val topicQuizzes: List<QuizPreviewDto>    = emptyList(),
     val mockTestQuizzes: List<QuizPreviewDto> = emptyList(),
     val userProfile: UserDto?                 = null,
     val isLoadingList: Boolean                = true,
     val listError: String?                    = null,
+    // Search / filter state — applied client-side over allQuizzes
+    val searchQuery: String                   = "",
+    val selectedType: String                  = "all",  // "all" | "daily" | "topic" | "mock"
 
     // ── Detail / Intro (pre-start) ────────────────────────────
     // The preview DTO loaded for the detail screen (no questions yet)
@@ -125,7 +133,11 @@ data class QuizUiState(
     val submitError: String?                  = null,
 
     // ── Result ────────────────────────────────────────────────
-    val result: QuizResult?                   = null
+    val result: QuizResult?                   = null,
+
+    // ── Per-quiz leaderboard (loaded after submit) ────────────
+    val leaderboard: List<com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse> = emptyList(),
+    val isLoadingLeaderboard: Boolean         = false,
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -172,11 +184,14 @@ class QuizViewModel @Inject constructor(
                 val profileResponse = try { authApi.getMe() } catch (e: Exception) { null }
                 val all = quizzesResponse.data?.quizzes ?: emptyList()
 
-                _uiState.update {
-                    it.copy(
-                        dailyQuizzes    = all.filter { q -> q.type == "daily" },
-                        topicQuizzes    = all.filter { q -> q.type == "topic" },
-                        mockTestQuizzes = all.filter { q -> q.type == "mock" },
+                _uiState.update { state ->
+                    // Apply existing search/filter to newly loaded data
+                    val filtered = applyQuizFilter(all, state.searchQuery, state.selectedType)
+                    state.copy(
+                        allQuizzes      = all,
+                        dailyQuizzes    = filtered.filter { q -> q.type == "daily" },
+                        topicQuizzes    = filtered.filter { q -> q.type == "topic" },
+                        mockTestQuizzes = filtered.filter { q -> q.type == "mock" },
                         userProfile     = profileResponse?.data?.user,
                         isLoadingList   = false
                     )
@@ -188,6 +203,46 @@ class QuizViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** Set search query and recompute filtered lists client-side (no network call) */
+    fun setSearchQuery(q: String) {
+        _uiState.update { state ->
+            val filtered = applyQuizFilter(state.allQuizzes, q, state.selectedType)
+            state.copy(
+                searchQuery     = q,
+                dailyQuizzes    = filtered.filter { it.type == "daily" },
+                topicQuizzes    = filtered.filter { it.type == "topic" },
+                mockTestQuizzes = filtered.filter { it.type == "mock" },
+            )
+        }
+    }
+
+    /** Set type filter ("all", "daily", "topic", "mock") and recompute */
+    fun setTypeFilter(type: String) {
+        _uiState.update { state ->
+            val filtered = applyQuizFilter(state.allQuizzes, state.searchQuery, type)
+            state.copy(
+                selectedType    = type,
+                dailyQuizzes    = filtered.filter { it.type == "daily" },
+                topicQuizzes    = filtered.filter { it.type == "topic" },
+                mockTestQuizzes = filtered.filter { it.type == "mock" },
+            )
+        }
+    }
+
+    private fun applyQuizFilter(all: List<QuizPreviewDto>, query: String, type: String): List<QuizPreviewDto> {
+        var list = all
+        if (type != "all") list = list.filter { it.type == type }
+        if (query.isNotBlank()) {
+            val q = query.trim().lowercase()
+            list = list.filter { quiz ->
+                quiz.title.lowercase().contains(q) ||
+                        (quiz.subject?.lowercase()?.contains(q) == true) ||
+                        (quiz.examTags?.any { it.lowercase().contains(q) } == true)
+            }
+        }
+        return list
     }
 
     // ── 2. DETAIL (intro screen) ──────────────────────────────
@@ -371,6 +426,8 @@ class QuizViewModel @Inject constructor(
                             coinsEarned    = data.coinsEarned,
                             timeTakenSecs  = data.timeTakenSecs,
                             answerDetails  = answerDetails,
+                            rank           = data.rank,
+                            percentile     = data.percentile,
                             negativeMarkingEnabled = data.negativeMarkingEnabled,
                             marksPerCorrect        = data.marksPerCorrect,
                             marksPerWrong          = data.marksPerWrong,
@@ -399,9 +456,29 @@ class QuizViewModel @Inject constructor(
                 // Broadcast so QuizListScreen's VM (separate hiltViewModel instance)
                 // picks up the event and reloads the list with fresh scores + solved count
                 bus.emit(RefreshEvent.QuizCompleted)
+
+                // Auto-load per-quiz leaderboard so result screen shows it instantly
+                loadLeaderboard(session.id)
             } catch (e: Exception) {
                 Log.e("QuizVM", "submitQuiz: ${e.message}", e)
                 _uiState.update { it.copy(isSubmitting = false, submitError = e.toUserMessage("Submit failed")) }
+            }
+        }
+    }
+
+    /** Fetch top-10 leaderboard for a quiz (called after submit) */
+    fun loadLeaderboard(quizId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingLeaderboard = true) }
+            try {
+                val res = quizzesApi.getLeaderboard(quizId)
+                _uiState.update { it.copy(
+                    leaderboard = res.data?.leaderboard ?: emptyList(),
+                    isLoadingLeaderboard = false
+                )}
+            } catch (e: Exception) {
+                Log.w("QuizVM", "loadLeaderboard: ${e.message}")
+                _uiState.update { it.copy(isLoadingLeaderboard = false) }
             }
         }
     }

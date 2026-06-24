@@ -37,6 +37,8 @@ import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
@@ -152,171 +154,179 @@ fun CurrentAffairsScreen(
 
     val grouped = filtered.groupBy { it.rawDate }.entries.sortedByDescending { it.key }
 
-    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    val pullRefreshState = rememberPullToRefreshState()
 
-            // ── Header ─────────────────────────────────────────
-            Box(
-                modifier = Modifier.fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)), start = Offset(0f, 0f), end = Offset(400f, 400f)))
-                    .statusBarsPadding()
-            ) {
-                Canvas(modifier = Modifier.matchParentSize()) {
-                    drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
-                    drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.6f))
-                }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+    PullToRefreshBox(
+        state = pullRefreshState,
+        isRefreshing = state.isLoading && allArticles.isNotEmpty(),
+        onRefresh = { viewModel.refresh() }
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+
+                // ── Header ─────────────────────────────────────────
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)), start = Offset(0f, 0f), end = Offset(400f, 400f)))
+                        .statusBarsPadding()
+                ) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
+                        drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.6f))
+                    }
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                }
+                                Column {
+                                    Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                }
                             }
-                            Column {
-                                Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            // Bookmark count chip — taps to Saved tab
+                            Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.15f)).clickable { selectedTab = 3 }.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Rounded.Bookmark, null, tint = BpscColors.CoinGold, modifier = Modifier.size(14.dp))
+                                    Text("${bookmarkedIds.size}", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                        // Bookmark count chip — taps to Saved tab
-                        Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.15f)).clickable { selectedTab = 3 }.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Rounded.Bookmark, null, tint = BpscColors.CoinGold, modifier = Modifier.size(14.dp))
-                                Text("${bookmarkedIds.size}", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+
+                        Spacer(Modifier.height(14.dp))
+
+                        // Search bar
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.15f)).border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Rounded.Search, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery, onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                                decorationBox = { inner ->
+                                    if (searchQuery.isNullOrEmpty()) Text(str.caSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
+                                    inner()
+                                }
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                Icon(Icons.Rounded.Close, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(16.dp).clickable { searchQuery = ""; focusManager.clearFocus() })
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Tabs
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            tabs.forEachIndexed { index, tab ->
+                                val sel = selectedTab == index
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)      // equal weight = equal width for ALL tabs
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (sel) Color.White else Color.White.copy(0.12f))
+                                        .clickable { selectedTab = index }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.85f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = if (index == 3) 11.sp else 14.sp)
+                                }
                             }
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(14.dp))
+                // Category chips — dynamic from loaded articles
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(dynamicCategories) { cat ->
+                        val sel = cat == selectedCategory
+                        Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { selectedCategory = cat }.padding(horizontal = 14.dp, vertical = 7.dp)) {
+                            Text(cat, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
 
-                    // Search bar
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.15f)).border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(Icons.Rounded.Search, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = searchQuery, onValueChange = { searchQuery = it },
-                            modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                            decorationBox = { inner ->
-                                if (searchQuery.isNullOrEmpty()) Text(str.caSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
-                                inner()
-                            }
+                // Stats row
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    CAStatChip("📰", "${filtered.size}", "Articles")
+                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
+                    CAStatChip("⭐", "${filtered.count { it.isImportant }}", str.caImportant)
+                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
+                    CAStatChip("❓", "${filtered.sumOf { it.mcqCount }}", "MCQs")
+                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
+                    CAStatChip("🔖", "${bookmarkedIds.size}", "Saved")
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // ── Content area ──────────────────────────────────
+                when {
+                    // Loading
+                    state.isLoading && articles.isNullOrEmpty() -> {
+                        com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 150.dp, itemCount = 5, itemHeight = 100.dp)
+                    }
+
+                    // Error
+                    state.error != null && articles.isNullOrEmpty() -> {
+                        com.example.bpscnotes.core.ui.AppErrorState(
+                            message = state.error!!,
+                            onRetry = { viewModel.refresh() }
                         )
-                        if (searchQuery.isNotEmpty()) {
-                            Icon(Icons.Rounded.Close, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(16.dp).clickable { searchQuery = ""; focusManager.clearFocus() })
-                        }
                     }
 
-                    Spacer(Modifier.height(12.dp))
-
-                    // Tabs
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        tabs.forEachIndexed { index, tab ->
-                            val sel = selectedTab == index
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)      // equal weight = equal width for ALL tabs
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (sel) Color.White else Color.White.copy(0.12f))
-                                    .clickable { selectedTab = index }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.85f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = if (index == 3) 11.sp else 14.sp)
+                    // Empty filter result
+                    filtered.isNullOrEmpty() -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(if (selectedTab == 3) "🔖" else "🔍", fontSize = 48.sp)
+                                Text(if (selectedTab == 3) str.caNoSaved else str.caNoArticles, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                                Text(if (selectedTab == 3) str.caBookmarkHint else str.caTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                             }
                         }
                     }
-                }
-            }
 
-            // Category chips — dynamic from loaded articles
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(dynamicCategories) { cat ->
-                    val sel = cat == selectedCategory
-                    Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (sel) BpscColors.Primary else Color.White).border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp)).clickable { selectedCategory = cat }.padding(horizontal = 14.dp, vertical = 7.dp)) {
-                        Text(cat, style = MaterialTheme.typography.bodyMedium, color = if (sel) Color.White else BpscColors.TextSecondary, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
-                    }
-                }
-            }
-
-            // Stats row
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                CAStatChip("📰", "${filtered.size}", "Articles")
-                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                CAStatChip("⭐", "${filtered.count { it.isImportant }}", str.caImportant)
-                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                CAStatChip("❓", "${filtered.sumOf { it.mcqCount }}", "MCQs")
-                Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                CAStatChip("🔖", "${bookmarkedIds.size}", "Saved")
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // ── Content area ──────────────────────────────────
-            when {
-                // Loading
-                state.isLoading && articles.isNullOrEmpty() -> {
-                    com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 150.dp, itemCount = 5, itemHeight = 100.dp)
-                }
-
-                // Error
-                state.error != null && articles.isNullOrEmpty() -> {
-                    com.example.bpscnotes.core.ui.AppErrorState(
-                        message = state.error!!,
-                        onRetry = { viewModel.refresh() }
-                    )
-                }
-
-                // Empty filter result
-                filtered.isNullOrEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(if (selectedTab == 3) "🔖" else "🔍", fontSize = 48.sp)
-                            Text(if (selectedTab == 3) str.caNoSaved else str.caNoArticles, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                            Text(if (selectedTab == 3) str.caBookmarkHint else str.caTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                        }
-                    }
-                }
-
-                // Article list
-                else -> {
-                    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        var globalArticleIndex = 0
-                        grouped.forEach { (date, dateArticles) ->
-                            stickyHeader(key = date) { DateGroupHeader(date = dateArticles.firstOrNull()?.date ?: date, count = dateArticles.size) }
-                            itemsIndexed(dateArticles, key = { _, a -> a.id }) { _, article ->
-                                CAArticleCard(
-                                    article     = article,
-                                    isBookmarked = bookmarkedIds.contains(article.id),
-                                    markingConfig = mcqMarkingConfig,
-                                    onBookmark  = { viewModel.toggleBookmark(article.id) },
-                                    onShare     = {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
-                                            putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app")
+                    // Article list
+                    else -> {
+                        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            var globalArticleIndex = 0
+                            grouped.forEach { (date, dateArticles) ->
+                                stickyHeader(key = date) { DateGroupHeader(date = dateArticles.firstOrNull()?.date ?: date, count = dateArticles.size) }
+                                itemsIndexed(dateArticles, key = { _, a -> a.id }) { _, article ->
+                                    CAArticleCard(
+                                        article     = article,
+                                        isBookmarked = bookmarkedIds.contains(article.id),
+                                        markingConfig = mcqMarkingConfig,
+                                        onBookmark  = { viewModel.toggleBookmark(article.id) },
+                                        onShare     = {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
+                                        },
+                                        onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) },
+                                        onStartMcq = {
+                                            navController.navigate("ca_mcq_quiz/${article.id}")
                                         }
-                                        context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
-                                    },
-                                    onReadMore  = { navController.navigate(Screen.CaArticleDetail.createRoute(article.id)) },
-                                    onStartMcq = {
-                                        navController.navigate("ca_mcq_quiz/${article.id}")
-                                    }
 
-                                )
-                                Spacer(Modifier.height(10.dp))
-
-                                // Banner every 7 articles (requirement: every 7 items)
-                                // Counted across the whole flattened list so a long
-                                // single-date group still gets ads at a steady cadence.
-                                globalArticleIndex++
-                                if (adManager != null && globalArticleIndex % 7 == 0) {
-                                    BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                                    )
                                     Spacer(Modifier.height(10.dp))
+
+                                    // Banner every 7 articles (requirement: every 7 items)
+                                    // Counted across the whole flattened list so a long
+                                    // single-date group still gets ads at a steady cadence.
+                                    globalArticleIndex++
+                                    if (adManager != null && globalArticleIndex % 7 == 0) {
+                                        BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                                        Spacer(Modifier.height(10.dp))
+                                    }
                                 }
                             }
                         }
@@ -324,7 +334,7 @@ fun CurrentAffairsScreen(
                 }
             }
         }
-    }
+    } // end PullToRefreshBox
 }
 
 // ─────────────────────────────────────────────────────────────

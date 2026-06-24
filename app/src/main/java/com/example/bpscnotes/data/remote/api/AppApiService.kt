@@ -490,7 +490,18 @@ data class UserStatsData(
     val rank: Int? = null,
     @SerializedName("quizzes_attempted")   val quizzesAttempted: Int = 0,
     // Subject-wise accuracy from quiz attempts — now mapped from API
-    @SerializedName("subjectAccuracy")     val subjectAccuracy: List<SubjectAccuracyDto> = emptyList()
+    @SerializedName("subjectAccuracy")     val subjectAccuracy: List<SubjectAccuracyDto> = emptyList(),
+    // Last 10 quiz attempts — used for "Continue Learning" card on dashboard
+    @SerializedName("recentQuizzes")       val recentAttempts: List<RecentQuizAttemptDto> = emptyList(),
+)
+
+data class RecentQuizAttemptDto(
+    val title: String = "",
+    val type: String = "topic",
+    val subject: String = "",
+    val score: Int = 0,
+    @SerializedName("total_questions") val totalQuestions: Int = 0,
+    @SerializedName("attempted_at")    val attemptedAt: String = "",
 )
 
 // ══════════════════════════════════════════════════════════════

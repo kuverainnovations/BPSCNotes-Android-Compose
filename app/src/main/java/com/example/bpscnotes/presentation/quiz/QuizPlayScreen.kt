@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bpscnotes.core.ads.AdManager
 import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader
@@ -65,10 +66,12 @@ fun QuizPlayScreen(
     when {
         state.result != null && state.activeSession != null -> {
             QuizResultScreen(
-                session   = state.activeSession!!,
-                result    = state.result!!,
-                onRetake  = { viewModel.exitSession(); viewModel.startQuiz(quizId) },
-                onExit    = {
+                session      = state.activeSession!!,
+                result       = state.result!!,
+                leaderboard  = state.leaderboard,
+                isLoadingLeaderboard = state.isLoadingLeaderboard,
+                onRetake     = { viewModel.exitSession(); viewModel.startQuiz(quizId) },
+                onExit       = {
                     viewModel.exitSession()
                     // Show interstitial after quiz result (enforces 20min cooldown internally)
                     activity?.let { act ->
@@ -743,10 +746,13 @@ private fun QuizBottomBar(
 @Composable
 private fun QuizResultScreen(
     session: QuizSession, result: QuizResult,
+    leaderboard: List<com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse> = emptyList(),
+    isLoadingLeaderboard: Boolean = false,
     onRetake: () -> Unit, onExit: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val context = LocalContext.current
     var showDetailReview by remember { mutableStateOf(false) }
     val accuracy          = result.accuracy
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
@@ -782,6 +788,37 @@ private fun QuizResultScreen(
             Text(when { accuracy >= 80 -> str.quizExcellent; accuracy >= 50 -> str.quizGoodJob; else -> str.quizKeepPracticing },
                 style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
             Text(session.title, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.7f))
+
+            // Rank + percentile pill — shown when rank data is available
+            if (result.rank > 0) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(0.15f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🏅", fontSize = 18.sp)
+                        Text("Rank #${result.rank}", style = MaterialTheme.typography.labelLarge,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text("on this quiz", style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(0.6f), fontSize = 9.sp)
+                    }
+                    Box(Modifier.width(1.dp).height(36.dp).background(Color.White.copy(0.3f)))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("📊", fontSize = 18.sp)
+                        Text("Top ${(100 - result.percentile).toInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text("percentile", style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(0.6f), fontSize = 9.sp)
+                    }
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
 
             // Score ring
@@ -868,6 +905,29 @@ private fun QuizResultScreen(
             Column(Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+                // ── Share score button ──────────────────────────────
+                OutlinedButton(
+                    onClick = {
+                        val emoji = if (accuracy >= 80) "🏆" else if (accuracy >= 50) "👍" else "💪"
+                        val rankText = if (result.rank > 0) " · Rank #${result.rank}" else ""
+                        val shareText = "$emoji I scored ${accuracy.toInt()}% on \"${session.title}\"$rankText!\n\nPractice BPSC with BPSCNotes app 📚"
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(intent, "Share your score"))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(0.4f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                ) {
+                    Icon(Icons.Rounded.Share, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share Score", style = MaterialTheme.typography.titleMedium)
+                }
+
                 Button(onClick = { showDetailReview = true }, Modifier
                     .fillMaxWidth()
                     .height(52.dp), shape = RoundedCornerShape(14.dp),
@@ -895,6 +955,80 @@ private fun QuizResultScreen(
                     Text(str.quizBackToQuizzes, style = MaterialTheme.typography.titleMedium)
                 }
             }
+
+            // ── Per-quiz leaderboard ────────────────────────────────
+            if (isLoadingLeaderboard || leaderboard.isNotEmpty()) {
+                Spacer(Modifier.height(20.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface)
+                ) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Text("🏆 Top Scorers", style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
+                            if (isLoadingLeaderboard) {
+                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
+                            }
+                        }
+                        HorizontalDivider(color = cs.outline)
+                        leaderboard.forEach { entry ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Rank badge
+                                Box(
+                                    modifier = Modifier.size(32.dp).clip(CircleShape)
+                                        .background(
+                                            when (entry.rankPosition) {
+                                                1 -> Color(0xFFFFD700)
+                                                2 -> Color(0xFFC0C0C0)
+                                                3 -> Color(0xFFCD7F32)
+                                                else -> if (entry.isCurrentUser) BpscColors.PrimaryLight else cs.background
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (entry.rankPosition <= 3) listOf("🥇","🥈","🥉")[entry.rankPosition-1]
+                                        else "#${entry.rankPosition}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = if (entry.rankPosition <= 3) 14.sp else 10.sp
+                                    )
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        if (entry.isCurrentUser) "You" else entry.userName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (entry.isCurrentUser) FontWeight.ExtraBold else FontWeight.Medium,
+                                        color = if (entry.isCurrentUser) BpscColors.Primary else cs.onSurface
+                                    )
+                                    Text(
+                                        "${entry.correctAnswers}/${entry.totalQuestions} correct · ${entry.timeTakenSecs}s",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = cs.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    "${entry.score.toInt()}%",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = when {
+                                        entry.score >= 80f -> BpscColors.Success
+                                        entry.score >= 50f -> BpscColors.Primary
+                                        else -> cs.onSurfaceVariant
+                                    },
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(32.dp))
         }
     }

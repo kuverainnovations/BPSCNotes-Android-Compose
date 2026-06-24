@@ -12,6 +12,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
@@ -113,243 +115,250 @@ fun JobVacanciesScreen(
     val cs = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("job_vacancies") }
 
-    var searchQuery      by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
-    var selectedJob      by remember { mutableStateOf<JobVacancyDto?>(null) }
-    val savedJobs = remember(vmState.jobs) {
-        vmState.jobs
-            .filter { it.isSaved == true }
-            .map { it.id }
-            .toMutableStateList()
-    }
-    var showAlertSheet   by remember { mutableStateOf(false) }
-    val focusManager     = LocalFocusManager.current
+    val pullRefreshState = rememberPullToRefreshState()
 
-    val allJobs = vmState.jobs
+    PullToRefreshBox(
+        state = pullRefreshState,
+        isRefreshing = vmState.isLoading && vmState.jobs.isNotEmpty(),
+        onRefresh = { viewModel.load() }
+    ) {    var searchQuery      by remember { mutableStateOf("") }
+        var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
+        var selectedJob      by remember { mutableStateOf<JobVacancyDto?>(null) }
+        val savedJobs = remember(vmState.jobs) {
+            vmState.jobs
+                .filter { it.isSaved == true }
+                .map { it.id }
+                .toMutableStateList()
+        }
+        var showAlertSheet   by remember { mutableStateOf(false) }
+        val focusManager     = LocalFocusManager.current
 
-    // Get all unique categories from live data
-    val liveCategories = remember(allJobs) {
-        allJobs.map { it.category?.toJobCategory() }.distinct().sortedBy { it?.label }
-    }
+        val allJobs = vmState.jobs
 
-    val filtered = remember(allJobs, searchQuery, selectedCategory) {
-        allJobs.filter { job ->
-            val matchCat    = selectedCategory == null || (job.category ?: "").toJobCategory() == selectedCategory
-            val matchSearch = searchQuery.isEmpty() ||
-                    job.title.contains(searchQuery, true) ||
-                    job.department?.contains(searchQuery, true) == true ||
-                    job.location?.contains(searchQuery, true) == true ||
-                    job.qualification?.contains(searchQuery, true) == true
-            matchCat && matchSearch
-        }.sortedWith(compareBy { it.applyEndDate.parseToMillis() })
-    }
+        // Get all unique categories from live data
+        val liveCategories = remember(allJobs) {
+            allJobs.map { it.category?.toJobCategory() }.distinct().sortedBy { it?.label }
+        }
 
-    if (vmState.isLoading && allJobs.isEmpty()) {
-        AppLoader()
-        return
-    }
+        val filtered = remember(allJobs, searchQuery, selectedCategory) {
+            allJobs.filter { job ->
+                val matchCat    = selectedCategory == null || (job.category ?: "").toJobCategory() == selectedCategory
+                val matchSearch = searchQuery.isEmpty() ||
+                        job.title.contains(searchQuery, true) ||
+                        job.department?.contains(searchQuery, true) == true ||
+                        job.location?.contains(searchQuery, true) == true ||
+                        job.qualification?.contains(searchQuery, true) == true
+                matchCat && matchSearch
+            }.sortedWith(compareBy { it.applyEndDate.parseToMillis() })
+        }
 
-    if (vmState.error != null && allJobs.isEmpty()) {
-        AppErrorState(message = vmState.error!!, onRetry = { viewModel.retry() })
-        return
-    }
+        if (vmState.isLoading && allJobs.isEmpty()) {
+            AppLoader()
+            return@PullToRefreshBox
+        }
 
-    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        if (vmState.error != null && allJobs.isEmpty()) {
+            AppErrorState(message = vmState.error!!, onRetry = { viewModel.retry() })
+            return@PullToRefreshBox
+        }
 
-            // ── HERO HEADER ───────────────────────────────────
-            Box(
-                modifier = Modifier.fillMaxWidth()
-                    .background(Brush.linearGradient(
-                        listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
-                        Offset.Zero, Offset(400f, 400f)
-                    ))
-                    .statusBarsPadding()
-            ) {
-                Canvas(Modifier.matchParentSize()) {
-                    drawCircle(Color.White.copy(0.05f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
-                    drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
-                }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
+            Column(modifier = Modifier.fillMaxSize()) {
 
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, Alignment.Center) {
-                                Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            }
-                            Column {
-                                Text(str.jobsTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("${allJobs.size} ${str.jobsOpeningsCountLabel}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
-                            }
-                        }
-                        Box(
-                            Modifier.size(38.dp).clip(RoundedCornerShape(10.dp))
-                                .background(Color.White.copy(0.15f))
-                                .clickable { showAlertSheet = true },
-                            Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.NotificationAdd, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
-                    }
-
-                    // Search
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                            .background(Color.White.copy(0.15f))
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement =  Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(Icons.Rounded.Search, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = searchQuery, onValueChange = { searchQuery = it },
-                            modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                            decorationBox = { inner ->
-                                if (searchQuery.isEmpty()) Text(str.jobsSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
-                                inner()
-                            }
-                        )
-                        if (searchQuery.isNotEmpty()) {
-                            Icon(Icons.Rounded.Close, null, tint = Color.White.copy(0.7f),
-                                modifier = Modifier.size(16.dp).clickable { searchQuery = ""; focusManager.clearFocus() })
-                        }
-                    }
-
-                    // Stats strip
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.1f)).padding(horizontal = 4.dp, vertical = 10.dp),
-                        Arrangement.SpaceEvenly
-                    ) {
-                        JobStatChip("📋", "${allJobs.size}", "Total")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        JobStatChip("🆕", "${allJobs.count { it.isNew }}", "New")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        JobStatChip("🔴", "${allJobs.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                        JobStatChip("🔖", "${savedJobs.size}", str.jobsSaved)
-                    }
-                }
-            }
-
-            // ── CATEGORY CHIPS ────────────────────────────────
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    val sel = selectedCategory == null
-                    Box(
-                        Modifier.clip(RoundedCornerShape(20.dp))
-                            .background(if (sel) BpscColors.Primary else Color.White)
-                            .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                            .clickable { selectedCategory = null }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
-                    ) {
-                        Text(str.filterAll, style = MaterialTheme.typography.bodyMedium,
-                            color = if (sel) Color.White else BpscColors.TextSecondary,
-                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
-                    }
-                }
-                items(liveCategories) { cat ->
-                    val sel = selectedCategory == cat
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (sel) cat?.color ?: BpscColors.Primary else Color.White)
-                            .border(
-                                1.dp,
-                                if (sel) cat?.color ?: BpscColors.Primary else cs.outline,
-                                RoundedCornerShape(20.dp)
-                            )
-                            .clickable {
-                                selectedCategory = if (sel) null else cat
-                            }
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        cat?.emoji?.let {
-                            Text(it, fontSize = 13.sp)
-                        }
-
-                        cat?.label?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (sel) Color.White else BpscColors.TextSecondary,
-                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ── JOB LIST ──────────────────────────────────────
-            if (filtered.isEmpty()) {
-                Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("🔍", fontSize = 48.sp)
-                        Text(str.jobsNoJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text(str.jobsTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
-                        if (vmState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BpscColors.Primary)
-                    }
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                // ── HERO HEADER ───────────────────────────────────
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(
+                            listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
+                            Offset.Zero, Offset(400f, 400f)
+                        ))
+                        .statusBarsPadding()
                 ) {
-                    // Featured
-                    val featured = filtered.filter { it.isFeatured }
-                    if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {
-                        item { Text(str.jobsFeatured, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
-                        items(featured, key = { it.id }) { job ->
-                            JobCard(job = job, isSaved = savedJobs.contains(job.id),
-                                onSave = {
-                                    viewModel.toggleSave(job.id)
-                                },
-                                onClick  = { selectedJob = job })
-                        }
-                        item { Spacer(Modifier.height(4.dp)) }
-                        item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
+                    Canvas(Modifier.matchParentSize()) {
+                        drawCircle(Color.White.copy(0.05f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
+                        drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
                     }
-                    val rest = if (selectedCategory == null && searchQuery.isEmpty()) filtered.filter { !it.isFeatured } else filtered
-                    itemsIndexed(rest, key = { _, it -> it.id }) { index, job ->
-                        // Banner ad every 5 job cards — unobtrusive, between items
-                        if (index > 0 && index % 5 == 0) {
-                            BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, Alignment.Center) {
+                                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                }
+                                Column {
+                                    Text(str.jobsTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text("${allJobs.size} ${str.jobsOpeningsCountLabel}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                                }
+                            }
+                            Box(
+                                Modifier.size(38.dp).clip(RoundedCornerShape(10.dp))
+                                    .background(Color.White.copy(0.15f))
+                                    .clickable { showAlertSheet = true },
+                                Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.NotificationAdd, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
                         }
-                        JobCard(job = job, isSaved = savedJobs.contains(job.id),
-                            onSave  = { viewModel.toggleSave(job.id) },
-                            onClick = { selectedJob = job })
+
+                        // Search
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(0.15f))
+                                .padding(horizontal = 14.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement =  Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Rounded.Search, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery, onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                                decorationBox = { inner ->
+                                    if (searchQuery.isEmpty()) Text(str.jobsSearchHint, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(0.5f))
+                                    inner()
+                                }
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                Icon(Icons.Rounded.Close, null, tint = Color.White.copy(0.7f),
+                                    modifier = Modifier.size(16.dp).clickable { searchQuery = ""; focusManager.clearFocus() })
+                            }
+                        }
+
+                        // Stats strip
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.1f)).padding(horizontal = 4.dp, vertical = 10.dp),
+                            Arrangement.SpaceEvenly
+                        ) {
+                            JobStatChip("📋", "${allJobs.size}", "Total")
+                            Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                            JobStatChip("🆕", "${allJobs.count { it.isNew }}", "New")
+                            Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                            JobStatChip("🔴", "${allJobs.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
+                            Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                            JobStatChip("🔖", "${savedJobs.size}", str.jobsSaved)
+                        }
+                    }
+                }
+
+                // ── CATEGORY CHIPS ────────────────────────────────
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        val sel = selectedCategory == null
+                        Box(
+                            Modifier.clip(RoundedCornerShape(20.dp))
+                                .background(if (sel) BpscColors.Primary else Color.White)
+                                .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                                .clickable { selectedCategory = null }
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Text(str.filterAll, style = MaterialTheme.typography.bodyMedium,
+                                color = if (sel) Color.White else BpscColors.TextSecondary,
+                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                    items(liveCategories) { cat ->
+                        val sel = selectedCategory == cat
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (sel) cat?.color ?: BpscColors.Primary else Color.White)
+                                .border(
+                                    1.dp,
+                                    if (sel) cat?.color ?: BpscColors.Primary else cs.outline,
+                                    RoundedCornerShape(20.dp)
+                                )
+                                .clickable {
+                                    selectedCategory = if (sel) null else cat
+                                }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            cat?.emoji?.let {
+                                Text(it, fontSize = 13.sp)
+                            }
+
+                            cat?.label?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (sel) Color.White else BpscColors.TextSecondary,
+                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── JOB LIST ──────────────────────────────────────
+                if (filtered.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("🔍", fontSize = 48.sp)
+                            Text(str.jobsNoJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(str.jobsTryFilter, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                            if (vmState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = BpscColors.Primary)
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Featured
+                        val featured = filtered.filter { it.isFeatured }
+                        if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {
+                            item { Text(str.jobsFeatured, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
+                            items(featured, key = { it.id }) { job ->
+                                JobCard(job = job, isSaved = savedJobs.contains(job.id),
+                                    onSave = {
+                                        viewModel.toggleSave(job.id)
+                                    },
+                                    onClick  = { selectedJob = job })
+                            }
+                            item { Spacer(Modifier.height(4.dp)) }
+                            item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
+                        }
+                        val rest = if (selectedCategory == null && searchQuery.isEmpty()) filtered.filter { !it.isFeatured } else filtered
+                        itemsIndexed(rest, key = { _, it -> it.id }) { index, job ->
+                            // Banner ad every 5 job cards — unobtrusive, between items
+                            if (index > 0 && index % 5 == 0) {
+                                BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                            }
+                            JobCard(job = job, isSaved = savedJobs.contains(job.id),
+                                onSave  = { viewModel.toggleSave(job.id) },
+                                onClick = { selectedJob = job })
+                        }
                     }
                 }
             }
-        }
 
-        // Job detail sheet
-        selectedJob?.let { job ->
-            JobDetailSheet(
-                job       = job,
-                isSaved   = savedJobs.contains(job.id),
-                onSave    = { if (savedJobs.contains(job.id)) savedJobs.remove(job.id) else savedJobs.add(job.id) },
-                onDismiss = { selectedJob = null }
-            )
-        }
+            // Job detail sheet
+            selectedJob?.let { job ->
+                JobDetailSheet(
+                    job       = job,
+                    isSaved   = savedJobs.contains(job.id),
+                    onSave    = { if (savedJobs.contains(job.id)) savedJobs.remove(job.id) else savedJobs.add(job.id) },
+                    onDismiss = { selectedJob = null }
+                )
+            }
 
-        // Alert sheet
-        if (showAlertSheet) {
-            JobAlertSheet(
-                categories      = liveCategories,
-                selectedLabels  = vmState.alertCategories,
-                onToggle        = { viewModel.toggleAlertCategory(it) },
-                onDismiss       = { showAlertSheet = false }
-            )
+            // Alert sheet
+            if (showAlertSheet) {
+                JobAlertSheet(
+                    categories      = liveCategories,
+                    selectedLabels  = vmState.alertCategories,
+                    onToggle        = { viewModel.toggleAlertCategory(it) },
+                    onDismiss       = { showAlertSheet = false }
+                )
+            }
         }
-    }
+    } // end PullToRefreshBox
 }
 
 // ─────────────────────────────────────────────────────────────

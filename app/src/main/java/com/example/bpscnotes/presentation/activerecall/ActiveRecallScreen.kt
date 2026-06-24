@@ -41,6 +41,8 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -826,6 +828,11 @@ private fun FlashcardLobbyScreen(
                 }
             }
 
+            // Compute distinct subjects outside LazyColumn — remember requires @Composable context
+            val distinctSubjects = remember(allCards) {
+                allCards.map { it.subject }.distinct().filter { it.isNotBlank() }.sorted()
+            }
+
             LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (weakCount > 0) {
                     item {
@@ -945,6 +952,119 @@ private fun FlashcardLobbyScreen(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
+                }
+
+                // ── Subject-wise progress rings ───────────────────────────
+                if (distinctSubjects.isNotEmpty()) {
+                    item {
+                        Text(
+                            "📖 By Subject",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                    items(distinctSubjects, key = { it }) { subject ->
+                        val subjectCards    = allCards.filter { it.subject == subject }
+                        val subjectTotal    = subjectCards.size
+                        val subjectMastered = masteredIds.count { id -> subjectCards.any { it.id == id } }
+                        val subjectWeak     = weakIds.count { id -> subjectCards.any { it.id == id } }
+                        val subjectProgress = if (subjectTotal > 0) subjectMastered.toFloat() / subjectTotal else 0f
+                        val animSubjProg by animateFloatAsState(subjectProgress, tween(900), label = "subj_${subject}")
+
+                        Card(
+                            modifier  = Modifier.fillMaxWidth().clickable { onStartSubject(subject) },
+                            shape     = RoundedCornerShape(16.dp),
+                            colors    = CardDefaults.cardColors(containerColor = cs.surface),
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                // Circular progress ring
+                                Box(
+                                    modifier         = Modifier.size(56.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.foundation.Canvas(Modifier.size(56.dp)) {
+                                        val stroke = 5.dp.toPx()
+                                        val inset  = stroke / 2
+                                        val sz     = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                                        // Track
+                                        drawArc(
+                                            color    = Color(0xFFE8EAF6),
+                                            startAngle = -90f, sweepAngle = 360f,
+                                            useCenter = false,
+                                            style    = Stroke(stroke),
+                                            topLeft  = Offset(inset, inset), size = sz
+                                        )
+                                        // Fill
+                                        drawArc(
+                                            brush    = Brush.sweepGradient(listOf(BpscColors.Primary, Color(0xFF42A5F5))),
+                                            startAngle = -90f, sweepAngle = animSubjProg * 360f,
+                                            useCenter = false,
+                                            style    = Stroke(stroke, cap = StrokeCap.Round),
+                                            topLeft  = Offset(inset, inset), size = sz
+                                        )
+                                    }
+                                    Text(
+                                        "${(subjectProgress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.Primary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        subject,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = cs.onSurface,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        "$subjectTotal cards · $subjectMastered mastered" +
+                                                if (subjectWeak > 0) " · $subjectWeak to review" else "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = cs.onSurfaceVariant
+                                    )
+                                    // Mini progress bar
+                                    Box(
+                                        Modifier.fillMaxWidth().height(4.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(cs.background)
+                                    ) {
+                                        Box(
+                                            Modifier.fillMaxWidth(animSubjProg).fillMaxHeight()
+                                                .background(
+                                                    Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF42A5F5))),
+                                                    RoundedCornerShape(2.dp)
+                                                )
+                                        )
+                                    }
+                                }
+
+                                // Start chip
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(BpscColors.PrimaryLight)
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        "▶",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = BpscColors.Primary,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

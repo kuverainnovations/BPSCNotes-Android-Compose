@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +31,15 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
 import com.example.bpscnotes.presentation.quiz.components.SectionLabel
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 
 /**
  * QuizListScreen — shows all quizzes grouped by type.
@@ -44,6 +55,7 @@ fun QuizListScreen(
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
+    val focusManager = LocalFocusManager.current
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("quiz_list") }
 
     LaunchedEffect(Unit) {
@@ -53,135 +65,208 @@ fun QuizListScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
+    val pullRefreshState = rememberPullToRefreshState()
+    PullToRefreshBox(
+        state = pullRefreshState,
+        isRefreshing = state.isLoadingList && state.allQuizzes.isNotEmpty(),
+        onRefresh = { viewModel.loadLobby() }
+    ) {
+        Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
 
-        // ── Header ─────────────────────────────────────────────
-        Box(
-            modifier = Modifier.fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
-                        Offset(0f, 0f), Offset(400f, 300f)
-                    )
-                )
-                .statusBarsPadding()
-        ) {
-            androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
-                drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
-                drawCircle(Color.White.copy(0.04f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.7f))
-            }
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment     = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(
-                            modifier         = Modifier.size(36.dp).clip(CircleShape)
-                                .background(Color.White.copy(0.15f))
-                                .clickable { navController.popBackStackSafe() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
-                        Column {
-                            Text(str.quizDaily + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text(str.quizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
-                        }
-                    }
-                    // Real user coins
-                    Row(
-                        modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(0.15f))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text("🪙", fontSize = 13.sp)
-                        Text(
-                            "${state.userProfile?.coins ?: "--"}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp
+            // ── Header ─────────────────────────────────────────────
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
+                            Offset(0f, 0f), Offset(400f, 300f)
                         )
+                    )
+                    .statusBarsPadding()
+            ) {
+                androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                    drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
+                    drawCircle(Color.White.copy(0.04f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.7f))
+                }
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(
+                                modifier         = Modifier.size(36.dp).clip(CircleShape)
+                                    .background(Color.White.copy(0.15f))
+                                    .clickable { navController.popBackStackSafe() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                            Column {
+                                Text(str.quizDaily + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.quizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            }
+                        }
+                        // Real user coins
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(0.15f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("🪙", fontSize = 13.sp)
+                            Text(
+                                "${state.userProfile?.coins ?: "--"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Real user stats strip
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(0.1f))
+                            .padding(horizontal = 4.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        val p = state.userProfile
+                        LobbyStatChip("🎯", if (p != null) "${p.accuracy}%" else "--",    "Accuracy")
+                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        LobbyStatChip("🔥", if (p != null) "${p.streak}" else "--",               "Streak")
+                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        LobbyStatChip("🏆", if (p?.rank != null) "#${p.rank}" else "--",          "Rank")
+                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Attempted")
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Search bar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(0.15f))
+                            .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Rounded.Search, null, tint = Color.White.copy(0.7f), modifier = Modifier.size(17.dp))
+                        BasicTextField(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                            singleLine = true,
+                            decorationBox = { inner ->
+                                if (state.searchQuery.isEmpty()) {
+                                    Text("Search quizzes…", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
+                                }
+                                inner()
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
+                        )
+                        if (state.searchQuery.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier.size(22.dp).clip(CircleShape)
+                                    .background(Color.White.copy(0.2f))
+                                    .clickable { viewModel.setSearchQuery("") },
+                                contentAlignment = Alignment.Center
+                            ) { Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(13.dp)) }
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // Type filter chips
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        listOf("all" to "All", "daily" to "📅 Daily", "topic" to "📝 Topic", "mock" to "📋 Mock")
+                            .forEach { (type, label) ->
+                                val selected = state.selectedType == type
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (selected) Color.White else Color.White.copy(0.15f))
+                                        .clickable { viewModel.setTypeFilter(type) }
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (selected) Color(0xFF0A2472) else Color.White,
+                                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium
+                                    )
+                                }
+                            }
                     }
                 }
+            }
 
-                Spacer(Modifier.height(16.dp))
-
-                // Real user stats strip
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(0.1f))
-                        .padding(horizontal = 4.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    val p = state.userProfile
-                    LobbyStatChip("🎯", if (p != null) "${p.accuracy}%" else "--",    "Accuracy")
-                    Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                    LobbyStatChip("🔥", if (p != null) "${p.streak}" else "--",               "Streak")
-                    Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                    LobbyStatChip("🏆", if (p?.rank != null) "#${p.rank}" else "--",          "Rank")
-                    Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                    LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Attempted")
+            // ── Content ────────────────────────────────────────────
+            when {
+                state.isLoadingList -> {
+                    com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 140.dp, itemCount = 5, itemHeight = 85.dp)
                 }
-            }
-        }
-
-        // ── Content ────────────────────────────────────────────
-        when {
-            state.isLoadingList -> {
-                com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 140.dp, itemCount = 5, itemHeight = 85.dp)
-            }
-            state.listError != null -> AppErrorState(message = state.listError!!, onRetry = { viewModel.loadLobby() })
-            state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("📝", fontSize = 48.sp)
-                        Text(str.quizNoAvailable, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                state.listError != null -> AppErrorState(message = state.listError!!, onRetry = { viewModel.loadLobby() })
+                state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("📝", fontSize = 48.sp)
+                            Text(str.quizNoAvailable, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(str.quizCheckLater, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                        }
                     }
                 }
-            }
-            else -> {
-                LazyColumn(
-                    contentPadding        = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
-                    verticalArrangement   = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (state.dailyQuizzes.isNotEmpty()) {
-                        item { SectionLabel("📅 " + str.quizDaily + "s", "Today's scheduled quizzes — resets at midnight") }
-                        items(state.dailyQuizzes, key = { it.id }) { quiz ->
-                            QuizCard(quiz = quiz) {
-                                if (quiz.totalQuestions == 0) {
-                                    android.widget.Toast.makeText(context,
-                                        "\"${quiz.title}\" " + str.quizNoQuestions,
-                                        android.widget.Toast.LENGTH_SHORT).show()
-                                } else {
-                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                else -> {
+                    LazyColumn(
+                        contentPadding        = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
+                        verticalArrangement   = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (state.dailyQuizzes.isNotEmpty()) {
+                            item { SectionLabel("📅 " + str.quizDaily + "s", "Today's scheduled quizzes — resets at midnight") }
+                            items(state.dailyQuizzes, key = { it.id }) { quiz ->
+                                QuizCard(quiz = quiz) {
+                                    if (quiz.totalQuestions == 0) {
+                                        android.widget.Toast.makeText(context,
+                                            "\"${quiz.title}\" " + str.quizNoQuestions,
+                                            android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                    }
+                                }
+                            }
+                        }
+                        if (state.topicQuizzes.isNotEmpty()) {
+                            item { Spacer(Modifier.height(4.dp)) }
+                            item { SectionLabel("📝 " + str.quizTopic + "s", "Practice specific subjects") }
+                            items(state.topicQuizzes, key = { it.id }) { quiz ->
+                                QuizCard(quiz = quiz) {
+                                    if (quiz.totalQuestions == 0) {
+                                        android.widget.Toast.makeText(context,
+                                            "\"${quiz.title}\" " + str.quizNoQuestions,
+                                            android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
+                                    }
                                 }
                             }
                         }
                     }
-                    if (state.topicQuizzes.isNotEmpty()) {
-                        item { Spacer(Modifier.height(4.dp)) }
-                        item { SectionLabel("📝 " + str.quizTopic + "s", "Practice specific subjects") }
-                        items(state.topicQuizzes, key = { it.id }) { quiz ->
-                            QuizCard(quiz = quiz) {
-                                if (quiz.totalQuestions == 0) {
-                                    android.widget.Toast.makeText(context,
-                                        "\"${quiz.title}\" " + str.quizNoQuestions,
-                                        android.widget.Toast.LENGTH_SHORT).show()
-                                } else {
-                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
-    }
+    } // end PullToRefreshBox
 }
 
 @Composable

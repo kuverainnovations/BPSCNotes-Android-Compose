@@ -231,6 +231,15 @@ fun DashboardScreen(
                             navController = navController
                         )
 
+                        // ── Continue Learning (last attempted quiz) ─────────────────
+                        val recentAttempts = state.stats?.recentAttempts ?: emptyList()
+                        if (recentAttempts.isNotEmpty()) {
+                            ContinueLearningSection(
+                                recentAttempt = recentAttempts.first(),
+                                navController = navController
+                            )
+                        }
+
                         // ── Quick access ───────────────────────────────────────────
                         QuickAccessSection(
                             navController = navController,
@@ -1327,6 +1336,86 @@ private fun WeeklyConsistencyCard(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTINUE LEARNING — last quiz attempt card (Testbook/Unacademy style)
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun ContinueLearningSection(
+    recentAttempt: com.example.bpscnotes.data.remote.api.RecentQuizAttemptDto,
+    navController: NavHostController
+) {
+    val str = LocalStrings.current
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+        SectionHeader(title = "Continue Learning")
+        Spacer(Modifier.height(10.dp))
+        Card(
+            modifier  = Modifier.fillMaxWidth(),
+            shape     = RoundedCornerShape(16.dp),
+            colors    = CardDefaults.cardColors(containerColor = BpscColors.PrimaryLight),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate(Screen.QuizList.route) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Type icon
+                Box(
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+                        .background(BpscColors.Primary.copy(0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        when (recentAttempt.type) { "daily" -> "📅"; "mock" -> "📋"; else -> "📝" },
+                        fontSize = 22.sp
+                    )
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        recentAttempt.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = BpscColors.Primary,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${recentAttempt.subject} · Last score: ${recentAttempt.score}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = BpscColors.TextSecondary
+                    )
+                    // Score progress bar
+                    val scoreProgress = recentAttempt.score / 100f
+                    Box(
+                        Modifier.fillMaxWidth().height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(BpscColors.Primary.copy(0.15f))
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth(scoreProgress).fillMaxHeight()
+                                .background(
+                                    when {
+                                        recentAttempt.score >= 80 -> BpscColors.Success
+                                        recentAttempt.score >= 50 -> BpscColors.Primary
+                                        else -> Color(0xFFE74C3C)
+                                    },
+                                    RoundedCornerShape(2.dp)
+                                )
+                        )
+                    }
+                }
+                Icon(
+                    Icons.Rounded.ChevronRight, null,
+                    tint = BpscColors.Primary, modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

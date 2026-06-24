@@ -305,8 +305,10 @@ fun StudyMaterialsScreen(
             var selectedTab by remember { mutableIntStateOf(0) }
 
             // Reload My Uploads every time user switches to that tab
+            // Reload Downloads tab when switched to — keeps list fresh
             LaunchedEffect(selectedTab) {
                 if (selectedTab == 1) viewModel.loadMyUploads()
+                if (selectedTab == 2) viewModel.loadDownloadHistory()
             }
 
             // Switch to My Uploads tab after successful upload
@@ -321,6 +323,8 @@ fun StudyMaterialsScreen(
                 }
             }
 
+            // Three tabs: Explore / My Uploads / Downloads
+            val tabLabels = listOf(str.materialsExplore, str.materialsMyUploads, "📥 Downloads")
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -328,7 +332,7 @@ fun StudyMaterialsScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                listOf(str.materialsExplore, str.materialsMyUploads).forEachIndexed { index, label ->
+                tabLabels.forEachIndexed { index, label ->
                     val isSelected = selectedTab == index
                     Box(
                         modifier = Modifier
@@ -399,7 +403,7 @@ fun StudyMaterialsScreen(
                         }
                     }
                 }
-            } else {
+            } else if (selectedTab == 1) {
                 // My Uploads tab — user owns everything here, no locks
                 Box(modifier = Modifier.weight(1f)) {
                     MyUploadsTab(
@@ -413,6 +417,26 @@ fun StudyMaterialsScreen(
                         onRespondNegotiation = { material -> viewModel.openNegotiation(material) },
                         onOpenWallet = { viewModel.openWallet() },
                         onOpenChats = { navController.navigate(Screen.ChatInbox.route) }
+                    )
+                }
+            } else {
+                // Downloads tab — offline-first: uses local file path when available
+                Box(modifier = Modifier.weight(1f)) {
+                    DownloadsTab(
+                        downloads    = state.downloadHistory,
+                        isLoading    = state.isLoadingList && state.downloadHistory.isEmpty(),
+                        purchasedIds = emptySet(),
+                        onOpenPdf    = { url, title, freePages, isPurchased ->
+                            // Check for local file first — works offline with no network
+                            val itemId = state.downloadHistory.firstOrNull { it.fileUrl == url }?.id
+                            val localUrl = itemId?.let { viewModel.getLocalPath(it)?.let { p -> "file://$p" } }
+                            openMaterial(
+                                context, navController,
+                                localUrl ?: url,  // prefer local cached file
+                                title, freePages, isPurchased, adManager = adManager
+                            )
+                        },
+                        onRefresh = { viewModel.loadDownloadHistory() }
                     )
                 }
             }
@@ -1258,7 +1282,7 @@ private fun LibraryItemCard(
                     Spacer(Modifier.width(4.dp))
                     Text(
                         when {
-                            isDownloaded                   -> "Saved"
+                            isDownloaded                   -> "Offline ✓"
                             item.isPremium && !isPurchased -> "Unlock ₹${item.price}"
                             else                           -> str.materialsDownload
                         },
@@ -2571,7 +2595,7 @@ fun DownloadsTab(
     isLoading:    Boolean,
     purchasedIds: Set<String>,
     onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
-    onRefresh:    () -> Unit
+    onRefresh:    () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -2670,15 +2694,37 @@ fun DownloadsTab(
                         }
                         // Action button
                         if (!item.fileUrl.isNullOrBlank()) {
-                            Button(
-                                onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased) },
-                                shape    = RoundedCornerShape(10.dp),
-                                modifier = Modifier.height(36.dp),
-                                colors   = ButtonDefaults.buttonColors(
-                                    containerColor = if (hasFullAccess) BpscColors.Primary else Color(0xFFF59E0B))
-                            ) {
-                                Text(if (hasFullAccess) str.materialOpen else str.materialPreview,
-                                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            val hasLocalFile = item.fileUrl?.let {
+                                java.io.File(it.removePrefix("file://")).exists()
+                            } == true
+                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                // Offline badge — shown when file is saved locally
+                                if (hasLocalFile) {
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(0xFFE8F5E9))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Rounded.WifiOff, null,
+                                            tint = Color(0xFF2E7D32),
+                                            modifier = Modifier.size(10.dp))
+                                        Text("Offline", style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                                    }
+                                }
+                                Button(
+                                    onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased) },
+                                    shape    = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.height(36.dp),
+                                    colors   = ButtonDefaults.buttonColors(
+                                        containerColor = if (hasFullAccess) BpscColors.Primary else Color(0xFFF59E0B))
+                                ) {
+                                    Text(if (hasFullAccess) str.materialOpen else str.materialPreview,
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
