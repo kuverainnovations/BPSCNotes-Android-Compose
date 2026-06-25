@@ -131,22 +131,28 @@ class MainActivity : ComponentActivity(),
             }
         })
 
-        // Handle notification deep-link
-        val initialScreen = intent?.getStringExtra("screen")
-        val notifType     = intent?.getStringExtra("type") ?: ""
-        val notifId       = intent?.getStringExtra("notifId") ?: ""
-        if (notifId.isNotBlank()) Event.notificationTapped(notifType, notifId)
+        // Handle notification deep-link — read from launch intent so navigation
+        // works even when the app is fully closed (cold start from tray notification).
+        val initialScreen       = intent?.getStringExtra("screen") ?: ""
+        val initialNotifType    = intent?.getStringExtra("type") ?: ""
+        val initialNotifId      = intent?.getStringExtra("notifId") ?: ""
+        val initialCourseId     = intent?.getStringExtra("courseId") ?: ""
+        val initialDeepLink     = intent?.getStringExtra("deepLink") ?: ""
+        if (initialNotifId.isNotBlank()) Event.notificationTapped(initialNotifType, initialNotifId)
 
         setContent {
             val settingsState by settingsViewModel.state.collectAsState()
-            // Collect from static companion — shared by ALL LanguageManager instances
-            // This ensures drawer/settings changes apply instantly without restart
             val currentLanguage by com.example.bpscnotes.core.language.LanguageManager.language.collectAsState()
             BPSCNotesTheme(darkMode = settingsState.darkMode, language = currentLanguage) {
                 val navController = rememberNavController()
                 BpscNavHost(
-                    navController = navController,
-                    adManager     = adManager,
+                    navController        = navController,
+                    adManager            = adManager,
+                    // FIX Issue 2: pass intent extras so NavHost can deep-link
+                    // on cold start (app was closed when notification was tapped)
+                    initialNotifScreen   = initialScreen,
+                    initialNotifType     = initialNotifType,
+                    initialNotifCourseId = initialCourseId,
                 )
             }
         }

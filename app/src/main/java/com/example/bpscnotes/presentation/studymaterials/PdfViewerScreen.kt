@@ -32,10 +32,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.StudyMaterialDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import com.example.bpscnotes.presentation.payment.launchCashfree
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -63,10 +66,12 @@ fun PdfViewerScreen(
     title:         String,
     freePages:     Int     = 3,
     isPurchased:   Boolean = false,
+    materialId:    String  = "",   // FIX: wires Buy button to real purchase flow
+    price:         Int     = 0,    // FIX: shown in PurchaseConfirmDialog
     navController: NavHostController,
     authToken:     String  = "",
     adManager:     com.example.bpscnotes.core.ads.AdManager? = null,
-    onPurchase:    () -> Unit = {}
+    viewModel:     StudyMaterialsViewModel = hiltViewModel(),
 ) {
     val str = LocalStrings.current
     val context    = LocalContext.current
@@ -90,6 +95,8 @@ fun PdfViewerScreen(
     var totalPages by remember { mutableIntStateOf(0) }
     var isLoading  by remember { mutableStateOf(true) }
     var error      by remember { mutableStateOf<String?>(null) }
+    // FIX: collect purchase state from ViewModel
+    val purchaseState by viewModel.state.collectAsState()
     var showBuyDialog by remember { mutableStateOf(false) }
 
     val effectiveFreePages = if (isPurchased) Int.MAX_VALUE else freePages.coerceAtLeast(1)
@@ -115,40 +122,51 @@ fun PdfViewerScreen(
         }
     }
 
-    // Buy dialog
-    if (showBuyDialog) {
-        AlertDialog(
-            onDismissRequest = { showBuyDialog = false },
-            shape            = RoundedCornerShape(20.dp),
-            containerColor   = Color.White,
-            title = {
-                Text(str.pdfUnlock, fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.titleLarge)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${str.pdfReadFreePages} $freePages/$totalPages.",
-                        style = MaterialTheme.typography.bodyLarge, color = BpscColors.TextSecondary)
-                    Text("${str.pdfPurchaseUnlock}",
-                        style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showBuyDialog = false; onPurchase() },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape    = RoundedCornerShape(12.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) {
-                    Text(str.pdfBuyAccess, style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBuyDialog = false }) {
-                    Text(str.pdfMaybeLater, color = BpscColors.TextHint)
-                }
-            }
+    // FIX: Show the exact same PurchaseConfirmDialog used in the materials list.
+    // No coins, gold button, triggers real Cashfree payment.
+    if (showBuyDialog && materialId.isNotBlank()) {
+        val dummyDto = StudyMaterialDto(
+            id = materialId,
+            title = title,
+            description = null,
+            subject = "",
+            materialType = "",
+            author = null,
+            uploadedDate = null,
+            uploaderName = null,
+            price = price,
+            pageCount = totalPages,
+        )
+        PurchaseConfirmDialog(
+            item         = dummyDto,
+            isPurchasing = purchaseState.purchasingId == materialId || purchaseState.isConfirmingPurchase,
+            onConfirm    = { viewModel.purchaseMaterial(materialId, price, title) },
+            onDismiss    = { showBuyDialog = false; viewModel.clearPurchaseMessages() }
+        )
+    }
+
+    // Navigate back to materials list after successful purchase so user can see unlocked state
+    LaunchedEffect(purchaseState.purchaseSuccess) {
+        if (purchaseState.purchaseSuccess != null && materialId.isNotBlank()) {
+            showBuyDialog = false
+            navController.popBackStackSafe()
+        }
+    }
+
+    // Show Cashfree payment when required
+    LaunchedEffect(purchaseState.pendingPurchase) {
+        val pending   = purchaseState.pendingPurchase ?: return@LaunchedEffect
+        val sessionId = pending.paymentSessionId    ?: return@LaunchedEffect
+        val orderId   = pending.providerOrderId     ?: return@LaunchedEffect
+        if (sessionId.isBlank()) return@LaunchedEffect
+        viewModel.consumePendingPurchase()
+        showBuyDialog = false
+        launchCashfree(
+            context   = context,
+            sessionId = sessionId,
+            orderId   = orderId,
+            onSuccess = { cfPaymentId -> viewModel.confirmMaterialPurchase(cfPaymentId) },
+            onFailure = { code, msg  -> viewModel.handleMaterialPaymentFailure(code, msg) }
         )
     }
 

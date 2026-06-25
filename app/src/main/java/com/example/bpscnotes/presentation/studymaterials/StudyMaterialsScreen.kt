@@ -72,7 +72,9 @@ private fun openMaterial(
     title:        String,
     freePages:    Int,
     isPurchased:  Boolean,
-    adManager:    com.example.bpscnotes.core.ads.AdManager? = null
+    adManager:    com.example.bpscnotes.core.ads.AdManager? = null,
+    materialId:   String = "",   // FIX: needed to wire Buy button in PdfViewerScreen
+    price:        Int    = 0,    // FIX: shown in the purchase dialog
 ) {
     val lower = url.lowercase()
     val activity = context as? android.app.Activity
@@ -105,7 +107,9 @@ private fun openMaterial(
                         fileUrl     = url,
                         title       = title,
                         freePages   = freePages,
-                        isPurchased = isPurchased
+                        isPurchased = isPurchased,
+                        materialId  = materialId,
+                        price       = price,
                     )
                 )
             }
@@ -206,7 +210,6 @@ fun StudyMaterialsScreen(
         PurchaseConfirmDialog(
             item         = item,
             isPurchasing = state.purchasingId == item.id || state.isConfirmingPurchase,
-            // FIX Issue 5: no coin params — real-money only
             onConfirm    = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title) },
             onDismiss    = { showPurchaseDialog = null; viewModel.clearPurchaseMessages() }
         )
@@ -284,6 +287,8 @@ fun StudyMaterialsScreen(
                     onLanguageSelect  = viewModel::selectLanguage,
                     onSortSelect      = viewModel::setSortBy,
                     onToggleBookmarks = viewModel::toggleBookmarksOnly,
+                    // FIX Issue 6: Reset All clears every active filter in one tap
+                    onResetFilters    = viewModel::resetFilters,
                     onDismiss         = { showFilterDialog = false }
                 )
             }
@@ -451,6 +456,21 @@ fun StudyMaterialsScreen(
             currentUserId  = currentUserId,
             onChatWithUploader = { viewModel.openChatWithUploader(detail.id) },
             onBookmark     = { viewModel.toggleBookmark(detail.id) },
+            // FIX Issue 5: convert MaterialDetailData → StudyMaterialDto for purchase dialog
+            onPurchase     = {
+                val dto = StudyMaterialDto(
+                    id = detail.id, title = detail.title, description = detail.description,
+                    subject = detail.subject, materialType = detail.materialType,
+                    author = detail.author, tags = detail.tags,
+                    fileSizeBytes = detail.fileSizeBytes, pageCount = detail.pageCount,
+                    isPremium = detail.isPremium, isFeatured = detail.isFeatured,
+                    isTrending = detail.isTrending, isNew = detail.isNew,
+                    downloadCount = detail.downloadCount, rating = detail.rating,
+                    uploadedDate = detail.uploadedDate, uploaderName = detail.uploaderName,
+                    price = detail.price,
+                )
+                showPurchaseDialog = dto
+            },
             onDownload     = {
                 val dto = StudyMaterialDto(
                     id = detail.id, title = detail.title, description = detail.description,
@@ -467,9 +487,11 @@ fun StudyMaterialsScreen(
             onOpenPdf      = { url, title, freePages, isPurchased ->
                 openMaterial(
                     context, navController,
-                    // Use local file path if downloaded — works offline, no network needed
                     viewModel.getLocalPath(detail.id)?.let { "file://$it" } ?: url,
-                    title, freePages, isPurchased, adManager = adManager
+                    title, freePages, isPurchased, adManager = adManager,
+                    // FIX: pass so PdfViewerScreen can show the correct purchase dialog
+                    materialId = detail.id,
+                    price      = detail.price,
                 )
             },
             onDismiss      = viewModel::closeDetail
@@ -664,6 +686,7 @@ private fun FilterDialog(
     onLanguageSelect: (String) -> Unit,
     onSortSelect:    (String) -> Unit,
     onToggleBookmarks: () -> Unit,
+    onResetFilters:  () -> Unit = {},   // FIX Issue 6: clear all filters at once
     onDismiss:       () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -1714,12 +1737,13 @@ private fun MaterialDetailSheet(
     isBookmarked: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
-    isPurchased:  Boolean = false,   // FIX: true if user has purchased this session
-    buyers:       BuyersData? = null,   // Phase 4: anonymized buyer names for social proof
-    currentUserId: String = "",         // Phase 5: to hide chat button on own uploads
-    onChatWithUploader: () -> Unit = {}, // Phase 5: opens chat thread with uploader
+    isPurchased:  Boolean = false,
+    buyers:       BuyersData? = null,
+    currentUserId: String = "",
+    onChatWithUploader: () -> Unit = {},
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
+    onPurchase:   () -> Unit = {},           // FIX Issue 5: triggers purchase dialog
     onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
     onDismiss:    () -> Unit
 ) {
@@ -1845,22 +1869,6 @@ private fun MaterialDetailSheet(
                             Text(str.materialsUnlockPro2, style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant)
                         }
-                        // FIX Issue 3: Show actual price so user knows what they pay
-                        if (!isPurchased && material.price > 0) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    "₹${material.price}",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = BpscColors.CoinGold,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                                Text(
-                                    "one-time",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = cs.onSurfaceVariant
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -1869,24 +1877,44 @@ private fun MaterialDetailSheet(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Save button removed — download option already serves this purpose
-                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages,
-                    isPurchased || material.isFree) } } else onDownload,
-                    modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
+                // FIX Issue 5: Premium+unpurchased taps onPurchase() to open the
+                // payment dialog. Previously it opened the PDF with free-page preview
+                // (via onOpenPdf) and showed an ad — the payment dialog never appeared.
+                val isLocked = material.isPremium && !isPurchased
+                Button(
+                    onClick = when {
+                        isLocked -> { { onDismiss(); onPurchase() } }   // Open payment dialog
+                        !material.resolvedUrl.isNullOrBlank() -> { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages, isPurchased || material.isFree) } }
+                        else -> onDownload
+                    },
+                    modifier = Modifier.weight(2f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = when { isDownloaded -> BpscColors.Success; material.isPremium -> BpscColors.CoinGold; else -> BpscColors.Primary })) {
+                        containerColor = when {
+                            isDownloaded -> BpscColors.Success
+                            isLocked     -> BpscColors.Primary   // consistent with card button
+                            else         -> BpscColors.Primary
+                        }
+                    )
+                ) {
                     if (isDownloading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            when {
+                                isDownloaded -> Icons.Rounded.CheckCircle
+                                isLocked     -> Icons.Rounded.Lock
+                                else         -> Icons.Rounded.Download
+                            }, null, modifier = Modifier.size(16.dp)
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(when {
-                        isDownloaded   -> str.materialsDownloadedDone
-                        // FIX Issue 3: Show price in Unlock button so user sees it before tapping
-                        material.isPremium && !isPurchased && material.price > 0 ->
-                            "Unlock — ₹${material.price}"
-                        material.isPremium && !isPurchased -> str.materialsUnlockPro
+                        isDownloaded -> str.materialsDownloadedDone
+                        // FIX Issue 5: Show price so user knows what they pay
+                        isLocked && material.price > 0 -> "Unlock — ₹${material.price}"
+                        isLocked     -> str.materialsUnlockPro
                         !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                         else -> str.materialsDownloadFree
                     }, style = MaterialTheme.typography.titleMedium)
@@ -2748,14 +2776,15 @@ fun DownloadsTab(
 // Shows price, preview page count, and commission notice
 // ════════════════════════════════════════════════════════════
 @Composable
-// FIX Issue 5: No coin params. Real-money Cashfree payment only.
+// ── PurchaseConfirmDialog ────────────────────────────────────
+// No coins. Gold button. Exact same dialog everywhere.
 fun PurchaseConfirmDialog(
     item:         StudyMaterialDto,
     isPurchasing: Boolean,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
-    val cs = MaterialTheme.colorScheme
+    val cs  = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val price = item.price ?: 0
 
@@ -2773,54 +2802,35 @@ fun PurchaseConfirmDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // What they get
                 Card(shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FBF5))) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅"); Text("Full PDF — all ${item.pageCount ?: 0} pages",
-                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅")
+                            Text("Full PDF — all ${item.pageCount ?: 0} pages",
+                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅"); Text(str.materialsDownloadDevice,
-                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅")
+                            Text(str.materialsDownloadDevice,
+                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅"); Text(str.materialsLifetimeAccess,
-                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅")
+                            Text(str.materialsLifetimeAccess,
+                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                     }
                 }
-                // Price + coin discount slider
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween,
-                    Alignment.CenterVertically
-                ) {
+                HorizontalDivider(color = cs.outline)
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Text(str.materialPrice, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
-                    Text("₹$price",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
-                }
-
-                HorizontalDivider(color = cs.outline)
-
-                // FIX Issue 3+5: Show price clearly; no coin discount
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween,
-                    Alignment.CenterVertically
-                ) {
-                    Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("₹$price", style = MaterialTheme.typography.titleLarge,
-                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                        color = Color(0xFFFFA726), fontWeight = FontWeight.ExtraBold)
                 }
-                Text(
-                    "Secure payment via Cashfree · One-time purchase",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.onSurfaceVariant
-                )
+                Text("Secure payment via Cashfree · One-time purchase",
+                    style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
             }
         },
         confirmButton = {
@@ -2829,16 +2839,19 @@ fun PurchaseConfirmDialog(
                 enabled  = !isPurchasing,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape    = RoundedCornerShape(12.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
             ) {
                 if (isPurchasing) {
                     CircularProgressIndicator(color = Color.White,
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text(str.courseProcessing)
+                    Text(str.courseProcessing, color = Color(0xFF1A1A1A))
                 } else {
-                    Text("Pay ₹$price",
-                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Rounded.Lock, null,
+                        modifier = Modifier.size(16.dp), tint = Color(0xFF1A1A1A))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Unlock — ₹$price", style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A1A))
                 }
             }
         },

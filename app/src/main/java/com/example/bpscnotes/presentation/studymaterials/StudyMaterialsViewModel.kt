@@ -312,6 +312,19 @@ fun selectLanguage(language: String)  { _state.update { it.copy(selectedLanguage
 fun setSortBy(sort: String)           { _state.update { it.copy(sortBy          = sort)    }; loadMaterials(reset = true) }
 fun toggleBookmarksOnly()             { _state.update { it.copy(showBookmarksOnly = !it.showBookmarksOnly) }; loadMaterials(reset = true) }
 
+// FIX Issue 6: Reset all active filters in one tap
+fun resetFilters() {
+    _state.update { it.copy(
+        selectedType      = null,
+        selectedSubject   = "All",
+        selectedLanguage  = "All",
+        sortBy            = "downloads",
+        showBookmarksOnly = false,
+        searchQuery       = "",
+    )}
+    loadMaterials(reset = true)
+}
+
 fun setSearch(query: String) {
     _state.update { it.copy(searchQuery = query) }
     searchJob?.cancel()
@@ -1040,12 +1053,13 @@ fun loadDownloadHistory() {
 }
 
 // ── Purchase locked material (Phase 3: hybrid coins + Cashfree) ──
-// FIX Issue 5: No coins allowed for purchases. Real-money Cashfree only.
-fun purchaseMaterial(materialId: String, price: Int, title: String) {
+// coinsToApply: how many coins the user chose to apply as a discount
+// (capped server-side by max_coins_per_purchase).
+fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply: Int = 0) {
     viewModelScope.launch {
         _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
         try {
-            val res = api.initPurchase(materialId, InitPurchaseRequest())
+            val res = api.initPurchase(materialId, InitPurchaseRequest(coinsToApply))
             val data = res.data
 
             when {
@@ -1056,9 +1070,7 @@ fun purchaseMaterial(materialId: String, price: Int, title: String) {
                         purchasedIds    = it.purchasedIds + materialId
                     )}
                 }
-                // Free material — already completed by initPurchase (requiresPayment=false only for free)
-                // FIX Issue 4: Paid materials ALWAYS return requiresPayment=true now
-                // (coin-coverage path removed). This branch is ONLY for price=0 materials.
+                // Free or fully covered by coins — already completed by initPurchase
                 data?.requiresPayment != true -> {
                     tokenStore.addPurchasedId(materialId)
                     _state.update { it.copy(
@@ -1083,7 +1095,11 @@ fun purchaseMaterial(materialId: String, price: Int, title: String) {
             val msg = e.toUserMessage("Purchase failed")
             _state.update { it.copy(
                 purchasingId  = null,
-                purchaseError = msg
+                purchaseError = when {
+                    msg.contains("insufficient", true) || msg.contains("coins", true) ->
+                        "Not enough coins. Watch an ad or complete daily tasks to earn more."
+                    else -> msg
+                }
             )}
         }
     }

@@ -84,7 +84,33 @@ import com.example.bpscnotes.presentation.auth.mpin.ResetMpinScreen
 import com.example.bpscnotes.presentation.settings.ChangeMpinScreen
 
 @Composable
-fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
+fun BpscNavHost(
+    navController:        NavHostController,
+    adManager:            AdManager,
+    // FIX Issue 2: cold-start notification deep-link from MainActivity intent
+    initialNotifScreen:   String = "",
+    initialNotifType:     String = "",
+    initialNotifCourseId: String = "",
+) {
+    // Navigate to the correct screen when app opened from a tray notification (cold start).
+    androidx.compose.runtime.LaunchedEffect(initialNotifScreen) {
+        if (initialNotifScreen.isBlank()) return@LaunchedEffect
+        kotlinx.coroutines.delay(2000L) // wait for Splash + auth to settle
+        when (initialNotifScreen) {
+            "courses", "new_course", "course_update" ->
+                if (initialNotifCourseId.isNotBlank())
+                    navController.navigate(Screen.CourseDetail.createRoute(initialNotifCourseId)) { launchSingleTop = true }
+                else
+                    navController.navigate(Screen.Main.route) { launchSingleTop = true }
+            "quizzes", "quiz_result", "mock_result",
+            "jobs", "new_job",
+            "current_affairs", "ca_update" ->
+                navController.navigate(Screen.Main.route) { launchSingleTop = true }
+            "notifications" ->
+                navController.navigate(Screen.NotificationSettings.route) { launchSingleTop = true }
+            else -> { /* dashboard — no extra nav needed */ }
+        }
+    }
     val context = LocalContext.current
 
     // ── Session expired (401) → redirect to Login ───────────────────────
@@ -221,46 +247,21 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
             }
 
             composable(
-                route = "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}/{orderId}",
+                route     = "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}/{orderId}",
                 arguments = listOf(
-                    navArgument("courseId") { type = NavType.StringType },
+                    navArgument("courseId")    { type = NavType.StringType },
                     navArgument("courseTitle") { type = NavType.StringType },
-                    navArgument("price") { type = NavType.IntType },
-                    navArgument("sessionId") { type = NavType.StringType },
-                    navArgument("orderId") { type = NavType.StringType }
+                    navArgument("price")       { type = NavType.IntType    },
+                    navArgument("sessionId")   { type = NavType.StringType },
+                    navArgument("orderId")     { type = NavType.StringType; defaultValue = "none" }
                 )
             ) { back ->
-
-                val courseId = java.net.URLDecoder.decode(
-                    back.arguments?.getString("courseId") ?: return@composable,
-                    "UTF-8"
-                )
-
-                val courseTitle = java.net.URLDecoder.decode(
-                    back.arguments?.getString("courseTitle") ?: "",
-                    "UTF-8"
-                )
-
-                val price = back.arguments?.getInt("price") ?: 0
-
-                val paymentSession = java.net.URLDecoder.decode(
-                    back.arguments?.getString("sessionId") ?: "none",
-                    "UTF-8"
-                ).takeIf { it != "none" }
-
-                val orderId = java.net.URLDecoder.decode(
-                    back.arguments?.getString("orderId") ?: "none",
-                    "UTF-8"
-                ).takeIf { it != "none" }
-
-                CoursePaymentScreen(
-                    navController = navController,
-                    courseId = courseId,
-                    courseTitle = courseTitle,
-                    price = price,
-                    paymentSessionId = paymentSession,
-                    providerOrderId = orderId
-                )
+                val courseId        = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
+                val courseTitle     = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
+                val price           = back.arguments?.getInt("price") ?: 0
+                val paymentSession  = java.net.URLDecoder.decode(back.arguments?.getString("sessionId") ?: "none", "UTF-8").takeIf { it != "none" }
+                val providerOrderId = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
+                CoursePaymentScreen(navController, courseId, courseTitle, price, paymentSession, providerOrderId)
             }
 
             composable(
@@ -431,17 +432,23 @@ fun BpscNavHost(navController: NavHostController, adManager: AdManager,) {
                     navArgument("title")       { type = NavType.StringType },
                     navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
                     navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
+                    navArgument("materialId")  { type = NavType.StringType; defaultValue = "" },
+                    navArgument("price")       { type = NavType.IntType;  defaultValue = 0 },
                 )
             ) { back ->
                 val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
                 val title       = back.arguments?.getString("title")?.let  { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Document"
                 val freePages   = back.arguments?.getInt("freePages")  ?: 3
                 val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
+                val materialId  = back.arguments?.getString("materialId")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                val price       = back.arguments?.getInt("price") ?: 0
                 PdfViewerScreen(
                     fileUrl       = fileUrl,
                     title         = title,
                     freePages     = freePages,
                     isPurchased   = isPurchased,
+                    materialId    = materialId,
+                    price         = price,
                     navController = navController,
                     adManager     = adManager,
                     authToken     = ""

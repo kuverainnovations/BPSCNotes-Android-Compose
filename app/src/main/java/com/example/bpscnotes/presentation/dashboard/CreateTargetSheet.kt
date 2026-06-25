@@ -138,7 +138,7 @@ fun CreateTargetSheet(
                 modifier      = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
-                label         = { Text("Sub-topic (optional detail)") },
+                label         = { Text("Sub-topic") },
                 placeholder   = { Text("e.g. Fundamental Rights, Chapter 3", color = BpscColors.TextHint) },
                 singleLine    = true,
                 shape         = RoundedCornerShape(14.dp),
