@@ -68,6 +68,12 @@ data class StudyMaterialsUiState(
     val pendingPurchaseOrderId:    String? = null,
     val isConfirmingPurchase: Boolean = false,
     val userCoins: Int = 0,
+    // ── Rating ──────────────────────────────────────────────
+    val myRatingStars:    Int     = 0,      // 0 = not yet rated
+    val myRatingReview:   String? = null,
+    val isSubmittingRating: Boolean = false,
+    val ratingSuccess:    String? = null,
+    val ratingError:      String? = null,
     // List
     val materials:          List<StudyMaterialDto> = emptyList(),
     val isLoadingList:      Boolean                = true,
@@ -1155,6 +1161,52 @@ fun handleMaterialPaymentFailure(code: Int, message: String) {
 
 fun clearPurchaseMessages() {
     _state.update { it.copy(purchaseSuccess = null, purchaseError = null) }
+}
+
+// ── Rating ──────────────────────────────────────────────────
+/** Load the current user's existing rating for the open material. */
+fun loadMyRating(materialId: String) {
+    viewModelScope.launch {
+        try {
+            val res = api.getMyRating(materialId)
+            _state.update { it.copy(
+                myRatingStars  = res.data?.stars  ?: 0,
+                myRatingReview = res.data?.review,
+            )}
+        } catch (_: Exception) {}
+    }
+}
+
+/** Submit or update a 1-5 star rating with an optional text review. */
+fun submitRating(materialId: String, stars: Int, review: String? = null) {
+    if (stars < 1 || stars > 5) return
+    viewModelScope.launch {
+        _state.update { it.copy(isSubmittingRating = true, ratingError = null) }
+        try {
+            val res = api.rateMaterial(
+                materialId,
+                com.example.bpscnotes.data.remote.api.RateMaterialRequest(stars, review?.trim()?.ifBlank { null })
+            )
+            _state.update { it.copy(
+                isSubmittingRating = false,
+                myRatingStars      = stars,
+                myRatingReview     = review?.trim()?.ifBlank { null },
+                ratingSuccess      = "Thanks for your rating!",
+                ratingError        = null,
+            )}
+            // Refresh list so the updated avg rating reflects immediately
+            refresh()
+        } catch (e: Exception) {
+            _state.update { it.copy(
+                isSubmittingRating = false,
+                ratingError        = e.message ?: "Rating failed",
+            )}
+        }
+    }
+}
+
+fun clearRatingMessages() {
+    _state.update { it.copy(ratingSuccess = null, ratingError = null) }
 }
 
 /** Called by UI after user grants WRITE_EXTERNAL_STORAGE permission */

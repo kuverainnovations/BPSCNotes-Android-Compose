@@ -72,9 +72,7 @@ private fun openMaterial(
     title:        String,
     freePages:    Int,
     isPurchased:  Boolean,
-    adManager:    com.example.bpscnotes.core.ads.AdManager? = null,
-    materialId:   String = "",   // FIX: needed to wire Buy button in PdfViewerScreen
-    price:        Int    = 0,    // FIX: shown in the purchase dialog
+    adManager:    com.example.bpscnotes.core.ads.AdManager? = null
 ) {
     val lower = url.lowercase()
     val activity = context as? android.app.Activity
@@ -107,9 +105,7 @@ private fun openMaterial(
                         fileUrl     = url,
                         title       = title,
                         freePages   = freePages,
-                        isPurchased = isPurchased,
-                        materialId  = materialId,
-                        price       = price,
+                        isPurchased = isPurchased
                     )
                 )
             }
@@ -440,6 +436,11 @@ fun StudyMaterialsScreen(
 
     // ── DETAIL SHEET ─────────────────────────────────────────────
     if (state.isLoadingDetail) { AppLoader() }
+    // Load user's existing rating whenever a new material detail opens
+    LaunchedEffect(state.selectedMaterial?.id) {
+        state.selectedMaterial?.id?.let { viewModel.loadMyRating(it) }
+    }
+
     state.selectedMaterial?.let { detail ->
         // FIX: Pass purchasedIds so sheet knows if user just bought this material
         // Full access if: purchased, is the uploader (owner), or is free
@@ -456,7 +457,6 @@ fun StudyMaterialsScreen(
             currentUserId  = currentUserId,
             onChatWithUploader = { viewModel.openChatWithUploader(detail.id) },
             onBookmark     = { viewModel.toggleBookmark(detail.id) },
-            // FIX Issue 5: convert MaterialDetailData → StudyMaterialDto for purchase dialog
             onPurchase     = {
                 val dto = StudyMaterialDto(
                     id = detail.id, title = detail.title, description = detail.description,
@@ -471,6 +471,9 @@ fun StudyMaterialsScreen(
                 )
                 showPurchaseDialog = dto
             },
+            myRatingStars      = state.myRatingStars,
+            isSubmittingRating = state.isSubmittingRating,
+            onSubmitRating     = { stars -> viewModel.submitRating(detail.id, stars) },
             onDownload     = {
                 val dto = StudyMaterialDto(
                     id = detail.id, title = detail.title, description = detail.description,
@@ -487,11 +490,9 @@ fun StudyMaterialsScreen(
             onOpenPdf      = { url, title, freePages, isPurchased ->
                 openMaterial(
                     context, navController,
+                    // Use local file path if downloaded — works offline, no network needed
                     viewModel.getLocalPath(detail.id)?.let { "file://$it" } ?: url,
-                    title, freePages, isPurchased, adManager = adManager,
-                    // FIX: pass so PdfViewerScreen can show the correct purchase dialog
-                    materialId = detail.id,
-                    price      = detail.price,
+                    title, freePages, isPurchased, adManager = adManager
                 )
             },
             onDismiss      = viewModel::closeDetail
@@ -1202,29 +1203,13 @@ private fun LibraryItemCard(
                 LibInfoChip(Icons.Rounded.Storage, if (item.fileSizeMb > 0f && item.fileSizeMb < 1f) "${(item.fileSizeMb * 1024).toInt()} KB" else "${"%.1f".format(item.fileSizeMb)} MB")
                 LibInfoChip(Icons.Rounded.Download, formatCount(item.downloadCount))
                 // Show price/lock badge for paid materials
+                // FIX: removed extra padding wrapper rows that were causing rating to shift down
                 if ((item.price ?: 0) > 0) {
-                    Row(
-                        modifier = Modifier
-                            //   .clip(RoundedCornerShape(12.dp))
-                            //    .background(Color(0xFFFFF8E1))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        Text("₹${item.price}", style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF856404), fontWeight = FontWeight.Bold)
-                    }
-                }else{
-                    Row(
-                        modifier = Modifier
-                            //   .clip(RoundedCornerShape(12.dp))
-                            //    .background(Color(0xFFFFF8E1))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        Text("Free", fontSize = 10.sp)
-                    }
+                    Text("₹${item.price}", style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF856404), fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Free", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.Success, fontWeight = FontWeight.Bold)
                 }
                 // Social proof: "12 students bought this" — only for paid materials with sales
                 if ((item.price ?: 0) > 0 && item.buyerCount > 0) {
@@ -1242,10 +1227,20 @@ private fun LibraryItemCard(
                     }
                 }
                 Spacer(Modifier.weight(1f))
+                // FIX: show "New" when no ratings yet instead of "0.0"
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold, modifier = Modifier.size(12.dp))
-                    Text("${item.rating}", style = MaterialTheme.typography.labelSmall,
-                        color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    if (item.rating > 0f) {
+                        Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold, modifier = Modifier.size(12.dp))
+                        Text("${"%.1f".format(item.rating)}", style = MaterialTheme.typography.labelSmall,
+                            color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("New", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Primary, fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(BpscColors.PrimaryLight)
+                                .padding(horizontal = 5.dp, vertical = 1.dp))
+                    }
                 }
             }
 
@@ -1743,9 +1738,13 @@ private fun MaterialDetailSheet(
     onChatWithUploader: () -> Unit = {},
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
-    onPurchase:   () -> Unit = {},           // FIX Issue 5: triggers purchase dialog
-    onOpenPdf:     (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
-    onDismiss:    () -> Unit
+    onPurchase:   () -> Unit = {},
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onDismiss:    () -> Unit,
+    // Rating
+    myRatingStars:      Int      = 0,
+    isSubmittingRating: Boolean  = false,
+    onSubmitRating:     (Int) -> Unit = {},
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -1794,6 +1793,16 @@ private fun MaterialDetailSheet(
             // Body
             Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())
                 .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                // ── Rate this material (only after access) ──
+                if (isPurchased) {
+                    MaterialRatingWidget(
+                        currentStars = myRatingStars,
+                        isSubmitting = isSubmittingRating,
+                        avgRating    = material.rating,
+                        onStarTap    = onSubmitRating,
+                    )
+                }
 
                 if (!material.description.isNullOrEmpty()) {
                     Text(str.materialAbout, style = MaterialTheme.typography.titleMedium,
@@ -1877,44 +1886,21 @@ private fun MaterialDetailSheet(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Save button removed — download option already serves this purpose
-                // FIX Issue 5: Premium+unpurchased taps onPurchase() to open the
-                // payment dialog. Previously it opened the PDF with free-page preview
-                // (via onOpenPdf) and showed an ad — the payment dialog never appeared.
-                val isLocked = material.isPremium && !isPurchased
-                Button(
-                    onClick = when {
-                        isLocked -> { { onDismiss(); onPurchase() } }   // Open payment dialog
-                        !material.resolvedUrl.isNullOrBlank() -> { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages, isPurchased || material.isFree) } }
-                        else -> onDownload
-                    },
-                    modifier = Modifier.weight(2f).height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages,
+                    isPurchased || material.isFree) } } else onDownload,
+                    modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = when {
-                            isDownloaded -> BpscColors.Success
-                            isLocked     -> BpscColors.Primary   // consistent with card button
-                            else         -> BpscColors.Primary
-                        }
-                    )
-                ) {
+                        containerColor = when { isDownloaded -> BpscColors.Success; material.isPremium -> BpscColors.CoinGold; else -> BpscColors.Primary })) {
                     if (isDownloading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(
-                            when {
-                                isDownloaded -> Icons.Rounded.CheckCircle
-                                isLocked     -> Icons.Rounded.Lock
-                                else         -> Icons.Rounded.Download
-                            }, null, modifier = Modifier.size(16.dp)
-                        )
+                        Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(when {
                         isDownloaded -> str.materialsDownloadedDone
-                        // FIX Issue 5: Show price so user knows what they pay
-                        isLocked && material.price > 0 -> "Unlock — ₹${material.price}"
-                        isLocked     -> str.materialsUnlockPro
+                        material.isPremium -> str.materialsUnlockPro
                         !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                         else -> str.materialsDownloadFree
                     }, style = MaterialTheme.typography.titleMedium)
@@ -2399,6 +2385,76 @@ private fun TypeBadge(type: MaterialType) {
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
+// ── Material Rating Widget ──────────────────────────────────
+// Shows current avg + 5 tappable stars. Highlights the user's own rating.
+// Appears inside MaterialDetailSheet only when user has purchased/downloaded.
+@Composable
+private fun MaterialRatingWidget(
+    currentStars: Int,     // 0 = not yet rated
+    isSubmitting: Boolean,
+    avgRating:    Float,
+    onStarTap:    (Int) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFFFFBEC))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Text(
+                if (currentStars == 0) "Rate this material" else "Your rating",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold, color = cs.onSurface
+            )
+            if (avgRating > 0f) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Icon(Icons.Rounded.Star, null, tint = BpscColors.CoinGold,
+                        modifier = Modifier.size(14.dp))
+                    Text("${"%.1f".format(avgRating)} avg",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (star in 1..5) {
+                val filled = star <= currentStars
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (filled) BpscColors.CoinGold.copy(0.15f) else Color.Transparent)
+                        .clickable(enabled = !isSubmitting) { onStarTap(star) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (filled) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        contentDescription = "$star star",
+                        tint     = if (filled) BpscColors.CoinGold else cs.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            if (isSubmitting) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp).align(Alignment.CenterVertically),
+                    strokeWidth = 2.dp, color = BpscColors.CoinGold)
+            }
+        }
+        if (currentStars > 0) {
+            Text(
+                listOf("", "Poor", "Fair", "Good", "Very Good", "Excellent")[currentStars],
+                style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.CoinGold, fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
 @Composable private fun SheetStatWhite(icon: String, value: String) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -2776,17 +2832,30 @@ fun DownloadsTab(
 // Shows price, preview page count, and commission notice
 // ════════════════════════════════════════════════════════════
 @Composable
-// ── PurchaseConfirmDialog ────────────────────────────────────
-// No coins. Gold button. Exact same dialog everywhere.
 fun PurchaseConfirmDialog(
     item:         StudyMaterialDto,
     isPurchasing: Boolean,
+    coinsToApply: Int = 0,
+    onCoinsToApplyChange: (Int) -> Unit = {},
+    userCoins:    Int = 0,
+    maxCoinsPerPurchase: Int = 50,
+    coinToInrRate: Double = 1.0,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
 ) {
-    val cs  = MaterialTheme.colorScheme
+    val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+
     val price = item.price ?: 0
+    // Mirrors the backend's Math.min(price, floor(coins * coin_to_inr_rate))
+    // exactly (studyMaterialsService.initPurchase) — coinDiscount is in
+    // rupees, coinsToApply is in coins.
+    val coinDiscount = minOf(price, (coinsToApply * coinToInrRate).toInt())
+    // Slider cap is in coins, so convert the price ceiling from rupees to
+    // coins via the live rate (admin: Coins page -> Economy Settings).
+    val priceInCoins = if (coinToInrRate > 0) (price / coinToInrRate).toInt() else 0
+    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) { minOf(maxCoinsPerPurchase, userCoins, priceInCoins) }
+    val amountDue = (price - coinDiscount).coerceAtLeast(0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2802,35 +2871,74 @@ fun PurchaseConfirmDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // What they get
                 Card(shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FBF5))) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅")
-                            Text("Full PDF — all ${item.pageCount ?: 0} pages",
-                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅"); Text("Full PDF — all ${item.pageCount ?: 0} pages",
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅")
-                            Text(str.materialsDownloadDevice,
-                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅"); Text(str.materialsDownloadDevice,
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("✅")
-                            Text(str.materialsLifetimeAccess,
-                                style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Text("✅"); Text(str.materialsLifetimeAccess,
+                            style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
                         }
                     }
                 }
-                HorizontalDivider(color = cs.outline)
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                // Price + coin discount slider
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
                     Text(str.materialPrice, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
-                    Text("₹$price", style = MaterialTheme.typography.titleLarge,
-                        color = Color(0xFFFFA726), fontWeight = FontWeight.ExtraBold)
+                    Text("₹$price",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 }
-                Text("Secure payment via Cashfree · One-time purchase",
-                    style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+
+                if (maxApplicable > 0) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Text("Use coins for discount", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("🪙", fontSize = 14.sp)
+                                Text("$coinsToApply / $maxApplicable", style = MaterialTheme.typography.labelLarge,
+                                    color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Slider(
+                            value = coinsToApply.toFloat(),
+                            onValueChange = { onCoinsToApplyChange(it.toInt()) },
+                            valueRange = 0f..maxApplicable.toFloat(),
+                            steps = if (maxApplicable > 1) maxApplicable - 1 else 0,
+                            colors = SliderDefaults.colors(thumbColor = BpscColors.CoinGold, activeTrackColor = BpscColors.CoinGold)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = cs.outline)
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
+                    Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("₹$amountDue", style = MaterialTheme.typography.titleLarge,
+                            color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                        if (coinsToApply > 0) {
+                            Text("🪙 $coinsToApply coins applied (−₹$coinDiscount)",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -2839,19 +2947,19 @@ fun PurchaseConfirmDialog(
                 enabled  = !isPurchasing,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape    = RoundedCornerShape(12.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
+                colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
             ) {
                 if (isPurchasing) {
                     CircularProgressIndicator(color = Color.White,
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text(str.courseProcessing, color = Color(0xFF1A1A1A))
+                    Text(str.courseProcessing)
+                } else if (amountDue == 0) {
+                    Text(if (coinsToApply > 0) "🪙 Pay with $coinsToApply coins" else "Unlock for free",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 } else {
-                    Icon(Icons.Rounded.Lock, null,
-                        modifier = Modifier.size(16.dp), tint = Color(0xFF1A1A1A))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Unlock — ₹$price", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A1A))
+                    Text("Pay ₹$amountDue",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
         },

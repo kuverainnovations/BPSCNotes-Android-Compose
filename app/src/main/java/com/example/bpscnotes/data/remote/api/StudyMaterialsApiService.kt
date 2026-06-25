@@ -352,6 +352,11 @@ data class PreviewData(
     val isPurchased: Boolean  = false
 )
 
+// ── Rating DTOs ───────────────────────────────────────────────
+data class RateMaterialRequest(val stars: Int, val review: String? = null)
+data class RateMaterialResponse(val stars: Int = 0, val avgRating: Float = 0f)
+data class MyRatingData(val stars: Int = 0, val review: String? = null)
+
 // ── Social proof (Phase 4) ─────────────────────────────────────
 data class BuyersData(
     val buyers: List<String> = emptyList(),   // anonymized e.g. "Rahul K."
@@ -480,6 +485,18 @@ interface StudyMaterialsApiService {
     /** GET /study-materials/:id/preview — get signed preview (free pages only) */
     @GET("study-materials/{id}/preview")
     suspend fun getPreview(@Path("id") id: String): ApiResponse<PreviewData>
+
+    // ── Rating ──────────────────────────────────────────────────
+    /** POST /study-materials/:id/rate — submit or update a 1-5 star rating */
+    @POST("study-materials/{id}/rate")
+    suspend fun rateMaterial(
+        @Path("id") id: String,
+        @Body body: RateMaterialRequest
+    ): ApiResponse<RateMaterialResponse>
+
+    /** GET /study-materials/:id/my-rating — fetch current user's rating for this material */
+    @GET("study-materials/{id}/my-rating")
+    suspend fun getMyRating(@Path("id") id: String): ApiResponse<MyRatingData>
 
     /** GET /study-materials/:id/buyers — anonymized buyer list for social proof */
     @GET("study-materials/{id}/buyers")
