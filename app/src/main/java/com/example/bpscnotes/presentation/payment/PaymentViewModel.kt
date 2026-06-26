@@ -41,6 +41,7 @@ data class PaymentState(
     val subscriptionId: String?             = null,
     val paymentSessionId: String?           = null,
     val providerOrderId: String?            = null,
+    val paymentEnvironment: String          = "sandbox",  // 'sandbox' | 'production'
     val finalAmount: Int                    = 0,
     val isCreatingOrder: Boolean            = false,
     val isConfirming: Boolean               = false,
@@ -225,6 +226,7 @@ class PaymentViewModel @Inject constructor(
                             subscriptionId   = data.subscriptionId,
                             paymentSessionId = sessionId,
                             providerOrderId  = providerOrderId,
+                            paymentEnvironment = data.paymentEnvironment ?: "sandbox",
                             finalAmount      = finalAmt
                         )}
                     }
@@ -252,7 +254,9 @@ class PaymentViewModel @Inject constructor(
                 val bonusCoins = _state.value.selectedPlan?.bonusCoins ?: 0
                 val plan       = _state.value.selectedPlan?.id ?: "subscription"
                 Event.paymentSuccess(plan, _state.value.finalAmount, "cashfree")
-               // bus.emit(RefreshEvent.SubscriptionChanged)
+                // Notify all screens that subscription state has changed so they
+                // re-fetch isPurchased / subscription status and remove Buy buttons.
+                bus.emit(RefreshEvent.SubscriptionChanged)
                 _state.update { it.copy(isConfirming = false, isSuccess = true, bonusCoins = bonusCoins) }
             } catch (e: Exception) {
                 _state.update { it.copy(
@@ -280,17 +284,19 @@ class PaymentViewModel @Inject constructor(
         courseId: String, courseTitle: String, price: Int,
         paymentSessionId: String?,
         providerOrderId: String? = null,
+        paymentEnvironment: String = "sandbox",
     ) {
         _state.update { it.copy(
-            courseId          = courseId,
-            courseTitle       = courseTitle,
-            coursePrice       = price,
-            finalAmount       = price,
+            courseId           = courseId,
+            courseTitle        = courseTitle,
+            coursePrice        = price,
+            finalAmount        = price,
+            paymentEnvironment = paymentEnvironment,
             // Store separately — LaunchedEffect triggers only when user taps Pay
-            _pendingSessionId = paymentSessionId,
+            _pendingSessionId  = paymentSessionId,
             // Also store providerOrderId so LaunchedEffect(paymentSessionId, providerOrderId)
             // can fire correctly when triggerCoursePayment() sets paymentSessionId.
-            providerOrderId   = providerOrderId,
+            providerOrderId    = providerOrderId,
         )}
     }
 

@@ -38,6 +38,7 @@ class MaterialChatSocketManager @Inject constructor(private val tokenStore: Toke
     companion object {
         private const val TAG       = "MaterialChatSocket"
         private const val BASE_URL  = "https://api-stg.bpscnotes.in"
+//        private const val BASE_URL  = "https://api.bpscnotes.in"
         private const val NAMESPACE = "/material-chat"
     }
 

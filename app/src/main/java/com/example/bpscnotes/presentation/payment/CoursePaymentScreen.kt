@@ -32,6 +32,7 @@ fun CoursePaymentScreen(
     price: Int,
     paymentSessionId: String? = null,
     providerOrderId: String? = null,     // FIX: passed from CourseDetail 402 response
+    paymentEnvironment: String = "sandbox", // 'sandbox' | 'production' — must match backend order
     viewModel: PaymentViewModel = hiltViewModel()
 ) {
     val str = LocalStrings.current
@@ -41,15 +42,16 @@ fun CoursePaymentScreen(
 
     // Initialize with course details including providerOrderId for LaunchedEffect
     LaunchedEffect(courseId) {
-        viewModel.initCoursePurchase(courseId, courseTitle, price, paymentSessionId, providerOrderId)
+        viewModel.initCoursePurchase(courseId, courseTitle, price, paymentSessionId, providerOrderId, paymentEnvironment)
     }
 
     // Launch Cashfree SDK when payment_session_id is ready.
     // Consume immediately — prevents double-launch on recompose.
     LaunchedEffect(state.paymentSessionId, state.providerOrderId) {
 
-        val sessionId = state.paymentSessionId ?: return@LaunchedEffect
-        val orderId   = state.providerOrderId ?: return@LaunchedEffect
+        val sessionId   = state.paymentSessionId   ?: return@LaunchedEffect
+        val orderId     = state.providerOrderId     ?: return@LaunchedEffect
+        val environment = state.paymentEnvironment  // 'sandbox' | 'production' from backend
 
         viewModel.consumePaymentSessionId()
 
@@ -57,6 +59,7 @@ fun CoursePaymentScreen(
             context = context,
             sessionId = sessionId,
             orderId = orderId,
+            environment = environment,
             onSuccess = { cfPaymentId ->
                 // FIX: Must call confirmCoursePurchase (not confirmSubscription).
                 // confirmSubscription requires subscriptionId in state which is null

@@ -124,6 +124,7 @@ data class CreateSubscriptionResponse(
     val subscriptionId: String,
     val paymentSessionId: String?,      // → Cashfree Android SDK
     val providerOrderId: String?,       // Cashfree order_id (for webhook lookup)
+    val paymentEnvironment: String?,    // 'sandbox' | 'production' — drives CFSession.Environment
     val breakdown: PaymentBreakdown
 )
 
@@ -146,6 +147,7 @@ data class CoursePurchaseRequiredData(
     val price: Int,
     val paymentSessionId: String?,      // → Cashfree Android SDK
     val providerOrderId: String?,
+    val paymentEnvironment: String?,    // 'sandbox' | 'production' — drives CFSession.Environment
     val courseTitle: String?,
     val courseId: String?,
     val code: String?

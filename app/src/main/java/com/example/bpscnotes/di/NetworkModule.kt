@@ -26,7 +26,9 @@ object NetworkModule {
     // Switch to BuildConfig.BASE_URL once you add buildConfigField to app/build.gradle.
     // See BUILDCONFIG_INSTRUCTIONS.md for the exact lines to add.
     // For now, use the staging URL directly to unblock the build.
+
     private const val BASE_URL = "https://api-stg.bpscnotes.in/api/v1/"
+//    private const val BASE_URL = "https://api.bpscnotes.in/api/v1/"
 
     // ── Retry GET requests only — never POST/auth ─────────────
     private val retryInterceptor = Interceptor { chain ->

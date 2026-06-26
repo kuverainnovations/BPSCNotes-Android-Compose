@@ -122,6 +122,7 @@ fun CourseDetailScreen(
                     courseId, title, state.purchasePrice,
                     state.purchaseSessionId,
                     state.purchaseProviderOrderId,
+                    state.purchasePaymentEnvironment,
                 )
             )
             viewModel.clearPurchaseRequired()

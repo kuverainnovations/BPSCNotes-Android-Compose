@@ -13,6 +13,8 @@ sealed class RefreshEvent {
     object QuizCompleted     : RefreshEvent()
     object TargetUpdated     : RefreshEvent()
     object NotificationReceived : RefreshEvent()   // fires when push arrives → update badge
+    /** Emitted after a subscription is activated so all screens re-check isPurchased/isSubscribed. */
+    object SubscriptionChanged  : RefreshEvent()
     data class CourseProgressChanged(val courseId: String) : RefreshEvent()
     data class AvatarUpdated(val avatarUrl: String) : RefreshEvent()
     // Detail screen and list screen hold separate CurrentAffairsViewModel

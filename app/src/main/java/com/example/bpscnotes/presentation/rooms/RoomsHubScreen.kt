@@ -211,7 +211,7 @@ fun RoomsHubScreen(
             // Scrollable content
             LazyColumn(
                 modifier = Modifier.fillMaxSize().weight(1f),
-                contentPadding = PaddingValues(bottom = 32.dp)
+                contentPadding = PaddingValues(bottom = 22.dp)
             ) {
 
                 // ── 2. DEMOTION WARNING ───────────────────────────
@@ -247,20 +247,11 @@ fun RoomsHubScreen(
                             .fillMaxWidth()
                             //  .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                             .background(cs.background)
-                            .padding(top = 8.dp)
                     ) {
 
-                        // Moved out of the hero (redesign section 1): personal
-                        // progress/stats, Room Champions, Room Insights —
-                        // normal scrollable cards now, not pinned inside the
-                        // compact gradient header. (Activity Feed removed.)
+
                         if (state.myTierData?.currentTier != null) {
                             MyRoomProgressCard(state)
-                            Spacer(Modifier.height(12.dp))
-                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
-                            Spacer(Modifier.height(12.dp))
-                            RoomInsightsCard(state.roomStats, Modifier.padding(horizontal = 16.dp))
-                            Spacer(Modifier.height(12.dp))
                         }
 
                         // Promotion ready banner
@@ -383,6 +374,12 @@ fun RoomsHubScreen(
                         }
 
                         Spacer(Modifier.height(8.dp))
+
+                        if (state.myTierData?.currentTier != null) {
+                            RoomChampionsCard(state.champions, Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(12.dp))
+
+                        }
 
                         // Quick links — Leaderboard moved to top-right room
                         // actions (redesign section 2); no longer a 3rd

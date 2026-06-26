@@ -72,6 +72,8 @@ private fun openMaterial(
     title:        String,
     freePages:    Int,
     isPurchased:  Boolean,
+    id:  String,
+    price:  Int,
     adManager:    com.example.bpscnotes.core.ads.AdManager? = null
 ) {
     val lower = url.lowercase()
@@ -102,10 +104,12 @@ private fun openMaterial(
             navigateAfterAd {
                 navController.navigate(
                     Screen.PdfViewer.createRoute(
-                        fileUrl     = url,
-                        title       = title,
-                        freePages   = freePages,
-                        isPurchased = isPurchased
+                        fileUrl = url,
+                        title = title,
+                        freePages = freePages,
+                        isPurchased = isPurchased,
+                        materialId = id,
+                        price = price
                     )
                 )
             }
@@ -401,8 +405,8 @@ fun StudyMaterialsScreen(
                         uploads   = state.myUploads,
                         isLoading = state.isLoadingList && state.myUploads.isEmpty(),
                         // Open PDF with full access — user owns their uploads, no page locks
-                        onOpenPdf = { url, title, freePages, _ ->
-                            openMaterial(context, navController, url, title, freePages, isPurchased = true, adManager = adManager)
+                            onOpenPdf    = { url, title, freePages, isPurchased,id,price ->
+                            openMaterial(context, navController, url, title, freePages, isPurchased = true,id,price, adManager = adManager)
                         },
                         onRefresh = { viewModel.refresh() },
                         onRespondNegotiation = { material -> viewModel.openNegotiation(material) },
@@ -417,14 +421,14 @@ fun StudyMaterialsScreen(
                         downloads    = state.downloadHistory,
                         isLoading    = state.isLoadingList && state.downloadHistory.isEmpty(),
                         purchasedIds = emptySet(),
-                        onOpenPdf    = { url, title, freePages, isPurchased ->
+                        onOpenPdf    = { url, title, freePages, isPurchased,id,price ->
                             // Check for local file first — works offline with no network
                             val itemId = state.downloadHistory.firstOrNull { it.fileUrl == url }?.id
                             val localUrl = itemId?.let { viewModel.getLocalPath(it)?.let { p -> "file://$p" } }
                             openMaterial(
                                 context, navController,
                                 localUrl ?: url,  // prefer local cached file
-                                title, freePages, isPurchased, adManager = adManager
+                                title, freePages, isPurchased,id,price, adManager = adManager
                             )
                         },
                         onRefresh = { viewModel.loadDownloadHistory() }
@@ -457,6 +461,8 @@ fun StudyMaterialsScreen(
             currentUserId  = currentUserId,
             onChatWithUploader = { viewModel.openChatWithUploader(detail.id) },
             onBookmark     = { viewModel.toggleBookmark(detail.id) },
+            id=detail.id,
+            price = detail.price,
             onPurchase     = {
                 val dto = StudyMaterialDto(
                     id = detail.id, title = detail.title, description = detail.description,
@@ -487,12 +493,12 @@ fun StudyMaterialsScreen(
                 )
                 viewModel.downloadMaterial(dto)
             },
-            onOpenPdf      = { url, title, freePages, isPurchased ->
+            onOpenPdf      = { url, title, freePages, isPurchased,id,price ->
                 openMaterial(
                     context, navController,
                     // Use local file path if downloaded — works offline, no network needed
                     viewModel.getLocalPath(detail.id)?.let { "file://$it" } ?: url,
-                    title, freePages, isPurchased, adManager = adManager
+                    title, freePages, isPurchased, id,price,adManager = adManager
                 )
             },
             onDismiss      = viewModel::closeDetail
@@ -1733,13 +1739,15 @@ private fun MaterialDetailSheet(
     isDownloaded: Boolean,
     isDownloading: Boolean,
     isPurchased:  Boolean = false,
+    id: String,
+    price:Int,
     buyers:       BuyersData? = null,
     currentUserId: String = "",
     onChatWithUploader: () -> Unit = {},
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
     onPurchase:   () -> Unit = {},
-    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Int) -> Unit,
     onDismiss:    () -> Unit,
     // Rating
     myRatingStars:      Int      = 0,
@@ -1855,7 +1863,7 @@ private fun MaterialDetailSheet(
                     .then(if (!downloadUrl.isNullOrBlank()) Modifier.clickable {
                         // FIX: use runtime isPurchased (includes purchases made this session)
                         onOpenPdf(downloadUrl, material.title, material.freePages,
-                            isPurchased || material.isFree)
+                            isPurchased || material.isFree,id,price )
                     } else Modifier),
                     contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1887,7 +1895,7 @@ private fun MaterialDetailSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // Save button removed — download option already serves this purpose
                 Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages,
-                    isPurchased || material.isFree) } } else onDownload,
+                    isPurchased || material.isFree,id,price) } } else onDownload,
                     modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
@@ -2496,7 +2504,7 @@ private fun formatCount(count: Int): String {
 fun MyUploadsTab(
     uploads:   List<StudyMaterialDto>,
     isLoading: Boolean,
-    onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Int) -> Unit,
     onRefresh: () -> Unit,
     onRespondNegotiation: (StudyMaterialDto) -> Unit = {},
     onOpenWallet: () -> Unit = {},
@@ -2584,7 +2592,8 @@ fun MyUploadsTab(
                                     }
                                 }
                                 // Language badge — always shown
-                                val uploadLang = item.language.ifEmpty { "English" }
+                                //val uploadLang = item.language.ifEmpty { "English" }
+                                val uploadLang = item.language?.ifEmpty { "English" } ?: "English"
                                 val (ulBg, ulFg) = when (uploadLang) {
                                     "Hindi"           -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
                                     "Hindi + English" -> Pair(Color(0xFFEDE7F6), Color(0xFF6A1B9A))
@@ -2668,7 +2677,7 @@ fun MyUploadsTab(
                         }
                         // Open button — owner always gets full access (no lock)
                         if (!item.resolvedUrl.isNullOrBlank()) {
-                            IconButton(onClick = { onOpenPdf(item.resolvedUrl ?: "", item.title, item.freePages, true) }) {
+                            IconButton(onClick = { onOpenPdf(item.resolvedUrl ?: "", item.title, item.freePages, true,item.id,item.price) }) {
                                 Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary)
                             }
                         }
@@ -2678,7 +2687,6 @@ fun MyUploadsTab(
         }
     }
 }
-
 // ════════════════════════════════════════════════════════════
 // DOWNLOADS TAB — shows user's download history with PDF access
 // ════════════════════════════════════════════════════════════
@@ -2687,7 +2695,7 @@ fun DownloadsTab(
     downloads:    List<com.example.bpscnotes.data.remote.api.DownloadHistoryItem>,
     isLoading:    Boolean,
     purchasedIds: Set<String>,
-    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id: String,price:Int) -> Unit,
     onRefresh:    () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -2809,7 +2817,7 @@ fun DownloadsTab(
                                     }
                                 }
                                 Button(
-                                    onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased) },
+                                    onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased,item.id,item.price) },
                                     shape    = RoundedCornerShape(10.dp),
                                     modifier = Modifier.height(36.dp),
                                     colors   = ButtonDefaults.buttonColors(

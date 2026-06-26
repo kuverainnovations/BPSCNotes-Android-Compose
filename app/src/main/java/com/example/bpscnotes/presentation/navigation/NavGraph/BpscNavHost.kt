@@ -247,21 +247,23 @@ fun BpscNavHost(
             }
 
             composable(
-                route     = "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}/{orderId}",
+                route     = "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}/{orderId}/{env}",
                 arguments = listOf(
                     navArgument("courseId")    { type = NavType.StringType },
                     navArgument("courseTitle") { type = NavType.StringType },
                     navArgument("price")       { type = NavType.IntType    },
                     navArgument("sessionId")   { type = NavType.StringType },
-                    navArgument("orderId")     { type = NavType.StringType; defaultValue = "none" }
+                    navArgument("orderId")     { type = NavType.StringType; defaultValue = "none" },
+                    navArgument("env")         { type = NavType.StringType; defaultValue = "sandbox" }
                 )
             ) { back ->
-                val courseId        = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
-                val courseTitle     = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
-                val price           = back.arguments?.getInt("price") ?: 0
-                val paymentSession  = java.net.URLDecoder.decode(back.arguments?.getString("sessionId") ?: "none", "UTF-8").takeIf { it != "none" }
-                val providerOrderId = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
-                CoursePaymentScreen(navController, courseId, courseTitle, price, paymentSession, providerOrderId)
+                val courseId           = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
+                val courseTitle        = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
+                val price              = back.arguments?.getInt("price") ?: 0
+                val paymentSession     = java.net.URLDecoder.decode(back.arguments?.getString("sessionId") ?: "none", "UTF-8").takeIf { it != "none" }
+                val providerOrderId    = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
+                val paymentEnvironment = java.net.URLDecoder.decode(back.arguments?.getString("env") ?: "sandbox", "UTF-8")
+                CoursePaymentScreen(navController, courseId, courseTitle, price, paymentSession, providerOrderId, paymentEnvironment)
             }
 
             composable(

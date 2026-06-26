@@ -58,8 +58,9 @@ fun SubscriptionPaymentScreen(
     // Consume immediately so recompose doesn't re-trigger.
     LaunchedEffect(state.paymentSessionId, state.providerOrderId) {
 
-        val sessionId = state.paymentSessionId ?: return@LaunchedEffect
-        val orderId   = state.providerOrderId ?: return@LaunchedEffect
+        val sessionId   = state.paymentSessionId   ?: return@LaunchedEffect
+        val orderId     = state.providerOrderId     ?: return@LaunchedEffect
+        val environment = state.paymentEnvironment  // 'sandbox' | 'production' from backend
 
         viewModel.consumePaymentSessionId()
 
@@ -67,6 +68,7 @@ fun SubscriptionPaymentScreen(
             context = context,
             sessionId = sessionId,
             orderId = orderId,
+            environment = environment,
             onSuccess = { cfPaymentId ->
                 viewModel.confirmSubscription(cfPaymentId)
             },
@@ -469,6 +471,7 @@ fun launchCashfree(
     context: Context,
     sessionId: String,
     orderId: String,
+    environment: String = "sandbox",  // 'sandbox' | 'production' — must match backend order
     onSuccess: (String) -> Unit,
     onFailure: (Int, String) -> Unit
 ){
@@ -526,14 +529,24 @@ fun launchCashfree(
         // ── Until SDK is added to build.gradle, call onFailure to avoid crash ──
      //   onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
 
+        // Resolve CFSession.Environment from the backend-provided string.
+        // The payment_session_id is environment-scoped: a production session MUST
+        // be opened with Environment.PRODUCTION and vice-versa, otherwise Cashfree
+        // returns "authentication Failed" without opening the payment sheet.
+        val cfEnvironment = if (environment == "production")
+            CFSession.Environment.PRODUCTION
+        else
+            CFSession.Environment.SANDBOX
+
         Log.e("CF_DEBUG", "======================")
-        Log.e("CF_DEBUG", "sessionId = $sessionId")
-        Log.e("CF_DEBUG", "orderId   = $orderId")
-        Log.e("CF_DEBUG", "activity  = ${activity::class.java.simpleName}")
+        Log.e("CF_DEBUG", "sessionId   = $sessionId")
+        Log.e("CF_DEBUG", "orderId     = $orderId")
+        Log.e("CF_DEBUG", "environment = $environment → $cfEnvironment")
+        Log.e("CF_DEBUG", "activity    = ${activity::class.java.simpleName}")
         Log.e("CF_DEBUG", "======================")
         try {
             val session = CFSession.CFSessionBuilder()
-                .setEnvironment(CFSession.Environment.SANDBOX)
+                .setEnvironment(cfEnvironment)
                 .setPaymentSessionID(sessionId)
                 .setOrderId(orderId)
                 .build()

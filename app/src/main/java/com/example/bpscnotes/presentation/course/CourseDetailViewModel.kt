@@ -38,8 +38,9 @@ data class CourseDetailUiState(
     // Payment required
     val purchaseRequired: Boolean = false,
     val purchasePrice: Int = 0,
-    val purchaseSessionId: String? = null,    // paymentSessionId → Cashfree SDK
-    val purchaseProviderOrderId: String? = null, // Cashfree order ID for LaunchedEffect
+    val purchaseSessionId: String? = null,          // paymentSessionId → Cashfree SDK
+    val purchaseProviderOrderId: String? = null,    // Cashfree order ID for LaunchedEffect
+    val purchasePaymentEnvironment: String = "sandbox", // 'sandbox' | 'production' → CFSession.Environment
     // Rating
     val showRatingSheet: Boolean = false,
     val isSubmittingRating: Boolean = false,
@@ -169,15 +170,17 @@ class CourseDetailViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price           = data.optInt("price", 0)
-                        val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
-                        val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                        val price               = data.optInt("price", 0)
+                        val sessionId           = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                        val providerOrderId     = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                        val paymentEnvironment  = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
                         _uiState.update { it.copy(
-                            isEnrolling             = false,
-                            purchaseRequired        = true,
-                            purchasePrice           = price,
-                            purchaseSessionId       = sessionId,
-                            purchaseProviderOrderId = providerOrderId,
+                            isEnrolling                 = false,
+                            purchaseRequired            = true,
+                            purchasePrice               = price,
+                            purchaseSessionId           = sessionId,
+                            purchaseProviderOrderId     = providerOrderId,
+                            purchasePaymentEnvironment  = paymentEnvironment,
                         )}
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }
