@@ -632,6 +632,23 @@ private fun QuizScreen(
                 }
             }
 
+            // ── Hint — shown BEFORE answering (while question is live) ──
+            if (answered == null && !q.hint.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFF8E1)).padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("💡", fontSize = 14.sp, modifier = Modifier.padding(top = 1.dp))
+                    Text(
+                        q.hint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF795548),
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
             // Explanation — shown after server answer returns
             val explanation = serverAns?.explanation ?: if (answered != null) q.explanation else null
             if (answered != null && !explanation.isNullOrBlank()) {

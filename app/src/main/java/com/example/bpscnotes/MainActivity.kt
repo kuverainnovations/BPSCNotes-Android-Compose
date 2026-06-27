@@ -61,9 +61,11 @@ class MainActivity : ComponentActivity(),
 
     /** Called by CashfreePaymentResultCallback after a successful payment. */
     fun onCashfreePaymentSuccess(cfPaymentId: String) {
+        Log.d("CF_DEBUG", "Payment success callback = ${onPaymentSuccessCallback != null}")
+
         Log.d("Cashfree", "Payment success: cfPaymentId=$cfPaymentId")
-        Event.paymentSuccess("subscription", 0, "cashfree")
         onPaymentSuccessCallback?.invoke(cfPaymentId)
+
         onPaymentSuccessCallback = null
         onPaymentFailureCallback = null
     }

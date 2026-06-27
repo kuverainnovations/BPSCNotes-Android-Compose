@@ -660,6 +660,7 @@ data class CaMcqDto(
     @com.google.gson.annotations.SerializedName("option_d") val optionD: String = "",
     @com.google.gson.annotations.SerializedName("option_e") val optionE: String = "",
     val correct: String = "a",
+    val hint: String? = null,
     val explanation: String? = null,
     val difficulty: String = "medium"
 )

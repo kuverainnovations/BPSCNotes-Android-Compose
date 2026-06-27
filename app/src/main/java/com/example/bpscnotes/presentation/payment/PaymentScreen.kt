@@ -556,10 +556,14 @@ fun launchCashfree(
                 .setNavigationBarTextColor("#FFFFFF")
                 .build()
 
+            // ✅ FIXED
             val checkout = CFDropCheckoutPayment.CFDropCheckoutPaymentBuilder()
                 .setSession(session)
                 //.setTheme(theme)
                 .build()
+
+            CFPaymentGatewayService.getInstance()
+                .setCheckoutCallback(activity as CFCheckoutResponseCallback)  // ← ADD THIS LINE
 
             CFPaymentGatewayService.getInstance()
                 .doPayment(activity, checkout)
