@@ -37,7 +37,7 @@ data class CourseDetailUiState(
     val isEnrolling: Boolean = false,
     // Payment required
     val purchaseRequired: Boolean = false,
-    val purchasePrice: Int = 0,
+    val purchasePrice: Double = 0.0,
     val purchaseSessionId: String? = null,          // paymentSessionId → Cashfree SDK
     val purchaseProviderOrderId: String? = null,    // Cashfree order ID for LaunchedEffect
     val purchasePaymentEnvironment: String = "sandbox", // 'sandbox' | 'production' → CFSession.Environment
@@ -170,7 +170,7 @@ class CourseDetailViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price               = data.optInt("price", 0)
+                        val price               = data.optDouble("price", 0.0)
                         val sessionId           = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
                         val providerOrderId     = data.optString("providerOrderId").takeIf { it.isNotBlank() }
                         val paymentEnvironment  = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"

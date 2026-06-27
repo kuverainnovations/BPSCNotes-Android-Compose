@@ -251,7 +251,7 @@ fun BpscNavHost(
                 arguments = listOf(
                     navArgument("courseId")    { type = NavType.StringType },
                     navArgument("courseTitle") { type = NavType.StringType },
-                    navArgument("price")       { type = NavType.IntType    },
+                    navArgument("price")       { type = NavType.StringType; defaultValue = "0" },
                     navArgument("sessionId")   { type = NavType.StringType },
                     navArgument("orderId")     { type = NavType.StringType; defaultValue = "none" },
                     navArgument("env")         { type = NavType.StringType; defaultValue = "sandbox" }
@@ -259,7 +259,7 @@ fun BpscNavHost(
             ) { back ->
                 val courseId           = java.net.URLDecoder.decode(back.arguments?.getString("courseId") ?: return@composable, "UTF-8")
                 val courseTitle        = java.net.URLDecoder.decode(back.arguments?.getString("courseTitle") ?: "", "UTF-8")
-                val price              = back.arguments?.getInt("price") ?: 0
+                val price              = back.arguments?.getString("price")?.toDoubleOrNull() ?: 0.0
                 val paymentSession     = java.net.URLDecoder.decode(back.arguments?.getString("sessionId") ?: "none", "UTF-8").takeIf { it != "none" }
                 val providerOrderId    = java.net.URLDecoder.decode(back.arguments?.getString("orderId") ?: "none", "UTF-8").takeIf { it != "none" }
                 val paymentEnvironment = java.net.URLDecoder.decode(back.arguments?.getString("env") ?: "sandbox", "UTF-8")
@@ -435,7 +435,7 @@ fun BpscNavHost(
                     navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
                     navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
                     navArgument("materialId")  { type = NavType.StringType; defaultValue = "" },
-                    navArgument("price")       { type = NavType.IntType;  defaultValue = 0 },
+                    navArgument("price")       { type = NavType.StringType; defaultValue = "0" },
                 )
             ) { back ->
                 val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
@@ -443,7 +443,7 @@ fun BpscNavHost(
                 val freePages   = back.arguments?.getInt("freePages")  ?: 3
                 val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
                 val materialId  = back.arguments?.getString("materialId")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
-                val price       = back.arguments?.getInt("price") ?: 0
+                val price       = back.arguments?.getString("price")?.toDoubleOrNull() ?: 0.0
                 PdfViewerScreen(
                     fileUrl       = fileUrl,
                     title         = title,

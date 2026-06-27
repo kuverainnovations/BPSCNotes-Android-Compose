@@ -992,7 +992,7 @@ class StudyMaterialsViewModel @Inject constructor(
     }
 
     // Send a counter-offer back to admin — increments the round.
-    fun counterNegotiationOffer(price: Int, message: String?) {
+    fun counterNegotiationOffer(price: Double, message: String?) {
         val materialId = _state.value.negotiationSheet?.id ?: return
         if (price < 0) {
             _state.update { it.copy(toastMessage = "Enter a valid price") }
@@ -1061,7 +1061,7 @@ class StudyMaterialsViewModel @Inject constructor(
     // ── Purchase locked material (Phase 3: hybrid coins + Cashfree) ──
 // coinsToApply: how many coins the user chose to apply as a discount
 // (capped server-side by max_coins_per_purchase).
-    fun purchaseMaterial(materialId: String, price: Int, title: String, coinsToApply: Int = 0) {
+    fun purchaseMaterial(materialId: String, price: Double, title: String, coinsToApply: Int = 0) {
         viewModelScope.launch {
             _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
             try {

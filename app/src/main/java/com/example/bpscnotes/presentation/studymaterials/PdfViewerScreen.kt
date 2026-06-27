@@ -67,7 +67,7 @@ fun PdfViewerScreen(
     freePages:     Int     = 3,
     isPurchased:   Boolean = false,
     materialId:    String  = "",   // FIX: wires Buy button to real purchase flow
-    price:         Int     = 0,    // FIX: shown in PurchaseConfirmDialog
+    price:         Double  = 0.0,    // FIX: shown in PurchaseConfirmDialog
     navController: NavHostController,
     authToken:     String  = "",
     adManager:     com.example.bpscnotes.core.ads.AdManager? = null,

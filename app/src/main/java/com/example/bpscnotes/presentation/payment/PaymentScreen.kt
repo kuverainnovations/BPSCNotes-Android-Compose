@@ -1,10 +1,5 @@
 package com.example.bpscnotes.presentation.payment
 
-/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
-
-
-
-
 import android.app.Activity
 import android.content.Context
 import android.util.Log
@@ -202,7 +197,7 @@ fun SubscriptionPaymentScreen(
                     // Price breakdown
                     state.selectedPlan?.let { plan ->
                         PriceBreakdown(
-                            baseAmount     = plan.price ?: 0,
+                            baseAmount     = plan.price ?: 0.0,
                             couponDiscount = state.couponDiscount,
                             coinDiscount   = state.coinDiscount,
                             finalAmount    = state.finalAmount,
@@ -254,10 +249,10 @@ fun SubscriptionPaymentScreen(
     }
 }
 
-private fun fmtRs(amount: Double): String {
-    return if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
+/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
+private fun fmtRs(amount: Double): String =
+    if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
     else "₹${"%.2f".format(amount)}"
-}
 
 // ── Plan card ─────────────────────────────────────────────────
 @Composable
@@ -302,14 +297,14 @@ private fun PlanCard(plan: SubscriptionPlanDto, isSelected: Boolean, onSelect: (
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier.widthIn(min = 80.dp)
             ) {
-                if ((plan.originalPrice ?: 0) > (plan.price ?: 0)) {
+                if ((plan.originalPrice ?: 0.0) > (plan.price ?: 0.0)) {
                     Text("₹${plan.originalPrice}",
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextHint,
                         textDecoration = TextDecoration.LineThrough,
                         maxLines = 1)
                 }
-                Text("₹${plan.price}",
+                Text(fmtRs(plan.price ?: 0.0),
                     style = MaterialTheme.typography.titleLarge,
                     color = if (isSelected) BpscColors.Primary else BpscColors.TextPrimary,
                     fontWeight = FontWeight.ExtraBold,
@@ -370,14 +365,14 @@ private fun CouponSection(
 // ── Price breakdown ───────────────────────────────────────────
 @Composable
 private fun PriceBreakdown(
-    baseAmount: Int, couponDiscount: Int, coinDiscount: Double, finalAmount: Double,
+    baseAmount: Double, couponDiscount: Int, coinDiscount: Double, finalAmount: Double,
     coinsAvailable: Int, coinsToUse: Int, coinToInrRate: Double,
     onCoinsToggle: () -> Unit,
     onCoinsSlide: (Int) -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val remainingPrice = (baseAmount - couponDiscount).coerceAtLeast(0)
+    val remainingPrice = (baseAmount - couponDiscount).coerceAtLeast(0.0)
     val maxByPrice     = if (coinToInrRate > 0) kotlin.math.ceil(remainingPrice / coinToInrRate).toInt() else 0
     val maxCoins       = minOf(coinsAvailable, maxByPrice).coerceAtLeast(0)
 
@@ -387,7 +382,7 @@ private fun PriceBreakdown(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(str.paymentBreakdown, style = MaterialTheme.typography.titleSmall,
                 color = cs.onSurface, fontWeight = FontWeight.Bold)
-            PriceRow(str.paymentBasePrice, "₹$baseAmount")
+            PriceRow(str.paymentBasePrice, fmtRs(baseAmount))
             if (couponDiscount > 0) PriceRow(str.paymentCouponDiscount, "−₹$couponDiscount", Color(0xFF2ECC71))
             if (coinDiscount > 0.0) PriceRow("Coin discount (${coinsToUse} 🪙)", "−${fmtRs(coinDiscount)}", Color(0xFFF57F17))
             HorizontalDivider(color = cs.outline)

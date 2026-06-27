@@ -95,7 +95,7 @@ data class StudyMaterialDto(
     val rejectionReason: String? = null,
 
     @SerializedName("price")
-    val price: Int = 0,
+    val price: Double = 0.0,
 
     @SerializedName("free_pages")
     val freePages: Int = 3,
@@ -132,7 +132,7 @@ data class StudyMaterialDto(
         get() = fileSizeBytes / (1024f * 1024f)
 
     val isFree: Boolean
-        get() = price == 0
+        get() = price == 0.0
 
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
 
@@ -184,14 +184,14 @@ data class MaterialDetailData(
     val downloadUrl: String? = null,
     val language: String = "English",
     // Marketplace / PDF lock fields
-    val price: Int = 0,
+    val price: Double = 0.0,
     @SerializedName("free_pages")      val freePages: Int = 3,
     @SerializedName("is_purchased")    val isPurchased: Boolean = false,
     @SerializedName("buyer_count")     val buyerCount: Int = 0,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
-    val isFree: Boolean get() = price == 0
+    val isFree: Boolean get() = price == 0.0
 }
 
 data class StatsData(
@@ -223,7 +223,7 @@ data class NegotiationHistoryData(
     val materialId: String,
     val title: String,
     val status: String,
-    val originalPrice: Int,
+    val originalPrice: Double,
     val negotiationRound: Int,
     val currentOfferPrice: Int? = null,
     val proposedBy: String? = null,
@@ -241,7 +241,7 @@ data class NegotiationActionResultData(
     val isFinalRound: Boolean = false,
 )
 
-data class CounterOfferRequest(val price: Int, val message: String? = null)
+data class CounterOfferRequest(val price: Double = 0.0, val message: String? = null)
 
 
 // ── Create DTO ────────────────────────────────────────────────
@@ -266,7 +266,7 @@ data class DownloadHistoryItem(
     @SerializedName("fileSizeBytes") val fileSizeBytes: Long    = 0L,
     @SerializedName("pageCount")     val pageCount:     Int     = 0,
     @SerializedName("isPremium")     val isPremium:     Boolean = false,
-    val price:         Int     = 0,
+    val price: Double = 0.0,
     @SerializedName("freePages")     val freePages:     Int     = 3,
     val rating:        Float   = 0f,
     @SerializedName("uploaderName")  val uploaderName:  String? = null,

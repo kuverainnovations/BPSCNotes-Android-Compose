@@ -129,7 +129,7 @@ enum class LibraryContentType(
 
 data class StoreItem(
     val id: String, val title: String, val instructor: String, val subject: String,
-    val price: Int, val originalPrice: Int, val totalLessons: Int, val totalHours: Float,
+    val price: Double, val originalPrice: Double, val totalLessons: Int, val totalHours: Float,
     val rating: Float, val reviewCount: Int, val studentsEnrolled: Int,
     val bpscRelevance: Int, val syllabusCoverage: Int, val isPaid: Boolean,
     val isFeatured: Boolean = false, val isLimitedOffer: Boolean = false,
@@ -1530,7 +1530,7 @@ private fun StoreCourseCard(
                             textDecoration = TextDecoration.LineThrough
                         )
                         Text(
-                            "₹${course.price}",
+                            fmtRs(course.price),
                             style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.Primary,
                             fontWeight = FontWeight.ExtraBold
@@ -1607,8 +1607,8 @@ private fun CourseDetailSheet(
     val price         = course.price
     val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
     val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
-    val coinDiscount: Double = minOf(price.toDouble(), dialogCoins * coinToInrRate)
-    val amountDue:    Double = (price.toDouble() - coinDiscount).coerceAtLeast(0.0)
+    val coinDiscount: Double = minOf(price, dialogCoins * coinToInrRate)
+    val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
 
     // ── Coin purchase dialog ─────────────────────────────────────────────
     if (showBuyDialog) {
@@ -1628,7 +1628,7 @@ private fun CourseDetailSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Text("Course price", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("₹$price", style = MaterialTheme.typography.titleLarge,
+                        Text(fmtRs(price), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
                     if (maxApplicable > 0) {
@@ -1671,7 +1671,7 @@ private fun CourseDetailSheet(
                                 )
                             )
                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                Text("1 🪙 = ₹${"%.2f".format(coinToInrRate)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                                Text("0 🪙", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                                 Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                             }
                             if (dialogCoins > 0) Text("Using $dialogCoins coins  ·  saves ${fmtRs(coinDiscount)}",
@@ -2080,7 +2080,7 @@ private fun CourseDetailSheet(
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     if (!course.isPaid) str.courseEnrollFree
-                                    else "Buy — ₹${course.price}",
+                                    else "Buy — ${fmtRs(course.price)}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }

@@ -36,7 +36,7 @@ data class MyLearningUiState(
     val error:           String?         = null,
     // Set when enroll() hits a 402 for a paid course — navigate to CoursePaymentScreen.
     val purchaseRequired:    Boolean = false,
-    val purchasePrice:       Int     = 0,
+    val purchasePrice:       Double  = 0.0,
     val purchaseSessionId:      String? = null,   // paymentSessionId → Cashfree SDK
     val purchaseProviderOrderId: String? = null,   // FIX: Cashfree orderId for Pay button
     val purchaseCourseId:        String? = null,
@@ -173,7 +173,7 @@ class MyLearningViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price           = data.optInt("price", 0)
+                        val price           = data.optDouble("price", 0.0)
                         val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
                         val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
                         _uiState.update { it.copy(

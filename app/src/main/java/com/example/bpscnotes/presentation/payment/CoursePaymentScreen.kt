@@ -29,7 +29,7 @@ fun CoursePaymentScreen(
     navController: NavHostController,
     courseId: String,
     courseTitle: String,
-    price: Int,
+    price: Double,
     paymentSessionId: String? = null,
     providerOrderId: String? = null,     // FIX: passed from CourseDetail 402 response
     paymentEnvironment: String = "sandbox", // 'sandbox' | 'production' — must match backend order

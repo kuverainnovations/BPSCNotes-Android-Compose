@@ -35,7 +35,7 @@ sealed class Screen(val route: String) {
     object CoursePayment : Screen(
         "course_payment/{courseId}/{courseTitle}/{price}/{sessionId}/{orderId}/{env}"
     ) {
-        fun createRoute(courseId: String, courseTitle: String, price: Int,
+        fun createRoute(courseId: String, courseTitle: String, price: Double,
                         paymentSessionId: String?,
                         providerOrderId: String? = null,
                         paymentEnvironment: String = "sandbox") =
@@ -118,7 +118,7 @@ sealed class Screen(val route: String) {
     // PDF Viewer with page locking
     object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}/{materialId}/{price}") {
         fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean,
-                        materialId: String = "", price: Int = 0) =
+                        materialId: String = "", price: Double = 0.0) =
             "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased/${materialId.encodeUrl()}/$price"
     }
 

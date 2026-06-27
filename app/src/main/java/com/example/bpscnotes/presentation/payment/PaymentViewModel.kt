@@ -54,7 +54,7 @@ data class PaymentState(
     // Course purchase (separate from subscription)
     val courseId: String?                   = null,
     val courseTitle: String?                = null,
-    val coursePrice: Int                    = 0,
+    val coursePrice: Double                = 0.0,
     val _pendingSessionId: String?          = null,   // stored until user taps Pay
 
     // Result
@@ -80,13 +80,13 @@ class PaymentViewModel @Inject constructor(
     }
 
     // Mirrors SubscriptionsService.initiate() — keeps preview in sync with backend math.
-    private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Double> {
+    private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Double, ceiling: Double = base): Pair<Int, Double> {
         val rate   = coinsConfig.economy.coinToInrRate
         val maxPct = coinsConfig.economy.maxCoinDiscountPctSubscription
         val maxDiscountInr = (base * maxPct / 100.0).toInt()
         val maxCoinsUsable = if (rate > 0) (maxDiscountInr / rate).toInt() else 0
         val coinsToUse = minOf(requestedCoins, coinsAvailable, maxCoinsUsable).coerceAtLeast(0)
-        val discount   = minOf(coinsToUse * rate, ceiling.toDouble().coerceAtLeast(0.0))
+        val discount   = minOf(coinsToUse * rate, ceiling.coerceAtLeast(0.0))
         return coinsToUse to discount
     }
 
@@ -100,7 +100,7 @@ class PaymentViewModel @Inject constructor(
                     plans          = plans,
                     isLoadingPlans = false,
                     selectedPlan   = first,
-                    finalAmount    = first?.price?.toDouble() ?: 0.0
+                    finalAmount    = first?.price ?: 0.0
                 )}
             } catch (e: Exception) {
                 _state.update { it.copy(isLoadingPlans = false, error = "Failed to load plans") }
@@ -124,7 +124,7 @@ class PaymentViewModel @Inject constructor(
 
     fun selectPlan(plan: SubscriptionPlanDto) {
         _state.update { s ->
-            val base = plan.price ?: 0
+            val base = plan.price ?: 0.0
             val (coinsToUse, coinDis) = coinDiscountFor(s.coinsToUse, s.coinsAvailable, base)
             s.copy(
                 selectedPlan   = plan,
@@ -172,7 +172,7 @@ class PaymentViewModel @Inject constructor(
     fun toggleCoinsDiscount() {
         _state.update { s ->
             val plan = s.selectedPlan ?: return@update s
-            val base = plan.price ?: 0
+            val base = plan.price ?: 0.0
             val requested = if (s.coinsToUse > 0) 0 else s.coinsAvailable
             val (coinsToUse, coinDis) = coinDiscountFor(requested, s.coinsAvailable, base, ceiling = base - s.couponDiscount)
             s.copy(
@@ -187,7 +187,7 @@ class PaymentViewModel @Inject constructor(
     fun setCoinsToUse(requested: Int) {
         _state.update { s ->
             val plan = s.selectedPlan ?: return@update s
-            val base = plan.price ?: 0
+            val base = plan.price ?: 0.0
             val (coinsToUse, coinDis) = coinDiscountFor(requested, s.coinsAvailable, base, ceiling = base - s.couponDiscount)
             s.copy(
                 coinsToUse   = coinsToUse,
@@ -295,7 +295,7 @@ class PaymentViewModel @Inject constructor(
 
     // ── Course purchase ─────────────────────────────────────────
     fun initCoursePurchase(
-        courseId: String, courseTitle: String, price: Int,
+        courseId: String, courseTitle: String, price: Double,
         paymentSessionId: String?,
         providerOrderId: String? = null,
         paymentEnvironment: String = "sandbox",
@@ -304,7 +304,7 @@ class PaymentViewModel @Inject constructor(
             courseId           = courseId,
             courseTitle        = courseTitle,
             coursePrice        = price,
-            finalAmount        = price.toDouble(),
+            finalAmount        = price,
             paymentEnvironment = paymentEnvironment,
             // Store separately — LaunchedEffect triggers only when user taps Pay
             _pendingSessionId  = paymentSessionId,

@@ -73,7 +73,7 @@ private fun openMaterial(
     freePages:    Int,
     isPurchased:  Boolean,
     id:  String,
-    price:  Int,
+    price:  Double,
     adManager:    com.example.bpscnotes.core.ads.AdManager? = null
 ) {
     val lower = url.lowercase()
@@ -216,7 +216,7 @@ fun StudyMaterialsScreen(
             userCoins            = state.userCoins,
             maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
-            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, dialogCoins) },
+            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price, item.title, dialogCoins) },
             onDismiss    = { showPurchaseDialog = null; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }
@@ -1216,15 +1216,15 @@ private fun LibraryItemCard(
                 LibInfoChip(Icons.Rounded.Download, formatCount(item.downloadCount))
                 // Show price/lock badge for paid materials
                 // FIX: removed extra padding wrapper rows that were causing rating to shift down
-                if ((item.price ?: 0) > 0) {
-                    Text("₹${item.price}", style = MaterialTheme.typography.labelSmall,
+                if (item.price > 0.0) {
+                    Text(fmtRs(item.price), style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF856404), fontWeight = FontWeight.Bold)
                 } else {
                     Text("Free", style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.Success, fontWeight = FontWeight.Bold)
                 }
                 // Social proof: "12 students bought this" — only for paid materials with sales
-                if ((item.price ?: 0) > 0 && item.buyerCount > 0) {
+                if (item.price > 0.0 && item.buyerCount > 0) {
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
@@ -1303,7 +1303,7 @@ private fun LibraryItemCard(
                     Text(
                         when {
                             isDownloaded                   -> "Offline ✓"
-                            item.isPremium && !isPurchased -> "Unlock ₹${item.price}"
+                            item.isPremium && !isPurchased -> "Unlock ${fmtRs(item.price)}"
                             else                           -> str.materialsDownload
                         },
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
@@ -1434,7 +1434,7 @@ private fun NegotiationSheet(
     isLoading: Boolean,
     isResponding: Boolean,
     onAccept: () -> Unit,
-    onCounter: (price: Int, message: String?) -> Unit,
+    onCounter: (price: Double, message: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
@@ -1590,10 +1590,10 @@ private fun NegotiationSheet(
                                 ) { Text("Cancel") }
                                 Button(
                                     onClick = {
-                                        val price = counterPriceText.toIntOrNull() ?: return@Button
+                                        val price = counterPriceText.toDoubleOrNull() ?: return@Button
                                         onCounter(price, counterMessage.ifBlank { null })
                                     },
-                                    enabled = !isResponding && counterPriceText.toIntOrNull() != null,
+                                    enabled = !isResponding && counterPriceText.toDoubleOrNull() != null,
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
@@ -1746,14 +1746,14 @@ private fun MaterialDetailSheet(
     isDownloading: Boolean,
     isPurchased:  Boolean = false,
     id: String,
-    price:Int,
+    price: Double,
     buyers:       BuyersData? = null,
     currentUserId: String = "",
     onChatWithUploader: () -> Unit = {},
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
     onPurchase:   () -> Unit = {},
-    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Int) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Double) -> Unit,
     onDismiss:    () -> Unit,
     // Rating
     myRatingStars:      Int      = 0,
@@ -1933,7 +1933,7 @@ private fun MaterialDetailSheet(
                     Text(
                         when {
                             isDownloaded    -> str.materialsDownloadedDone
-                            isPremiumLocked -> "Unlock  ₹${price}"
+                            isPremiumLocked -> "Unlock  ${fmtRs(price)}"
                             !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
                             else            -> str.materialsDownloadFree
                         },
@@ -2532,7 +2532,7 @@ private fun formatCount(count: Int): String {
 fun MyUploadsTab(
     uploads:   List<StudyMaterialDto>,
     isLoading: Boolean,
-    onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Int) -> Unit,
+    onOpenPdf: (url: String, title: String, freePages: Int, isPurchased: Boolean,id:String,price:Double) -> Unit,
     onRefresh: () -> Unit,
     onRespondNegotiation: (StudyMaterialDto) -> Unit = {},
     onOpenWallet: () -> Unit = {},
@@ -2616,7 +2616,7 @@ fun MyUploadsTab(
                                 }
                                 if (item.price > 0) {
                                     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                        Text("₹${item.price}", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                        Text(fmtRs(item.price), style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
                                 // Language badge — always shown
@@ -2667,7 +2667,7 @@ fun MyUploadsTab(
                                     Text("💬", fontSize = 12.sp)
                                     Column(Modifier.weight(1f)) {
                                         Text(
-                                            "Offer: ₹${item.currentOfferPrice} (you asked ₹${item.price})",
+                                            "Offer: ${fmtRs(item.currentOfferPrice?.toDouble() ?: 0.0)} (you asked ${fmtRs(item.price)})",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = Color(0xFF3730A3),
                                             fontWeight = FontWeight.Bold,
@@ -2723,7 +2723,7 @@ fun DownloadsTab(
     downloads:    List<com.example.bpscnotes.data.remote.api.DownloadHistoryItem>,
     isLoading:    Boolean,
     purchasedIds: Set<String>,
-    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id: String,price:Int) -> Unit,
+    onOpenPdf:    (url: String, title: String, freePages: Int, isPurchased: Boolean,id: String,price: Double) -> Unit,
     onRefresh:    () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -2757,7 +2757,7 @@ fun DownloadsTab(
             }
             items(downloads, key = { it.id }) { item ->
                 val isPurchased = purchasedIds.contains(item.id) || item.isPurchased
-                val hasFullAccess = !item.isPremium || isPurchased || item.price == 0
+                val hasFullAccess = !item.isPremium || isPurchased || item.price == 0.0
 
                 Card(
                     modifier  = Modifier.fillMaxWidth(),
@@ -2867,6 +2867,7 @@ fun DownloadsTab(
 // PURCHASE CONFIRM DIALOG — shown when user taps Buy
 // Shows price, preview page count, and commission notice
 // ════════════════════════════════════════════════════════════
+@Composable
 /** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
 private fun fmtRs(amount: Double): String {
     return if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
@@ -2888,11 +2889,11 @@ fun PurchaseConfirmDialog(
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
 
-    val price = item.price ?: 0
+    val price = item.price
     // coinDiscount and amountDue are Double so fractional rates (e.g. 0.33 per coin)
     // are preserved and displayed correctly instead of being truncated to Int.
-    val coinDiscount: Double = minOf(price.toDouble(), coinsToApply * coinToInrRate)
-    val amountDue:    Double = (price.toDouble() - coinDiscount).coerceAtLeast(0.0)
+    val coinDiscount: Double = minOf(price, coinsToApply * coinToInrRate)
+    val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
     // priceInCoins: ceiling so user never needs more coins than available price
     val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
     val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) {
@@ -2939,7 +2940,7 @@ fun PurchaseConfirmDialog(
                 ) {
                     Text(str.materialPrice, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold)
-                    Text("₹$price",
+                    Text(fmtRs(price),
                         style = MaterialTheme.typography.titleLarge,
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 }
@@ -2998,7 +2999,7 @@ fun PurchaseConfirmDialog(
                         )
                         // Min / Max labels
                         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                            Text("1 🪙 = ₹${"%.2f".format(coinToInrRate)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                            Text("0 🪙", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                             Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                         }
                         if (coinsToApply > 0) {

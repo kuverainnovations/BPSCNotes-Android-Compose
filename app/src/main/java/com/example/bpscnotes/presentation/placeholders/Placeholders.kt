@@ -400,8 +400,8 @@ private fun DownloadedFileCard(
 // SUBSCRIPTION / PAID CONTENT SCREEN
 // ════════════════════════════════════════════════════════════
 data class SubscriptionPlanItem(
-    val id: String, val name: String, val price: Int,
-    val originalPrice: Int = 0, val duration: String,
+    val id: String, val name: String, val price: Double,
+    val originalPrice: Double = 0.0, val duration: String,
     val billingCycle: String = "", val bonusCoins: Int = 0, val savings: Int = 0
 )
 
@@ -458,8 +458,8 @@ class SubscriptionViewModel @Inject constructor(
                     SubscriptionPlanItem(
                         id            = p.id ?: "monthly",
                         name          = p.name ?: "Monthly",
-                        price         = p.price ?: 199,
-                        originalPrice = p.originalPrice ?: 299,
+                        price         = p.price ?: 199.0,
+                        originalPrice = p.originalPrice ?: 299.0,
                         duration      = p.duration ?: "1 Month",
                         billingCycle  = p.billingCycle ?: "",
                         bonusCoins    = p.bonusCoins ?: 0,
@@ -468,9 +468,9 @@ class SubscriptionViewModel @Inject constructor(
                 }.ifEmpty {
                     // Hardcoded fallback matching backend PLANS constant
                     listOf(
-                        SubscriptionPlanItem("monthly", "Monthly", 199, 299, "1 Month", "Billed monthly", 20, 100),
-                        SubscriptionPlanItem("quarterly", "Quarterly", 499, 699, "3 Months", "Billed every 3 months", 50, 200),
-                        SubscriptionPlanItem("annual", "Annual", 1499, 2388, "12 Months", "Billed annually", 100, 889)
+                        SubscriptionPlanItem("monthly", "Monthly", 199.0, 299.0, "1 Month", "Billed monthly", 20, 100),
+                        SubscriptionPlanItem("quarterly", "Quarterly", 499.0, 699.0, "3 Months", "Billed every 3 months", 50, 200),
+                        SubscriptionPlanItem("annual", "Annual", 1499.0, 2388.0, "12 Months", "Billed annually", 100, 889)
                     )
                 }
 
@@ -543,7 +543,7 @@ fun SubscriptionScreen(
 
                     // FIX: Dynamic plan card from API
                     val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
-                        "monthly", "BPSCNotes Pro", 199, 299, "1 Month", str.placeholdersBilledMonthly, 20, 100)
+                        "monthly", "BPSCNotes Pro", 199.0, 299.0, "1 Month", str.placeholdersBilledMonthly, 20, 100)
                     if (state.isPremiumUser) {
                         val planLabel = state.plans.find { it.id == state.activePlan }?.name
                             ?: state.activePlan?.replaceFirstChar { it.uppercase() } ?: "Pro"

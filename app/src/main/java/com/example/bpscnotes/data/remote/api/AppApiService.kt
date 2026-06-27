@@ -46,9 +46,9 @@ data class CourseDto(
     @SerializedName("instructor_students") val instructorStudents: String? = null,
     @SerializedName("instructor_courses")  val instructorCourses: Int = 1,
     val subject: String = "",
-    val price: Int = 0,
+    val price: Double = 0.0,
     @SerializedName("original_price")
-    val originalPrice: Int,
+    val originalPrice: Double = 0.0,
     @SerializedName("is_paid")
     val isPaid: Boolean,
     val is_featured: Boolean,
@@ -91,7 +91,7 @@ data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
 
 data class SubscriptionPlanDto(
     val id: String? = null, val name: String? = null,
-    val price: Int? = null, @SerializedName("original_price") val originalPrice: Int? = null,
+    val price: Double? = null, @SerializedName("original_price") val originalPrice: Double? = null,
     val duration: String? = null, @SerializedName("billing_cycle") val billingCycle: String? = null,
     @SerializedName("bonus_coins") val bonusCoins: Int? = null, val savings: Int? = null
 )
@@ -144,7 +144,7 @@ data class ConfirmSubscriptionRequest(
 )
 
 data class CoursePurchaseRequiredData(
-    val price: Int,
+    val price: Double,
     val paymentSessionId: String?,      // → Cashfree Android SDK
     val providerOrderId: String?,
     val paymentEnvironment: String?,    // 'sandbox' | 'production' — drives CFSession.Environment
