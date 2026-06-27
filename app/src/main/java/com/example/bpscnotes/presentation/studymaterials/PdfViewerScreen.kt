@@ -97,7 +97,8 @@ fun PdfViewerScreen(
     var error      by remember { mutableStateOf<String?>(null) }
     // FIX: collect purchase state from ViewModel
     val purchaseState by viewModel.state.collectAsState()
-    var showBuyDialog by remember { mutableStateOf(false) }
+    var showBuyDialog  by remember { mutableStateOf(false) }
+    var dialogCoins    by remember { mutableStateOf(0) }     // coin slider
 
     val effectiveFreePages = if (isPurchased) Int.MAX_VALUE else freePages.coerceAtLeast(1)
 
@@ -138,17 +139,22 @@ fun PdfViewerScreen(
             pageCount = totalPages,
         )
         PurchaseConfirmDialog(
-            item         = dummyDto,
-            isPurchasing = purchaseState.purchasingId == materialId || purchaseState.isConfirmingPurchase,
-            onConfirm    = { viewModel.purchaseMaterial(materialId, price, title) },
-            onDismiss    = { showBuyDialog = false; viewModel.clearPurchaseMessages() }
+            item                 = dummyDto,
+            isPurchasing         = purchaseState.purchasingId == materialId || purchaseState.isConfirmingPurchase,
+            coinsToApply         = dialogCoins,
+            onCoinsToApplyChange = { dialogCoins = it },
+            userCoins            = purchaseState.userCoins,
+            maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+            coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
+            onConfirm    = { viewModel.purchaseMaterial(materialId, price, title, dialogCoins) },
+            onDismiss    = { showBuyDialog = false; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }
 
     // Navigate back to materials list after successful purchase so user can see unlocked state
     LaunchedEffect(purchaseState.purchaseSuccess) {
         if (purchaseState.purchaseSuccess != null && materialId.isNotBlank()) {
-            showBuyDialog = false
+            showBuyDialog = false; dialogCoins = 0
             navController.popBackStackSafe()
         }
     }
@@ -160,7 +166,7 @@ fun PdfViewerScreen(
         val orderId   = pending.providerOrderId     ?: return@LaunchedEffect
         if (sessionId.isBlank()) return@LaunchedEffect
         viewModel.consumePendingPurchase()
-        showBuyDialog = false
+        showBuyDialog = false; dialogCoins = 0
         launchCashfree(
             context   = context,
             sessionId = sessionId,

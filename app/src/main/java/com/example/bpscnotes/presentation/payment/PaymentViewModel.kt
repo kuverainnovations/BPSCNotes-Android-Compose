@@ -35,14 +35,14 @@ data class PaymentState(
     // Coins
     val coinsAvailable: Int                 = 0,
     val coinsToUse: Int                     = 0,
-    val coinDiscount: Int                   = 0,
+    val coinDiscount: Double               = 0.0,
 
     // Order — Cashfree
     val subscriptionId: String?             = null,
     val paymentSessionId: String?           = null,
     val providerOrderId: String?            = null,
     val paymentEnvironment: String          = "sandbox",  // 'sandbox' | 'production'
-    val finalAmount: Int                    = 0,
+    val finalAmount: Double                = 0.0,
     val isCreatingOrder: Boolean            = false,
     val isConfirming: Boolean               = false,
 
@@ -80,13 +80,13 @@ class PaymentViewModel @Inject constructor(
     }
 
     // Mirrors SubscriptionsService.initiate() — keeps preview in sync with backend math.
-    private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Int> {
+    private fun coinDiscountFor(requestedCoins: Int, coinsAvailable: Int, base: Int, ceiling: Int = base): Pair<Int, Double> {
         val rate   = coinsConfig.economy.coinToInrRate
         val maxPct = coinsConfig.economy.maxCoinDiscountPctSubscription
         val maxDiscountInr = (base * maxPct / 100.0).toInt()
         val maxCoinsUsable = if (rate > 0) (maxDiscountInr / rate).toInt() else 0
         val coinsToUse = minOf(requestedCoins, coinsAvailable, maxCoinsUsable).coerceAtLeast(0)
-        val discount   = minOf((coinsToUse * rate).toInt(), ceiling.coerceAtLeast(0))
+        val discount   = minOf(coinsToUse * rate, ceiling.toDouble().coerceAtLeast(0.0))
         return coinsToUse to discount
     }
 
@@ -100,7 +100,7 @@ class PaymentViewModel @Inject constructor(
                     plans          = plans,
                     isLoadingPlans = false,
                     selectedPlan   = first,
-                    finalAmount    = first?.price ?: 0
+                    finalAmount    = first?.price?.toDouble() ?: 0.0
                 )}
             } catch (e: Exception) {
                 _state.update { it.copy(isLoadingPlans = false, error = "Failed to load plans") }
@@ -133,7 +133,7 @@ class PaymentViewModel @Inject constructor(
                 couponDiscount = 0,
                 couponCode     = "",
                 couponApplied  = false,
-                finalAmount    = maxOf(1, base - coinDis)
+                finalAmount    = maxOf(1.0, base.toDouble() - coinDis)
             )
         }
     }
@@ -159,7 +159,7 @@ class PaymentViewModel @Inject constructor(
                         couponApplied  = true,
                         couponDiscount = breakdown.couponDiscount,
                         couponError    = null,
-                        finalAmount    = maxOf(1, breakdown.finalAmount)
+                        finalAmount    = maxOf(1.0, breakdown.finalAmount.toDouble())
                     )}
                     // Abandon the preview order — real order created on Pay tap
                 }
@@ -178,7 +178,21 @@ class PaymentViewModel @Inject constructor(
             s.copy(
                 coinsToUse   = coinsToUse,
                 coinDiscount = coinDis,
-                finalAmount  = maxOf(1, base - s.couponDiscount - coinDis)
+                finalAmount  = maxOf(1.0, base.toDouble() - s.couponDiscount - coinDis)
+            )
+        }
+    }
+
+    /** Called by the coin slider — sets exact coins the user wants to redeem. */
+    fun setCoinsToUse(requested: Int) {
+        _state.update { s ->
+            val plan = s.selectedPlan ?: return@update s
+            val base = plan.price ?: 0
+            val (coinsToUse, coinDis) = coinDiscountFor(requested, s.coinsAvailable, base, ceiling = base - s.couponDiscount)
+            s.copy(
+                coinsToUse   = coinsToUse,
+                coinDiscount = coinDis,
+                finalAmount  = maxOf(1.0, base.toDouble() - s.couponDiscount - coinDis)
             )
         }
     }
@@ -213,7 +227,7 @@ class PaymentViewModel @Inject constructor(
                         _state.update { it.copy(
                             isCreatingOrder = false,
                             subscriptionId  = data.subscriptionId,
-                            finalAmount     = finalAmt,
+                            finalAmount     = finalAmt.toDouble(),
                             error           = "Payment gateway is not configured yet. Please contact support. " +
                                     "(Ref: ${data.subscriptionId.take(8)})"
                         )}
@@ -227,7 +241,7 @@ class PaymentViewModel @Inject constructor(
                             paymentSessionId = sessionId,
                             providerOrderId  = providerOrderId,
                             paymentEnvironment = data.paymentEnvironment ?: "sandbox",
-                            finalAmount      = finalAmt
+                            finalAmount      = finalAmt.toDouble()
                         )}
                     }
                 }
@@ -290,7 +304,7 @@ class PaymentViewModel @Inject constructor(
             courseId           = courseId,
             courseTitle        = courseTitle,
             coursePrice        = price,
-            finalAmount        = price,
+            finalAmount        = price.toDouble(),
             paymentEnvironment = paymentEnvironment,
             // Store separately — LaunchedEffect triggers only when user taps Pay
             _pendingSessionId  = paymentSessionId,

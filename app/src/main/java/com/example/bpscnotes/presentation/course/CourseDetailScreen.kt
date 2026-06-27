@@ -44,6 +44,12 @@ import java.util.*
 // ─────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
+/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
+private fun fmtRs(amount: Double): String =
+    if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
+    else "₹${"%.2f".format(amount)}"
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailScreen(
     nav: NavHostController,
@@ -56,8 +62,133 @@ fun CourseDetailScreen(
     val str = LocalStrings.current
     val cs  = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("course_detail") }
-    var expandedChapter by remember { mutableStateOf<String?>(null) }
+    var expandedChapter     by remember { mutableStateOf<String?>(null) }
     var showEnrollSuccessDialog by remember { mutableStateOf(false) }
+    var showBuyDialog       by remember { mutableStateOf(false) }
+    var dialogCoins         by remember { mutableStateOf(0) }
+
+    // Coin economy config for slider
+    val coinsConfig = viewModel.coinsConfig
+
+    // ── Course purchase dialog (same design as material purchase) ──
+    if (showBuyDialog) {
+        val course = state.course
+        val price  = state.purchasePrice.takeIf { it > 0 } ?: course?.price ?: 0
+        val userCoins = state.userCoins
+        val coinToInrRate = coinsConfig.economy.coinToInrRate
+        val maxCoinsPer   = coinsConfig.economy.maxCoinsPerPurchase
+        val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
+        val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
+        val coinDiscount: Double = minOf(price.toDouble(), dialogCoins * coinToInrRate)
+        val amountDue:    Double = (price.toDouble() - coinDiscount).coerceAtLeast(0.0)
+
+        AlertDialog(
+            onDismissRequest = { showBuyDialog = false; dialogCoins = 0 },
+            shape            = RoundedCornerShape(20.dp),
+            containerColor   = Color.White,
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Enroll in Course", fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleLarge)
+                    Text(course?.title ?: "", style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant, maxLines = 2)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Price row
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("Course price", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("₹$price", style = MaterialTheme.typography.titleLarge,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
+                    // Coin slider
+                    if (maxApplicable > 0) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFFFFFBEB))
+                                .border(1.dp, Color(0xFFFFE082), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🪙", fontSize = 18.sp)
+                                    Column {
+                                        Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                            color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
+                                        Text("You have $userCoins 🪙 available",
+                                            style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
+                                    }
+                                }
+                                Box(Modifier.clip(RoundedCornerShape(20.dp))
+                                    .background(if (dialogCoins > 0) BpscColors.CoinGold else Color(0xFFE5E7EB))
+                                    .padding(horizontal = 12.dp, vertical = 5.dp)) {
+                                    Text(if (dialogCoins > 0) "−${fmtRs(coinDiscount)}" else "₹0 off",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (dialogCoins > 0) Color.White else Color(0xFF6B7280),
+                                        fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(
+                                value         = dialogCoins.toFloat(),
+                                onValueChange = { dialogCoins = it.toInt() },
+                                valueRange    = 0f..maxApplicable.toFloat(),
+                                steps         = 0,
+                                colors = SliderDefaults.colors(
+                                    thumbColor         = BpscColors.CoinGold,
+                                    activeTrackColor   = BpscColors.CoinGold,
+                                    inactiveTrackColor = Color(0xFFE5E7EB)
+                                )
+                            )
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                                Text("1 🪙 = ₹${"%.2f".format(coinToInrRate)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                                Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                            }
+                            if (dialogCoins > 0) Text("Using $dialogCoins coins  ·  saves ${fmtRs(coinDiscount)}",
+                                style = MaterialTheme.typography.labelSmall, color = Color(0xFF065F46), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    HorizontalDivider(color = cs.outline)
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
+                                color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                            if (dialogCoins > 0) Text("🪙 $dialogCoins coins applied (−${fmtRs(coinDiscount)})",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick  = { viewModel.enroll(courseId, dialogCoins) },
+                    enabled  = !state.isEnrolling,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.CoinGold)
+                ) {
+                    if (state.isEnrolling) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Processing…", style = MaterialTheme.typography.titleMedium)
+                    } else {
+                        Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (amountDue == 0.0) "🪙 Pay with coins" else "Pay ${fmtRs(amountDue)}",
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBuyDialog = false; dialogCoins = 0 }) {
+                    Text("Cancel", color = cs.onSurfaceVariant)
+                }
+            }
+        )
+    }
 
     LaunchedEffect(state.enrollSuccess) {
         if (state.enrollSuccess) {
@@ -112,21 +243,21 @@ fun CourseDetailScreen(
         )
     }
 
-    // If the course is paid and the user hasn't purchased it, the backend
-    // responds with a Cashfree session — navigate to CoursePaymentScreen.
-    LaunchedEffect(state.purchaseRequired) {
-        if (state.purchaseRequired) {
-            val title = state.course?.title ?: ""
-            nav.navigate(
-                Screen.CoursePayment.createRoute(
-                    courseId, title, state.purchasePrice,
-                    state.purchaseSessionId,
-                    state.purchaseProviderOrderId,
-                    state.purchasePaymentEnvironment,
-                )
+    // Cashfree session is launched after enroll() returns payment details
+    // The dialog's confirm triggers enroll(); if backend returns a Cashfree
+    // session we launch the SDK directly from LaunchedEffect below.
+    LaunchedEffect(state.purchaseSessionId) {
+        val sessionId = state.purchaseSessionId ?: return@LaunchedEffect
+        val orderId   = state.purchaseProviderOrderId ?: return@LaunchedEffect
+        showBuyDialog = false; dialogCoins = 0
+        val title = state.course?.title ?: ""
+        nav.navigate(
+            Screen.CoursePayment.createRoute(
+                courseId, title, state.purchasePrice,
+                sessionId, orderId, state.purchasePaymentEnvironment,
             )
-            viewModel.clearPurchaseRequired()
-        }
+        )
+        viewModel.clearPurchaseRequired()
     }
 
     // ── Rating bottom sheet ───────────────────────────────────
@@ -294,7 +425,8 @@ fun CourseDetailScreen(
                     isEnrolled  = isEnrolled,
                     allDone     = allDone,
                     isEnrolling = state.isEnrolling,
-                    onEnroll    = { viewModel.enroll(courseId) },
+                    onEnroll         = { viewModel.enroll(courseId) },
+                    onShowBuyDialog  = { showBuyDialog = true; dialogCoins = 0 },
                     // FIX 3: Correct route — same LessonViewer used by lesson tap
                     onContinue  = {
                         val next = chapters
@@ -1121,13 +1253,14 @@ private fun InstructorSection(course: CourseDto, accent: Color) {
 
 @Composable
 private fun BottomCta(
-    course:      CourseDto,
-    accent:      Color,
-    isEnrolled:  Boolean,
-    allDone:     Boolean,
-    isEnrolling: Boolean,
-    onEnroll:    () -> Unit,          // FIX Issue 5: no coins param
-    onContinue:  () -> Unit,
+    course:          CourseDto,
+    accent:          Color,
+    isEnrolled:      Boolean,
+    allDone:         Boolean,
+    isEnrolling:     Boolean,
+    onEnroll:        () -> Unit,
+    onShowBuyDialog: () -> Unit,   // for paid courses — shows dialog before network call
+    onContinue:      () -> Unit,
     completedLessons: Int
 ) {
     val str = LocalStrings.current
@@ -1184,14 +1317,15 @@ private fun BottomCta(
                 }
 
                 // ── Not enrolled: Enroll / Buy button ──
-                // FIX Issue 5: No coin slider. Real-money purchase only.
                 else -> {
                     Button(
-                        onClick  = { onEnroll() },
+                        onClick  = { if (course.isPaid) onShowBuyDialog() else onEnroll() },
                         enabled  = !isEnrolling,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape    = RoundedCornerShape(14.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = accent)
+                        colors   = ButtonDefaults.buttonColors(
+                            containerColor = if (course.isPaid) BpscColors.CoinGold else accent
+                        )
                     ) {
                         if (isEnrolling) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)

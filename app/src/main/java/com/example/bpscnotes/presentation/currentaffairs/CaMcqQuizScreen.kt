@@ -29,6 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebSettings
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ads.AdManager
@@ -529,13 +532,9 @@ private fun QuizScreen(
                 colors    = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(3.dp)
             ) {
-                Text(
-                    q.question,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = BpscColors.TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 26.sp,
-                    modifier = Modifier.padding(18.dp)
+                McqQuestionHtml(
+                    html     = q.question,
+                    modifier = Modifier.fillMaxWidth().padding(18.dp)
                 )
             }
 
@@ -632,34 +631,50 @@ private fun QuizScreen(
                 }
             }
 
-            // ── Hint — shown BEFORE answering (while question is live) ──
-            if (answered == null && !q.hint.isNullOrBlank()) {
+            // ── Hint — always visible so student can read it before attempting ──
+            if (!q.hint.isNullOrBlank()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFFFFF8E1)).padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("💡", fontSize = 14.sp, modifier = Modifier.padding(top = 1.dp))
-                    Text(
-                        q.hint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF795548),
-                        lineHeight = 18.sp
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            "Hint",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF795548),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            q.hint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF795548),
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
             }
 
-            // Explanation — shown after server answer returns
+            // ── Explanation — shown only AFTER answering ──
             val explanation = serverAns?.explanation ?: if (answered != null) q.explanation else null
             if (answered != null && !explanation.isNullOrBlank()) {
                 Row(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFFF8E1)).padding(14.dp),
+                        .background(Color(0xFFE8F5E9)).padding(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("💡", fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
-                    Text(explanation, style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF5D4037), lineHeight = 22.sp)
+                    Text("📖", fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            "Explanation",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF2E7D32),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(explanation, style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF1B5E20), lineHeight = 22.sp)
+                    }
                 }
             }
 
@@ -961,4 +976,122 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
         Text(value, style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.ExtraBold)
         Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
     }
+}
+// ── McqQuestionHtml ──────────────────────────────────────────────────────────
+// Renders question text that may contain TipTap HTML (tables, bold, lists)
+// using a WebView. Falls back to simple Text if there are no HTML tags.
+// Tables are made horizontally scrollable and sized to fit the card width.
+@Composable
+private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
+    val isHtml = remember(html) { html.trimStart().startsWith("<") }
+
+    if (!isHtml) {
+        // Plain text (older questions) — keep original Text composable
+        Text(
+            html,
+            style    = MaterialTheme.typography.bodyLarge,
+            color    = BpscColors.TextPrimary,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 26.sp,
+            modifier = modifier
+        )
+        return
+    }
+
+    // Full HTML — wrap in responsive CSS so tables scroll horizontally
+    // and text matches the app's body size/colour.
+    val styledHtml = remember(html) {
+        """
+        <!DOCTYPE html><html><head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            margin: 0; padding: 0;
+            font-family: sans-serif;
+            font-size: 15px;
+            line-height: 1.65;
+            color: #1a1a2e;
+            background: transparent;
+          }
+          p { margin: 0 0 8px; }
+          strong, b { font-weight: 700; }
+          em, i { font-style: italic; }
+          ul, ol { padding-left: 20px; margin: 6px 0; }
+          li { margin-bottom: 4px; }
+          /* Tables: horizontally scrollable, full-width, compact */
+          .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+          table {
+            border-collapse: collapse;
+            min-width: 100%;
+            font-size: 13px;
+          }
+          th {
+            background: #ede9fe;
+            color: #4c1d95;
+            font-weight: 700;
+            text-align: left;
+            padding: 7px 10px;
+            border: 1px solid #c4b5fd;
+          }
+          td {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+          }
+          tr:nth-child(even) td { background: #f8f7ff; }
+        </style></head><body>
+        ${html.replace(Regex("<table"), "<div class='table-wrap'><table")
+            .replace(Regex("</table>"), "</table></div>")}
+        </body></html>
+        """.trimIndent()
+    }
+
+    // Measure approximate rendered height using a fixed estimate:
+    // plain text lines ≈ 24dp each, tables add ~80dp per row.
+    // We let the WebView be non-scrollable and give it a fixed height
+    // measured by JS so the outer Column scroll works correctly.
+    // Initial height estimate: ~100px base + 20px per 80 chars, avoids 0-height flash
+    var webViewHeight by remember(html) {
+        mutableIntStateOf((100 + (html.length / 80) * 20).coerceIn(80, 400))
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
+    AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                settings.apply {
+                    javaScriptEnabled      = true
+                    domStorageEnabled      = false
+                    loadWithOverviewMode   = true
+                    useWideViewPort        = true
+                    builtInZoomControls    = false
+                    displayZoomControls    = false
+                    setSupportZoom(false)
+                    @Suppress("DEPRECATION")
+                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                }
+                isScrollContainer    = false
+                isVerticalScrollBarEnabled   = false
+                isHorizontalScrollBarEnabled = false
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        // Measure actual content height after render
+                        view.evaluateJavascript(
+                            "(document.body.scrollHeight)"
+                        ) { result ->
+                            val px = result?.trim()?.toFloatOrNull() ?: 0f
+                            if (px > 0) webViewHeight = (px * ctx.resources.displayMetrics.density).toInt()
+                        }
+                    }
+                }
+                loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
+            }
+        },
+        update = { wv -> wv.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null) },
+        modifier = modifier.height(
+            with(density) { webViewHeight.toDp() }
+        )
+    )
 }

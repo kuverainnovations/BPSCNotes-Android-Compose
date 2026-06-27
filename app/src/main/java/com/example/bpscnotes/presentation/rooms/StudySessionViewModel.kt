@@ -113,20 +113,33 @@ class StudySessionViewModel @Inject constructor(
                 val session  = response.data?.session
                 if (session != null) {
                     Log.d(TAG, "Restored active session: ${session.id}")
+                    // Calculate wall-clock elapsed from startedAt so the timer
+                    // shows real time even if heartbeats were missed while offline.
+                    val startMs = try {
+                        val fmts = listOf("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy-MM-dd'T'HH:mm:ss'Z'")
+                        fmts.firstNotNullOfOrNull { fmt ->
+                            val sdf = java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault())
+                            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                            try { sdf.parse(session.startedAt)?.time } catch (_: Exception) { null }
+                        } ?: System.currentTimeMillis()
+                    } catch (_: Exception) { System.currentTimeMillis() }
+                    val wallClockSecs = ((System.currentTimeMillis() - startMs) / 1000L)
+                        .toInt().coerceAtLeast(session.activeMinutes * 60)
                     _uiState.update { s ->
                         s.copy(
-                            status        = if (session.isAfkNow) SessionStatus.AFK else SessionStatus.ACTIVE,
-                            sessionId     = session.id,
-                            startedAt     = session.startedAt,
-                            mode          = session.mode,
-                            activeMinutes = session.activeMinutes,
+                            status           = if (session.isAfkNow) SessionStatus.AFK else SessionStatus.ACTIVE,
+                            sessionId        = session.id,
+                            startedAt        = session.startedAt,
+                            mode             = session.mode,
+                            activeMinutes    = session.activeMinutes,
+                            elapsedSeconds   = wallClockSecs,   // wall-clock, not last heartbeat
                             coinsThisSession = session.coinsEarned,
-                            xpThisSession = session.xpEarned,
-                            afkCount      = session.afkCount,
-                            roomTierKey   = session.tier?.tierKey,
-                            tierName      = session.tier?.name,
-                            tierEmoji     = session.tier?.iconEmoji,
-                            tierColorHex  = session.tier?.colorHex,
+                            xpThisSession    = session.xpEarned,
+                            afkCount         = session.afkCount,
+                            roomTierKey      = session.tier?.tierKey,
+                            tierName         = session.tier?.name,
+                            tierEmoji        = session.tier?.iconEmoji,
+                            tierColorHex     = session.tier?.colorHex,
                         )
                     }
                     // Resume heartbeat + elapsed timer for the restored session
@@ -329,7 +342,12 @@ class StudySessionViewModel @Inject constructor(
             while (true) {
                 delay(1_000L)
                 val status = _uiState.value.status
-                if (status == SessionStatus.ACTIVE || status == SessionStatus.AFK) {
+                // Tick for all live states — ACTIVE, AFK, and even ENDING
+                // (so the timer doesn't freeze the moment user presses End Session).
+                // Only stop on ENDED or IDLE.
+                if (status == SessionStatus.ACTIVE ||
+                    status == SessionStatus.AFK    ||
+                    status == SessionStatus.ENDING) {
                     secs++
                     _uiState.update { it.copy(elapsedSeconds = secs) }
                 } else if (status == SessionStatus.ENDED || status == SessionStatus.IDLE) {
@@ -354,6 +372,19 @@ class StudySessionViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(status = SessionStatus.ENDING, error = null) }
             try {
+                // Fire one final heartbeat before ending so any time since the
+                // last scheduled heartbeat (e.g. screen-off gap) is credited by
+                // the backend before the session is closed. The backend's
+                // endSession() also does a finalGapSecs credit, but a heartbeat
+                // here ensures the DB last_heartbeat timestamp is fresh, which
+                // makes the backend's own calculation more accurate.
+                try {
+                    tierRoomsApi.heartbeat(HeartbeatRequest(sessionId))
+                    Log.d(TAG, "Pre-end heartbeat sent")
+                } catch (hbErr: Exception) {
+                    Log.w(TAG, "Pre-end heartbeat failed (non-fatal): ${hbErr.message}")
+                    // Don't abort endSession just because this failed
+                }
                 val response = tierRoomsApi.endSession(EndSessionRequest(sessionId))
                 val summary  = response.data ?: throw Exception("Empty end session response")
 
@@ -371,12 +402,31 @@ class StudySessionViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "endSession failed: ${e.message}", e)
-                // Still mark as ENDED locally — session will be auto-closed by cron
-                _uiState.update { s ->
-                    s.copy(
+                // Build a local summary from what we already know so the summary
+                // screen shows real numbers instead of 0m when offline.
+                // Backend auto-closes the session when connectivity returns.
+                val s = _uiState.value
+                val wallClockMins = s.elapsedSeconds / 60
+                val bestActiveMin = maxOf(s.activeMinutes, wallClockMins)
+                val localSummary  = com.example.bpscnotes.data.remote.api.EndSessionResponseData(
+                    sessionId         = sessionId,
+                    durationMinutes   = wallClockMins,
+                    activeMinutes     = bestActiveMin,
+                    todayStudyMinutes = bestActiveMin,
+                    totalCoins        = s.coinsThisSession,
+                    totalXp           = s.xpThisSession,
+                    bonusCoins        = 0,
+                    message           = if (e.message?.contains("Unable to resolve") == true ||
+                        e.message?.contains("timeout") == true)
+                        "Session saved — will sync when internet returns"
+                    else "Session ended offline — will be auto-completed"
+                )
+                _uiState.update { st ->
+                    st.copy(
                         status    = SessionStatus.ENDED,
+                        summary   = localSummary,
                         sessionId = null,
-                        error     = "Session ended (sync failed — will be auto-completed)"
+                        error     = "Offline — showing approximate session data"
                     )
                 }
             }

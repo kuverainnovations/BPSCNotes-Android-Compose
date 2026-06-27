@@ -292,6 +292,11 @@ private fun formatCertDate(raw: String?): String {
     } catch (_: Exception) { raw }
 }
 
+/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
+private fun fmtRs(amount: Double): String =
+    if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
+    else "₹${"%.2f".format(amount)}"
+
 @Composable
 fun MyLearningScreen(
     navController: NavHostController,
@@ -1592,13 +1597,150 @@ private fun CourseDetailSheet(
     val str = LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val state by viewModel.uiState.collectAsState()
-    // FIX: coinsToUse removed — no coin discount on purchases
     var showEnrollSuccessDialog by remember { mutableStateOf(false) }
+    var showBuyDialog           by remember { mutableStateOf(false) }
+    var dialogCoins             by remember { mutableStateOf(0) }
+
+    // Coin economy for slider
+    val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
+    val maxCoinsPer   = viewModel.coinsConfig.economy.maxCoinsPerPurchase
+    val price         = course.price
+    val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
+    val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
+    val coinDiscount: Double = minOf(price.toDouble(), dialogCoins * coinToInrRate)
+    val amountDue:    Double = (price.toDouble() - coinDiscount).coerceAtLeast(0.0)
+
+    // ── Coin purchase dialog ─────────────────────────────────────────────
+    if (showBuyDialog) {
+        AlertDialog(
+            onDismissRequest = { showBuyDialog = false; dialogCoins = 0 },
+            shape            = RoundedCornerShape(20.dp),
+            containerColor   = Color.White,
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Enroll in Course", fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.titleLarge)
+                    Text(course.title, style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant, maxLines = 2)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("Course price", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("₹$price", style = MaterialTheme.typography.titleLarge,
+                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                    }
+                    if (maxApplicable > 0) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFFFFFBEB))
+                                .border(1.dp, Color(0xFFFFE082), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🪙", fontSize = 18.sp)
+                                    Column {
+                                        Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                            color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
+                                        Text("You have $userCoins 🪙 available",
+                                            style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
+                                    }
+                                }
+                                Box(Modifier.clip(RoundedCornerShape(20.dp))
+                                    .background(if (dialogCoins > 0) BpscColors.CoinGold else Color(0xFFE5E7EB))
+                                    .padding(horizontal = 12.dp, vertical = 5.dp)) {
+                                    Text(if (dialogCoins > 0) "−${fmtRs(coinDiscount)}" else "₹0 off",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (dialogCoins > 0) Color.White else Color(0xFF6B7280),
+                                        fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Slider(
+                                value         = dialogCoins.toFloat(),
+                                onValueChange = { dialogCoins = it.toInt() },
+                                valueRange    = 0f..maxApplicable.toFloat(),
+                                steps         = 0,
+                                colors = SliderDefaults.colors(
+                                    thumbColor         = BpscColors.CoinGold,
+                                    activeTrackColor   = BpscColors.CoinGold,
+                                    inactiveTrackColor = Color(0xFFE5E7EB)
+                                )
+                            )
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                                Text("1 🪙 = ₹${"%.2f".format(coinToInrRate)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                                Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                            }
+                            if (dialogCoins > 0) Text("Using $dialogCoins coins  ·  saves ${fmtRs(coinDiscount)}",
+                                style = MaterialTheme.typography.labelSmall, color = Color(0xFF065F46), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    HorizontalDivider(color = cs.outline)
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
+                                color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                            if (dialogCoins > 0) Text("🪙 $dialogCoins coins applied (−${fmtRs(coinDiscount)})",
+                                style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick  = { viewModel.enrollWithCoins(course.id, course.title, dialogCoins) },
+                    enabled  = !state.isEnrolling,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.CoinGold)
+                ) {
+                    if (state.isEnrolling) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Processing…", style = MaterialTheme.typography.titleMedium)
+                    } else {
+                        Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (amountDue == 0.0) "🪙 Pay with coins" else "Pay ${fmtRs(amountDue)}",
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBuyDialog = false; dialogCoins = 0 }) {
+                    Text("Cancel", color = cs.onSurfaceVariant)
+                }
+            }
+        )
+    }
 
     // Show success dialog when enrollment succeeds for this specific course
     LaunchedEffect(state.justEnrolledId) {
         if (state.justEnrolledId == course.id) {
+            showBuyDialog = false; dialogCoins = 0
             showEnrollSuccessDialog = true
+        }
+    }
+
+    // Paid course: backend returned Cashfree session → navigate to CoursePaymentScreen
+    LaunchedEffect(state.purchaseRequired) {
+        if (state.purchaseRequired && state.purchaseCourseId == course.id) {
+            showBuyDialog = false; dialogCoins = 0
+            onDismiss()
+            navController.navigate(
+                Screen.CoursePayment.createRoute(
+                    state.purchaseCourseId!!,
+                    state.purchaseCourseTitle,
+                    state.purchasePrice,
+                    state.purchaseSessionId,
+                    state.purchaseProviderOrderId,
+                )
+            )
+            viewModel.clearPurchaseRequired()
         }
     }
 
@@ -1647,301 +1789,286 @@ private fun CourseDetailSheet(
                 }
             }
         )
-    } else {
+    }
 
-        // Paid course: enroll() hit a 402 -> navigate to CoursePaymentScreen (Cashfree)
-        LaunchedEffect(state.purchaseRequired) {
-            if (state.purchaseRequired && state.purchaseCourseId == course.id) {
-                onDismiss()
-                navController.navigate(
-                    Screen.CoursePayment.createRoute(
-                        state.purchaseCourseId!!,
-                        state.purchaseCourseTitle,
-                        state.purchasePrice,
-                        state.purchaseSessionId,
-                        state.purchaseProviderOrderId,  // FIX: pass orderId so Pay button is enabled
+    val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
+        BpscColors.Primary,
+        BpscColors.PrimaryLight
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = cs.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                accent.copy(
+                                    red = accent.red * 0.6f,
+                                    green = accent.green * 0.6f,
+                                    blue = accent.blue * 0.6f
+                                ), accent
+                            )
+                        )
                     )
-                )
-                viewModel.clearPurchaseRequired()
-            }
-        }
-
-        val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
-            BpscColors.Primary,
-            BpscColors.PrimaryLight
-        )
-
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
-            containerColor = cs.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    accent.copy(
-                                        red = accent.red * 0.6f,
-                                        green = accent.green * 0.6f,
-                                        blue = accent.blue * 0.6f
-                                    ), accent
-                                )
-                            )
-                        )
-                        .padding(20.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(subjectEmoji(course.subject), fontSize = 18.sp)
-                            course.tags.take(2).forEach { tag ->
-                                Text(
-                                    tag,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(0.85f),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color.White.copy(0.2f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            course.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            lineHeight = 26.sp
-                        )
-                        Text(
-                            "By ${course.instructor}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(0.8f)
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
-                            SheetStatWhite(
-                                "👥",
-                                "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
-                            )
-                            SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
-                        }
-                    }
-                }
-                val sheetScrollState = rememberScrollState()
-                // The sheet's own drag-to-dismiss and this content's
-                // verticalScroll both react to a small downward drag while
-                // scrolled to the top - each nudges the content position,
-                // which is the vertical "flicker" on light drags. Absorb that
-                // boundary case here so only the sheet's drag/settle animates.
-                val sheetContentNestedScroll = remember(sheetScrollState) {
-                    object : NestedScrollConnection {
-                        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-                            if (sheetScrollState.value == 0 && available.y > 0f) available else Offset.Zero
-                    }
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .nestedScroll(sheetContentNestedScroll)
-                        .verticalScroll(sheetScrollState)
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                    .padding(20.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
-                        "⏱️",
-                        "${course.totalHours}h",
-                        "Duration"
-                    )
-                        DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
-                        "🎯",
-                        "${course.bpscRelevance}%",
-                        "BPSC Rel."
-                    )
+                        Text(subjectEmoji(course.subject), fontSize = 18.sp)
+                        course.tags.take(2).forEach { tag ->
+                            Text(
+                                tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.85f),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                     }
                     Text(
-                        str.courseAbout,
+                        course.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 26.sp
+                    )
+                    Text(
+                        "By ${course.instructor}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(0.8f)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
+                        SheetStatWhite(
+                            "👥",
+                            "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
+                        )
+                        SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
+                    }
+                }
+            }
+            val sheetScrollState = rememberScrollState()
+            // The sheet's own drag-to-dismiss and this content's
+            // verticalScroll both react to a small downward drag while
+            // scrolled to the top - each nudges the content position,
+            // which is the vertical "flicker" on light drags. Absorb that
+            // boundary case here so only the sheet's drag/settle animates.
+            val sheetContentNestedScroll = remember(sheetScrollState) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                        if (sheetScrollState.value == 0 && available.y > 0f) available else Offset.Zero
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .nestedScroll(sheetContentNestedScroll)
+                    .verticalScroll(sheetScrollState)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
+                    "⏱️",
+                    "${course.totalHours}h",
+                    "Duration"
+                )
+                    DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
+                    "🎯",
+                    "${course.bpscRelevance}%",
+                    "BPSC Rel."
+                )
+                }
+                Text(
+                    str.courseAbout,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cs.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    course.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = cs.onSurfaceVariant,
+                    lineHeight = 24.sp
+                )
+                if (course.trialLessonTitle.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(BpscColors.PrimaryLight)
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(BpscColors.Primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.PlayArrow,
+                                null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                str.courseFreeTrial,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                course.trialLessonTitle,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = cs.onSurface,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            str.courseWatch,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = BpscColors.Primary,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                // Reviews
+                if (course.reviews.isNotEmpty()) {
+                    Text(
+                        str.courseStudentReviews,
                         style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        course.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = cs.onSurfaceVariant,
-                        lineHeight = 24.sp
-                    )
-                    if (course.trialLessonTitle.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(BpscColors.PrimaryLight)
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    course.reviews.forEach { review ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = cs.background),
+                            elevation = CardDefaults.cardElevation(0.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(BpscColors.Primary),
-                                contentAlignment = Alignment.Center
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    Icons.Rounded.PlayArrow,
-                                    null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    str.courseFreeTrial,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.Primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    course.trialLessonTitle,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = cs.onSurface,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Text(
-                                str.courseWatch,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = BpscColors.Primary,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-                    // Reviews
-                    if (course.reviews.isNotEmpty()) {
-                        Text(
-                            str.courseStudentReviews,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        course.reviews.forEach { review ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = cs.background),
-                                elevation = CardDefaults.cardElevation(0.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            review.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = cs.onSurface,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Row {
-                                            repeat(5) { i ->
-                                                Icon(
-                                                    Icons.Rounded.Star,
-                                                    null,
-                                                    tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                            }
+                                    Text(
+                                        review.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = cs.onSurface,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Row {
+                                        repeat(5) { i ->
+                                            Icon(
+                                                Icons.Rounded.Star,
+                                                null,
+                                                tint = if (i < review.rating.toInt()) BpscColors.CoinGold else cs.outline,
+                                                modifier = Modifier.size(12.dp)
+                                            )
                                         }
                                     }
-                                    Text(
-                                        review.comment,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = cs.onSurfaceVariant
-                                    )
-                                    Text(
-                                        review.date,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.TextHint
-                                    )
                                 }
+                                Text(
+                                    review.comment,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = cs.onSurfaceVariant
+                                )
+                                Text(
+                                    review.date,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.TextHint
+                                )
                             }
                         }
                     }
                 }
-                HorizontalDivider(color = cs.outline)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            }
+            HorizontalDivider(color = cs.outline)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // FIX: Coin slider removed — real-money Cashfree payment only
+                OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        navController.navigate(Screen.CourseDetail.createRoute(course.id))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    // FIX: Coin slider removed — real-money Cashfree payment only
+                    Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onClick = {
-                            onDismiss()
-                            navController.navigate(Screen.CourseDetail.createRoute(course.id))
-                        },
-                        modifier = Modifier.fillMaxWidth().height(46.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        onClick = onWishlist,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isWishlisted) BpscColors.CoinGold else cs.outline
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextSecondary)
                     ) {
-                        Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
+                        Icon(
+                            if (isWishlisted) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            null,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(
-                            onClick = onWishlist,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(50.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isWishlisted) BpscColors.CoinGold else cs.outline
-                            ),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextSecondary)
-                        ) {
-                            Icon(
-                                if (isWishlisted) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                                null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                if (course.isPaid) {
-                                    // FIX: No coinsToUse — enroll() hits 402 ->
-                                    // purchaseRequired -> LaunchedEffect navigates to Cashfree
-                                    viewModel.enroll(course.id, course.title)
-                                } else {
-                                    viewModel.enroll(course.id, course.title)
-                                    onDismiss()
-                                }
-                            },
-                            enabled = !state.isEnrolling,
-                            modifier = Modifier
-                                .weight(3f)
-                                .height(50.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (!course.isPaid) BpscColors.Success else BpscColors.Primary)
-                        ) {
+                    Button(
+                        onClick = {
+                            if (course.isPaid) {
+                                showBuyDialog = true
+                            } else {
+                                viewModel.enroll(course.id, course.title)
+                                onDismiss()
+                            }
+                        },
+                        enabled = !state.isEnrolling,
+                        modifier = Modifier
+                            .weight(3f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor =
+                                if (!course.isPaid) BpscColors.Success
+                                else BpscColors.CoinGold
+                        )
+                    ) {
                             if (state.isEnrolling) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             } else {
@@ -1953,19 +2080,18 @@ private fun CourseDetailSheet(
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     if (!course.isPaid) str.courseEnrollFree
-                                    else "Buy Now — ₹${course.price}",
+                                    else "Buy — ₹${course.price}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
                         }
-                    }
+                        }
                 }
             }
         }
-    } // end else (showEnrollSuccessDialog)
-}
+    }
 
-// ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 // CERTIFICATE CARD
 // ─────────────────────────────────────────────────────────────
 // NOTE: This card is only rendered for courses where
@@ -1973,485 +2099,485 @@ private fun CourseDetailSheet(
 // above) — i.e. the certificate PDF has already been generated by
 // the backend. So `downloadCertificate()` can safely assume the
 // URL exists; no "not yet available" fallback is needed here.
-@Composable
-private fun CertificateCard(course: LearningCourse) {
-    val str = LocalStrings.current
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val (accent, _) = subjectColorMap()[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+    @Composable
+    private fun CertificateCard(course: LearningCourse) {
+        val str = LocalStrings.current
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val (accent, _) = subjectColorMap()[course.subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
-    // Capture str values before non-composable lambdas
-    val certTitle    = str.courseCertTitle    // "Certificate of Completion" — existing key
-    val downloadLabel = str.materialsDownload  // "Download" — existing key
-    val shareLabel    = str.courseShareCertBtn // "Share 🎓" — existing key
+        // Capture str values before non-composable lambdas
+        val certTitle    = str.courseCertTitle    // "Certificate of Completion" — existing key
+        val downloadLabel = str.materialsDownload  // "Download" — existing key
+        val shareLabel    = str.courseShareCertBtn // "Share 🎓" — existing key
 
-    // Open certificate PDF in browser / PDF viewer
-    fun downloadCertificate() {
-        val url = course.certificateUrl ?: return
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-        context.startActivity(intent)
-    }
-
-    // Share certificate link
-    fun shareCertificate() {
-        val url       = course.certificateUrl
-        val shareText = if (!url.isNullOrBlank())
-            "I completed ${course.title} on BPSCNotes! 🏆\n$url"
-        else
-            "I completed ${course.title} on BPSCNotes! 🏆"
-        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+        // Open certificate PDF in browser / PDF viewer
+        fun downloadCertificate() {
+            val url = course.certificateUrl ?: return
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            context.startActivity(intent)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, "Share Certificate"))
-    }
 
-    Card(
-        modifier  = Modifier.width(220.dp),
-        shape     = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
-                .background(Brush.linearGradient(listOf(accent, accent.copy(0.75f)), Offset(0f, 0f), Offset(220f, 160f)))
+        // Share certificate link
+        fun shareCertificate() {
+            val url       = course.certificateUrl
+            val shareText = if (!url.isNullOrBlank())
+                "I completed ${course.title} on BPSCNotes! 🏆\n$url"
+            else
+                "I completed ${course.title} on BPSCNotes! 🏆"
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+            }
+            context.startActivity(android.content.Intent.createChooser(intent, "Share Certificate"))
+        }
+
+        Card(
+            modifier  = Modifier.width(220.dp),
+            shape     = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFFFD700)))
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("🏆", fontSize = 16.sp)
-                    Text(certTitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFFFD700), fontWeight = FontWeight.ExtraBold)
-                }
-                Text(course.title,
-                    style = MaterialTheme.typography.titleSmall, color = Color.White,
-                    fontWeight = FontWeight.ExtraBold, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
-                if (!course.certificateDate.isNullOrBlank()) {
-                    Text("${str.coursesCompleted} · ${formatCertDate(course.certificateDate)}",
-                        style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
-                }
-                // Download + Share row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(0.25f))
-                            .clickable { downloadCertificate() }
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Rounded.Download, null, tint = Color.White, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(3.dp))
-                        Text(downloadLabel,
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(Brush.linearGradient(listOf(accent, accent.copy(0.75f)), Offset(0f, 0f), Offset(220f, 160f)))
+            ) {
+                Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFFFD700)))
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("🏆", fontSize = 16.sp)
+                        Text(certTitle,
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White, fontWeight = FontWeight.Bold)
+                            color = Color(0xFFFFD700), fontWeight = FontWeight.ExtraBold)
                     }
-                    Row(
-                        modifier = Modifier.weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(0.15f))
-                            .clickable { shareCertificate() }
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(3.dp))
-                        Text(shareLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(course.title,
+                        style = MaterialTheme.typography.titleSmall, color = Color.White,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                    if (!course.certificateDate.isNullOrBlank()) {
+                        Text("${str.coursesCompleted} · ${formatCertDate(course.certificateDate)}",
+                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.8f))
+                    }
+                    // Download + Share row
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(0.25f))
+                                .clickable { downloadCertificate() }
+                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Rounded.Download, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text(downloadLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Row(
+                            modifier = Modifier.weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(0.15f))
+                                .clickable { shareCertificate() }
+                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text(shareLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
     }
-}
 
-// ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 // CONTINUE CARD
 // ─────────────────────────────────────────────────────────────
-@Composable
-private fun ContinueCard(course: LearningCourse, onContinue: () -> Unit) {
-    val str = LocalStrings.current
-    val progress =
-        if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
-    val animProg by animateFloatAsState(progress, tween(1000), label = "cp")
-    val (accent, _) = subjectColorMap()[course.subject] ?: Pair(
-        BpscColors.Primary,
-        BpscColors.PrimaryLight
-    )
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        val cs = MaterialTheme.colorScheme
-        Box(
+    @Composable
+    private fun ContinueCard(course: LearningCourse, onContinue: () -> Unit) {
+        val str = LocalStrings.current
+        val progress =
+            if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
+        val animProg by animateFloatAsState(progress, tween(1000), label = "cp")
+        val (accent, _) = subjectColorMap()[course.subject] ?: Pair(
+            BpscColors.Primary,
+            BpscColors.PrimaryLight
+        )
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(accent, accent.copy(alpha = 0.75f)),
-                        Offset(0f, 0f),
-                        Offset(400f, 150f)
-                    )
-                )
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(18.dp),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
+            val cs = MaterialTheme.colorScheme
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .offset(x = 240.dp, y = (-20).dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(0.08f))
-            )
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(accent, accent.copy(alpha = 0.75f)),
+                            Offset(0f, 0f),
+                            Offset(400f, 150f)
+                        )
+                    )
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.PlayCircle,
-                        null,
-                        tint = Color.White,
-                        modifier = Modifier.size(13.dp)
-                    ); Text(
-                    str.courseContinueLearning,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(0.85f)
-                )
-                }
-                Text(
-                    course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    "${course.completedLessons}/${course.totalLessons} lessons · ${formatStudiedDate(course.lastStudied)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(0.75f)
-                )
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color.White.copy(0.25f))
+                        .size(80.dp)
+                        .offset(x = 240.dp, y = (-20).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(0.08f))
+                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.PlayCircle,
+                            null,
+                            tint = Color.White,
+                            modifier = Modifier.size(13.dp)
+                        ); Text(
+                        str.courseContinueLearning,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(0.85f)
+                    )
+                    }
+                    Text(
+                        course.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${course.completedLessons}/${course.totalLessons} lessons · ${formatStudiedDate(course.lastStudied)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(0.75f)
+                    )
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(animProg)
-                            .fillMaxHeight()
-                            .background(Color.White, RoundedCornerShape(3.dp))
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.White.copy(0.25f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(animProg)
+                                .fillMaxHeight()
+                                .background(Color.White, RoundedCornerShape(3.dp))
+                        )
+                    }
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.surface)
+                    ) {
+                        Icon(
+                            Icons.Rounded.PlayArrow,
+                            null,
+                            tint = accent,
+                            modifier = Modifier.size(16.dp)
+                        ); Spacer(Modifier.width(6.dp)); Text(
+                        str.courseContinueLearning,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = accent,
+                        fontWeight = FontWeight.ExtraBold
                     )
-                }
-                Button(
-                    onClick = onContinue,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = cs.surface)
-                ) {
-                    Icon(
-                        Icons.Rounded.PlayArrow,
-                        null,
-                        tint = accent,
-                        modifier = Modifier.size(16.dp)
-                    ); Spacer(Modifier.width(6.dp)); Text(
-                    str.courseContinueLearning,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = accent,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                    }
                 }
             }
         }
     }
-}
 
-// ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 // COURSE PROGRESS CARD
 // ─────────────────────────────────────────────────────────────
-@Composable
-private fun CourseProgressCard(
-    course: LearningCourse,
-    isWishlisted: Boolean,
-    onToggleWishlist: () -> Unit,
-    onClick: () -> Unit
-) {
-    val cs = MaterialTheme.colorScheme
-    val progress =
-        if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
-    val animProg by animateFloatAsState(progress, tween(1000), label = "pp")
-    val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
-        BpscColors.Primary,
-        BpscColors.PrimaryLight
-    )
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+    @Composable
+    private fun CourseProgressCard(
+        course: LearningCourse,
+        isWishlisted: Boolean,
+        onToggleWishlist: () -> Unit,
+        onClick: () -> Unit
     ) {
-        Row(
+        val cs = MaterialTheme.colorScheme
+        val progress =
+            if (course.totalLessons > 0) course.completedLessons.toFloat() / course.totalLessons else 0f
+        val animProg by animateFloatAsState(progress, tween(1000), label = "pp")
+        val (accent, bg) = subjectColorMap()[course.subject] ?: Pair(
+            BpscColors.Primary,
+            BpscColors.PrimaryLight
+        )
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = cs.surface),
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(bg),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(subjectEmoji(course.subject), fontSize = 24.sp)
-                if (course.isPaid) Box(
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(3.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(BpscColors.CoinGold)
-                        .padding(horizontal = 2.dp, vertical = 1.dp)
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(bg),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "PRO",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontSize = 6.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    Text(subjectEmoji(course.subject), fontSize = 24.sp)
+                    if (course.isPaid) Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(3.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(BpscColors.CoinGold)
+                            .padding(horizontal = 2.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            "PRO",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontSize = 6.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
                 }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Text(
-                    course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cs.onSurface,
-                    fontWeight = FontWeight.ExtraBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    course.instructor,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text(
-                        "${course.completedLessons}/${course.totalLessons} lessons",
+                        course.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cs.onSurface,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        course.instructor,
                         style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurfaceVariant
                     )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = accent,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(bg)
-                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "${course.completedLessons}/${course.totalLessons} lessons",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant
+                        )
+                        Text(
+                            "${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = accent,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(animProg)
-                            .fillMaxHeight()
-                            .background(accent, RoundedCornerShape(3.dp))
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(bg)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(animProg)
+                                .fillMaxHeight()
+                                .background(accent, RoundedCornerShape(3.dp))
+                        )
+                    }
+                    if (course.hasCertificate && course.certificateDate != null) Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("🏆", fontSize = 11.sp); Text(
+                        "Certified · ${formatCertDate(course.certificateDate)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.CoinGold,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                if (course.hasCertificate && course.certificateDate != null) Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("🏆", fontSize = 11.sp); Text(
-                    "Certified · ${formatCertDate(course.certificateDate)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = BpscColors.CoinGold,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                    }
                 }
             }
         }
     }
-}
 
-// ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
-@Composable
-private fun StoreSectionHeader(title: String, subtitle: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    @Composable
+    private fun StoreSectionHeader(title: String, subtitle: String) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val cs = MaterialTheme.colorScheme
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = cs.onSurface,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurfaceVariant
+            )
+        }
+    }
+
+
+    @Composable
+    private fun CourseInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val cs = MaterialTheme.colorScheme
+            Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.labelSmall,
+                color = cs.onSurfaceVariant,
+                fontSize = 10.sp
+            )
+        }
+    }
+
+
+
+    @Composable
+    private fun LibSmallStat(icon: String, value: String, label: String) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            val cs = MaterialTheme.colorScheme
+            Text(icon, fontSize = 11.sp)
+            Text(
+                value,
+                style = MaterialTheme.typography.labelSmall,
+                color = cs.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 11.sp
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextHint,
+                fontSize = 8.sp
+            )
+        }
+    }
+
+    @Composable
+    private fun DetailStat(icon: String, value: String, label: String) {
         val cs = MaterialTheme.colorScheme
-        Text(
-            title,
-            style = MaterialTheme.typography.titleLarge,
-            color = cs.onSurface,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Text(
-            subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = cs.onSurfaceVariant
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(cs.background)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            Text(icon, fontSize = 16.sp)
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                color = cs.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 13.sp
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextHint,
+                fontSize = 9.sp
+            )
+        }
     }
-}
 
-
-@Composable
-private fun CourseInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        val cs = MaterialTheme.colorScheme
-        Icon(icon, null, tint = BpscColors.TextHint, modifier = Modifier.size(11.dp))
-        Text(
-            text,
-            style = MaterialTheme.typography.labelSmall,
-            color = cs.onSurfaceVariant,
-            fontSize = 10.sp
-        )
+    @Composable
+    private fun SheetStatWhite(icon: String, value: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val cs = MaterialTheme.colorScheme
+            Text(icon, fontSize = 12.sp)
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(0.85f),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
-}
 
-
-
-@Composable
-private fun LibSmallStat(icon: String, value: String, label: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(1.dp)
-    ) {
-        val cs = MaterialTheme.colorScheme
-        Text(icon, fontSize = 11.sp)
-        Text(
-            value,
-            style = MaterialTheme.typography.labelSmall,
-            color = cs.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 11.sp
-        )
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextHint,
-            fontSize = 8.sp
-        )
+    @Composable
+    private fun LearningStatItem(icon: String, value: String, label: String) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            val cs = MaterialTheme.colorScheme
+            Text(icon, fontSize = 13.sp)
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                color = cs.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 13.sp
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextHint,
+                fontSize = 9.sp
+            )
+        }
     }
-}
 
-@Composable
-private fun DetailStat(icon: String, value: String, label: String) {
-    val cs = MaterialTheme.colorScheme
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(cs.background)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Text(icon, fontSize = 16.sp)
-        Text(
-            value,
-            style = MaterialTheme.typography.titleMedium,
-            color = cs.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 13.sp
-        )
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextHint,
-            fontSize = 9.sp
-        )
+    private fun subjectColorMap() = mapOf(
+        "All" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
+        "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)),
+        "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)),
+        "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)),
+        "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)),
+        "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)),
+        "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)),
+        "Current Affairs" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
+    )
+
+    private fun subjectEmoji(subject: String) = when (subject) {
+        "All" -> "📚"; "Polity" -> "⚖️"; "History" -> "🏛️"; "Geography" -> "🗺️"
+        "Economy" -> "💰"; "Bihar GK" -> "🏔️"; "Science" -> "🔬"; "Current Affairs" -> "📰"; else -> "📖"
     }
-}
-
-@Composable
-private fun SheetStatWhite(icon: String, value: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        val cs = MaterialTheme.colorScheme
-        Text(icon, fontSize = 12.sp)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(0.85f),
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun LearningStatItem(icon: String, value: String, label: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        val cs = MaterialTheme.colorScheme
-        Text(icon, fontSize = 13.sp)
-        Text(
-            value,
-            style = MaterialTheme.typography.titleMedium,
-            color = cs.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 13.sp
-        )
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextHint,
-            fontSize = 9.sp
-        )
-    }
-}
-
-private fun subjectColorMap() = mapOf(
-    "All" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
-    "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)),
-    "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)),
-    "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)),
-    "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)),
-    "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)),
-    "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)),
-    "Current Affairs" to Pair(Color(0xFF1565C0), Color(0xFFE8F0FD)),
-)
-
-private fun subjectEmoji(subject: String) = when (subject) {
-    "All" -> "📚"; "Polity" -> "⚖️"; "History" -> "🏛️"; "Geography" -> "🗺️"
-    "Economy" -> "💰"; "Bihar GK" -> "🏔️"; "Science" -> "🔬"; "Current Affairs" -> "📰"; else -> "📖"
-}

@@ -31,7 +31,9 @@ import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.PostSessionAdPrompt
 import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import com.example.bpscnotes.data.remote.api.EndSessionResponseData
 import com.example.bpscnotes.data.remote.api.MyTierResponseData
 import com.example.bpscnotes.data.remote.api.TierMemberDto
@@ -77,6 +79,17 @@ fun StudyFocusScreen(
     val state      by viewModel.uiState.collectAsState()
     val tiersState by tiersViewModel.uiState.collectAsState()
     val activity = LocalContext.current as? Activity
+    val view     = LocalView.current
+
+    // Keep screen on for the entire duration of the study session.
+    // Clears FLAG_KEEP_SCREEN_ON when the composable leaves composition
+    // (user navigates away or session ends) so it doesn't stay on elsewhere.
+    DisposableEffect(Unit) {
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     var showEndConfirm    by remember { mutableStateOf(false) }
     var showPostSessionAd by remember { mutableStateOf(false) }
@@ -124,13 +137,25 @@ fun StudyFocusScreen(
         )
     }
 
-    // End confirm dialog
+    // End confirm dialog — show wall-clock elapsed so it matches the big timer
     if (showEndConfirm) {
+        val elapsedMins = state.elapsedSeconds / 60
         AlertDialog(
             onDismissRequest = { showEndConfirm = false },
             icon  = { Text("⏱️", fontSize = 28.sp) },
             title = { Text(str.focusEndSessionTitle, fontWeight = FontWeight.ExtraBold) },
-            text  = { Text("Your ${state.activeMinutes} min will be saved and coins awarded.") },
+            text  = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Your $elapsedMins min session will be saved and coins awarded.")
+                    if (elapsedMins != state.activeMinutes && state.activeMinutes > 0) {
+                        Text(
+                            "✅ ${state.activeMinutes} min already verified by heartbeat",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF2E7D32)
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = { showEndConfirm = false; viewModel.endSession(); showPostSessionAd = true },

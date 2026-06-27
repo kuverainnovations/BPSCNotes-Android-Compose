@@ -162,11 +162,12 @@ fun StudyMaterialsScreen(
 
     // Purchase dialog
     var showPurchaseDialog by remember { mutableStateOf<StudyMaterialDto?>(null) }
+    var dialogCoins        by remember { mutableStateOf(0) }   // coin slider value for purchase dialog
     LaunchedEffect(state.purchaseSuccess) {
         state.purchaseSuccess?.let {
             snackbarHost.showSnackbar(it)
             viewModel.clearPurchaseMessages()
-            showPurchaseDialog = null
+            showPurchaseDialog = null; dialogCoins = 0
         }
     }
     LaunchedEffect(state.purchaseError) {
@@ -191,7 +192,7 @@ fun StudyMaterialsScreen(
         if (sessionId.isBlank()) return@LaunchedEffect
 
         viewModel.consumePendingPurchase()
-        showPurchaseDialog = null
+        showPurchaseDialog = null; dialogCoins = 0
 
         launchCashfree(
             context   = context,
@@ -208,10 +209,15 @@ fun StudyMaterialsScreen(
 
     showPurchaseDialog?.let { item ->
         PurchaseConfirmDialog(
-            item         = item,
-            isPurchasing = state.purchasingId == item.id || state.isConfirmingPurchase,
-            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title) },
-            onDismiss    = { showPurchaseDialog = null; viewModel.clearPurchaseMessages() }
+            item                 = item,
+            isPurchasing         = state.purchasingId == item.id || state.isConfirmingPurchase,
+            coinsToApply         = dialogCoins,
+            onCoinsToApplyChange = { dialogCoins = it },
+            userCoins            = state.userCoins,
+            maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+            coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
+            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price ?: 0, item.title, dialogCoins) },
+            onDismiss    = { showPurchaseDialog = null; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }
 
@@ -405,7 +411,7 @@ fun StudyMaterialsScreen(
                         uploads   = state.myUploads,
                         isLoading = state.isLoadingList && state.myUploads.isEmpty(),
                         // Open PDF with full access — user owns their uploads, no page locks
-                            onOpenPdf    = { url, title, freePages, isPurchased,id,price ->
+                        onOpenPdf    = { url, title, freePages, isPurchased,id,price ->
                             openMaterial(context, navController, url, title, freePages, isPurchased = true,id,price, adManager = adManager)
                         },
                         onRefresh = { viewModel.refresh() },
@@ -475,7 +481,7 @@ fun StudyMaterialsScreen(
                     uploadedDate = detail.uploadedDate, uploaderName = detail.uploaderName,
                     price = detail.price,
                 )
-                showPurchaseDialog = dto
+                showPurchaseDialog = dto; dialogCoins = 0
             },
             myRatingStars      = state.myRatingStars,
             isSubmittingRating = state.isSubmittingRating,
@@ -1875,7 +1881,8 @@ private fun MaterialDetailSheet(
                     }
                 }
 
-                if (material.isPremium) {
+                // Premium lock banner — only show when NOT yet purchased
+                if (material.isPremium && !isPurchased) {
                     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                         .background(Color(0xFFFFF8E1)).padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1893,25 +1900,46 @@ private fun MaterialDetailSheet(
             HorizontalDivider(color = cs.outline)
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Save button removed — download option already serves this purpose
-                Button(onClick = if (!material.resolvedUrl.isNullOrBlank()) { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages,
-                    isPurchased || material.isFree,id,price) } } else onDownload,
-                    modifier = Modifier.weight(2f).height(48.dp), shape = RoundedCornerShape(12.dp),
+                val isPremiumLocked = material.isPremium && !isPurchased
+                Button(
+                    onClick = when {
+                        isPremiumLocked -> onPurchase   // ← show purchase dialog, NOT pdf viewer
+                        !material.resolvedUrl.isNullOrBlank() -> { { onOpenPdf(material.resolvedUrl ?: "", material.title, material.freePages, true, id, price) } }
+                        else -> onDownload
+                    },
+                    modifier = Modifier.weight(2f).height(52.dp), shape = RoundedCornerShape(14.dp),
                     enabled = !isDownloading,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = when { isDownloaded -> BpscColors.Success; material.isPremium -> BpscColors.CoinGold; else -> BpscColors.Primary })) {
+                        containerColor = when {
+                            isDownloaded    -> BpscColors.Success
+                            isPremiumLocked -> BpscColors.CoinGold
+                            else            -> BpscColors.Primary
+                        }
+                    )
+                ) {
                     if (isDownloading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(when { isDownloaded -> Icons.Rounded.CheckCircle; material.isPremium -> Icons.Rounded.Lock; else -> Icons.Rounded.Download }, null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            when {
+                                isDownloaded    -> Icons.Rounded.CheckCircle
+                                isPremiumLocked -> Icons.Rounded.Lock
+                                else            -> Icons.Rounded.Download
+                            },
+                            null, modifier = Modifier.size(18.dp)
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(when {
-                        isDownloaded -> str.materialsDownloadedDone
-                        material.isPremium -> str.materialsUnlockPro
-                        !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
-                        else -> str.materialsDownloadFree
-                    }, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        when {
+                            isDownloaded    -> str.materialsDownloadedDone
+                            isPremiumLocked -> "Unlock  ₹${price}"
+                            !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
+                            else            -> str.materialsDownloadFree
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -2839,6 +2867,12 @@ fun DownloadsTab(
 // PURCHASE CONFIRM DIALOG — shown when user taps Buy
 // Shows price, preview page count, and commission notice
 // ════════════════════════════════════════════════════════════
+/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
+private fun fmtRs(amount: Double): String {
+    return if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
+    else "₹${"%.2f".format(amount)}"
+}
+
 @Composable
 fun PurchaseConfirmDialog(
     item:         StudyMaterialDto,
@@ -2855,15 +2889,15 @@ fun PurchaseConfirmDialog(
     val str = LocalStrings.current
 
     val price = item.price ?: 0
-    // Mirrors the backend's Math.min(price, floor(coins * coin_to_inr_rate))
-    // exactly (studyMaterialsService.initPurchase) — coinDiscount is in
-    // rupees, coinsToApply is in coins.
-    val coinDiscount = minOf(price, (coinsToApply * coinToInrRate).toInt())
-    // Slider cap is in coins, so convert the price ceiling from rupees to
-    // coins via the live rate (admin: Coins page -> Economy Settings).
-    val priceInCoins = if (coinToInrRate > 0) (price / coinToInrRate).toInt() else 0
-    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) { minOf(maxCoinsPerPurchase, userCoins, priceInCoins) }
-    val amountDue = (price - coinDiscount).coerceAtLeast(0)
+    // coinDiscount and amountDue are Double so fractional rates (e.g. 0.33 per coin)
+    // are preserved and displayed correctly instead of being truncated to Int.
+    val coinDiscount: Double = minOf(price.toDouble(), coinsToApply * coinToInrRate)
+    val amountDue:    Double = (price.toDouble() - coinDiscount).coerceAtLeast(0.0)
+    // priceInCoins: ceiling so user never needs more coins than available price
+    val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
+    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) {
+        minOf(maxCoinsPerPurchase, userCoins, priceInCoins)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2911,22 +2945,70 @@ fun PurchaseConfirmDialog(
                 }
 
                 if (maxApplicable > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                            Text("Use coins for discount", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface)
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("🪙", fontSize = 14.sp)
-                                Text("$coinsToApply / $maxApplicable", style = MaterialTheme.typography.labelLarge,
-                                    color = BpscColors.CoinGold, fontWeight = FontWeight.Bold)
+                    // ── Coin redemption card ─────────────────────────────
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFFFFBEB))
+                            .border(1.dp, Color(0xFFFFE082), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Header row
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            Arrangement.SpaceBetween,
+                            Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("🪙", fontSize = 18.sp)
+                                Column {
+                                    Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                        color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
+                                    Text("You have $userCoins 🪙 available",
+                                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
+                                }
+                            }
+                            // Live coin count badge
+                            Box(
+                                Modifier.clip(RoundedCornerShape(20.dp))
+                                    .background(if (coinsToApply > 0) BpscColors.CoinGold else Color(0xFFE5E7EB))
+                                    .padding(horizontal = 12.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    if (coinsToApply > 0) "−${fmtRs(coinDiscount)}" else "₹0 off",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (coinsToApply > 0) Color.White else Color(0xFF6B7280),
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
+                        // Slider — steps=0 removes the dots entirely, smooth drag
                         Slider(
-                            value = coinsToApply.toFloat(),
+                            value         = coinsToApply.toFloat(),
                             onValueChange = { onCoinsToApplyChange(it.toInt()) },
-                            valueRange = 0f..maxApplicable.toFloat(),
-                            steps = if (maxApplicable > 1) maxApplicable - 1 else 0,
-                            colors = SliderDefaults.colors(thumbColor = BpscColors.CoinGold, activeTrackColor = BpscColors.CoinGold)
+                            valueRange    = 0f..maxApplicable.toFloat(),
+                            steps         = 0,   // ← no dots
+                            modifier      = Modifier.fillMaxWidth(),
+                            colors = SliderDefaults.colors(
+                                thumbColor            = BpscColors.CoinGold,
+                                activeTrackColor      = BpscColors.CoinGold,
+                                inactiveTrackColor    = Color(0xFFE5E7EB),
+                            )
                         )
+                        // Min / Max labels
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                            Text("1 🪙 = ₹${"%.2f".format(coinToInrRate)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                            Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                        }
+                        if (coinsToApply > 0) {
+                            Text(
+                                "Using $coinsToApply coins  ·  saves ${fmtRs(coinDiscount)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF065F46),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
 
@@ -2939,10 +3021,10 @@ fun PurchaseConfirmDialog(
                 ) {
                     Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("₹$amountDue", style = MaterialTheme.typography.titleLarge,
+                        Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                         if (coinsToApply > 0) {
-                            Text("🪙 $coinsToApply coins applied (−₹$coinDiscount)",
+                            Text("🪙 $coinsToApply coins applied (−${fmtRs(coinDiscount)})",
                                 style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
@@ -2962,11 +3044,11 @@ fun PurchaseConfirmDialog(
                         modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(str.courseProcessing)
-                } else if (amountDue == 0) {
+                } else if (amountDue == 0.0) {
                     Text(if (coinsToApply > 0) "🪙 Pay with $coinsToApply coins" else "Unlock for free",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 } else {
-                    Text("Pay ₹$amountDue",
+                    Text("Pay ${fmtRs(amountDue)}",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }

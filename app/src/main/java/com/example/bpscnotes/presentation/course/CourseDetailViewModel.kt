@@ -153,12 +153,12 @@ class CourseDetailViewModel @Inject constructor(
 
     // ── Enroll ────────────────────────────────────────────────
 
-    // FIX Issue 2/5: coins cannot be used for purchases — always pass 0
-    fun enroll(courseId: String) {
+    // FIX: accepts coinsToApply from the purchase dialog coin slider
+    fun enroll(courseId: String, coinsToApply: Int = 0) {
         viewModelScope.launch {
             _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
-                api.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply = 0))
+                api.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply = coinsToApply))
                 _uiState.update { it.copy(isEnrolling = false, enrollSuccess = true) }
                 bus.emit(RefreshEvent.CourseEnrolled)
                 cacheInvalidator.evict()           // stale enrollment data must not be served

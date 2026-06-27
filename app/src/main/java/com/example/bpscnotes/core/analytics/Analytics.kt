@@ -195,10 +195,10 @@ object Event {
         ))
 
     // ── Payment ───────────────────────────────────────────────
-    fun paymentInitiated(plan: String, amount: Int) =
+    fun paymentInitiated(plan: String, amount: Double) =
         Analytics.track("payment_initiated", mapOf("plan" to plan, "amount" to amount))
 
-    fun paymentSuccess(plan: String, amount: Int, method: String) {
+    fun paymentSuccess(plan: String, amount: Double, method: String) {
         Analytics.track("payment_success", mapOf(
             "plan"   to plan,
             "amount" to amount,

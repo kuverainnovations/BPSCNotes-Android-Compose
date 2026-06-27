@@ -150,11 +150,15 @@ class MyLearningViewModel @Inject constructor(
     // ── Enroll ─────────────────────────────────────────────────
     // FIX: coinsToApply removed — real-money Cashfree payment only
     fun enroll(courseId: String, courseTitle: String = "") {
+        enrollWithCoins(courseId, courseTitle, 0)
+    }
+
+    fun enrollWithCoins(courseId: String, courseTitle: String = "", coinsToApply: Int = 0) {
         viewModelScope.launch {
             _uiState.update { it.copy(isEnrolling = true, purchaseRequired = false) }
             try {
-                coursesApi.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply = 0))
-                cacheInvalidator.evict()           // stale enrollment data must not be served
+                coursesApi.enrollCourse(courseId, com.example.bpscnotes.data.remote.api.EnrollCourseRequest(coinsToApply = coinsToApply))
+                cacheInvalidator.evict()
                 load()
                 _uiState.update { s ->
                     s.copy(
@@ -177,7 +181,7 @@ class MyLearningViewModel @Inject constructor(
                             purchaseRequired        = true,
                             purchasePrice           = price,
                             purchaseSessionId       = sessionId,
-                            purchaseProviderOrderId = providerOrderId,  // FIX
+                            purchaseProviderOrderId = providerOrderId,
                             purchaseCourseId        = courseId,
                             purchaseCourseTitle     = courseTitle
                         )}

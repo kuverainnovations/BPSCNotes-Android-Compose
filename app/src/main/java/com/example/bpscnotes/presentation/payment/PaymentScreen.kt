@@ -1,5 +1,10 @@
 package com.example.bpscnotes.presentation.payment
 
+/** Format a rupee amount: whole number when exact (₹10), two decimals when fractional (₹3.30) */
+
+
+
+
 import android.app.Activity
 import android.content.Context
 import android.util.Log
@@ -204,7 +209,8 @@ fun SubscriptionPaymentScreen(
                             coinsAvailable = state.coinsAvailable,
                             coinsToUse     = state.coinsToUse,
                             coinToInrRate  = viewModel.coinsConfig.economy.coinToInrRate,
-                            onCoinsToggle  = { viewModel.toggleCoinsDiscount() }
+                            onCoinsToggle  = { viewModel.toggleCoinsDiscount() },
+                            onCoinsSlide   = { viewModel.setCoinsToUse(it) }
                         )
                     }
 
@@ -238,7 +244,7 @@ fun SubscriptionPaymentScreen(
                             Text(if (state.isCreatingOrder) str.paymentCreating else str.paymentConfirming,
                                 style = MaterialTheme.typography.titleMedium)
                         } else {
-                            Text("Pay ₹${state.finalAmount} →",
+                            Text("Pay ${fmtRs(state.finalAmount)} →",
                                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                         }
                     }
@@ -246,6 +252,11 @@ fun SubscriptionPaymentScreen(
             }
         }
     }
+}
+
+private fun fmtRs(amount: Double): String {
+    return if (amount == kotlin.math.floor(amount)) "₹${amount.toLong()}"
+    else "₹${"%.2f".format(amount)}"
 }
 
 // ── Plan card ─────────────────────────────────────────────────
@@ -359,11 +370,17 @@ private fun CouponSection(
 // ── Price breakdown ───────────────────────────────────────────
 @Composable
 private fun PriceBreakdown(
-    baseAmount: Int, couponDiscount: Int, coinDiscount: Int, finalAmount: Int,
-    coinsAvailable: Int, coinsToUse: Int, coinToInrRate: Double, onCoinsToggle: () -> Unit
+    baseAmount: Int, couponDiscount: Int, coinDiscount: Double, finalAmount: Double,
+    coinsAvailable: Int, coinsToUse: Int, coinToInrRate: Double,
+    onCoinsToggle: () -> Unit,
+    onCoinsSlide: (Int) -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val remainingPrice = (baseAmount - couponDiscount).coerceAtLeast(0)
+    val maxByPrice     = if (coinToInrRate > 0) kotlin.math.ceil(remainingPrice / coinToInrRate).toInt() else 0
+    val maxCoins       = minOf(coinsAvailable, maxByPrice).coerceAtLeast(0)
+
     Card(shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
@@ -372,31 +389,52 @@ private fun PriceBreakdown(
                 color = cs.onSurface, fontWeight = FontWeight.Bold)
             PriceRow(str.paymentBasePrice, "₹$baseAmount")
             if (couponDiscount > 0) PriceRow(str.paymentCouponDiscount, "−₹$couponDiscount", Color(0xFF2ECC71))
-            if (coinDiscount > 0)   PriceRow("Coin discount (${coinsToUse} 🪙)", "−₹$coinDiscount", Color(0xFFF57F17))
+            if (coinDiscount > 0.0) PriceRow("Coin discount (${coinsToUse} 🪙)", "−${fmtRs(coinDiscount)}", Color(0xFFF57F17))
             HorizontalDivider(color = cs.outline)
-            PriceRow(str.paymentTotal, "₹$finalAmount", BpscColors.Primary, bold = true)
+            PriceRow(str.paymentTotal, fmtRs(finalAmount), BpscColors.Primary, bold = true)
 
-            // Coins toggle
-            if (coinsAvailable > 0) {
-                Row(modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFFFF8E1))
-                    .clickable(onClick = onCoinsToggle)
-                    .padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🪙", fontSize = 18.sp)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Use ${coinsAvailable} coins", style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF5D4037), fontWeight = FontWeight.SemiBold)
-                        val rateLabel = if (coinToInrRate == coinToInrRate.toInt().toDouble())
-                            coinToInrRate.toInt().toString() else coinToInrRate.toString()
-                        Text("Save up to ₹${(coinsAvailable * coinToInrRate).toInt()} (1 coin = ₹$rateLabel)",
-                            style = MaterialTheme.typography.labelSmall, color = Color(0xFF8D6E63))
+            // ── Coin redemption slider ───────────────────────────────────
+            if (maxCoins > 0) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFF8E1))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("🪙", fontSize = 16.sp)
+                            Text("Redeem coins", style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF5D4037), fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("$coinsToUse / $maxCoins", style = MaterialTheme.typography.labelLarge,
+                                color = Color(0xFFF57F17), fontWeight = FontWeight.Bold)
+                            Text("🪙", fontSize = 12.sp)
+                        }
                     }
-                    Switch(checked = coinsToUse > 0, onCheckedChange = { onCoinsToggle() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFF57F17)))
+                    Slider(
+                        value         = coinsToUse.toFloat(),
+                        onValueChange = { onCoinsSlide(it.toInt()) },
+                        valueRange    = 0f..maxCoins.toFloat(),
+                        steps         = if (maxCoins > 1) maxCoins - 1 else 0,
+                        colors        = SliderDefaults.colors(
+                            thumbColor       = Color(0xFFF57F17),
+                            activeTrackColor = Color(0xFFF57F17)
+                        )
+                    )
+                    val rateLabel = if (coinToInrRate == coinToInrRate.toInt().toDouble())
+                        coinToInrRate.toInt().toString() else coinToInrRate.toString()
+                    Text(
+                        if (coinsToUse > 0) "Saves ${fmtRs(coinDiscount)}  ·  1 coin = ₹$rateLabel"
+                        else "Slide to use your $coinsAvailable coins  ·  1 coin = ₹$rateLabel",
+                        style = MaterialTheme.typography.labelSmall, color = Color(0xFF8D6E63)
+                    )
                 }
             }
         }
@@ -527,7 +565,7 @@ fun launchCashfree(
         //  }
         //
         // ── Until SDK is added to build.gradle, call onFailure to avoid crash ──
-     //   onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
+        //   onFailure(-99, "Cashfree SDK not yet linked. Add implementation(\"com.cashfree.pg:api:2.+\") to app/build.gradle.")
 
         // Resolve CFSession.Environment from the backend-provided string.
         // The payment_session_id is environment-scoped: a production session MUST
@@ -556,14 +594,10 @@ fun launchCashfree(
                 .setNavigationBarTextColor("#FFFFFF")
                 .build()
 
-            // ✅ FIXED
             val checkout = CFDropCheckoutPayment.CFDropCheckoutPaymentBuilder()
                 .setSession(session)
                 //.setTheme(theme)
                 .build()
-
-            CFPaymentGatewayService.getInstance()
-                .setCheckoutCallback(activity as CFCheckoutResponseCallback)  // ← ADD THIS LINE
 
             CFPaymentGatewayService.getInstance()
                 .doPayment(activity, checkout)
