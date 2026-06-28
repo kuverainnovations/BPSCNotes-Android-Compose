@@ -140,7 +140,7 @@ class DashboardViewModel @Inject constructor(
                 val statsJob   = async { safeGet("stats")   { statsApi.getStats().data } }
                 val targetsJob = async { safeGet("targets") { targetsApi.getDailyTargets().data } }
                 val liveClassesJob = async { safeGet("live-classes") {
-                    liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses }
+                    liveClassesApi.getLiveClasses(limit = 10).data?.liveClasses }
                 }
                 val notifJob = async { safeGet("notif-count") { statsApi.getNotifications(limit = 1).data?.unreadCount } }
                 val learningJob = async { safeGet("learning") { authApi.getLearningProgress().data?.inProgressSession } }

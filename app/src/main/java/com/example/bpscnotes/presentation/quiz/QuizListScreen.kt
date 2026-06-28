@@ -88,7 +88,7 @@ fun QuizListScreen(
                     drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
                     drawCircle(Color.White.copy(0.04f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.7f))
                 }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
                     Row(
                         modifier              = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -104,8 +104,8 @@ fun QuizListScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Daily Quizzes", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.quizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text("Daily Quizzes", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.quizTitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         // Real user coins
@@ -125,27 +125,27 @@ fun QuizListScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // Real user stats strip
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color.White.copy(0.1f))
-                            .padding(horizontal = 4.dp, vertical = 12.dp),
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         val p = state.userProfile
                         LobbyStatChip("🎯", if (p != null) "${p.accuracy}%" else "--",    "Accuracy")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🔥", if (p != null) "${p.streak}" else "--",               "Streak")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🏆", if (p?.rank != null) "#${p.rank}" else "--",          "Rank")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Attempted")
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     // Search bar
                     Row(
@@ -216,7 +216,7 @@ fun QuizListScreen(
             // ── Content ────────────────────────────────────────────
             when {
                 state.isLoadingList -> {
-                    com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 140.dp, itemCount = 5, itemHeight = 85.dp)
+                    com.example.bpscnotes.core.ui.ListScreenSkeleton(headerHeight = 120.dp, itemCount = 5, itemHeight = 85.dp)
                 }
                 state.listError != null -> AppErrorState(message = state.listError!!, onRetry = { viewModel.loadLobby() })
                 state.dailyQuizzes.isEmpty() && state.topicQuizzes.isEmpty() -> {
@@ -245,7 +245,7 @@ fun QuizListScreen(
                         }
                         if (visibleTopicQuizzes.isNotEmpty()) {
                             item { Spacer(Modifier.height(4.dp)) }
-                            item { SectionLabel("📝 " + str.quizTopic + "s", "Practice specific subjects") }
+                            item { SectionLabel("📝 Topic Quizzes", "Practice specific subjects") }
                             items(visibleTopicQuizzes, key = { it.id }) { quiz ->
                                 QuizCard(quiz = quiz) {
                                     navController.navigate(Screen.QuizDetail.createRoute(quiz.id))

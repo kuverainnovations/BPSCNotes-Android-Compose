@@ -425,10 +425,28 @@ fun CaArticleDetailScreen(
                                 Box(
                                     modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
                                         .clickable {
-                                            val shareText = "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app"
+                                            val headline = article.headline.stripHtmlTags()
+                                            val summary = article.summary.stripHtmlTags().take(300).let {
+                                                if (it.length == 300) "$it…" else it
+                                            }
+                                            val tags = article.tags
+                                                .filter { !it.equals("general", ignoreCase = true) }
+                                                .take(3)
+                                                .joinToString(" ") { "#${it.replace(" ", "")}" }
+                                            val shareText = buildString {
+                                                appendLine("📰 $headline")
+                                                appendLine()
+                                                if (summary.isNotBlank()) {
+                                                    appendLine(summary)
+                                                    appendLine()
+                                                }
+                                                if (tags.isNotBlank()) appendLine(tags)
+                                                appendLine()
+                                                append("📚 BPSCNotes App — Stay ahead in BPSC preparation")
+                                            }
                                             val intent = Intent(Intent.ACTION_SEND).apply {
                                                 type = "text/plain"
-                                                putExtra(Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
+                                                putExtra(Intent.EXTRA_SUBJECT, headline)
                                                 putExtra(Intent.EXTRA_TEXT, shareText)
                                             }
                                             context.startActivity(Intent.createChooser(intent, str.caShare))

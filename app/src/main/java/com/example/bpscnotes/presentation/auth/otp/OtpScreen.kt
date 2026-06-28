@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -96,11 +97,13 @@ fun OtpScreen(
         }
     }
 
+    val keyboardController = LocalSoftwareKeyboardController.current
     val fullOtp = otpValues.joinToString("") { it.value }
 
     // Auto-submit when all 6 digits are filled (paste or sequential entry)
     LaunchedEffect(fullOtp) {
         if (fullOtp.length == 6 && !isLoading) {
+            keyboardController?.hide()
             viewModel.verifyOtp(mobile, fullOtp, otpContext)
         }
     }
@@ -110,7 +113,7 @@ fun OtpScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
-            modifier          = Modifier.fillMaxWidth().statusBarsPadding()
+            modifier          = Modifier.fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

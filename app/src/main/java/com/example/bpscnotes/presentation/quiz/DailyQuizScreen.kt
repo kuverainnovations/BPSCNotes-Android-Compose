@@ -149,7 +149,7 @@ private fun QuizLobbyScreen(
                     drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
                     drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
                 }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -165,8 +165,8 @@ private fun QuizLobbyScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text(str.quizDaily, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.quizDaily, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.quizDaily, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.quizDaily, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         // Coins — REAL from user profile
@@ -188,14 +188,14 @@ private fun QuizLobbyScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // Stats strip — REAL from user profile
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color.White.copy(0.1f))
-                            .padding(horizontal = 4.dp, vertical = 12.dp),
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         val streak   = state.userProfile?.streak
@@ -205,11 +205,11 @@ private fun QuizLobbyScreen(
                         val formatted = String.format("%.2f", accuracy)
 
                         LobbyStatChip("🎯", if (accuracy != null) "$formatted%" else "--", str.quizDailyAccuracy)
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🔥", if (streak != null) "$streak" else "--", "Day Streak")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("🏆", if (rank != null) "#$rank" else "--", "Rank")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyStatChip("✅", if (solved != null) "$solved" else "--", "Solved")
                     }
                 }
@@ -676,8 +676,8 @@ internal fun QuizSummaryScreen(
                     onClick  = onExit,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape    = RoundedCornerShape(14.dp),
-                    border   = BorderStroke(1.dp, Color.White.copy(0.4f)),
-                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    border   = BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.5f)),
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
                 ) {
                     Icon(Icons.Rounded.Home, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                     Text(str.back, style = MaterialTheme.typography.titleMedium)

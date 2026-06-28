@@ -28,13 +28,13 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.profile.ProfileViewModel
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
 
@@ -403,7 +403,7 @@ fun SettingsScreen(
                             title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle,
                             onClick = {
                                 CustomTabsIntent.Builder().build()
-                                    .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
+                                    .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy/"))
                             }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)

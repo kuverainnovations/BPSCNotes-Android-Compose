@@ -457,16 +457,16 @@ private fun BannerSection(
                     }
                     Column(
                         modifier = Modifier
-                            .align(Alignment.CenterStart)
+                            .align(Alignment.TopStart)
                             .fillMaxWidth(0.7f)
                     ) {
                         Text(banner.title, style = MaterialTheme.typography.titleMedium,
                             color = Color.White, fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
                         banner.subtitle?.let {
                             Spacer(Modifier.height(4.dp))
                             Text(it, style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                color = Color.White.copy(0.85f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     // CTA pill — pinned to BottomEnd, always visible
@@ -1751,12 +1751,30 @@ private fun MyScheduleSection(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val context = androidx.compose.ui.platform.LocalContext.current
+    var showHistory by remember { mutableStateOf(false) }
+
+    val upcoming = remember(liveClasses) { liveClasses.filter { it.status != "ended" } }
+    val history  = remember(liveClasses) { liveClasses.filter { it.status == "ended" } }
+    val displayed = if (showHistory) history else upcoming
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        SectionHeader(str.dashboardMySchedule, str.dashboardUpcomingEvents)
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) {
+                SectionHeader(str.dashboardMySchedule, str.dashboardUpcomingEvents)
+            }
+            if (history.isNotEmpty()) {
+                TextButton(onClick = { showHistory = !showHistory }) {
+                    Text(
+                        if (showHistory) "Upcoming" else "History (${history.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = BpscColors.Primary
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(12.dp))
 
-        if (liveClasses.isEmpty()) {
+        if (displayed.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1766,7 +1784,7 @@ private fun MyScheduleSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    str.dashboardNoClasses,
+                    if (showHistory) "No past classes" else str.dashboardNoClasses,
                     style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant
                 )
@@ -1774,13 +1792,17 @@ private fun MyScheduleSection(
             return
         }
 
-        liveClasses.forEach { item ->
+        displayed.forEach { item ->
 
-            val isLive = item.status == "live"   // 🔥 IMPORTANT FIX
+            val isLive = item.status == "live"
+            val isEnded = item.status == "ended"
 
-            val color = if (isLive) Color(0xFFE74C3C) else BpscColors.Primary
+            val color = when {
+                isLive  -> Color(0xFFE74C3C)
+                isEnded -> BpscColors.TextSecondary
+                else    -> BpscColors.Primary
+            }
 
-            // Determine click action based on class status
             val isRegistered = registeredClassIds.contains(item.id)
             val onCardClick: () -> Unit = {
                 when (item.status) {
@@ -1799,10 +1821,8 @@ private fun MyScheduleSection(
                             viewModel.setScheduleToast(str.dashboardNoMeetingLink)
                         }
                     }
-
                     "ended" -> { viewModel.setScheduleToast(str.dashboardClassEnded) }
                     else -> {
-                        // Scheduled → register
                         if (!isRegistered) {
                             viewModel.registerLiveClass(item.id)
                             com.example.bpscnotes.core.analytics.Event.liveClassRegistered(item.id, item.title)
@@ -1816,10 +1836,11 @@ private fun MyScheduleSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 10.dp)
-                    .clickable(onClick = onCardClick),
+                    .clickable(onClick = onCardClick)
+                    .then(if (isEnded) Modifier.alpha(0.65f) else Modifier),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = cs.surface),
-                elevation = CardDefaults.cardElevation(2.dp)
+                elevation = CardDefaults.cardElevation(if (isEnded) 0.dp else 2.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
 
@@ -1851,7 +1872,7 @@ private fun MyScheduleSection(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Rounded.PlayCircle,
+                                if (isEnded) Icons.Rounded.History else Icons.Rounded.PlayCircle,
                                 contentDescription = null,
                                 tint = color,
                                 modifier = Modifier.size(22.dp)
@@ -1867,9 +1888,8 @@ private fun MyScheduleSection(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-
                             Text(
-                                formatDateTime(item.scheduledAt), // 👇 helper
+                                formatDateTime(item.scheduledAt),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant
                             )
@@ -1889,7 +1909,7 @@ private fun MyScheduleSection(
                                 Text("LIVE", style = MaterialTheme.typography.labelSmall,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                             }
-                            item.status == "ended" -> Text(
+                            isEnded -> Text(
                                 "Ended",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.TextHint,

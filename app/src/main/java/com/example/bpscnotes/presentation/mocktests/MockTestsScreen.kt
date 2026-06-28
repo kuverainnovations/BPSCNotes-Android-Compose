@@ -410,7 +410,7 @@ private fun MockTestLobbyScreen(
                     drawCircle(Color.White.copy(0.05f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
                     drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
                 }
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -424,8 +424,8 @@ private fun MockTestLobbyScreen(
                                 contentAlignment = Alignment.Center
                             ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                             Column {
-                                Text(str.quizMock + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.quizPracticeReal, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                Text(str.quizMock + "s", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.quizPracticeReal, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         // Custom test button
@@ -442,26 +442,26 @@ private fun MockTestLobbyScreen(
                          }*/
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // Stats strip
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Color.White.copy(0.1f))
-                            .padding(horizontal = 4.dp, vertical = 10.dp),
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         LobbyChip("📝", "${allTests.size}", "Tests")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyChip("✅", state.userQuizzesAttempted.toString(), "Attempted")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyChip("🏆", "#${state.userRank ?: "--"}", "Best Rank")
-                        Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
+                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
                         LobbyChip("📊", "${state.userAccuracy.toInt()}%", "Best Score")
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     // Type filter tabs — dynamic from available test types
                     LazyRow(

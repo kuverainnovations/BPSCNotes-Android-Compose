@@ -173,7 +173,7 @@ fun CurrentAffairsScreen(
                         drawCircle(Color.White.copy(0.05f), 150.dp.toPx(), Offset(size.width + 20.dp.toPx(), -40.dp.toPx()))
                         drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.6f))
                     }
-                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -184,8 +184,8 @@ fun CurrentAffairsScreen(
                                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 }
                                 Column {
-                                    Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                    Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                                    Text(str.caTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                    Text(str.caSubtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                                 }
                             }
                             if (state.userCoins > 0) {
@@ -200,7 +200,7 @@ fun CurrentAffairsScreen(
                             }
                         }
 
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(10.dp))
 
                         // Search bar
                         Row(
@@ -226,7 +226,7 @@ fun CurrentAffairsScreen(
                             }
                         }
 
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         // Tabs
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

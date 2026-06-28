@@ -883,7 +883,9 @@ private fun QuizResultScreen(
                     ResultStat("✅", "${result.correctCount}", "Correct", BpscColors.Success)
                     ResultStat("❌", "${result.wrongCount}", "Wrong", Color(0xFFE74C3C))
                     ResultStat("⏭️", "${result.skippedCount}", "Skipped", BpscColors.TextSecondary)
-                    ResultStat("🪙", "+${result.coinsEarned}", "Coins", BpscColors.CoinGold)
+                    if (result.coinsEarned > 0) {
+                        ResultStat("🪙", "+${result.coinsEarned}", "Coins", BpscColors.CoinGold)
+                    }
                 }
             }
 
@@ -957,8 +959,8 @@ private fun QuizResultScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(0.4f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    border = BorderStroke(1.dp, BpscColors.Primary.copy(0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary)
                 ) {
                     Icon(Icons.Rounded.Share, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
@@ -976,8 +978,8 @@ private fun QuizResultScreen(
                 OutlinedButton(onClick = onRetake, Modifier
                     .fillMaxWidth()
                     .height(48.dp), shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(0.5f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                    border = BorderStroke(1.dp, BpscColors.Primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary)) {
                     Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(str.quizRetake, style = MaterialTheme.typography.titleMedium)
@@ -985,8 +987,8 @@ private fun QuizResultScreen(
                 OutlinedButton(onClick = onExit, Modifier
                     .fillMaxWidth()
                     .height(48.dp), shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(0.3f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(0.7f))) {
+                    border = BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)) {
                     Icon(Icons.Rounded.Home, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(str.quizBackToQuizzes, style = MaterialTheme.typography.titleMedium)

@@ -463,9 +463,9 @@ private fun QuizScreen(
             modifier = Modifier.fillMaxWidth()
                 .background(Brush.linearGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -797,8 +797,8 @@ private fun ResultScreen(
                 if (negativeMarkingEnabled && (notAttempted > 0 || blank > 0)) {
                     HorizontalDivider(color = cs.outline)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ResultStat("⊘", "$notAttempted", "Not Attempted (0)", Color(0xFFF57F17))
-                        ResultStat("⏰", "$blank", "Left Blank (−)", Color(0xFFE74C3C))
+                        ResultStat("⊘", "$notAttempted", "Safe Skip", Color(0xFFF57F17))
+                        ResultStat("⬜", "$blank", "Unanswered", Color(0xFFE74C3C))
                     }
                 } else if (!negativeMarkingEnabled) {
                     HorizontalDivider(color = cs.outline)
@@ -814,13 +814,19 @@ private fun ResultScreen(
             Spacer(Modifier.height(12.dp))
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(4.dp, 18.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Primary))
+                        Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    }
                     HorizontalDivider(color = cs.outline)
                     com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Marks Earned", "+${com.example.bpscnotes.presentation.quiz.formatMarks(marksObtained)}", valueColor = Color(0xFF2ECC71))
-                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Negative Marks", "-${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}", valueColor = Color(0xFFE74C3C))
+                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Penalty (${blank} unanswered)", "−${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}", valueColor = Color(0xFFE74C3C))
                     HorizontalDivider(color = cs.outline)
-                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Final Score", "${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)} / ${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}", valueColor = BpscColors.Primary)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(BpscColors.Primary.copy(0.07f)).padding(10.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text("Final Score", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                        Text("${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)} / ${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
+                    }
                 }
             }
         }
@@ -846,8 +852,8 @@ private fun ResultScreen(
             }
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.4f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                border = androidx.compose.foundation.BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)) {
                 Icon(Icons.Rounded.ArrowBack, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                 Text(str.caBackToArticle, style = MaterialTheme.typography.titleMedium)
             }
