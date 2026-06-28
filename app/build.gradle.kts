@@ -106,8 +106,9 @@ dependencies {
     // Chrome Custom Tab — in-app browser for privacy policy / terms
     implementation("androidx.browser:browser:1.8.0")
 
-    // Payments
-    implementation("com.razorpay:checkout:1.6.40")
+    // Payments — Cashfree (web purchases / debug) + Google Play Billing (production)
+    // Razorpay removed: confirmed unused in Architecture Audit (CRIT-06)
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
 
     // Lottie
     implementation("com.airbnb.android:lottie-compose:6.4.0")

@@ -226,18 +226,32 @@ fun SubscriptionPaymentScreen(
                 // Pay button
                 Box(modifier = Modifier.fillMaxWidth().background(cs.surface)
                     .padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    val activity = context as? android.app.Activity
+                    val isBusy = state.isCreatingOrder || state.isConfirming || state.gplayVerifying
                     Button(
-                        onClick  = { viewModel.createOrder() },
-                        enabled  = state.selectedPlan != null && !state.isCreatingOrder && !state.isConfirming,
+                        onClick  = {
+                            if (state.useGPlay && activity != null) {
+                                viewModel.startGPlayPurchase(activity)
+                            } else {
+                                viewModel.createOrder()
+                            }
+                        },
+                        enabled  = state.selectedPlan != null && !isBusy,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape    = RoundedCornerShape(14.dp),
                         colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                     ) {
-                        if (state.isCreatingOrder || state.isConfirming) {
+                        if (isBusy) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                             Spacer(Modifier.width(10.dp))
-                            Text(if (state.isCreatingOrder) str.paymentCreating else str.paymentConfirming,
-                                style = MaterialTheme.typography.titleMedium)
+                            Text(when {
+                                state.isCreatingOrder  -> str.paymentCreating
+                                state.gplayVerifying   -> "Activating…"
+                                else                   -> str.paymentConfirming
+                            }, style = MaterialTheme.typography.titleMedium)
+                        } else if (state.useGPlay) {
+                            Text("Subscribe via Google Play →",
+                                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                         } else {
                             Text("Pay ${fmtRs(state.finalAmount)} →",
                                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)

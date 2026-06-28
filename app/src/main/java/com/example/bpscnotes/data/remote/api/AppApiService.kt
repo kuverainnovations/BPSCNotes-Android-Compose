@@ -143,6 +143,16 @@ data class ConfirmSubscriptionRequest(
     val upiId: String? = null
 )
 
+data class GPlayVerifyRequest(
+    val purchaseToken: String,
+    val productId: String
+)
+
+data class GPlayVerifyData(
+    val subscriptionId: String = "",
+    val bonusCoins: Int = 0
+)
+
 data class CoursePurchaseRequiredData(
     val price: Double,
     val paymentSessionId: String?,      // → Cashfree Android SDK
@@ -621,6 +631,10 @@ interface CoursesApiService {
     /** GET /subscriptions/status — active subscription for current user */
     @GET("subscriptions/status")
     suspend fun getSubscriptionStatus(): ApiResponse<SubscriptionStatusData>
+
+    /** POST /subscriptions/gplay/verify — verify Google Play purchase and activate */
+    @POST("subscriptions/gplay/verify")
+    suspend fun verifyGPlaySubscription(@Body dto: GPlayVerifyRequest): ApiResponse<GPlayVerifyData>
 
     /** POST /courses/:id/purchase/confirm — verify payment, enroll in course */
     @POST("courses/{id}/purchase/confirm")

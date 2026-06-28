@@ -1,13 +1,17 @@
 package com.example.bpscnotes.presentation.payment
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.billingclient.api.ProductDetails
+import com.example.bpscnotes.BuildConfig
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest
 import com.example.bpscnotes.data.remote.api.ConfirmSubscriptionRequest
 import com.example.bpscnotes.data.remote.api.CreateSubscriptionRequest
+import com.example.bpscnotes.data.remote.api.GPlayVerifyRequest
 import com.example.bpscnotes.data.remote.api.SubscriptionPlanDto
 import com.example.bpscnotes.core.analytics.Event
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,10 +61,21 @@ data class PaymentState(
     val coursePrice: Double                = 0.0,
     val _pendingSessionId: String?          = null,   // stored until user taps Pay
 
+    // Google Play Billing — only active in release builds
+    val useGPlay: Boolean                   = false,
+    val gplayVerifying: Boolean             = false,
+
     // Result
     val isSuccess: Boolean                  = false,
     val bonusCoins: Int                     = 0,
     val error: String?                      = null,
+)
+
+// Maps backend plan IDs to Google Play subscription product IDs
+private val PLAN_TO_GPLAY_PRODUCT = mapOf(
+    "monthly"   to "bpscnotes_monthly",
+    "quarterly" to "bpscnotes_quarterly",
+    "annual"    to "bpscnotes_annual"
 )
 
 @HiltViewModel
@@ -69,14 +84,88 @@ class PaymentViewModel @Inject constructor(
     private val authApi: AuthApiService,
     private val tokenStore: TokenStore,
     private val bus: RefreshEventBus,
+    private val billing: BillingClientWrapper,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(PaymentState())
     val state: StateFlow<PaymentState> = _state.asStateFlow()
 
+    // Keyed by Play product ID; populated in loadPlans() when useGPlay is true
+    private val productDetailsCache = mutableMapOf<String, ProductDetails>()
+
     init {
+        val useGPlay = !BuildConfig.DEBUG
+        _state.update { it.copy(useGPlay = useGPlay) }
         loadPlans()
         loadUserInfo()
+        if (useGPlay) {
+            collectGPlayPurchases()
+        }
+    }
+
+    private fun collectGPlayPurchases() {
+        viewModelScope.launch {
+            billing.purchasesFlow.collect { purchases ->
+                purchases.firstOrNull()?.let { purchase ->
+                    val productId = purchase.products.firstOrNull() ?: return@let
+                    verifyGPlayPurchase(purchase.purchaseToken, productId)
+                }
+            }
+        }
+    }
+
+    fun startGPlayPurchase(activity: Activity) {
+        val plan = _state.value.selectedPlan ?: return
+        val productId = PLAN_TO_GPLAY_PRODUCT[plan.id] ?: run {
+            _state.update { it.copy(error = "No Play Store product for plan: ${plan.id}") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isCreatingOrder = true, error = null) }
+            try {
+                val details = productDetailsCache[productId]
+                    ?: billing.queryProductDetails(listOf(productId)).firstOrNull()
+                    ?: run {
+                        _state.update { it.copy(isCreatingOrder = false, error = "Plan not found on Play Store") }
+                        return@launch
+                    }
+                productDetailsCache[productId] = details
+                val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken
+                val result = billing.launchBillingFlow(activity, details, offerToken)
+                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    _state.update { it.copy(
+                        isCreatingOrder = false,
+                        error = "Could not open Play Store checkout (${result.debugMessage})"
+                    )}
+                } else {
+                    _state.update { it.copy(isCreatingOrder = false) }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isCreatingOrder = false, error = parseError(e.message)) }
+            }
+        }
+    }
+
+    private fun verifyGPlayPurchase(purchaseToken: String, productId: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(gplayVerifying = true, error = null) }
+            try {
+                val res = api.verifyGPlaySubscription(GPlayVerifyRequest(
+                    purchaseToken = purchaseToken,
+                    productId     = productId
+                ))
+                val bonusCoins = res.data?.bonusCoins ?: 0
+                val plan       = _state.value.selectedPlan?.id ?: productId
+                Event.paymentSuccess(plan, _state.value.finalAmount, "gplay")
+                bus.emit(RefreshEvent.SubscriptionChanged)
+                _state.update { it.copy(gplayVerifying = false, isSuccess = true, bonusCoins = bonusCoins) }
+            } catch (e: Exception) {
+                _state.update { it.copy(
+                    gplayVerifying = false,
+                    error = "Purchase received but activation failed. Contact support with purchase token: ${purchaseToken.take(16)}…"
+                )}
+            }
+        }
     }
 
     // Mirrors SubscriptionsService.initiate() — keeps preview in sync with backend math.
