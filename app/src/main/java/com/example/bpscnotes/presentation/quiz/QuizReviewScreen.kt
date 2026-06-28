@@ -102,6 +102,7 @@ internal fun QuizReviewScreen(
                 // During play (before submit): we don't know correct answer yet
                 val resultKnown = correctLetter != null
                 val isCorrect   = resultKnown && selectedLetter == correctLetter
+                // Only reveal correct option when user got it right — no cheating on wrong/skipped
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -186,24 +187,23 @@ internal fun QuizReviewScreen(
                         // Options — skip empty ones (questions may have 2 or 3 options)
                         question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed
-                            val isUserChoice   = i == selectedIndex
-                            // Always highlight the correct option in green when result is known
-                            // so users can learn the right answer even when they were wrong.
-                            val isCorrectOpt   = resultKnown && i == correctIndex
+                            val isUserChoice = i == selectedIndex
+                            // Only show correct option when user answered it correctly — never reveal on wrong/skip
+                            val isCorrectOpt = isCorrect && i == correctIndex
 
                             val bgOpt = when {
-                                isCorrectOpt                    -> Color(0xFFE8FDF4)
-                                isUserChoice && !isCorrectOpt
-                                        && resultKnown          -> Color(0xFFFEE8E8)
-                                isUserChoice && !resultKnown    -> BpscColors.PrimaryLight  // selected, result pending
-                                else                            -> Color.Transparent
+                                isCorrectOpt                 -> Color(0xFFE8FDF4)   // user got it right
+                                isUserChoice && !isCorrect
+                                        && resultKnown       -> Color(0xFFFEE8E8)   // user's wrong choice
+                                isUserChoice && !resultKnown -> BpscColors.PrimaryLight
+                                else                         -> Color.Transparent
                             }
                             val txtOpt = when {
-                                isCorrectOpt                    -> BpscColors.Success
-                                isUserChoice && !isCorrectOpt
-                                        && resultKnown          -> Color(0xFFE74C3C)
-                                isUserChoice && !resultKnown    -> BpscColors.Primary
-                                else                            -> BpscColors.TextSecondary
+                                isCorrectOpt                 -> BpscColors.Success
+                                isUserChoice && !isCorrect
+                                        && resultKnown       -> Color(0xFFE74C3C)
+                                isUserChoice && !resultKnown -> BpscColors.Primary
+                                else                         -> BpscColors.TextSecondary
                             }
 
                             Row(
@@ -233,7 +233,7 @@ internal fun QuizReviewScreen(
                                         tint     = BpscColors.Success,
                                         modifier = Modifier.size(14.dp)
                                     )
-                                    isUserChoice && !isCorrectOpt && resultKnown -> Icon(
+                                    isUserChoice && !isCorrect && resultKnown -> Icon(
                                         Icons.Rounded.Cancel, null,
                                         tint     = Color(0xFFE74C3C),
                                         modifier = Modifier.size(14.dp)
@@ -242,8 +242,8 @@ internal fun QuizReviewScreen(
                             }
                         }
 
-                        // Explanation — only shown if revealed (after submit)
-                        if (!question.explanation.isNullOrBlank()) {
+                        // Explanation — only shown when user answered correctly (not on wrong/skip)
+                        if (!question.explanation.isNullOrBlank() && isCorrect) {
                             HorizontalDivider(color = BpscColors.Divider)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(

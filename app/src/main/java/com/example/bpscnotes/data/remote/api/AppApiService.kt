@@ -838,7 +838,7 @@ data class LeaderboardData(
 )
 
 interface GlobalLeaderboardApiService {
-    @GET("leaderboard")
+    @GET("users/leaderboard")
     suspend fun getLeaderboard(
         @Query("type") type: String = "coins",
         @Query("exam") exam: String? = null,

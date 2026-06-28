@@ -101,18 +101,20 @@ class DownloadsViewModel @Inject constructor(
                     // File is at context.filesDir/materials/<id>.<ext>
                     val localPath = tokenStore.getLocalPath(dto.id)
                     val localFile = if (localPath != null) java.io.File(localPath) else null
-                    val fileExists = localFile?.exists() == true
+                    val fileExists = localFile?.exists() == true && (localFile?.length() ?: 0L) > 0L
+
+                    // Skip items whose file no longer exists on disk — don't show "File Missing"
+                    if (!fileExists) return@forEach
 
                     items.add(DownloadedFileItem(
                         id           = dto.id,
                         title        = dto.title,
                         subject      = dto.subject,
                         materialType = dto.materialType,
-                        fileSizeMb   = if (fileExists) localFile!!.length() / 1048576f
-                        else dto.fileSizeBytes / 1048576f,
+                        fileSizeMb   = localFile!!.length() / 1048576f,
                         downloadedAt = dto.downloadedAt,
                         localPath    = localPath ?: "",
-                        fileExists   = fileExists
+                        fileExists   = true
                     ))
                 }
 
@@ -351,9 +353,7 @@ private fun DownloadedFileCard(
     }
 
     Card(
-        modifier  = Modifier.fillMaxWidth().then(
-            if (item.fileExists) Modifier.clickable(onClick = onOpen) else Modifier
-        ),
+        modifier  = Modifier.fillMaxWidth().clickable(onClick = onOpen),
         shape     = RoundedCornerShape(16.dp),
         colors    = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)
@@ -377,12 +377,8 @@ private fun DownloadedFileCard(
                     if (sizeLabel.isNotEmpty())
                         Text(sizeLabel, style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.TextHint, fontSize = 10.sp)
-                    if (!item.fileExists)
-                        Text(str.placeholderFileMissing, style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFE74C3C), fontSize = 10.sp)
-                    else
-                        Text(str.placeholderOnDevice, style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.Success, fontSize = 10.sp)
+                    Text(str.placeholderOnDevice, style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.Success, fontSize = 10.sp)
                 }
             }
 

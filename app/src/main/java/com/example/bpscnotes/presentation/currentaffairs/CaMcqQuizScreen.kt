@@ -440,8 +440,10 @@ private fun QuizScreen(
     val q        = mcqs[currentIndex]
     val answered = answers[q.id]
     val serverAns = serverAnswers[q.id]
-    var showQuit by remember { mutableStateOf(false) }
+    var showQuit    by remember { mutableStateOf(false) }
+    var hintVisible by remember(q.id) { mutableStateOf(false) }
     val progress by animateFloatAsState((currentIndex + 1f) / mcqs.size, tween(400), label = "prog")
+    val hasHint = !q.hint.isNullOrBlank()
 
     BackHandler { showQuit = true }
 
@@ -632,43 +634,6 @@ private fun QuizScreen(
                 }
             }
 
-            // ── Hint — hidden behind toggle so student can attempt first ──
-            if (!q.hint.isNullOrBlank()) {
-                var hintVisible by remember(q.id) { mutableStateOf(false) }
-                Column(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFFF8E1))
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { hintVisible = !hintVisible }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("💡", fontSize = 14.sp)
-                            Text("Show Hint", style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFF795548), fontWeight = FontWeight.Bold)
-                        }
-                        Icon(
-                            if (hintVisible) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = Color(0xFF795548),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    AnimatedVisibility(visible = hintVisible) {
-                        Text(
-                            q.hint,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF795548),
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
-                        )
-                    }
-                }
-            }
-
             // ── Explanation — shown only AFTER answering ──
             val explanation = serverAns?.explanation ?: if (answered != null) q.explanation else null
             if (answered != null && !explanation.isNullOrBlank()) {
@@ -705,19 +670,82 @@ private fun QuizScreen(
             }
         }
 
-        // ── Next / Submit button ───────────────────────────────
-        if (answered != null) {
-            Box(modifier = Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 12.dp)) {
-                Button(
-                    onClick  = onNext,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+        // ── Static bottom bar: Hint + Next ────────────────────
+        if (hasHint || answered != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = cs.surface,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        if (currentIndex < mcqs.size - 1) str.caNxtQuestion else str.caSeeResults,
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    // Hint text — expands above buttons when toggled
+                    if (hasHint) {
+                        AnimatedVisibility(visible = hintVisible) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFFFF8E1))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("💡", fontSize = 14.sp)
+                                Text(
+                                    q.hint ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF795548),
+                                    lineHeight = 18.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                    // Button row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (hasHint) {
+                            OutlinedButton(
+                                onClick  = { hintVisible = !hintVisible },
+                                modifier = Modifier
+                                    .let { if (answered != null) it.weight(1f) else it.fillMaxWidth() }
+                                    .height(52.dp),
+                                shape  = RoundedCornerShape(14.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.5.dp, if (hintVisible) BpscColors.CoinGold else cs.outline),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = if (hintVisible) BpscColors.CoinGold else BpscColors.TextSecondary
+                                )
+                            ) {
+                                Text("💡", fontSize = 14.sp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    if (hintVisible) "Hide" else "Hint",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                        if (answered != null) {
+                            Button(
+                                onClick  = onNext,
+                                modifier = Modifier
+                                    .let { if (hasHint) it.weight(1.5f) else it.fillMaxWidth() }
+                                    .height(52.dp),
+                                shape  = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                            ) {
+                                Text(
+                                    if (currentIndex < mcqs.size - 1) str.caNxtQuestion else str.caSeeResults,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -749,116 +777,147 @@ private fun ResultScreen(
 
     BackHandler { onBack() }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0), BpscColors.Surface)))
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.statusBarsPadding())
-        Spacer(Modifier.height(32.dp))
-        Text(if (pct >= 80) "🏆" else if (pct >= 50) "👍" else "📚", fontSize = 56.sp)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            when { pct >= 80 -> str.caExcellent; pct >= 60 -> str.caWellDone; pct >= 40 -> str.caGoodEffort; else -> str.caKeepPracticing },
-            style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold
-        )
-        Spacer(Modifier.height(24.dp))
+    Column(Modifier.fillMaxSize()) {
 
-        // Score ring
-        Box(modifier = Modifier.size(130.dp), contentAlignment = Alignment.Center) {
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                val stroke = 10.dp.toPx(); val inset = stroke / 2
-                val sz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-                drawArc(Color.White.copy(0.15f), -90f, 360f, false,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(stroke),
-                    topLeft = androidx.compose.ui.geometry.Offset(inset, inset), size = sz)
-                drawArc(Brush.sweepGradient(listOf(Color(0xFF64B5F6), Color.White)), -90f, animPct * 360f, false,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = StrokeCap.Round),
-                    topLeft = androidx.compose.ui.geometry.Offset(inset, inset), size = sz)
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$pct%", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                Text(str.quizScore, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+        // ── TOP: gradient header ──────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.42f)
+                .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                .statusBarsPadding()
+                .padding(top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(if (pct >= 80) "🏆" else if (pct >= 50) "👍" else "📚", fontSize = 44.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                when { pct >= 80 -> str.caExcellent; pct >= 60 -> str.caWellDone; pct >= 40 -> str.caGoodEffort; else -> str.caKeepPracticing },
+                style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.size(108.dp), Alignment.Center) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val stroke = 10.dp.toPx(); val inset = stroke / 2
+                    val sz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                    drawArc(Color.White.copy(0.15f), -90f, 360f, false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke),
+                        topLeft = androidx.compose.ui.geometry.Offset(inset, inset), size = sz)
+                    drawArc(Brush.sweepGradient(listOf(Color(0xFF64B5F6), Color.White)), -90f, animPct * 360f, false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = StrokeCap.Round),
+                        topLeft = androidx.compose.ui.geometry.Offset(inset, inset), size = sz)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$pct%", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.quizScore, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-
-        // Stats card
-        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        // ── BOTTOM: white card ────────────────────────────────────────
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(0.58f),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            color = cs.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 4.dp)
+                    .navigationBarsPadding()
+            ) {
+                // Stats row
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceEvenly) {
                     ResultStat("✅", "$correct", str.quizCorrect, Color(0xFF2ECC71))
-                    ResultStat("❌", "$wrong",   str.quizWrong,   Color(0xFFE74C3C))
-                    ResultStat("📝", "${summary.results.size}", "Total",      BpscColors.Primary)
-                }
-                if (negativeMarkingEnabled && (notAttempted > 0 || blank > 0)) {
-                    HorizontalDivider(color = cs.outline)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    ResultStat("❌", "$wrong", str.quizWrong, Color(0xFFE74C3C))
+                    ResultStat("📝", "${summary.results.size}", "Total", BpscColors.Primary)
+                    if (negativeMarkingEnabled && notAttempted > 0) {
                         ResultStat("⊘", "$notAttempted", "Safe Skip", Color(0xFFF57F17))
-                        ResultStat("⬜", "$blank", "Unanswered", Color(0xFFE74C3C))
-                    }
-                } else if (!negativeMarkingEnabled) {
-                    HorizontalDivider(color = cs.outline)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    } else if (!negativeMarkingEnabled) {
                         ResultStat("⏭️", "$blank", "Skipped", BpscColors.TextSecondary)
                     }
                 }
-            }
-        }
 
-        // ── Marks breakdown — only when negative marking is enabled for practice MCQs ──
-        if (negativeMarkingEnabled) {
-            Spacer(Modifier.height(12.dp))
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.size(4.dp, 18.dp).clip(RoundedCornerShape(2.dp)).background(BpscColors.Primary))
-                        Text("Marks Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                // Compact marks breakdown — inline 3-col row
+                if (negativeMarkingEnabled) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(cs.surfaceVariant)
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("+${com.example.bpscnotes.presentation.quiz.formatMarks(marksObtained)}",
+                                style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                            Text("Earned", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                        Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("-${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}",
+                                style = MaterialTheme.typography.labelMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
+                            Text("Penalty", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
+                        Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)}/${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}",
+                                style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                            Text("Final", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        }
                     }
-                    HorizontalDivider(color = cs.outline)
-                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Marks Earned", "+${com.example.bpscnotes.presentation.quiz.formatMarks(marksObtained)}", valueColor = Color(0xFF2ECC71))
-                    com.example.bpscnotes.presentation.quiz.MarkingSchemeRow("Penalty (${blank} unanswered)", "−${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}", valueColor = Color(0xFFE74C3C))
-                    HorizontalDivider(color = cs.outline)
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(BpscColors.Primary.copy(0.07f)).padding(10.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("Final Score", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onSurface)
-                        Text("${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)} / ${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
+                }
+
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = cs.outline)
+                Spacer(Modifier.height(10.dp))
+
+                // Banner ad
+                adManager?.let {
+                    BannerAdView(adUnitId = it.getBannerAdUnitId())
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // Primary: Review All
+                Button(
+                    onClick  = onReview,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
+                ) {
+                    Icon(Icons.Rounded.RateReview, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(str.quizReviewAll, style = MaterialTheme.typography.labelLarge)
+                }
+                Spacer(Modifier.height(8.dp))
+                // Secondary: Try Again + Back side by side
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick  = onRetry,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71))
+                    ) {
+                        Icon(Icons.Rounded.Refresh, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(str.tryAgain, style = MaterialTheme.typography.labelLarge)
+                    }
+                    OutlinedButton(
+                        onClick  = onBack,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        border   = androidx.compose.foundation.BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.5f)),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
+                    ) {
+                        Icon(Icons.Rounded.ArrowBack, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(str.caBackToArticle, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
         }
-
-        Spacer(Modifier.height(24.dp))
-
-        // Banner ad on result screen
-        adManager?.let {
-            BannerAdView(adUnitId = it.getBannerAdUnitId())
-            Spacer(Modifier.height(16.dp))
-        }
-
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onReview, modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Icon(Icons.Rounded.RateReview, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                Text(str.quizReviewAll, style = MaterialTheme.typography.titleMedium)
-            }
-            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC71))) {
-                Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                Text(str.tryAgain, style = MaterialTheme.typography.titleMedium)
-            }
-            OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.5f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)) {
-                Icon(Icons.Rounded.ArrowBack, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                Text(str.caBackToArticle, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -941,16 +1000,14 @@ private fun ReviewScreen(
                             }
                         }
                         Text(q.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
-                        // Show options with correct/wrong highlighting — the
-                        // correct answer is always shown in green, regardless
-                        // of what the user picked, so mistakes are learnable.
+                        // Show options: only reveal correct answer if user got it right
                         val showNotAttemptOpt = q.optionE.isBlank() && summary.negativeMarkingEnabled
                         (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() } +
                                 (if (showNotAttemptOpt) listOf("e" to "Not Attempting This Question") else emptyList()))
                             .forEach { (letter, text) ->
-                                val isCrct = letter == correctLetter
                                 val isUser = letter == userAnswer
+                                val isCrct = r.isCorrect && letter == correctLetter
                                 val bg = when { isCrct -> Color(0xFFE8FDF4); isUser && !isCrct -> Color(0xFFFEE8E8); else -> Color.Transparent }
                                 val tc = when { isCrct -> Color(0xFF2ECC71); isUser && !isCrct -> Color(0xFFE74C3C); else -> BpscColors.TextSecondary }
                                 Row(
@@ -973,8 +1030,9 @@ private fun ReviewScreen(
                                 )
                             }
                         }
+                        // Explanation only shown when user answered correctly
                         val explanation = serverAnswers[q.id]?.explanation ?: q.explanation
-                        if (!explanation.isNullOrBlank()) {
+                        if (!explanation.isNullOrBlank() && r.isCorrect) {
                             HorizontalDivider(color = cs.outline)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("💡", fontSize = 13.sp)

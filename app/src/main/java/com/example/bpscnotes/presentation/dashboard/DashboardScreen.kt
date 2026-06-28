@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.dashboard
 
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -95,6 +96,7 @@ fun DashboardScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showTargetSheet by remember { mutableStateOf(false) }
+    var showActivityDetail by remember { mutableStateOf(false) }
 
     val pullRefreshState = rememberPullToRefreshState()
 
@@ -127,7 +129,8 @@ fun DashboardScreen(
                 )
             }
         ) {
-            // ── FIX: outer Column so header is fixed, only body scrolls ──
+            // ── FIX: outer Box so full-screen overlays (e.g. activity history) can sit on top ──
+            Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -196,8 +199,6 @@ fun DashboardScreen(
                             navController = navController
                         )
 
-                        var showActivityDetail by remember { mutableStateOf(false) }
-
                         // ── Weekly consistency (no fake fallback) ──────────────────
                         WeeklyConsistencyCard(
                             data = state.weeklyActivity,
@@ -205,17 +206,6 @@ fun DashboardScreen(
                             isLoading = state.isLoading,
                             onSeeAll = { showActivityDetail = true }
                         )
-
-                        if (showActivityDetail) {
-                            ActivityDetailSheet(
-                                data        = state.monthlyActivity,
-                                quizMins    = state.monthlyQuizMins,
-                                roomMins    = state.monthlyRoomMins,
-                                caMins      = state.monthlyCaMins,
-                                lessonMins  = state.monthlyLessonMins,
-                                onDismiss   = { showActivityDetail = false }
-                            )
-                        }
 
                         // Ad banner below weekly consistency chart
                         if (adManager != null) {
@@ -325,6 +315,20 @@ fun DashboardScreen(
                     }
                 }  // end Box(weight=1f)
             }  // end outer Column
+
+            // Full-screen activity detail — covers dashboard when shown
+            if (showActivityDetail) {
+                BackHandler { showActivityDetail = false }
+                ActivityDetailFullScreen(
+                    data        = state.monthlyActivity,
+                    quizMins    = state.monthlyQuizMins,
+                    roomMins    = state.monthlyRoomMins,
+                    caMins      = state.monthlyCaMins,
+                    lessonMins  = state.monthlyLessonMins,
+                    onBack      = { showActivityDetail = false }
+                )
+            }
+            }  // end overlay Box
         }
 
     }
@@ -1762,13 +1766,18 @@ private fun MyScheduleSection(
             Box(Modifier.weight(1f)) {
                 SectionHeader(str.dashboardMySchedule, str.dashboardUpcomingEvents)
             }
-            if (history.isNotEmpty()) {
-                TextButton(onClick = { showHistory = !showHistory }) {
-                    Text(
-                        if (showHistory) "Upcoming" else "History (${history.size})",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = BpscColors.Primary
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (history.isNotEmpty()) {
+                    TextButton(onClick = { showHistory = !showHistory }) {
+                        Text(
+                            if (showHistory) "Upcoming" else "History (${history.size})",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = BpscColors.Primary
+                        )
+                    }
+                }
+                TextButton(onClick = { navController.navigate(com.example.bpscnotes.presentation.navigation.Routes.Screen.StudySessionHistory.route) }) {
+                    Text("Sessions", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
                 }
             }
         }
@@ -2387,18 +2396,17 @@ private fun SmallQuickCard(title: String, icon: ImageVector, iconBg: Color, icon
     }
 }
 // ════════════════════════════════════════════════════════════
-// ACTIVITY DETAIL SHEET
-// Latest week first, no flickering sheet, inline day tap tooltip
+// ACTIVITY DETAIL FULL SCREEN
+// Latest week first, inline day tap tooltip — full-screen page (not bottom sheet)
 // ════════════════════════════════════════════════════════════
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ActivityDetailSheet(
+private fun ActivityDetailFullScreen(
     data:       List<DayProgress>,
     quizMins:   Map<String, Int>,
     roomMins:   Map<String, Int>,
     caMins:     Map<String, Int>,
     lessonMins: Map<String, Int>,
-    onDismiss:  () -> Unit
+    onBack:     () -> Unit
 ) {
     val cs  = MaterialTheme.colorScheme
     val dfmt = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
@@ -2419,34 +2427,51 @@ private fun ActivityDetailSheet(
     // Track which day the user tapped — null = no selection
     var selectedDayKey by remember { mutableStateOf<String?>(null) }
 
-    // Fix: no confirmValueChange — just let onDismissRequest handle it cleanly
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor   = cs.surface,
-        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle       = null
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(cs.background)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .statusBarsPadding()
                 .navigationBarsPadding()
+        ) {
+            // ── Top App Bar ─────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Rounded.ArrowBack, "Back", tint = Color.White)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Study Activity", style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        Text("Last 28 days · tap a bar for details",
+                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                    }
+                    Box(Modifier.size(48.dp))
+                }
+            }
+
+            Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(top = 20.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── Header ──────────────────────────────────────────
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Column {
-                    Text("Study Activity", style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
-                    Text("Last 28 days · tap a bar for details",
-                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant)
-                }
-            }
 
             // ── Legend ──────────────────────────────────────────
             Row(
@@ -2638,8 +2663,9 @@ private fun ActivityDetailSheet(
                 }
             }
         }
-    }
-}
+    } // end scrollable Column
+  } // end outer Column
+} // end outer Box (ActivityDetailFullScreen)
 
 @Composable
 private fun LegendDot(color: Color, label: String) {

@@ -450,37 +450,68 @@ fun CourseDetailScreen(
                 }
             } // end pinned-header Box
 
-            // Bottom bar (non-enrolled) or FAB (enrolled)
-            if (isEnrolled && !allDone) {
-                // FAB for enrolled users: Start / Continue Learning
-                Box(Modifier.fillMaxSize().padding(bottom = 24.dp, end = 20.dp).navigationBarsPadding(), contentAlignment = Alignment.BottomEnd) {
-                    val onContinue = {
-                        val next = chapters
-                            .flatMap { it.lessons ?: emptyList() }
-                            .firstOrNull { it.is_completed != true && !it.is_locked }
-                        if (next != null) nav.navigate(Screen.LessonViewer.createRoute(courseId, next.id))
+            // ── FAB for all CTAs ──────────────────────────────────────────
+            Box(
+                Modifier.fillMaxSize().padding(bottom = 24.dp, end = 20.dp).navigationBarsPadding(),
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                when {
+                    // Course completed — green pill chip
+                    isEnrolled && allDone -> {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(BpscColors.Success)
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            Text(str.courseCourseCompleted, style = MaterialTheme.typography.labelLarge,
+                                color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    ExtendedFloatingActionButton(
-                        onClick            = onContinue,
-                        containerColor     = accent,
-                        contentColor       = Color.White,
-                        icon               = { Icon(Icons.Rounded.PlayArrow, null) },
-                        text               = { Text(if (completedLessons > 0) str.courseContinueLearning else str.courseStartLearning, fontWeight = FontWeight.Bold) }
-                    )
-                }
-            } else {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                    BottomCta(
-                        course      = course,
-                        accent      = accent,
-                        isEnrolled  = isEnrolled,
-                        allDone     = allDone,
-                        isEnrolling = state.isEnrolling,
-                        onEnroll         = { viewModel.enroll(courseId) },
-                        onShowBuyDialog  = { showBuyDialog = true; dialogCoins = 0 },
-                        onContinue  = {},
-                        completedLessons = completedLessons
-                    )
+                    // Enrolled, not done: Start / Continue Learning FAB
+                    isEnrolled -> {
+                        val onContinue = {
+                            val next = chapters
+                                .flatMap { it.lessons ?: emptyList() }
+                                .firstOrNull { it.is_completed != true && !it.is_locked }
+                            if (next != null) nav.navigate(Screen.LessonViewer.createRoute(courseId, next.id))
+                        }
+                        ExtendedFloatingActionButton(
+                            onClick        = onContinue,
+                            containerColor = accent,
+                            contentColor   = Color.White,
+                            icon           = { Icon(Icons.Rounded.PlayArrow, null) },
+                            text           = { Text(if (completedLessons > 0) str.courseContinueLearning else str.courseStartLearning, fontWeight = FontWeight.Bold) }
+                        )
+                    }
+                    // Not enrolled, paid: Buy FAB
+                    course.isPaid -> {
+                        ExtendedFloatingActionButton(
+                            onClick        = { if (!state.isEnrolling) { showBuyDialog = true; dialogCoins = 0 } },
+                            containerColor = BpscColors.CoinGold,
+                            contentColor   = Color.White,
+                            icon           = { Icon(Icons.Rounded.ShoppingCart, null) },
+                            text           = { Text("Buy — ${fmtRs(course.price ?: 0.0)}", fontWeight = FontWeight.Bold) }
+                        )
+                    }
+                    // Not enrolled, free: Enroll Free FAB
+                    else -> {
+                        ExtendedFloatingActionButton(
+                            onClick        = { if (!state.isEnrolling) viewModel.enroll(courseId) },
+                            containerColor = if (state.isEnrolling) accent.copy(alpha = 0.6f) else accent,
+                            contentColor   = Color.White,
+                            icon           = {
+                                if (state.isEnrolling)
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                else
+                                    Icon(Icons.Rounded.School, null)
+                            },
+                            text = { Text(str.courseEnrollFree, fontWeight = FontWeight.Bold) }
+                        )
+                    }
                 }
             }
         }

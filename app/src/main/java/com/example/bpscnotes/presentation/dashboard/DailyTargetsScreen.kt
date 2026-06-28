@@ -98,16 +98,37 @@ fun DailyTargetsScreen(
     if (alertMessage != null) {
         AlertDialog(
             onDismissRequest = { alertMessage = null },
-            icon = { Text(if (alertIsError) "⚠️" else "✅", fontSize = 28.sp) },
+            containerColor = Color.White,
+            icon = {
+                Box(
+                    modifier = Modifier.size(52.dp).clip(CircleShape)
+                        .background(if (alertIsError) Color(0xFFFFF3CD) else Color(0xFFE8F5E9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (alertIsError) "⏱️" else "🎉", fontSize = 24.sp)
+                }
+            },
             title = {
                 Text(
-                    if (alertIsError) "Cannot Complete Yet" else "Target Completed!",
-                    fontWeight = FontWeight.Bold
+                    if (alertIsError) "Need More Time" else "Target Completed!",
+                    fontWeight = FontWeight.Bold,
+                    color = if (alertIsError) Color(0xFF0A2472) else Color(0xFF1B5E20)
                 )
             },
-            text = { Text(alertMessage ?: "", style = MaterialTheme.typography.bodyMedium) },
+            text = {
+                Text(
+                    alertMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextSecondary
+                )
+            },
             confirmButton = {
-                Button(onClick = { alertMessage = null }) { Text("OK") }
+                Button(
+                    onClick = { alertMessage = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                ) {
+                    Text("Got it", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
             }
         )
     }
