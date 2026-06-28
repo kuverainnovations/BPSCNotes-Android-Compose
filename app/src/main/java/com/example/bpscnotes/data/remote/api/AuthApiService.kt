@@ -122,8 +122,10 @@ data class UpdateProfileRequest(
     val bio:         String?  = null,
     val district:    String?  = null,
     val state:       String?  = null,
-    @SerializedName("target_year") val targetYear: Int?    = null,
-    @SerializedName("prep_level")  val prepLevel:  String? = null
+    @SerializedName("target_year")          val targetYear:          Int?     = null,
+    @SerializedName("prep_level")           val prepLevel:           String?  = null,
+    @SerializedName("onboarding_completed") val onboardingCompleted: Boolean? = null,
+    @SerializedName("daily_goal_mins")      val dailyGoalMins:       Int?     = null
 )
 
 data class SendOtpRequest(val mobile: String)

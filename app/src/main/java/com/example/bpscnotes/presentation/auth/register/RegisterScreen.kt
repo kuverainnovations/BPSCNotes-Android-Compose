@@ -28,11 +28,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
@@ -43,8 +45,9 @@ fun RegisterScreen(
     tempToken: String,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
-    val str = LocalStrings.current
-    val cs  = MaterialTheme.colorScheme
+    val str     = LocalStrings.current
+    val cs      = MaterialTheme.colorScheme
+    val context = LocalContext.current
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("register") }
 
     var name     by remember { mutableStateOf("") }
@@ -61,7 +64,9 @@ fun RegisterScreen(
     LaunchedEffect(registerSuccess) {
         if (registerSuccess) {
             viewModel.onNavigationConsumed()
-            navController.navigate(Screen.ExamSetup.route) {
+            // Mark wizard as pending so SplashScreen can re-route if app is killed mid-wizard
+            TokenStore(context).saveOnboardingCompleted(false)
+            navController.navigate(Screen.OnboardingWizard.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
         }

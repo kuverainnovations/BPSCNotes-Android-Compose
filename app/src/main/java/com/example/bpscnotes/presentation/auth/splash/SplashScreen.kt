@@ -82,6 +82,8 @@ fun SplashScreen(navController: NavHostController) {
         // from Settings.
         val savedMobile = tokenStore.getUserMobile()
         val destination = when {
+            tokenStore.hasValidToken() && tokenStore.getOnboardingCompleted() == false ->
+                Screen.OnboardingWizard.route
             tokenStore.hasValidToken()              -> Screen.Main.route
             !savedMobile.isNullOrBlank() && tokenStore.hasMpin() ->
                 Screen.MpinLogin.createRoute(savedMobile)

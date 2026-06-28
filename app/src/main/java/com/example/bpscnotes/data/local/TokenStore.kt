@@ -141,6 +141,18 @@ class TokenStore @Inject constructor(
     // logout()'s use of commit() above.
     fun setOnboarded() = prefs.edit().putBoolean("is_onboarded", true).commit()
 
+    // ── Post-login onboarding wizard (server-driven) ──────────
+    // null  = not yet fetched / pre-feature users (skip wizard)
+    // false = new user, wizard not completed yet
+    // true  = wizard completed
+    fun getOnboardingCompleted(): Boolean? {
+        return if (prefs.contains("onboarding_wizard_done"))
+            prefs.getBoolean("onboarding_wizard_done", true)
+        else null
+    }
+    fun saveOnboardingCompleted(value: Boolean) =
+        prefs.edit().putBoolean("onboarding_wizard_done", value).commit()
+
     // ── Exam Setup ────────────────────────────────────────────
     fun isExamSetupDone(): Boolean = prefs.getBoolean("exam_setup_done", false)
     fun setExamSetupDone() = prefs.edit().putBoolean("exam_setup_done", true).apply()
@@ -227,6 +239,7 @@ class TokenStore @Inject constructor(
             .remove("exam_setup_done")
             .remove("primary_exam")
             .remove("prep_level")
+            .remove("onboarding_wizard_done")
             .remove("downloaded_material_ids")
             .remove("purchased_material_ids")
             .commit()
@@ -270,6 +283,7 @@ class TokenStore @Inject constructor(
             .remove("exam_setup_done")
             .remove("primary_exam")
             .remove("prep_level")
+            .remove("onboarding_wizard_done")
             .remove("downloaded_material_ids")
             .remove("purchased_material_ids")
             .commit()

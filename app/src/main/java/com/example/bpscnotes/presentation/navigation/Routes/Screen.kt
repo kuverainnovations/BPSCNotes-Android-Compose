@@ -17,6 +17,8 @@ sealed class Screen(val route: String) {
     }
     // NEW: exam setup after registration
     object ExamSetup  : Screen("exam_setup")
+    // Post-login onboarding wizard: exam → target year → daily goal
+    object OnboardingWizard : Screen("onboarding_wizard")
 
     // Main shell
     object Main         : Screen("main")

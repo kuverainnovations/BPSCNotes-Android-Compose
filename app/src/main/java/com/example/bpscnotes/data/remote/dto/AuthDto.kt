@@ -107,5 +107,11 @@ data class UserDto(
     val lastActiveAt: String? = null,
 
     @SerializedName("deleted_at")
-    val deletedAt: String? = null
+    val deletedAt: String? = null,
+
+    @SerializedName("onboarding_completed")
+    val onboardingCompleted: Boolean? = null,
+
+    @SerializedName("daily_goal_mins")
+    val dailyGoalMins: Int = 120
 )

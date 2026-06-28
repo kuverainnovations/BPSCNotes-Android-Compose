@@ -48,7 +48,7 @@
             android:name="com.example.bpscnotes.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.BPSCNotes"
+            android:theme="@style/Theme.BPSCNotes.Splash"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop">
             <intent-filter>

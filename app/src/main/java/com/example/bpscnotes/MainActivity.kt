@@ -1,8 +1,7 @@
 package com.example.bpscnotes
 
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
@@ -81,6 +80,7 @@ class MainActivity : ComponentActivity(),
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         // Persist Firebase Installation ID so AuthInterceptor can read it synchronously
         if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) {
@@ -125,12 +125,7 @@ class MainActivity : ComponentActivity(),
             isAppearanceLightStatusBars = false
         }
 
-        // ── Fix: prevent black screen on back press / minimize ────────────
-        // 1. Give the window a non-transparent background so it's never naked black.
-        window.setBackgroundDrawable(
-            ColorDrawable(Color.parseColor("#F2F4F8"))
-        )
-        // 2. Safety-net: if Compose's BackHandler misses a rapid second tap
+        // Safety-net: if Compose's BackHandler misses a rapid second tap
         //    (race condition during recomposition), catch it here and
         //    minimise the app instead of popping the NavHost into a black screen.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

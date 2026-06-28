@@ -12,4 +12,10 @@
         <item name="android:windowAnimationStyle">@null</item>
     </style>
 
+    <!-- Splash screen theme — shown by the OS during cold start before Activity.onCreate() -->
+    <style name="Theme.BPSCNotes.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1A6FE8</item>
+        <item name="postSplashScreenTheme">@style/Theme.BPSCNotes</item>
+    </style>
+
 </resources>

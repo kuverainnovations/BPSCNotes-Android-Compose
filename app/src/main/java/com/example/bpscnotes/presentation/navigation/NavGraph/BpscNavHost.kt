@@ -27,6 +27,7 @@ import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
 import com.example.bpscnotes.presentation.auth.onboarding.OnboardingScreen
+import com.example.bpscnotes.presentation.auth.onboarding.OnboardingWizardScreen
 import com.example.bpscnotes.presentation.auth.otp.OtpScreen
 import com.example.bpscnotes.presentation.auth.register.RegisterScreen
 import com.example.bpscnotes.core.language.LanguageSelectionScreen
@@ -151,6 +152,7 @@ fun BpscNavHost(
             || currentTopRoute == Screen.LanguageSelection.route
             || currentTopRoute == Screen.Onboarding.route
             || currentTopRoute == Screen.ExamSetup.route
+            || currentTopRoute == Screen.OnboardingWizard.route
 
     BackHandler(enabled = isAtRoot) {
         (context as? Activity)?.moveTaskToBack(true)
@@ -211,6 +213,10 @@ fun BpscNavHost(
             // Reached after: Register success OR from Splash when examSetupDone=false
             composable(Screen.ExamSetup.route) {
                 ExamSetupScreen(navController = navController)
+            }
+            // Post-login onboarding wizard: exam → target year → daily goal
+            composable(Screen.OnboardingWizard.route) {
+                OnboardingWizardScreen(navController = navController)
             }
             // ── Main shell ────────────────────────────────────────────
             composable(Screen.Main.route) { backStackEntry ->
