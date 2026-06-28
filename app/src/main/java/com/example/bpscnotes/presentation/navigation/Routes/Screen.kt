@@ -72,6 +72,9 @@ sealed class Screen(val route: String) {
     object ActiveRecall   : Screen("active_recall")
     object MockTests      : Screen("mock_tests")
     object JobVacancies   : Screen("job_vacancies")
+    object JobDetail      : Screen("job_detail/{jobId}") {
+        fun createRoute(id: String) = "job_detail/$id"
+    }
 
     // Study content
     object CourseDetail  : Screen("course/{courseId}") {
@@ -94,7 +97,8 @@ sealed class Screen(val route: String) {
     object Achievements      : Screen("achievements")
     object WeeklyChallenges  : Screen("weekly_challenges")
     object ReadingRooms      : Screen("reading_rooms")
-    object Leaderboard       : Screen("leaderboard")
+    object Leaderboard          : Screen("leaderboard")
+    object StudySessionHistory  : Screen("study_session_history")
     object ReadingRoomActive : Screen("reading_room/{roomId}") {
         fun createRoute(id: String) = "reading_room/$id"
     }

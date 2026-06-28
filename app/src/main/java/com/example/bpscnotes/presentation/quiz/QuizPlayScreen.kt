@@ -761,6 +761,7 @@ private fun QuizResultScreen(
     val str = LocalStrings.current
     val context = LocalContext.current
     var showDetailReview by remember { mutableStateOf(false) }
+    var resultTab        by remember { mutableStateOf("results") }
     val accuracy          = result.accuracy
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
 
@@ -826,7 +827,34 @@ private fun QuizResultScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // Tab strip — Results / Analysis (MED-16)
+            if (result.subjectBreakdown.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(0.15f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    listOf("results" to "📊 Results", "analysis" to "🔍 Analysis").forEach { (key, label) ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (resultTab == key) Color.White else Color.Transparent)
+                                .clickable { resultTab = key }
+                                .padding(horizontal = 16.dp, vertical = 7.dp),
+                        ) {
+                            Text(label, fontSize = 13.sp,
+                                fontWeight = if (resultTab == key) FontWeight.Bold else FontWeight.Medium,
+                                color = if (resultTab == key) Color(0xFF1565C0) else Color.White.copy(0.8f))
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
 
             // Score ring
             Box(Modifier.size(130.dp), Alignment.Center) {
@@ -844,6 +872,8 @@ private fun QuizResultScreen(
             }
 
             Spacer(Modifier.height(20.dp))
+            if (resultTab == "results") {
+
             Card(Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp), shape = RoundedCornerShape(20.dp)) {
@@ -1037,6 +1067,53 @@ private fun QuizResultScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+
+            } // end resultTab == "results"
+
+            // ── Analysis tab (MED-16): subject breakdown bars ────────
+            if (resultTab == "analysis" && result.subjectBreakdown.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    shape  = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cs.surface),
+                ) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text("Subject Breakdown", style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
+                        HorizontalDivider(color = cs.outline)
+                        result.subjectBreakdown.forEach { sub ->
+                            val pct = if (sub.total > 0) sub.correct.toFloat() / sub.total else 0f
+                            val barColor = when {
+                                pct >= 0.8f -> BpscColors.Success
+                                pct >= 0.5f -> BpscColors.Primary
+                                else        -> Color(0xFFE74C3C)
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                    Text(sub.subject, style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold, color = cs.onSurface)
+                                    Text("${sub.correct}/${sub.total}  ·  ${(pct * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall, color = barColor,
+                                        fontWeight = FontWeight.Bold)
+                                }
+                                val animPct by animateFloatAsState(pct, tween(900), label = "bar_${sub.subject}")
+                                Box(
+                                    Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                                        .background(cs.background)
+                                ) {
+                                    Box(
+                                        Modifier.fillMaxWidth(animPct).fillMaxHeight().clip(RoundedCornerShape(4.dp))
+                                            .background(Brush.horizontalGradient(listOf(barColor, barColor.copy(0.7f))))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
+            }
+
         }
     }
 }

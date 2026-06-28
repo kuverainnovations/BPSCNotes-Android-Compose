@@ -222,4 +222,6 @@ object NetworkModule {
     @Provides @Singleton fun provideMaterialChatApi(r: Retrofit): MaterialChatApiService = r.create(MaterialChatApiService::class.java)
     @Provides @Singleton fun provideMarketplaceApi(r: Retrofit): MarketplaceApiService = r.create(MarketplaceApiService::class.java)
     @Provides @Singleton fun provideNotificationsApi(r: Retrofit): NotificationsApiService = r.create(NotificationsApiService::class.java)
+    @Provides @Singleton fun provideGlobalLeaderboardApi(r: Retrofit): GlobalLeaderboardApiService = r.create(GlobalLeaderboardApiService::class.java)
+    @Provides @Singleton fun provideStudySessionHistoryApi(r: Retrofit): StudySessionHistoryApiService = r.create(StudySessionHistoryApiService::class.java)
 }

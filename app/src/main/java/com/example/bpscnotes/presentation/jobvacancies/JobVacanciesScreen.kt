@@ -35,6 +35,7 @@ import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -123,7 +124,6 @@ fun JobVacanciesScreen(
         onRefresh = { viewModel.load() }
     ) {    var searchQuery      by remember { mutableStateOf("") }
         var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
-        var selectedJob      by remember { mutableStateOf<JobVacancyDto?>(null) }
         val savedJobs = remember(vmState.jobs) {
             vmState.jobs
                 .filter { it.isSaved == true }
@@ -319,7 +319,7 @@ fun JobVacanciesScreen(
                                     onSave = {
                                         viewModel.toggleSave(job.id)
                                     },
-                                    onClick  = { selectedJob = job })
+                                    onClick  = { navController.navigate(Screen.JobDetail.createRoute(job.id)) })
                             }
                             item { Spacer(Modifier.height(4.dp)) }
                             item { Text(str.jobsAllJobs, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold) }
@@ -336,16 +336,6 @@ fun JobVacanciesScreen(
                         }
                     }
                 }
-            }
-
-            // Job detail sheet
-            selectedJob?.let { job ->
-                JobDetailSheet(
-                    job       = job,
-                    isSaved   = savedJobs.contains(job.id),
-                    onSave    = { if (savedJobs.contains(job.id)) savedJobs.remove(job.id) else savedJobs.add(job.id) },
-                    onDismiss = { selectedJob = null }
-                )
             }
 
             // Alert sheet

@@ -793,6 +793,43 @@ interface UserStatsApiService {
     suspend fun getUnreadCount(): ApiResponse<UnreadCountDto>
 }
 
+// ══════════════════════════════════════════════════════════════
+// GLOBAL LEADERBOARD  — GET /leaderboard
+// MED-17, LOW-08
+// ══════════════════════════════════════════════════════════════
+
+data class LeaderboardEntryDto(
+    val rank: Int = 0,
+    @SerializedName("user_id")     val userId:   String = "",
+    val name:    String = "",
+    @SerializedName("avatar_url")  val avatarUrl: String? = null,
+    // coins type fields
+    val coins:   Int? = null,
+    // weekly_coins
+    @SerializedName("weekly_coins") val weeklyCoins: Int? = null,
+    // quiz_accuracy
+    val accuracy: Double? = null,
+    @SerializedName("total_attempts") val totalAttempts: Int? = null,
+    // streak
+    val streak:  Int? = null,
+    // rank delta (server may send previous rank for delta badge)
+    @SerializedName("prev_rank")   val prevRank: Int? = null,
+)
+
+data class LeaderboardData(
+    val leaderboard: List<LeaderboardEntryDto> = emptyList(),
+    val myRank: LeaderboardEntryDto? = null,
+    val type: String = "coins",
+)
+
+interface GlobalLeaderboardApiService {
+    @GET("leaderboard")
+    suspend fun getLeaderboard(
+        @Query("type") type: String = "coins",
+        @Query("exam") exam: String? = null,
+    ): ApiResponse<LeaderboardData>
+}
+
 data class DailyTargetHistoryDto(
     val date:           String,
     val total:          Int,
@@ -913,8 +950,9 @@ data class JobVacancyDto(
     @SerializedName("is_saved")    val isSaved:    Boolean = false,
     val status: String? = null,
     @SerializedName("brief_description") val briefDescription: String? = null,
-    @SerializedName("pdf_url")        val pdfUrl:       String? = null,  // notification PDF
-    @SerializedName("advert_pdf_url") val advertPdfUrl: String? = null,  // advertisement PDF
+    @SerializedName("pdf_url")           val pdfUrl:          String? = null,  // notification PDF
+    @SerializedName("advert_pdf_url")    val advertPdfUrl:    String? = null,  // advertisement PDF
+    @SerializedName("notification_url")  val notificationUrl: String? = null,  // official notification web page
 )
 
 data class JobsResponseData(
@@ -931,6 +969,11 @@ interface JobsApiService {
         @Query("search")   search: String? = null,
         @Query("status")   status: String = "active"
     ): ApiResponse<JobsResponseData>
+
+    @GET("jobs/{id}")
+    suspend fun getJob(
+        @Path("id") jobId: String
+    ): ApiResponse<JobDetailData>
 
     @POST("jobs/{id}/save")
     suspend fun toggleSaveJob(
@@ -949,6 +992,8 @@ interface JobsApiService {
 }
 
 data class AlertPrefsData(val subscribed: List<String> = emptyList())
+
+data class JobDetailData(val job: JobVacancyDto? = null)
 
 // ══════════════════════════════════════════════════════════════
 // STUDY ROOMS DTOs  — GET /study-rooms
@@ -1009,6 +1054,33 @@ data class CreateRoomRequest(
     @SerializedName("is_private") val isPrivate: Boolean = false,
     @SerializedName("duration_mins") val durationMins: Int = 120
 )
+
+// ══════════════════════════════════════════════════════════════
+// STUDY SESSION HISTORY  — GET /users/me/study-sessions
+// LOW-12
+// ══════════════════════════════════════════════════════════════
+
+data class StudySessionHistoryDto(
+    val id: String = "",
+    @SerializedName("started_at")    val startedAt:    String? = null,
+    @SerializedName("ended_at")      val endedAt:      String? = null,
+    @SerializedName("duration_secs") val durationSecs: Int = 0,
+    @SerializedName("xp_earned")     val xpEarned:     Int = 0,
+    @SerializedName("room_name")     val roomName:     String? = null,
+    @SerializedName("tier_name")     val tierName:     String? = null,
+)
+
+data class StudySessionHistoryResponse(
+    val sessions: List<StudySessionHistoryDto> = emptyList(),
+)
+
+interface StudySessionHistoryApiService {
+    @GET("users/me/study-sessions")
+    suspend fun getSessions(
+        @Query("from") from: String? = null,
+        @Query("to")   to:   String? = null,
+    ): ApiResponse<StudySessionHistoryResponse>
+}
 
 // ══════════════════════════════════════════════════════════════
 // COINS DTOs  — GET /coins/*

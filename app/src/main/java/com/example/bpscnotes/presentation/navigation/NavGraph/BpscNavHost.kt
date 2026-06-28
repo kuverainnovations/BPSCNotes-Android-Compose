@@ -43,6 +43,7 @@ import com.example.bpscnotes.presentation.dashboard.DailyTargetsScreen
 import com.example.bpscnotes.presentation.dashboard.DashboardScreen
 import com.example.bpscnotes.presentation.elibrary.ELibraryScreen
 import com.example.bpscnotes.presentation.jobvacancies.JobVacanciesScreen
+import com.example.bpscnotes.presentation.jobvacancies.JobDetailScreen
 import com.example.bpscnotes.presentation.mocktests.MockTestsScreen
 import com.example.bpscnotes.presentation.mylearning.MyLearningScreen
 import com.example.bpscnotes.presentation.navigation.MainShell.MainShell
@@ -64,6 +65,8 @@ import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.LeaderboardScreen
+import com.example.bpscnotes.presentation.rooms.GlobalLeaderboardScreen
+import com.example.bpscnotes.presentation.studysessions.StudySessionHistoryScreen
 import com.example.bpscnotes.presentation.course.LessonViewerScreen
 import com.example.bpscnotes.presentation.liveclasses.LiveClassViewerScreen
 import com.example.bpscnotes.presentation.rooms.StudyFocusScreen
@@ -375,6 +378,10 @@ fun BpscNavHost(
             composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
             composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
             composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
+            composable(
+                route = Screen.JobDetail.route,
+                arguments = listOf(navArgument("jobId") { type = NavType.StringType }),
+            ) { JobDetailScreen(navController) }
             // ── Tier Room System (Phase 1) ──────────────────────────
             composable(Screen.RoomsHub.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
@@ -502,14 +509,7 @@ fun BpscNavHost(
             composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
             composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
 
-            composable(Screen.Leaderboard.route) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    try { navController.getBackStackEntry(Screen.Main.route) }
-                    catch (_: Exception) { backStackEntry }
-                }
-                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
-                LeaderboardScreen(navController = navController, viewModel = tiersVM)
-            }
+            composable(Screen.Leaderboard.route) { GlobalLeaderboardScreen(navController) }
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
             composable(Screen.MyLearning.route)         { MyLearningScreen(navController, startTab = 0, fromScreen = "nav-host") }
             composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, fromScreen = "nav-host") }
@@ -523,6 +523,7 @@ fun BpscNavHost(
             composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
             composable(Screen.Settings.route)      { SettingsScreen(navController) }
             composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
+            composable(Screen.StudySessionHistory.route)  { StudySessionHistoryScreen(navController) }
 
             // ── MPIN Auth ────────────────────────────────────────────
             composable(

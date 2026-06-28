@@ -1355,7 +1355,6 @@ private fun WeeklyConsistencyCard(
 // CONTINUE LEARNING — last quiz attempt card (Testbook/Unacademy style)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
-@Composable
 private fun ContinueLearningSection(
     inProgressSession: com.example.bpscnotes.data.remote.api.InProgressSessionDto,
     navController: NavHostController
