@@ -48,10 +48,11 @@ fun OtpScreen(
     val cs  = MaterialTheme.colorScheme
     val otpValues       = remember { List(6) { mutableStateOf("") } }
     val focusRequesters = remember { List(6) { FocusRequester() } }
-    val isLoading       by viewModel.isLoading.observeAsState(false)
-    val error           by viewModel.error.observeAsState()
-    val result          by viewModel.result.observeAsState()
-    val resendSuccess   by viewModel.resendSuccess.observeAsState(false)
+    val isLoading          by viewModel.isLoading.observeAsState(false)
+    val error              by viewModel.error.observeAsState()
+    val result             by viewModel.result.observeAsState()
+    val resendSuccess      by viewModel.resendSuccess.observeAsState(false)
+    val retryAfterSeconds  by viewModel.retryAfterSeconds.observeAsState(30)
 
     // For forgot_mpin: send OTP on screen entry (LoginViewModel doesn't send it)
     LaunchedEffect(Unit) {
@@ -60,11 +61,11 @@ fun OtpScreen(
         }
     }
 
-    // Countdown timer — resets on each successful send/resend
-    var secondsLeft by remember { mutableIntStateOf(30) }
+    // Countdown timer — resets on each successful send/resend or 429 retryAfterSeconds
+    var secondsLeft by remember { mutableIntStateOf(retryAfterSeconds) }
     var canResend   by remember { mutableStateOf(false) }
-    LaunchedEffect(resendSuccess) {
-        secondsLeft = 30; canResend = false
+    LaunchedEffect(resendSuccess, retryAfterSeconds) {
+        secondsLeft = retryAfterSeconds; canResend = false
         while (secondsLeft > 0) { delay(1000L); secondsLeft-- }
         canResend = true
         viewModel.onResendConsumed()
@@ -96,6 +97,13 @@ fun OtpScreen(
     }
 
     val fullOtp = otpValues.joinToString("") { it.value }
+
+    // Auto-submit when all 6 digits are filled (paste or sequential entry)
+    LaunchedEffect(fullOtp) {
+        if (fullOtp.length == 6 && !isLoading) {
+            viewModel.verifyOtp(mobile, fullOtp, otpContext)
+        }
+    }
 
     Column(
         modifier            = Modifier.fillMaxSize().background(cs.background).statusBarsPadding().imePadding(),

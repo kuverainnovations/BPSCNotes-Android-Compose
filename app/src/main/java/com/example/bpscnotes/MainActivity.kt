@@ -31,6 +31,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import com.cashfree.pg.core.api.callback.CFCheckoutResponseCallback
 import com.cashfree.pg.core.api.utils.CFErrorResponse
+import com.google.firebase.installations.FirebaseInstallations
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(),
@@ -81,6 +82,13 @@ class MainActivity : ComponentActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Persist Firebase Installation ID so AuthInterceptor can read it synchronously
+        if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) {
+            FirebaseInstallations.getInstance().id.addOnSuccessListener { fid ->
+                tokenStore.saveDeviceId(fid)
+            }
+        }
+
         // Fetch admin-controlled settings on startup
         lifecycleScope.launch {
             try { appConfigRepo.fetch() } catch (_: Exception) {}

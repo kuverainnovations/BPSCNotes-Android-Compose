@@ -46,6 +46,13 @@ interface QuizzesApiService {
         @Body body: QuizSubmitRequest
     ): ApiResponse<QuizResultData>
 
+    /** POST /quizzes/:id/abandon — mark session abandoned on back-press or app kill */
+    @POST("quizzes/{id}/abandon")
+    suspend fun abandonQuiz(
+        @Path("id") id: String,
+        @Body body: Map<String, String> = emptyMap()
+    ): ApiResponse<Unit>
+
     /** GET /quizzes/:id/leaderboard — top scores for this quiz */
     @GET("quizzes/{id}/leaderboard")
     suspend fun getLeaderboard(

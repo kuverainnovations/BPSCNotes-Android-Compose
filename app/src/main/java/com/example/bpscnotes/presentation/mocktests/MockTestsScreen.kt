@@ -28,6 +28,8 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader
+import com.example.bpscnotes.core.ui.components.AppTimer
+import com.example.bpscnotes.core.ui.components.SecureScreen
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
@@ -259,31 +261,35 @@ fun MockTestsScreen(
                 }
                 questions.isNotEmpty() -> {
                     val testStartTime = remember { System.currentTimeMillis() }
-                    key(test.id) {
-                        ActiveTestScreen(
-                            test          = test,
-                            questions     = questions,
-                            userAnswers   = userAnswers,
-                            bookmarked    = bookmarked,
-                            reviewMarked  = reviewMarked,
-                            onSubmit      = { score ->
-                                finalScore = score
-                                val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
-                                viewModel.submitTest(test.id, userAnswers, elapsed)
-                                // Show ad after completing test, then go to Analysis
-                                if (adManager != null && activity != null)
-                                    adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Analysis }
-                                else
-                                    screenState = MockTestState.Analysis
-                            },
-                            onExit = {
-                                viewModel.clearQuestions()
-                                if (adManager != null && activity != null)
-                                    adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
-                                else
-                                    screenState = MockTestState.Lobby
-                            }
-                        )
+                    // Track background time for anti-cheat
+                    AppTimer(onBackground = { bgSecs -> viewModel.addBackgroundSecs(bgSecs) })
+                    SecureScreen {
+                        key(test.id) {
+                            ActiveTestScreen(
+                                test          = test,
+                                questions     = questions,
+                                userAnswers   = userAnswers,
+                                bookmarked    = bookmarked,
+                                reviewMarked  = reviewMarked,
+                                onSubmit      = { score ->
+                                    finalScore = score
+                                    val elapsed = ((System.currentTimeMillis() - testStartTime) / 1000).toInt()
+                                    viewModel.submitTest(test.id, userAnswers, elapsed)
+                                    // Show ad after completing test, then go to Analysis
+                                    if (adManager != null && activity != null)
+                                        adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Analysis }
+                                    else
+                                        screenState = MockTestState.Analysis
+                                },
+                                onExit = {
+                                    viewModel.clearQuestions()
+                                    if (adManager != null && activity != null)
+                                        adManager.showInterstitialIfReady(activity) { screenState = MockTestState.Lobby }
+                                    else
+                                        screenState = MockTestState.Lobby
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -24,11 +24,13 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = tokenStore.getToken()
 
+        val deviceId = tokenStore.getDeviceId()
         val request = chain.request().newBuilder()
             .apply {
                 if (!token.isNullOrEmpty()) {
                     addHeader("Authorization", "Bearer $token")
                 }
+                addHeader("X-Device-ID", deviceId ?: "")
             }
             .build()
 

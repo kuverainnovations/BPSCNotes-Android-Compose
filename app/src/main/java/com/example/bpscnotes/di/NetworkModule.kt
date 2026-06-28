@@ -3,6 +3,7 @@ package com.example.bpscnotes.di
 import android.content.Context
 import com.example.bpscnotes.core.network.AuthInterceptor
 import com.example.bpscnotes.data.remote.api.*
+import com.kuvera.bpscnotes.BuildConfig
 import com.example.bpscnotes.presentation.nofification.NotificationsApiService
 import dagger.Module
 import dagger.Provides
@@ -23,12 +24,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // Switch to BuildConfig.BASE_URL once you add buildConfigField to app/build.gradle.
-    // See BUILDCONFIG_INSTRUCTIONS.md for the exact lines to add.
-    // For now, use the staging URL directly to unblock the build.
-
-    private const val BASE_URL = "https://api-stg.bpscnotes.in/api/v1/"
-//    private const val BASE_URL = "https://api.bpscnotes.in/api/v1/"
 
     // ── Retry GET requests only — never POST/auth ─────────────
     private val retryInterceptor = Interceptor { chain ->
@@ -165,7 +160,8 @@ object NetworkModule {
             // onlineInterceptor goes as network interceptor (sees real response)
             .addNetworkInterceptor(onlineInterceptor(cache))
             .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                        else HttpLoggingInterceptor.Level.NONE
             })
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -180,7 +176,8 @@ object NetworkModule {
         OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                        else HttpLoggingInterceptor.Level.NONE
             })
             .connectTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.MINUTES)
@@ -191,7 +188,7 @@ object NetworkModule {
     @Provides @Singleton
     fun provideRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -199,7 +196,7 @@ object NetworkModule {
     @Provides @Singleton @Named("upload")
     fun provideUploadRetrofit(@Named("upload") client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

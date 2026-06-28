@@ -138,6 +138,10 @@ data class QuizUiState(
     // ── Per-quiz leaderboard (loaded after submit) ────────────
     val leaderboard: List<com.example.bpscnotes.data.remote.api.QuizLeaderboardItemResponse> = emptyList(),
     val isLoadingLeaderboard: Boolean         = false,
+
+    // ── Session integrity ──────────────────────────────────────
+    val sessionId: String?                    = null,
+    val backgroundSecs: Int                   = 0,
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -320,7 +324,14 @@ class QuizViewModel @Inject constructor(
                     marksPerCorrect        = quiz.marksPerCorrect,
                     marksPerWrong          = quiz.marksPerWrong,
                 )
-                _uiState.update { it.copy(activeSession = session, isStartingQuiz = false) }
+                _uiState.update {
+                    it.copy(
+                        activeSession  = session,
+                        isStartingQuiz = false,
+                        sessionId      = data.sessionId,
+                        backgroundSecs = 0,
+                    )
+                }
             } catch (e: Exception) {
                 Log.e("QuizVM", "startQuiz: ${e.message}", e)
                 // Parse actual JSON error body — e.message only says "HTTP 400"
@@ -349,13 +360,20 @@ class QuizViewModel @Inject constructor(
 
     fun getAnswer(questionId: String): String? = _uiState.value.selectedAnswers[questionId]
 
+    /** Called by AppTimer whenever the app goes to background during an active quiz. */
+    fun addBackgroundSecs(secs: Int) {
+        _uiState.update { it.copy(backgroundSecs = it.backgroundSecs + secs) }
+    }
+
     // ── 5. SUBMIT ─────────────────────────────────────────────
 
     fun submitQuiz(timeTakenSecs: Int) {
         val session = _uiState.value.activeSession ?: return
         // Guard against double-submit (timer + button can both trigger simultaneously)
         if (_uiState.value.isSubmitting || _uiState.value.result != null) return
-        val answers = _uiState.value.selectedAnswers
+        val answers       = _uiState.value.selectedAnswers
+        val sessionId     = _uiState.value.sessionId
+        val backgroundSecs = _uiState.value.backgroundSecs
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, submitError = null) }
@@ -368,7 +386,12 @@ class QuizViewModel @Inject constructor(
                 }
                 val response = quizzesApi.submitQuiz(
                     session.id,
-                    QuizSubmitRequest(answers = requestAnswers, timeTakenSecs = timeTakenSecs)
+                    QuizSubmitRequest(
+                        answers        = requestAnswers,
+                        timeTakenSecs  = timeTakenSecs,
+                        sessionId      = sessionId,
+                        backgroundSecs = backgroundSecs,
+                    )
                 )
                 val data = response.data ?: throw Exception("Empty submit response")
 

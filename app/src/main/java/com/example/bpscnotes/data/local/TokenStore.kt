@@ -284,4 +284,10 @@ class TokenStore @Inject constructor(
     fun clearAll() {
         prefs.edit().clear().commit()
     }
+
+    // ── Device ID (Firebase Installation ID) ──────────────────
+    // Stored once at app startup by MainActivity; read synchronously
+    // by AuthInterceptor on every network request.
+    fun getDeviceId(): String? = prefs.getString("device_id", null)
+    fun saveDeviceId(id: String) = prefs.edit().putString("device_id", id).apply()
 }

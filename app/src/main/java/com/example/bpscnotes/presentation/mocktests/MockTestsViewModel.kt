@@ -42,6 +42,9 @@ data class MockTestsUiState(
     val leaderboard: List<QuizLeaderboardEntry> = emptyList(),
     val isLoadingLeaderboard: Boolean           = false,
     val leaderboardError: String?               = null,
+    // ── Session integrity ──────────────────────────────────────
+    val activeSessionId: String?                = null,
+    val backgroundSecs: Int                     = 0,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
@@ -124,20 +127,14 @@ class MockTestsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Fetch questions for a quiz before starting the active test.
-     * Tries POST /quizzes/:id/start first (creates attempt), falls back to GET /quizzes/:id.
-     */
+    /** Fetch questions for a quiz. POST /quizzes/:id/start (creates session, no GET fallback). */
     fun loadQuestionsForTest(quizId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingQuestions = true, questionsError = null, activeQuestions = emptyList()) }
             try {
-                val detail = try {
-                    quizzesApi.startQuiz(quizId)       // POST — creates session
-                } catch (e: Exception) {
-                    quizzesApi.getQuizDetail(quizId)   // GET fallback
-                }
+                val detail = quizzesApi.startQuiz(quizId)
                 val questions = detail.data?.questions ?: emptyList()
+                val sessionId = detail.data?.sessionId
                 if (questions.isEmpty()) {
                     _uiState.update {
                         it.copy(
@@ -146,7 +143,14 @@ class MockTestsViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    _uiState.update { it.copy(isLoadingQuestions = false, activeQuestions = questions) }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingQuestions = false,
+                            activeQuestions = questions,
+                            activeSessionId = sessionId,
+                            backgroundSecs = 0,
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("MockTestsVM", "loadQuestions: ${e.message}", e)
@@ -160,11 +164,17 @@ class MockTestsViewModel @Inject constructor(
         }
     }
 
+    fun addBackgroundSecs(secs: Int) {
+        _uiState.update { it.copy(backgroundSecs = it.backgroundSecs + secs) }
+    }
+
     /**
      * Submit user answers via POST /quizzes/:id/submit.
      * The result contains score, correct count, and per-question breakdown.
      */
     fun submitTest(quizId: String, answers: Map<String, Int>, timeTakenSecs: Int) {
+        val sessionId      = _uiState.value.activeSessionId
+        val backgroundSecs = _uiState.value.backgroundSecs
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, submitError = null) }
             try {
@@ -175,7 +185,12 @@ class MockTestsViewModel @Inject constructor(
                 }
                 val result = quizzesApi.submitQuiz(
                     quizId,
-                    QuizSubmitRequest(answers = answerList, timeTakenSecs = timeTakenSecs)
+                    QuizSubmitRequest(
+                        answers        = answerList,
+                        timeTakenSecs  = timeTakenSecs,
+                        sessionId      = sessionId,
+                        backgroundSecs = backgroundSecs,
+                    )
                 ).data
                 _uiState.update { it.copy(isSubmitting = false, submitResult = result) }
             } catch (e: Exception) {

@@ -35,6 +35,8 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.AppQuitDialog
+import com.example.bpscnotes.core.ui.components.AppTimer
+import com.example.bpscnotes.core.ui.components.SecureScreen
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.t.BpscColors
 import kotlinx.coroutines.delay
@@ -215,6 +217,10 @@ private fun QuizPlayerContent(
         return
     }
 
+    // Track background time while quiz is active
+    AppTimer(onBackground = { bgSecs -> viewModel.addBackgroundSecs(bgSecs) })
+
+    SecureScreen {
     Box(Modifier
         .fillMaxSize()
         .background(cs.background)) {
@@ -312,6 +318,7 @@ private fun QuizPlayerContent(
             )
         }
     }
+    } // end SecureScreen
 }
 
 // ═════════════════════════════════════════════════════════════════

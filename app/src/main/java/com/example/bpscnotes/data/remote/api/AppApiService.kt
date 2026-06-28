@@ -245,14 +245,17 @@ data class QuizQuestionDto(
 
 data class QuizDetailData(
     val quiz: QuizPreviewDto,
-    val questions: List<QuizQuestionDto> = emptyList()
+    val questions: List<QuizQuestionDto> = emptyList(),
+    @SerializedName("sessionId") val sessionId: String? = null
 )
 
 // ── Submit ────────────────────────────────────────────────────
 
 data class QuizSubmitRequest(
     val answers: List<QuizAnswerRequest>,
-    @SerializedName("timeTakenSecs") val timeTakenSecs: Int = 0
+    @SerializedName("timeTakenSecs")  val timeTakenSecs: Int = 0,
+    @SerializedName("sessionId")      val sessionId: String? = null,
+    @SerializedName("backgroundSecs") val backgroundSecs: Int = 0
 )
 
 data class QuizAnswerRequest(

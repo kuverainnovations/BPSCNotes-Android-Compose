@@ -3,12 +3,16 @@ package com.example.bpscnotes.presentation.auth.otp
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.core.base.BaseViewModel
 import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.core.notifications.FcmTokenManager
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import retrofit2.HttpException
 import javax.inject.Inject
 
 // What the OTP screen should do after successful verification
@@ -32,6 +36,10 @@ class OtpViewModel @Inject constructor(
 
     private val _resendSuccess = MutableLiveData(false)
     val resendSuccess: LiveData<Boolean> = _resendSuccess
+
+    // Seconds the user must wait before resending (from backend 429 response)
+    private val _retryAfterSeconds = MutableLiveData(30)
+    val retryAfterSeconds: LiveData<Int> = _retryAfterSeconds
 
     /**
      * context: "registration" — normal OTP after new-user mobile entry
@@ -84,9 +92,22 @@ class OtpViewModel @Inject constructor(
         }
     }
     fun resendOtp(mobile: String) {
-        launchWithLoading {
-            val response = authRepository.sendOtp(mobile)
-            _resendSuccess.postValue(response.success)
+        viewModelScope.launch {
+            try {
+                val response = authRepository.sendOtp(mobile)
+                _resendSuccess.postValue(response.success)
+            } catch (e: HttpException) {
+                if (e.code() == 429) {
+                    val body = e.response()?.errorBody()?.string() ?: ""
+                    val secs = try {
+                        JSONObject(body).optInt("retryAfterSeconds", 120)
+                    } catch (_: Exception) { 120 }
+                    _retryAfterSeconds.postValue(secs)
+                }
+                Log.e("OtpVM", "resendOtp: ${e.message}")
+            } catch (e: Exception) {
+                Log.e("OtpVM", "resendOtp: ${e.message}")
+            }
         }
     }
 
