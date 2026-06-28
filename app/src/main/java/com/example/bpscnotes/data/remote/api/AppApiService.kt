@@ -308,7 +308,18 @@ data class QuizResultData(
     val negativeMarks: Double = 0.0,
     val finalScore: Double = 0.0,
 
+    @SerializedName("isFirstAttempt")   val isFirstAttempt:   Boolean = false,
+    @SerializedName("canEarnCoins")     val canEarnCoins:     Boolean = false,
+    @SerializedName("subjectBreakdown") val subjectBreakdown: List<QuizSubjectBreakdown> = emptyList(),
+
     val answers: List<QuizAnswerResultDto> = emptyList()
+)
+
+data class QuizSubjectBreakdown(
+    val subject: String = "",
+    val total:   Int    = 0,
+    val correct: Int    = 0,
+    val score:   Int    = 0,
 )
 
 // ══════════════════════════════════════════════════════════════

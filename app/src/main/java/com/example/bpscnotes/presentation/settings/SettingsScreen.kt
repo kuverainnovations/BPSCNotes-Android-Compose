@@ -27,6 +27,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.profile.ProfileViewModel
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
@@ -185,38 +186,21 @@ fun SettingsScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), thickness = 0.5.dp)
 
                         // Biometric toggle
-                        // LocalContext.current must be called at composable scope, not inside remember {}
                         val biometricContext = androidx.compose.ui.platform.LocalContext.current
                         val biometricAvailable = remember(biometricContext) {
                             com.example.bpscnotes.core.auth.AppBiometricManager.isAvailable(biometricContext)
                         }
                         if (biometricAvailable) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Fingerprint,
-                                    contentDescription = null,
-                                    tint = BpscColors.Primary,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(Modifier.width(14.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("Biometric Login", style = MaterialTheme.typography.titleSmall,
-                                        color = cs.onSurface)
-                                    Text("Use fingerprint or face to login",
-                                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                                }
-                                Switch(
-                                    checked = settingsState.biometricEnabled,
-                                    onCheckedChange = { settingsViewModel.setBiometricEnabled(it) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor  = Color.White,
-                                        checkedTrackColor  = BpscColors.Primary
-                                    )
-                                )
-                            }
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                            SettingsToggleRow(
+                                icon     = Icons.Rounded.Fingerprint,
+                                iconBg   = Color(0xFFE3F2FD),
+                                iconTint = Color(0xFF1565C0),
+                                title    = "Biometric Login",
+                                subtitle = "Use fingerprint or face to login",
+                                checked  = settingsState.biometricEnabled,
+                                onChange = { settingsViewModel.setBiometricEnabled(it) }
+                            )
                         }
                     }
                 }
@@ -417,10 +401,8 @@ fun SettingsScreen(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
                             title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle,
                             onClick = {
-                                context.startActivity(
-                                    android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
-                                )
+                                CustomTabsIntent.Builder().build()
+                                    .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
                             }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
@@ -428,10 +410,8 @@ fun SettingsScreen(
                             icon = Icons.Rounded.Gavel, iconBg = Color(0xFFF5F5F5), iconTint = Color(0xFF616161),
                             title = str.settingsTerms, subtitle = str.settingsTermsSubtitle,
                             onClick = {
-                                context.startActivity(
-                                    android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://bpscnotes.in/terms-of-service"))
-                                )
+                                CustomTabsIntent.Builder().build()
+                                    .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/terms-of-service"))
                             }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)

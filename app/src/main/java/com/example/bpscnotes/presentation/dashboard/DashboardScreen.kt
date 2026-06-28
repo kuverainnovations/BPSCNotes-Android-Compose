@@ -231,9 +231,15 @@ fun DashboardScreen(
                             navController = navController
                         )
 
-                        // ── Continue Learning (last attempted quiz) ─────────────────
+                        // ── Continue Learning — in-progress quiz takes priority ─────
+                        val inProgress = state.inProgressSession
                         val recentAttempts = state.stats?.recentAttempts ?: emptyList()
-                        if (recentAttempts.isNotEmpty()) {
+                        if (inProgress != null) {
+                            ContinueLearningSection(
+                                inProgressSession = inProgress,
+                                navController     = navController
+                            )
+                        } else if (recentAttempts.isNotEmpty()) {
                             ContinueLearningSection(
                                 recentAttempt = recentAttempts.first(),
                                 navController = navController
@@ -447,29 +453,33 @@ private fun BannerSection(
                                 .align(Alignment.CenterEnd)
                         )
                     }
-                    Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .fillMaxWidth(0.7f)
+                    ) {
                         Text(banner.title, style = MaterialTheme.typography.titleMedium,
                             color = Color.White, fontWeight = FontWeight.ExtraBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         banner.subtitle?.let {
-                            Spacer(Modifier.height(5.dp))
-                            Text(it, style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(0.85f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(4.dp))
+                            Text(it, style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    // CTA pill
+                    // CTA pill — pinned to BottomEnd, always visible
+                    val ctaText = banner.ctaLabel?.takeIf { it.isNotBlank() }
+                        ?: if (!banner.actionLink.isNullOrBlank()) "Open" else "View"
                     Row(
                         modifier = Modifier.align(Alignment.BottomEnd)
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.White.copy(0.2f))
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val ctaText = banner.ctaLabel?.takeIf { it.isNotBlank() }
-                            ?: if (!banner.actionLink.isNullOrBlank()) "Open" else "View"
-                        Text("$ctaText →", style = MaterialTheme.typography.labelSmall,
-                            color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(ctaText, style = MaterialTheme.typography.labelSmall,
+                            color = Color.White, fontWeight = FontWeight.ExtraBold)
                         Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(12.dp))
                     }
                 }
@@ -1345,11 +1355,83 @@ private fun WeeklyConsistencyCard(
 // CONTINUE LEARNING — last quiz attempt card (Testbook/Unacademy style)
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
+@Composable
+private fun ContinueLearningSection(
+    inProgressSession: com.example.bpscnotes.data.remote.api.InProgressSessionDto,
+    navController: NavHostController
+) {
+    val progress = if (inProgressSession.totalQuestions > 0)
+        inProgressSession.answeredCount.toFloat() / inProgressSession.totalQuestions
+    else 0f
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+        SectionHeader(title = "Continue Learning")
+        Spacer(Modifier.height(10.dp))
+        Card(
+            modifier  = Modifier.fillMaxWidth(),
+            shape     = RoundedCornerShape(16.dp),
+            colors    = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E7)),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate(Screen.QuizPlayer.createRoute(inProgressSession.quizId)) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFFF9800).copy(0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        when (inProgressSession.quizType) { "daily" -> "📅"; "mock" -> "📋"; else -> "📝" },
+                        fontSize = 22.sp
+                    )
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        "▶ Resume Quiz",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFE65100),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        inProgressSession.quizTitle,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color(0xFF5D4037),
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "${inProgressSession.answeredCount}/${inProgressSession.totalQuestions} answered",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF8D6E63)
+                    )
+                    Box(
+                        Modifier.fillMaxWidth().height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color(0xFFFF9800).copy(0.2f))
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth(progress).fillMaxHeight()
+                                .background(Color(0xFFFF9800), RoundedCornerShape(2.dp))
+                        )
+                    }
+                }
+                Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFFE65100), modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
 private fun ContinueLearningSection(
     recentAttempt: com.example.bpscnotes.data.remote.api.RecentQuizAttemptDto,
     navController: NavHostController
 ) {
-    val str = LocalStrings.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
         SectionHeader(title = "Continue Learning")
         Spacer(Modifier.height(10.dp))
@@ -1367,7 +1449,6 @@ private fun ContinueLearningSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Type icon
                 Box(
                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                         .background(BpscColors.Primary.copy(0.15f)),
@@ -1392,7 +1473,6 @@ private fun ContinueLearningSection(
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextSecondary
                     )
-                    // Score progress bar
                     val scoreProgress = recentAttempt.score / 100f
                     Box(
                         Modifier.fillMaxWidth().height(4.dp)
@@ -1412,10 +1492,7 @@ private fun ContinueLearningSection(
                         )
                     }
                 }
-                Icon(
-                    Icons.Rounded.ChevronRight, null,
-                    tint = BpscColors.Primary, modifier = Modifier.size(20.dp)
-                )
+                Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
             }
         }
     }

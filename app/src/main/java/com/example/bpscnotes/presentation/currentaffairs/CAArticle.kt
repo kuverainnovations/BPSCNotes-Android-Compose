@@ -1,6 +1,7 @@
 package com.example.bpscnotes.presentation.currentaffairs
 
 import com.example.bpscnotes.data.remote.api.CurrentAffairDto
+import org.jsoup.Jsoup
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -39,14 +40,7 @@ fun formatCaDate(raw: String?): String {
  * NOT applied in toUiModel() — the UI model keeps raw HTML so that
  * RichHtmlText composables can render colors, bold, highlights, etc.
  */
-fun String.stripHtmlTags(): String =
-    this.replace(Regex("<[^>]+>"), "")
-        .replace("&amp;",  "&")
-        .replace("&lt;",   "<")
-        .replace("&gt;",   ">")
-        .replace("&nbsp;", " ")
-        .replace("&quot;", "\"")
-        .replace("&#39;",  "'")
+fun String.stripHtmlTags(): String = Jsoup.parse(this).text()
         .replace(Regex("\\s+"), " ")
         .trim()
 

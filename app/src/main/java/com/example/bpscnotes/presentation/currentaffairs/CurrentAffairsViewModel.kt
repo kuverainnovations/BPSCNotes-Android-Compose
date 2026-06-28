@@ -6,12 +6,18 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.BackoffPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.bpscnotes.core.workers.CaMcqSubmitWorker
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.core.network.toUserMessage
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +26,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class CurrentAffairsUiState(
@@ -250,13 +257,6 @@ class CurrentAffairsViewModel @Inject constructor(
 
     fun clearMcqError() { _mcqError.value = null }
 
-    /**
-     * Persists a completed CA MCQ attempt so the article list/detail can
-     * show "attempted" + last score. Fire-and-forget by design — the
-     * result/review screens already show the locally-computed summary
-     * immediately, so this call shouldn't block or visibly fail the UI if
-     * the network is briefly unavailable.
-     */
     fun submitMcqAttempt(affairId: String, answers: Map<String, String>) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -267,9 +267,21 @@ class CurrentAffairsViewModel @Inject constructor(
                 )
                 api.submitMcqAttempt(affairId, payload)
             } catch (e: Exception) {
-                Log.w("CurrentAffairsVM", "submitMcqAttempt failed (non-fatal): ${e.message}")
+                Log.w("CurrentAffairsVM", "submitMcqAttempt failed, scheduling retry: ${e.message}")
+                scheduleRetry(affairId, answers)
             }
         }
+    }
+
+    private fun scheduleRetry(affairId: String, answers: Map<String, String>) {
+        val request = OneTimeWorkRequestBuilder<CaMcqSubmitWorker>()
+            .setInputData(workDataOf(
+                CaMcqSubmitWorker.KEY_AFFAIR_ID to affairId,
+                CaMcqSubmitWorker.KEY_ANSWERS_JSON to Gson().toJson(answers),
+            ))
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(appContext).enqueue(request)
     }
 
     /** Called by TrackStudyTime — logs time silently in background */

@@ -305,19 +305,44 @@ fun CourseDetailScreen(
             // FIX 2: isRatingSubmitted is now persistent via companion set in ViewModel
             val canReview = allDone && !course.hasReviewed
 
-            // FIX 4: Preserve scroll position when returning from LessonViewer
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-            // Hero header height is content-driven (no fixed size), so we
-            // measure it and use that as the LazyColumn's top padding —
-            // avoids a hardcoded guess leaving a gap above "What You'll Learn".
             val density = LocalDensity.current
-            var heroHeightDp by remember { mutableStateOf(340.dp) }
+
+            // Collapsing header: 420dp initial guess is safely above any real header height,
+            // so the first onGloballyPositioned measurement is always unconstrained.
+            val collapsedHeightDp = 64.dp
+            var expandedHeightDp by remember { mutableStateOf(500.dp) }
+            var expandedHeightLocked by remember { mutableStateOf(false) }
+
+            val scrollOffsetPx by remember {
+                derivedStateOf {
+                    if (listState.firstVisibleItemIndex > 0) Float.MAX_VALUE
+                    else listState.firstVisibleItemScrollOffset.toFloat()
+                }
+            }
+            val collapseProgress by remember {
+                derivedStateOf {
+                    val expandPx  = with(density) { expandedHeightDp.toPx() }
+                    val collapsePx = with(density) { collapsedHeightDp.toPx() }
+                    val range = expandPx - collapsePx
+                    if (range <= 0f) 0f else (scrollOffsetPx / range).coerceIn(0f, 1f)
+                }
+            }
+            val currentHeaderHeightDp by remember {
+                derivedStateOf {
+                    val expandPx  = with(density) { expandedHeightDp.toPx() }
+                    val collapsePx = with(density) { collapsedHeightDp.toPx() }
+                    val currentPx = expandPx + (collapsePx - expandPx) * collapseProgress
+                    with(density) { currentPx.toDp() }
+                }
+            }
+
             // HeroHeader is pinned — only the content below it scrolls
             Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
-                // Content column with top padding matching hero header height
+                // Content column with top padding = locked expanded height (never changes)
                 LazyColumn(
                     modifier       = Modifier.fillMaxSize().background(cs.background),
-                    contentPadding = PaddingValues(top = heroHeightDp, bottom = 110.dp),
+                    contentPadding = PaddingValues(top = expandedHeightDp, bottom = 110.dp),
                     state          = listState
                 ) {
 
@@ -404,16 +429,24 @@ fun CourseDetailScreen(
                     }
                 }
 
-                // ── Pinned HeroHeader overlaid on top ──────────────
+                // ── Pinned collapsing HeroHeader ──────────────
                 Box(
-                    Modifier.onGloballyPositioned { coords ->
-                        val measuredDp = with(density) { coords.size.height.toDp() }
-                        if (measuredDp != heroHeightDp) heroHeightDp = measuredDp
-                    }
+                    Modifier
+                        .height(currentHeaderHeightDp)
+                        .clip(RectangleShape)
                 ) {
-                    HeroHeader(
-                        course, accent, totalLessons, completedLessons, animProg, isEnrolled
-                    ) { nav.popBackStackSafe() }
+                    Box(Modifier.onGloballyPositioned { coords ->
+                        val measuredDp = with(density) { coords.size.height.toDp() }
+                        if (!expandedHeightLocked && measuredDp > 60.dp) {
+                            expandedHeightDp = measuredDp
+                            expandedHeightLocked = true
+                        }
+                    }) {
+                        HeroHeader(
+                            course, accent, totalLessons, completedLessons, animProg,
+                            isEnrolled, collapseProgress
+                        ) { nav.popBackStackSafe() }
+                    }
                 }
             } // end pinned-header Box
 
@@ -916,9 +949,15 @@ private fun ReviewCard(review: CourseReview) {
 @Composable
 private fun HeroHeader(
     course: CourseDto, accent: Color, totalLessons: Int,
-    completedLessons: Int, animProg: Float, isEnrolled: Boolean, onBack: () -> Unit
+    completedLessons: Int, animProg: Float, isEnrolled: Boolean,
+    collapseProgress: Float,
+    onBack: () -> Unit
 ) {
     val str = LocalStrings.current
+    // Detail content fades out in the first 60% of collapse; compact title fades in at 40%+
+    val detailAlpha = (1f - collapseProgress * 1.8f).coerceIn(0f, 1f)
+    val compactTitleAlpha = ((collapseProgress - 0.35f) * 2.5f).coerceIn(0f, 1f)
+
     Box(
         Modifier.fillMaxWidth().background(
             Brush.linearGradient(
@@ -930,33 +969,41 @@ private fun HeroHeader(
             )
         ).statusBarsPadding()
     ) {
-        Canvas(Modifier.matchParentSize()) {
-            drawCircle(Color.White.copy(0.06f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
-            drawCircle(Color.White.copy(0.04f), 80.dp.toPx(),  Offset(-20.dp.toPx(), size.height * 0.7f))
+        if (detailAlpha > 0f) {
+            Canvas(Modifier.matchParentSize().alpha(detailAlpha)) {
+                drawCircle(Color.White.copy(0.06f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
+                drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
+            }
         }
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Top row: back + compact title (on collapse) + share
+            val shareContext = androidx.compose.ui.platform.LocalContext.current
+            val courseTitle  = course.title
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f)).clickable(onClick = onBack), Alignment.Center) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-                // FIX 5: Share now actually works
-                val shareContext = androidx.compose.ui.platform.LocalContext.current
-                val courseTitle  = course.title
+                if (compactTitleAlpha > 0f) {
+                    Text(
+                        courseTitle,
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp).alpha(compactTitleAlpha),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
                 Box(
                     Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f))
                         .clickable {
                             val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-
-                                putExtra(
-                                    android.content.Intent.EXTRA_SUBJECT,
-                                    "Check this BPSC course: $courseTitle"
-                                )
-
-                                putExtra(
-                                    android.content.Intent.EXTRA_TEXT,
-                                    "I'm studying \"$courseTitle\" on BPSCNotes app! Join me → https://bpscnotes.in/courses/${course.id}"
-                                )
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Check this BPSC course: $courseTitle")
+                                putExtra(android.content.Intent.EXTRA_TEXT,
+                                    "I'm studying \"$courseTitle\" on BPSCNotes app! Join me → https://bpscnotes.in/courses/${course.id}")
                             }
                             shareContext.startActivity(android.content.Intent.createChooser(shareIntent, str.caShare))
                         },
@@ -965,51 +1012,54 @@ private fun HeroHeader(
                     Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Badge(course.subject, accent, Color.White)
-                if (course.isPaid) Badge("PRO", BpscColors.CoinGold, Color(0xFFFFF8E1))
-                else Badge(str.coursesFree, BpscColors.Success, Color(0xFFE8FDF4))
-            }
-            Text(course.title, style = MaterialTheme.typography.titleLarge, color = Color.White,
-                fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
-            // Instructor chip hidden per request
-            if (false) course.instructor?.let {
-                Text("${str.courseByAuthor} $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
-            }
-            val ratingFloat = course.rating.toFloatOrNull() ?: 0f
-            if (ratingFloat > 0f || course.review_count > 0) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        repeat(5) { i ->
-                            Icon(Icons.Rounded.Star, null,
-                                tint = if (i < ratingFloat.toInt()) Color(0xFFFFD700) else Color.White.copy(0.3f),
-                                modifier = Modifier.size(13.dp))
+            // Detail content — fades out on collapse
+            if (detailAlpha > 0f) {
+                Column(
+                    modifier = Modifier.alpha(detailAlpha),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Badge(course.subject, accent, Color.White)
+                        if (course.isPaid) Badge("PRO", BpscColors.CoinGold, Color(0xFFFFF8E1))
+                        else Badge(str.coursesFree, BpscColors.Success, Color(0xFFE8FDF4))
+                    }
+                    Text(course.title, style = MaterialTheme.typography.titleLarge, color = Color.White,
+                        fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
+                    val ratingFloat = course.rating.toFloatOrNull() ?: 0f
+                    if (ratingFloat > 0f || course.review_count > 0) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                repeat(5) { i ->
+                                    Icon(Icons.Rounded.Star, null,
+                                        tint = if (i < ratingFloat.toInt()) Color(0xFFFFD700) else Color.White.copy(0.3f),
+                                        modifier = Modifier.size(13.dp))
+                                }
+                                Text("$ratingFloat", style = MaterialTheme.typography.bodyMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("(${course.review_count})", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+                            }
+                            Text("·", color = Color.White.copy(0.5f))
+                            Text(formatStudentCount(course.enrollmentCount),
+                                style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
                         }
-                        Text("$ratingFloat", style = MaterialTheme.typography.bodyMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("(${course.review_count})", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                     }
-                    Text("·", color = Color.White.copy(0.5f))
-                    Text(formatStudentCount(course.enrollmentCount),
-                        style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoPill(Icons.Rounded.PlayLesson, "$totalLessons lessons")
-                InfoPill(Icons.Rounded.Schedule, "${course.totalHours}h total")
-                // FIX: Only show language tag if it has a meaningful value
-                if (course.language.isNotBlank() && course.language != str.courseHindiEnglish && course.language != str.courseHindiEnglish) {
-                    InfoPill(Icons.Rounded.Language, course.language)
-                }
-            }
-            if (isEnrolled && totalLessons > 0) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text(str.courseYourProgress, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
-                        Text("$completedLessons/$totalLessons · ${(animProg * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodyMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        InfoPill(Icons.Rounded.PlayLesson, "$totalLessons lessons")
+                        InfoPill(Icons.Rounded.Schedule, "${course.totalHours}h total")
+                        if (course.language.isNotBlank() && course.language != str.courseHindiEnglish) {
+                            InfoPill(Icons.Rounded.Language, course.language)
+                        }
                     }
-                    Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(0.2f))) {
-                        Box(Modifier.fillMaxWidth(animProg).fillMaxHeight().background(Color.White, RoundedCornerShape(3.dp)))
+                    if (isEnrolled && totalLessons > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                                Text(str.courseYourProgress, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.8f))
+                                Text("$completedLessons/$totalLessons · ${(animProg * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodyMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(0.2f))) {
+                                Box(Modifier.fillMaxWidth(animProg).fillMaxHeight().background(Color.White, RoundedCornerShape(3.dp)))
+                            }
+                        }
                     }
                 }
             }

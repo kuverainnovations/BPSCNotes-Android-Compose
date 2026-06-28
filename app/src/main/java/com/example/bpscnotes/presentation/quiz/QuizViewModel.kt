@@ -96,6 +96,10 @@ data class QuizResult(
     val marksObtained: Double = 0.0,
     val negativeMarks: Double = 0.0,
     val finalScore: Double = 0.0,
+    // ── First-attempt & coin eligibility ─────────────────────
+    val isFirstAttempt: Boolean = false,
+    val canEarnCoins: Boolean = false,
+    val subjectBreakdown: List<com.example.bpscnotes.data.remote.api.QuizSubjectBreakdown> = emptyList(),
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -458,6 +462,9 @@ class QuizViewModel @Inject constructor(
                             marksObtained           = data.marksObtained,
                             negativeMarks           = data.negativeMarks,
                             finalScore              = data.finalScore,
+                            isFirstAttempt          = data.isFirstAttempt,
+                            canEarnCoins            = data.canEarnCoins,
+                            subjectBreakdown        = data.subjectBreakdown,
                         ),
                         isSubmitting    = false,
                         // Update isAttempted AND myLastScore locally for immediate UI update

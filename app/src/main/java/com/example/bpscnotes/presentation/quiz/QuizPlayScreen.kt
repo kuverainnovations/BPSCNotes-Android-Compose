@@ -331,8 +331,8 @@ private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(20.dp),
-        colors   = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(3.dp)
+        colors   = CardDefaults.cardColors(containerColor = Color(0xFFEEF4FF)),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 

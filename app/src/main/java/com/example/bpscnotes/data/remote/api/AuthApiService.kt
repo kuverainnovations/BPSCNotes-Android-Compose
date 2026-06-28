@@ -86,6 +86,9 @@ interface AuthApiService {
     /** POST /auth/change-mpin — current + new MPIN (JWT required) */
     @POST("auth/change-mpin")
     suspend fun changeMpin(@Body dto: ChangeMpinRequest): ApiResponse<Any>
+
+    @GET("users/me/learning-progress")
+    suspend fun getLearningProgress(): ApiResponse<LearningProgressDto>
 }
 
 // ── MPIN DTOs ──────────────────────────────────────────────────
@@ -167,4 +170,19 @@ data class GetMeResponse(
 
 data class AvatarUploadData(
     val url: String? = null
+)
+
+data class InProgressSessionDto(
+    @com.google.gson.annotations.SerializedName("session_id")  val sessionId:          String = "",
+    @com.google.gson.annotations.SerializedName("quiz_id")     val quizId:             String = "",
+    @com.google.gson.annotations.SerializedName("quiz_title")  val quizTitle:          String = "",
+    @com.google.gson.annotations.SerializedName("quiz_type")   val quizType:           String = "",
+    @com.google.gson.annotations.SerializedName("quiz_subject") val quizSubject:       String = "",
+    @com.google.gson.annotations.SerializedName("total_questions") val totalQuestions: Int    = 0,
+    @com.google.gson.annotations.SerializedName("answers_so_far_count") val answeredCount: Int = 0,
+)
+
+data class LearningProgressDto(
+    val inProgressSession: InProgressSessionDto? = null,
+    val recentAttempts: List<com.example.bpscnotes.data.remote.api.RecentQuizAttemptDto> = emptyList(),
 )

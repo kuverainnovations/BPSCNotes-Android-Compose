@@ -378,7 +378,7 @@ fun CaArticleDetailScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Text(
-                            article?.category ?: str.caTitle,
+                            article?.headline?.stripHtmlTags() ?: str.caTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,

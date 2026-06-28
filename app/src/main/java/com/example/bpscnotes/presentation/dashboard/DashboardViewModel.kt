@@ -46,6 +46,7 @@ data class DashboardUiState(
     val monthlyCaMins:      Map<String, Int>  = emptyMap(),
     val monthlyLessonMins:  Map<String, Int>  = emptyMap(),
     val stats: UserStatsData?                 = null,
+    val inProgressSession: com.example.bpscnotes.data.remote.api.InProgressSessionDto? = null,
     val dailyTargets: List<DailyTargetDto>    = emptyList(),
     val targetSummary: DailyTargetsSummary    = DailyTargetsSummary(),
     val liveClasses: List<LiveClassDto>       = emptyList(),
@@ -142,7 +143,7 @@ class DashboardViewModel @Inject constructor(
                     liveClassesApi.getLiveClasses(limit = 3).data?.liveClasses }
                 }
                 val notifJob = async { safeGet("notif-count") { statsApi.getNotifications(limit = 1).data?.unreadCount } }
-
+                val learningJob = async { safeGet("learning") { authApi.getLearningProgress().data?.inProgressSession } }
 
                 val user       = userJob.await()
                 val courses    = coursesJob.await() ?: emptyList()
@@ -152,6 +153,7 @@ class DashboardViewModel @Inject constructor(
                 val targetsData = targetsJob.await()
                 val liveClasses = liveClassesJob.await() ?: emptyList()
                 val unreadCount = notifJob.await() ?: 0
+                val inProgressSession = learningJob.await()
 
                 // FIX: Seed registeredClassIds from the is_registered flag the GET API already returns.
                 // No extra API call needed — backend joins live_class_registrations per user in getLiveClasses().
@@ -211,6 +213,7 @@ class DashboardViewModel @Inject constructor(
                         monthlyCaMins     = caMap,
                         monthlyLessonMins = lessonMap,
                         stats          = stats,
+                        inProgressSession = inProgressSession,
                         dailyTargets   = targetsData?.targets ?: emptyList(),
                         targetSummary  = targetsData?.summary ?: DailyTargetsSummary(),
                         liveClasses=liveClasses,

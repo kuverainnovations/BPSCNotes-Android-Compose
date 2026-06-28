@@ -104,7 +104,7 @@ fun QuizListScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text(str.quizDaily + "s", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text("Daily Quizzes", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
                                 Text(str.quizTitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
@@ -234,7 +234,7 @@ fun QuizListScreen(
                         verticalArrangement   = Arrangement.spacedBy(12.dp)
                     ) {
                         if (state.dailyQuizzes.isNotEmpty()) {
-                            item { SectionLabel("📅 " + str.quizDaily + "s", "Today's scheduled quizzes — resets at midnight") }
+                            item { SectionLabel("📅 Daily Quizzes", "Today's scheduled quizzes — resets at midnight") }
                             items(state.dailyQuizzes, key = { it.id }) { quiz ->
                                 QuizCard(quiz = quiz) {
                                     if (quiz.totalQuestions == 0) {

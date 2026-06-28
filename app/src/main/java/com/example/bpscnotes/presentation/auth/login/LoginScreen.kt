@@ -62,6 +62,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 
 @Composable
@@ -257,9 +258,8 @@ fun LoginScreen(navController: NavHostController) {
                     color = BpscColors.Primary,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
-                        context.startActivity(intent)
+                        CustomTabsIntent.Builder().build()
+                            .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
                     }
                 )
             }

@@ -303,7 +303,8 @@ fun DailyTargetsScreen(
                         items            = allTargets,
                         onToggleComplete = { id ->  viewModel.toggleTargetComplete(id)*//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
                         onStartQuiz      = { subjectId -> navController.navigate(Screen.DailyQuiz.createRoute(subjectId)) },
-                        onViewNotes      = { navController.navigate(Screen.ELibrary.route) }
+                        onViewNotes      = { navController.navigate(Screen.ELibrary.route) },
+                        onAddMore        = { showAddSheet = true }
                     )
                     2 -> TimelineTabContent(
                         items            = allTargets,
@@ -595,7 +596,7 @@ private fun SubjectTag(subject: String) {
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) -> Unit, onStartQuiz: (String) -> Unit, onViewNotes: () -> Unit) {
+private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) -> Unit, onStartQuiz: (String) -> Unit, onViewNotes: () -> Unit, onAddMore: () -> Unit = {}) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -682,6 +683,19 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                 Text("🎉", fontSize = 60.sp)
                 Text("${str.targetCompleted}! 🎉", style = MaterialTheme.typography.headlineSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 Text(str.targetAllDone, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BpscColors.PrimaryLight)
+                        .clickable(onClick = onAddMore)
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Add, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
+                    Text("Need more time? Add a target", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -819,6 +833,14 @@ private fun EditTargetSheet(
             Text("Edit Target", style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, color = cs.onSurface)
 
+            // Subject dropdown — pick subject first, then enter sub-topic
+            BpscDropdown(
+                value    = selectedSubject,
+                label    = "Subject",
+                options  = subjects,
+                onSelect = { selectedSubject = it }
+            )
+
             // Title field
             OutlinedTextField(
                 value = title,
@@ -827,14 +849,6 @@ private fun EditTargetSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 maxLines = 3
-            )
-
-            // Subject dropdown
-            BpscDropdown(
-                value    = selectedSubject,
-                label    = "Subject",
-                options  = subjects,
-                onSelect = { selectedSubject = it }
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

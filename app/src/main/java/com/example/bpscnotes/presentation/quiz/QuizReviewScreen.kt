@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -142,22 +143,35 @@ internal fun QuizReviewScreen(
                                 SubjectChip(question.subject)
                             }
 
-                            Text(
-                                when {
-                                    isSkipped    -> str.quizSkipped
-                                    !resultKnown -> str.quizAnswered  // before submit
-                                    isCorrect    -> "✅ " + str.quizCorrect
-                                    else         -> "❌ " + str.quizWrong
-                                },
-                                style      = MaterialTheme.typography.labelSmall,
-                                color      = when {
-                                    isSkipped    -> BpscColors.TextSecondary
-                                    !resultKnown -> BpscColors.Primary
-                                    isCorrect    -> BpscColors.Success
-                                    else         -> Color(0xFFE74C3C)
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    when {
+                                        isSkipped    -> str.quizSkipped
+                                        !resultKnown -> str.quizAnswered  // before submit
+                                        isCorrect    -> "✅ " + str.quizCorrect
+                                        else         -> "❌ " + str.quizWrong
+                                    },
+                                    style      = MaterialTheme.typography.labelSmall,
+                                    color      = when {
+                                        isSkipped    -> BpscColors.TextSecondary
+                                        !resultKnown -> BpscColors.Primary
+                                        isCorrect    -> BpscColors.Success
+                                        else         -> Color(0xFFE74C3C)
+                                    },
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (resultKnown) {
+                                    Icon(
+                                        Icons.Rounded.Flag,
+                                        contentDescription = "Report question",
+                                        tint     = BpscColors.TextHint,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
                         }
 
                         // Question text
@@ -173,11 +187,9 @@ internal fun QuizReviewScreen(
                         question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed
                             val isUserChoice   = i == selectedIndex
-                            // Only reveal which option is correct when the user
-                            // actually got it right. For wrong/skipped answers,
-                            // the correct option is NOT highlighted - the user
-                            // sees their own (wrong) pick, but not "the answer".
-                            val isCorrectOpt   = resultKnown && isCorrect && i == correctIndex
+                            // Always highlight the correct option in green when result is known
+                            // so users can learn the right answer even when they were wrong.
+                            val isCorrectOpt   = resultKnown && i == correctIndex
 
                             val bgOpt = when {
                                 isCorrectOpt                    -> Color(0xFFE8FDF4)
@@ -233,8 +245,13 @@ internal fun QuizReviewScreen(
                         // Explanation — only shown if revealed (after submit)
                         if (!question.explanation.isNullOrBlank()) {
                             HorizontalDivider(color = BpscColors.Divider)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("💡", fontSize = 13.sp)
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "💡 Explanation",
+                                    style      = MaterialTheme.typography.labelSmall,
+                                    color      = BpscColors.Primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                                 Text(
                                     question.explanation ?: "",
                                     style      = MaterialTheme.typography.bodyMedium,

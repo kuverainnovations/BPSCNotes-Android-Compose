@@ -97,6 +97,15 @@ dependencies {
     // Splash Screen
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // WorkManager — for durable background retry (e.g., CA MCQ submit)
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // JSoup — reliable HTML-to-plain-text conversion for share intents
+    implementation("org.jsoup:jsoup:1.17.2")
+
+    // Chrome Custom Tab — in-app browser for privacy policy / terms
+    implementation("androidx.browser:browser:1.8.0")
+
     // Payments
     implementation("com.razorpay:checkout:1.6.40")
 

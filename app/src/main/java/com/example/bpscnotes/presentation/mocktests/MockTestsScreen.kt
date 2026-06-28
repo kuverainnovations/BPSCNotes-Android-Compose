@@ -381,16 +381,13 @@ private fun MockTestLobbyScreen(
     var selectedType by remember { mutableStateOf<MockTestType?>(null) }
 
     // Derive tabs dynamically — only show tab if tests of that type exist
-    val hasFull     = allTests.any { it.type == MockTestType.Full }
+    // "Full Mock Test" chip removed per LOW-02: full mocks still appear under "All"
     val hasMini     = allTests.any { it.type == MockTestType.SubjectWise }
     val hasPrevYear = allTests.any { it.type == MockTestType.PreviousYear }
 
     data class MockTab(val label: String, val type: MockTestType?)
     val tabs = buildList {
-        // "All" only earns its place if it aggregates 2+ of the tabs below -
-        // otherwise it's identical to (and confusingly duplicates) the single tab that exists
-        if (listOf(hasFull, hasMini, hasPrevYear).count { it } > 1) add(MockTab(str.filterAll, null))
-        if (hasFull)     add(MockTab(str.quizFullMock, MockTestType.Full))
+        add(MockTab(str.filterAll, null))
         if (hasMini)     add(MockTab("Mini Tests", MockTestType.SubjectWise))
         if (hasPrevYear) add(MockTab(str.quizPrevYear, MockTestType.PreviousYear))
     }

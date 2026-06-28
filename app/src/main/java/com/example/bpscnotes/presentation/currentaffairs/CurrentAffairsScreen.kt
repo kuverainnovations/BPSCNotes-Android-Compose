@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -175,22 +174,13 @@ fun CurrentAffairsScreen(
                         drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.6f))
                     }
                     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                }
-                                Column {
-                                    Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                    Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
-                                }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { navController.popBackStackSafe() }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                            // Bookmark count chip — taps to Saved tab
-                            Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(0.15f)).clickable { selectedTab = 3 }.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(Icons.Rounded.Bookmark, null, tint = BpscColors.CoinGold, modifier = Modifier.size(14.dp))
-                                    Text("${bookmarkedIds.size}", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                                }
+                            Column {
+                                Text(str.caTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(str.caSubtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                             }
                         }
 
@@ -228,7 +218,7 @@ fun CurrentAffairsScreen(
                                 val sel = selectedTab == index
                                 Box(
                                     modifier = Modifier
-                                        .weight(1f)      // equal weight = equal width for ALL tabs
+                                        .weight(1f)
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(if (sel) Color.White else Color.White.copy(0.12f))
                                         .clickable { selectedTab = index }
@@ -237,6 +227,25 @@ fun CurrentAffairsScreen(
                                 ) {
                                     Text(tab, style = MaterialTheme.typography.bodyMedium, color = if (sel) BpscColors.Primary else Color.White.copy(0.85f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal, fontSize = if (index == 3) 11.sp else 14.sp)
                                 }
+                            }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Compact stats row inside header
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            listOf(
+                                Triple("📰", "${filtered.size}", "articles"),
+                                Triple("⭐", "${filtered.count { it.isImportant }}", str.caImportant.lowercase()),
+                                Triple("❓", "${filtered.sumOf { it.mcqCount }}", "MCQs"),
+                                Triple("🔖", "${bookmarkedIds.size}", "saved"),
+                            ).forEach { (icon, value, label) ->
+                                Text(
+                                    "$icon $value $label",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(0.75f),
+                                    fontSize = 11.sp
+                                )
                             }
                         }
                     }
@@ -251,19 +260,6 @@ fun CurrentAffairsScreen(
                         }
                     }
                 }
-
-                // Stats row
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(cs.surface).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    CAStatChip("📰", "${filtered.size}", "Articles")
-                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                    CAStatChip("⭐", "${filtered.count { it.isImportant }}", str.caImportant)
-                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                    CAStatChip("❓", "${filtered.sumOf { it.mcqCount }}", "MCQs")
-                    Box(Modifier.width(1.dp).height(24.dp).background(cs.outline))
-                    CAStatChip("🔖", "${bookmarkedIds.size}", "Saved")
-                }
-
-                Spacer(Modifier.height(8.dp))
 
                 // ── Content area ──────────────────────────────────
                 when {
@@ -405,7 +401,7 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
 
                 val hasMcqs = article.mcqCount > 0
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -488,15 +484,3 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// STAT CHIP
-// ─────────────────────────────────────────────────────────────
-@Composable
-private fun CAStatChip(icon: String, value: String, label: String) {
-    val cs = MaterialTheme.colorScheme
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Text(icon, fontSize = 13.sp)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 9.sp)
-    }
-}
