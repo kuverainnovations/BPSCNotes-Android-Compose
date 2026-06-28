@@ -188,11 +188,10 @@ internal fun QuizReviewScreen(
                         question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed
                             val isUserChoice = i == selectedIndex
-                            // Only show correct option when user answered it correctly — never reveal on wrong/skip
-                            val isCorrectOpt = isCorrect && i == correctIndex
+                            val isCorrectOpt = resultKnown && i == correctIndex
 
                             val bgOpt = when {
-                                isCorrectOpt                 -> Color(0xFFE8FDF4)   // user got it right
+                                isCorrectOpt                 -> Color(0xFFE8FDF4)   // correct answer
                                 isUserChoice && !isCorrect
                                         && resultKnown       -> Color(0xFFFEE8E8)   // user's wrong choice
                                 isUserChoice && !resultKnown -> BpscColors.PrimaryLight
@@ -242,8 +241,8 @@ internal fun QuizReviewScreen(
                             }
                         }
 
-                        // Explanation — only shown when user answered correctly (not on wrong/skip)
-                        if (!question.explanation.isNullOrBlank() && isCorrect) {
+                        // Explanation — shown for all questions once result is known
+                        if (!question.explanation.isNullOrBlank() && resultKnown) {
                             HorizontalDivider(color = BpscColors.Divider)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(

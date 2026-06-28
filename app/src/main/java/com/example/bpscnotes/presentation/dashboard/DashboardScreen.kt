@@ -131,203 +131,203 @@ fun DashboardScreen(
         ) {
             // ── FIX: outer Box so full-screen overlays (e.g. activity history) can sit on top ──
             Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(cs.background)
-            ) {
-                // Offline banner — shows automatically when no internet
-                com.example.bpscnotes.core.network.OfflineBanner()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(cs.background)
+                ) {
+                    // Offline banner — shows automatically when no internet
+                    com.example.bpscnotes.core.network.OfflineBanner()
 
-                // Auto-refresh when coming back online — evict stale cache first
-                val isOnline = com.example.bpscnotes.core.network.rememberIsOnline()
-                var wasOffline by remember { mutableStateOf(false) }
-                LaunchedEffect(isOnline) {
-                    if (!isOnline) {
-                        wasOffline = true
-                    } else if (wasOffline) {
-                        wasOffline = false
-                        // Small delay so network is stable before hitting server
-                        kotlinx.coroutines.delay(500)
-                        dashboardViewModel.refresh()
+                    // Auto-refresh when coming back online — evict stale cache first
+                    val isOnline = com.example.bpscnotes.core.network.rememberIsOnline()
+                    var wasOffline by remember { mutableStateOf(false) }
+                    LaunchedEffect(isOnline) {
+                        if (!isOnline) {
+                            wasOffline = true
+                        } else if (wasOffline) {
+                            wasOffline = false
+                            // Small delay so network is stable before hitting server
+                            kotlinx.coroutines.delay(500)
+                            dashboardViewModel.refresh()
+                        }
                     }
-                }
 
-                // ── STICKY HEADER — never scrolls ──────────────────────────
-                val notifCount = state.unreadNotifCount
-                DashboardHeader(
-                    user          = state.user,
-                    stats         = state.stats,
-                    greeting      = dashboardViewModel.getGreeting(),
-                    targets       = state.dailyTargets,
-                    notifCount    = notifCount,
-                    onMenuClick   = { scope.launch { drawerState.open() } },
-                    onNotifClick  = { dashboardViewModel.clearUnreadNotifCount() },
-                    navController = navController
-                )
+                    // ── STICKY HEADER — never scrolls ──────────────────────────
+                    val notifCount = state.unreadNotifCount
+                    DashboardHeader(
+                        user          = state.user,
+                        stats         = state.stats,
+                        greeting      = dashboardViewModel.getGreeting(),
+                        targets       = state.dailyTargets,
+                        notifCount    = notifCount,
+                        onMenuClick   = { scope.launch { drawerState.open() } },
+                        onNotifClick  = { dashboardViewModel.clearUnreadNotifCount() },
+                        navController = navController
+                    )
 
-                // ── SCROLLABLE BODY ─────────────────────────────────────────
-                Box(modifier = Modifier.weight(1f)) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                    ) {
+                    // ── SCROLLABLE BODY ─────────────────────────────────────────
+                    Box(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
 
-                        // ── Global error banner ────────────────────────────────────
-                        if (state.error != null) {
-                            ErrorBanner(message = state.error!!) { dashboardViewModel.refresh() }
-                        }
-
-                        // ── Loading indicator (first load only) ────────────────────
-                        if (state.isLoading && state.courses.isEmpty()) {
-                            LoadingSection()
-                        }
-
-                        // ── Today's target card ────────────────────────────────────
-                        TodayTargetCard(
-                            targets = state.dailyTargets,
-                            isLoading = state.isLoading,
-                            onCreateTarget = { showTargetSheet = true },
-                            onClick = { navController.navigate(Screen.DailyTargets.route) }
-                        )
-
-                        // ── Banners (between targets and weekly consistency) ────────
-                        BannerSection(
-                            banners = state.banners,
-                            isLoading = state.isLoading,
-                            navController = navController
-                        )
-
-                        // ── Weekly consistency (no fake fallback) ──────────────────
-                        WeeklyConsistencyCard(
-                            data = state.weeklyActivity,
-                            streak = state.stats?.currentStreak ?: state.user?.streak ?: 0,
-                            isLoading = state.isLoading,
-                            onSeeAll = { showActivityDetail = true }
-                        )
-
-                        // Ad banner below weekly consistency chart
-                        if (adManager != null) {
-                            BannerAdView(
-                                adUnitId = adManager.getBannerAdUnitId()
-                            )
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        // ── Daily quizzes ──────────────────────────────────────────
-                        DailyQuizSection(
-                            quizzes = state.dailyQuizzes,
-                            isLoading = state.isLoading,
-                            navController = navController
-                        )
-
-                        // ── Continue Learning — in-progress quiz takes priority ─────
-                        val inProgress = state.inProgressSession
-                        val recentAttempts = state.stats?.recentAttempts ?: emptyList()
-                        if (inProgress != null) {
-                            ContinueLearningSection(
-                                inProgressSession = inProgress,
-                                navController     = navController
-                            )
-                        } else if (recentAttempts.isNotEmpty()) {
-                            ContinueLearningSection(
-                                recentAttempt = recentAttempts.first(),
-                                navController = navController
-                            )
-                        }
-
-                        // ── Quick access ───────────────────────────────────────────
-                        QuickAccessSection(
-                            navController = navController,
-                            bookmarkCount = bookmarkedIds.size
-                        )
-
-                        // ── Recommended courses ────────────────────────────────────
-                        RecommendedSection(
-                            courses = state.courses,
-                            isLoading = state.isLoading,
-                            navController = navController
-                        )
-
-                        MyScheduleSection(
-                            liveClasses        = state.liveClasses,
-                            registeredClassIds = state.registeredClassIds,
-                            navController      = navController,
-                            viewModel          = dashboardViewModel
-                        )
-
-                        // Schedule toast
-                        state.scheduleToast?.let { msg ->
-                            LaunchedEffect(msg) {
-                                kotlinx.coroutines.delay(3_000)
-                                dashboardViewModel.clearScheduleToast()
+                            // ── Global error banner ────────────────────────────────────
+                            if (state.error != null) {
+                                ErrorBanner(message = state.error!!) { dashboardViewModel.refresh() }
                             }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(BpscColors.Primary)
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Text(
-                                    msg,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
+
+                            // ── Loading indicator (first load only) ────────────────────
+                            if (state.isLoading && state.courses.isEmpty()) {
+                                LoadingSection()
+                            }
+
+                            // ── Continue Learning — in-progress quiz takes priority ─────
+                            val inProgress = state.inProgressSession
+                            val recentAttempts = state.stats?.recentAttempts ?: emptyList()
+                            if (inProgress != null) {
+                                ContinueLearningSection(
+                                    inProgressSession = inProgress,
+                                    navController     = navController
+                                )
+                            } else if (recentAttempts.isNotEmpty()) {
+                                ContinueLearningSection(
+                                    recentAttempt = recentAttempts.first(),
+                                    navController = navController
                                 )
                             }
-                        }
 
-                        AchievementsSection(
-                            achievements = state.achievements
-                        )
-                        // ── FIX: enough bottom padding to clear the bottom nav bar ──
-                        Spacer(modifier = Modifier
-                            .navigationBarsPadding()
-                            .height(5.dp))
-                        // Ad banner bottom
-                        if (adManager != null) {
-                            BannerAdView(
-                                adUnitId = adManager.getBannerAdUnitId()
+                            // ── Today's target card ────────────────────────────────────
+                            TodayTargetCard(
+                                targets = state.dailyTargets,
+                                isLoading = state.isLoading,
+                                onCreateTarget = { showTargetSheet = true },
+                                onClick = { navController.navigate(Screen.DailyTargets.route) }
                             )
+
+                            // ── Banners (between targets and weekly consistency) ────────
+                            BannerSection(
+                                banners = state.banners,
+                                isLoading = state.isLoading,
+                                navController = navController
+                            )
+
+                            // ── Weekly consistency (no fake fallback) ──────────────────
+                            WeeklyConsistencyCard(
+                                data = state.weeklyActivity,
+                                streak = state.stats?.currentStreak ?: state.user?.streak ?: 0,
+                                isLoading = state.isLoading,
+                                onSeeAll = { showActivityDetail = true }
+                            )
+
+                            // Ad banner below weekly consistency chart
+                            if (adManager != null) {
+                                BannerAdView(
+                                    adUnitId = adManager.getBannerAdUnitId()
+                                )
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // ── Daily quizzes ──────────────────────────────────────────
+                            DailyQuizSection(
+                                quizzes = state.dailyQuizzes,
+                                isLoading = state.isLoading,
+                                navController = navController
+                            )
+
+                            // ── Quick access ───────────────────────────────────────────
+                            QuickAccessSection(
+                                navController = navController,
+                                bookmarkCount = bookmarkedIds.size
+                            )
+
+                            // ── Recommended courses ────────────────────────────────────
+                            RecommendedSection(
+                                courses = state.courses,
+                                isLoading = state.isLoading,
+                                navController = navController
+                            )
+
+                            MyScheduleSection(
+                                liveClasses        = state.liveClasses,
+                                registeredClassIds = state.registeredClassIds,
+                                navController      = navController,
+                                viewModel          = dashboardViewModel
+                            )
+
+                            // Schedule toast
+                            state.scheduleToast?.let { msg ->
+                                LaunchedEffect(msg) {
+                                    kotlinx.coroutines.delay(3_000)
+                                    dashboardViewModel.clearScheduleToast()
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(BpscColors.Primary)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    Text(
+                                        msg,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            AchievementsSection(
+                                achievements = state.achievements
+                            )
+                            // ── FIX: enough bottom padding to clear the bottom nav bar ──
+                            Spacer(modifier = Modifier
+                                .navigationBarsPadding()
+                                .height(5.dp))
+                            // Ad banner bottom
+                            if (adManager != null) {
+                                BannerAdView(
+                                    adUnitId = adManager.getBannerAdUnitId()
+                                )
+                            }
+                            Spacer(modifier = Modifier
+                                .navigationBarsPadding()
+                                .height(5.dp))
+                        }  // end scrollable Column
+
+
+                        if (showTargetSheet) {
+                            if (state.dailyTargets.size >= 10) {
+                                Toast.makeText(
+                                    LocalContext.current,
+                                    str.targetMax,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Box
+                            }
+                            CreateTargetSheet(
+                                viewModel = dashboardViewModel,
+                                onDismiss = { showTargetSheet = false })
                         }
-                        Spacer(modifier = Modifier
-                            .navigationBarsPadding()
-                            .height(5.dp))
-                    }  // end scrollable Column
+                    }  // end Box(weight=1f)
+                }  // end outer Column
 
-
-                    if (showTargetSheet) {
-                        if (state.dailyTargets.size >= 10) {
-                            Toast.makeText(
-                                LocalContext.current,
-                                str.targetMax,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            return@Box
-                        }
-                        CreateTargetSheet(
-                            viewModel = dashboardViewModel,
-                            onDismiss = { showTargetSheet = false })
-                    }
-                }  // end Box(weight=1f)
-            }  // end outer Column
-
-            // Full-screen activity detail — covers dashboard when shown
-            if (showActivityDetail) {
-                BackHandler { showActivityDetail = false }
-                ActivityDetailFullScreen(
-                    data        = state.monthlyActivity,
-                    quizMins    = state.monthlyQuizMins,
-                    roomMins    = state.monthlyRoomMins,
-                    caMins      = state.monthlyCaMins,
-                    lessonMins  = state.monthlyLessonMins,
-                    onBack      = { showActivityDetail = false }
-                )
-            }
+                // Full-screen activity detail — covers dashboard when shown
+                if (showActivityDetail) {
+                    BackHandler { showActivityDetail = false }
+                    ActivityDetailFullScreen(
+                        data        = state.monthlyActivity,
+                        quizMins    = state.monthlyQuizMins,
+                        roomMins    = state.monthlyRoomMins,
+                        caMins      = state.monthlyCaMins,
+                        lessonMins  = state.monthlyLessonMins,
+                        onBack      = { showActivityDetail = false }
+                    )
+                }
             }  // end overlay Box
         }
 
@@ -747,11 +747,6 @@ private fun DashboardHeader(
 
     val completed = targets.count { it.isCompleted }
     val total     = targets.size
-    val progress  by animateFloatAsState(
-        targetValue   = if (total > 0) completed.toFloat() / total else 0f,
-        animationSpec = tween(1200),
-        label         = "ring"
-    )
 
     Box(
         modifier = Modifier
@@ -797,71 +792,75 @@ private fun DashboardHeader(
 
         Column(modifier = Modifier
             .fillMaxWidth()
-            // .statusBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(top = 34.dp)) {
-            // Top bar
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(0.12f))
-                    .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(12.dp))
-                    .clickable(onClick = onMenuClick), contentAlignment = Alignment.Center) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.Start, modifier = Modifier.padding(horizontal = 10.dp)) {
-                        Box(Modifier
-                            .width(16.dp)
-                            .height(2.dp)
-                            .background(Color.White, RoundedCornerShape(1.dp)))
-                        Box(Modifier
-                            .width(11.dp)
-                            .height(2.dp)
-                            .background(Color.White.copy(0.6f), RoundedCornerShape(1.dp)))
-                        Box(Modifier
-                            .width(16.dp)
-                            .height(2.dp)
-                            .background(Color.White, RoundedCornerShape(1.dp)))
+
+            // ── TOP BAR — 3 balanced items, notification always visible ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Menu button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(0.12f))
+                        .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(12.dp))
+                        .clickable(onClick = onMenuClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    ) {
+                        Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
+                        Box(Modifier.width(11.dp).height(2.dp).background(Color.White.copy(0.6f), RoundedCornerShape(1.dp)))
+                        Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
                     }
                 }
-                Row(modifier = Modifier
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color.White.copy(0.1f))
-                    .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp))
-                    .padding(horizontal = 14.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+
+                // Center — logo + app name (compact)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color.White.copy(0.1f))
+                        .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(com.kuvera.bpscnotes.R.drawable.ic_bpsc_logo),
                         contentDescription = "BPSCNotes",
-                        modifier = Modifier.size(22.dp).clip(RoundedCornerShape(6.dp))
+                        modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
                     )
-                    Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
+                    Text(
+                        "BPSCNotes",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.5.sp
+                    )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Search
+
+                // Right — Search + Notification only (coins moved to hero)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(0.12f))
                             .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
                             .clickable { navController.navigate(Screen.GlobalSearch.route) },
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
-                    // Single wallet entry point — shows coin balance, taps to wallet screen
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(Color.White.copy(0.12f))
-                            .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp))
-                            .clickable { navController.navigate(Screen.CoinWallet.route) }
-                            .padding(horizontal = 10.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(Icons.Rounded.AccountBalanceWallet, null,
-                            tint = Color.White, modifier = Modifier.size(14.dp))
-                        Text("🪙", fontSize = 12.sp)
-                        Text("$coins", style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                        Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     BadgedBox(badge = {
                         if (notifCount > 0) Badge(containerColor = Color(0xFFEF5350)) {
@@ -873,65 +872,106 @@ private fun DashboardHeader(
                             )
                         }
                     }) {
-                        Box(modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(0.12f))
-                            .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                            .clickable {
-                                onNotifClick()
-                                navController.navigate(Screen.NotificationSettings.route)
-                            }, contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(0.12f))
+                                .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
+                                .clickable {
+                                    onNotifClick()
+                                    navController.navigate(Screen.NotificationSettings.route)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
 
-            // Hero row
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(BpscColors.Success))
-                        Text(greeting, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
+            Spacer(Modifier.height(18.dp))
+
+            // ── HERO ROW ──────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Greeting
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(BpscColors.Success))
+                        Text(
+                            greeting,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(0.7f)
+                        )
                     }
+                    // Name
                     Text(
                         if (name.isNotEmpty()) "${name.split(" ").first()} 👋" else str.dashboardAspirant,
-                        style = MaterialTheme.typography.titleLarge, color = Color.White,
-                        fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 28.sp
                     )
-                    Row(modifier = Modifier
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Color(0xFFFF8F00).copy(0.18f))
-                        .border(0.5.dp, Color(0xFFFFB300).copy(0.4f), RoundedCornerShape(22.dp))
-                        .padding(horizontal = 11.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(Icons.Rounded.Whatshot, null, tint = BpscColors.CoinGold, modifier = Modifier.size(14.dp))
+                    // Streak chip
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color(0xFFFF8F00).copy(0.2f))
+                                .border(0.5.dp, Color(0xFFFFB300).copy(0.35f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Rounded.Whatshot, null, tint = BpscColors.CoinGold, modifier = Modifier.size(13.dp))
+                            Text(
+                                if (streak > 0) "$streak ${str.profileDayStreak}" else str.dashboardStreak,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(0.9f),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                // Coins circle — BPSC frosted glass style
+                val coinDisplay = when {
+                    coins >= 1_000_000 -> "${coins / 1_000_000}M"
+                    coins >= 1_000     -> "${String.format("%.1f", coins / 1000f)}k"
+                    else               -> "$coins"
+                }
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFB300).copy(0.18f))
+                        .border(1.dp, Color(0xFFFFD54F).copy(0.5f), CircleShape)
+                        .clickable { navController.navigate(Screen.CoinWallet.route) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("🪙", fontSize = 18.sp)
                         Text(
-                            if (streak > 0) "${str.dashboardStreak}: $streak " + str.profileDayStreak else "${str.dashboardStreak}!",
-                            style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold
+                            coinDisplay,
+                            style      = MaterialTheme.typography.labelSmall,
+                            color      = Color(0xFFFFE082),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 10.sp
                         )
                     }
                 }
-                // Progress ring (targets completion)
-                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val stroke = 7.dp.toPx(); val inset = stroke / 2
-                        val arcSz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-                        drawArc(Color.White.copy(0.05f), -90f, 360f, false, Offset(inset, inset), arcSz, style = Stroke(stroke + 8.dp.toPx(), cap = StrokeCap.Round))
-                        drawArc(Color.White.copy(0.14f), -90f, 360f, false, Offset(inset, inset), arcSz, style = Stroke(stroke, cap = StrokeCap.Round))
-                        drawArc(Brush.sweepGradient(listOf(Color(0xFF64B5F6), Color(0xFFE3F2FD), Color.White)), -90f, progress * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round), topLeft = Offset(inset, inset), size = arcSz)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                        Text("done", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
-                    }
-                }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
 
             // ── Stats strip — ALL values from API ─────────────────────────
             val rankText  = if (rank != null) "#$rank" else "--"
@@ -1063,12 +1103,36 @@ private fun TodayTargetCard(
                         }
                     }
                 }
-                Row(modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(BpscColors.PrimaryLight)
-                    .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(str.dashboardViewAll, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
-                    Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
+                // Circular progress ring
+                Box(modifier = Modifier.size(54.dp), contentAlignment = Alignment.Center) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val stroke = 6.dp.toPx(); val inset = stroke / 2
+                        val arcSz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                        // Empty track — neutral gray
+                        drawArc(Color(0xFFDEE2E6), -90f, 360f, false, Offset(inset, inset), arcSz, style = Stroke(stroke, cap = StrokeCap.Round))
+                        // Progress fill
+                        if (animProg > 0f) {
+                            drawArc(
+                                brush      = Brush.sweepGradient(listOf(Color(0xFF1565C0), Color(0xFF42A5F5), Color(0xFF64B5F6))),
+                                startAngle = -90f,
+                                sweepAngle = animProg * 360f,
+                                useCenter  = false,
+                                topLeft    = Offset(inset, inset),
+                                size       = arcSz,
+                                style      = Stroke(stroke, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        Text(
+                            "${(animProg * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Primary,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.sp
+                        )
+                        Text("done", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 8.sp)
+                    }
                 }
             }
 
@@ -1776,9 +1840,9 @@ private fun MyScheduleSection(
                         )
                     }
                 }
-                TextButton(onClick = { navController.navigate(com.example.bpscnotes.presentation.navigation.Routes.Screen.StudySessionHistory.route) }) {
+                /*TextButton(onClick = { navController.navigate(com.example.bpscnotes.presentation.navigation.Routes.Screen.StudySessionHistory.route) }) {
                     Text("Sessions", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
-                }
+                }*/
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -2435,7 +2499,7 @@ private fun ActivityDetailFullScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                // .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
             // ── Top App Bar ─────────────────────────────────────
@@ -2443,7 +2507,7 @@ private fun ActivityDetailFullScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .padding(start = 8.dp, end = 8.dp, top = 38.dp, bottom =8.dp)
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -2453,7 +2517,7 @@ private fun ActivityDetailFullScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Rounded.ArrowBack, "Back", tint = Color.White)
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text("Study Activity", style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold, color = Color.White)
                         Text("Last 28 days · tap a bar for details",
@@ -2464,197 +2528,198 @@ private fun ActivityDetailFullScreen(
             }
 
             Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(top = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-
-            // ── Legend ──────────────────────────────────────────
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                    .background(cs.background).padding(horizontal = 12.dp, vertical = 8.dp),
-                Arrangement.SpaceEvenly
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 20.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                LegendDot(colorQuiz,   "Quizzes")
-                LegendDot(colorRoom,   "Study Room")
-                LegendDot(colorCa,     "Curr. Affairs")
-                LegendDot(colorLesson, "Lessons")
-            }
 
-            // ── Summary stats ────────────────────────────────────
-            if (data.isNotEmpty()) {
-                val activeDays  = data.count { it.score > 0 }
-                val totalMins   = data.sumOf { it.score }
-                val totalQuiz   = quizMins.values.sum()
-                val totalRoom   = roomMins.values.sum()
-                val totalCa     = caMins.values.sum()
-                val totalLesson = lessonMins.values.sum()
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                            .background(BpscColors.PrimaryLight.copy(0.3f))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        Arrangement.SpaceEvenly
-                    ) {
-                        ActivityStat("📅", "$activeDays", "Active Days")
-                        ActivityStat("⏱️",
-                            if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m",
-                            "Total (28d)")
-                        ActivityStat("🏆", "${data.maxOfOrNull { it.score } ?: 0}m", "Best Day")
-                    }
-                    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {
-                        BreakdownChip(colorQuiz,   "📝", if (totalQuiz >= 60) "${totalQuiz/60}h ${totalQuiz%60}m" else "${totalQuiz}m", "Quiz",    Modifier.weight(1f))
-                        BreakdownChip(colorRoom,   "🏠", if (totalRoom >= 60) "${totalRoom/60}h ${totalRoom%60}m" else "${totalRoom}m", "Room",    Modifier.weight(1f))
-                        BreakdownChip(colorCa,     "📰", if (totalCa >= 60) "${totalCa/60}h ${totalCa%60}m" else "${totalCa}m", "CA",      Modifier.weight(1f))
-                        BreakdownChip(colorLesson, "📚", if (totalLesson >= 60) "${totalLesson/60}h ${totalLesson%60}m" else "${totalLesson}m", "Lessons", Modifier.weight(1f))
-                    }
-                }
-            }
-
-            // ── Inline day tooltip (shows on bar tap, no sheet) ───
-            if (selectedDayKey != null) {
-                val dk = selectedDayKey!!
-                val q  = quizMins[dk]   ?: 0
-                val r  = roomMins[dk]   ?: 0
-                val c  = caMins[dk]     ?: 0
-                val l  = lessonMins[dk] ?: 0
-                val total = q + r + c + l
-                val displayDate = try {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault()).format(sdf.parse(dk)!!)
-                } catch (_: Exception) { dk }
-
+                // ── Legend ──────────────────────────────────────────
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(BpscColors.Primary.copy(0.08f))
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(cs.background).padding(horizontal = 12.dp, vertical = 8.dp),
+                    Arrangement.SpaceEvenly
                 ) {
-                    Column {
-                        Text(displayDate, style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold, color = BpscColors.Primary)
-                        Text(
-                            if (total == 0) "No study activity"
-                            else buildString {
-                                if (q > 0) append("Quiz ${q}m  ")
-                                if (r > 0) append("Room ${r}m  ")
-                                if (c > 0) append("CA ${c}m  ")
-                                if (l > 0) append("Lessons ${l}m")
-                            }.trim(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = cs.onSurfaceVariant
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (q > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorQuiz))
-                        if (r > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorRoom))
-                        if (c > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorCa))
-                        if (l > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorLesson))
-                        Text(if (total > 0) "${total}m" else "–",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (total > 0) BpscColors.Primary else cs.onSurfaceVariant)
-                        IconButton(onClick = { selectedDayKey = null }, modifier = Modifier.size(20.dp)) {
-                            Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                    LegendDot(colorQuiz,   "Quizzes")
+                    LegendDot(colorRoom,   "Study Room")
+                    LegendDot(colorCa,     "Curr. Affairs")
+                    LegendDot(colorLesson, "Lessons")
+                }
+
+                // ── Summary stats ────────────────────────────────────
+                if (data.isNotEmpty()) {
+                    val activeDays  = data.count { it.score > 0 }
+                    val totalMins   = data.sumOf { it.score }
+                    val totalQuiz   = quizMins.values.sum()
+                    val totalRoom   = roomMins.values.sum()
+                    val totalCa     = caMins.values.sum()
+                    val totalLesson = lessonMins.values.sum()
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .background(BpscColors.PrimaryLight.copy(0.3f))
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            Arrangement.SpaceEvenly
+                        ) {
+                            ActivityStat("📅", "$activeDays", "Active Days")
+                            ActivityStat("⏱️",
+                                if (totalMins >= 60) "${totalMins/60}h ${totalMins%60}m" else "${totalMins}m",
+                                "Total (28d)")
+                            ActivityStat("🏆", "${data.maxOfOrNull { it.score } ?: 0}m", "Best Day")
+                        }
+                        Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {
+                            BreakdownChip(colorQuiz,   "📝", if (totalQuiz >= 60) "${totalQuiz/60}h ${totalQuiz%60}m" else "${totalQuiz}m", "Quiz",    Modifier.weight(1f))
+                            BreakdownChip(colorRoom,   "🏠", if (totalRoom >= 60) "${totalRoom/60}h ${totalRoom%60}m" else "${totalRoom}m", "Room",    Modifier.weight(1f))
+                            BreakdownChip(colorCa,     "📰", if (totalCa >= 60) "${totalCa/60}h ${totalCa%60}m" else "${totalCa}m", "CA",      Modifier.weight(1f))
+                            BreakdownChip(colorLesson, "📚", if (totalLesson >= 60) "${totalLesson/60}h ${totalLesson%60}m" else "${totalLesson}m", "Lessons", Modifier.weight(1f))
                         }
                     }
                 }
-            }
 
-            // ── 4-week stacked bar chart — LATEST FIRST ──────────
-            if (data.isNotEmpty() && dateKeys.size == data.size) {
-                val maxTotal = data.maxOfOrNull { it.score }?.coerceAtLeast(1) ?: 1
-                // Reverse: newest week at top
-                val weeks = data.zip(dateKeys).chunked(7).reversed()
+                // ── Inline day tooltip (shows on bar tap, no sheet) ───
+                if (selectedDayKey != null) {
+                    val dk = selectedDayKey!!
+                    val q  = quizMins[dk]   ?: 0
+                    val r  = roomMins[dk]   ?: 0
+                    val c  = caMins[dk]     ?: 0
+                    val l  = lessonMins[dk] ?: 0
+                    val total = q + r + c + l
+                    val displayDate = try {
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault()).format(sdf.parse(dk)!!)
+                    } catch (_: Exception) { dk }
 
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    weeks.forEachIndexed { reversedIdx, week ->
-                        // reversedIdx 0 = this week (most recent), last = oldest
-                        val weeksAgo = reversedIdx
-                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(BpscColors.Primary.copy(0.08f))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(displayDate, style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold, color = BpscColors.Primary)
                             Text(
-                                if (weeksAgo == 0) "This week" else "$weeksAgo week${if (weeksAgo > 1) "s" else ""} ago",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (weeksAgo == 0) BpscColors.Primary else BpscColors.TextHint,
-                                fontWeight = if (weeksAgo == 0) FontWeight.Bold else FontWeight.Normal
+                                if (total == 0) "No study activity"
+                                else buildString {
+                                    if (q > 0) append("Quiz ${q}m  ")
+                                    if (r > 0) append("Room ${r}m  ")
+                                    if (c > 0) append("CA ${c}m  ")
+                                    if (l > 0) append("Lessons ${l}m")
+                                }.trim(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = cs.onSurfaceVariant
                             )
-                            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp)) {
-                                week.forEach { (day, dateKey) ->
-                                    val q = quizMins[dateKey]   ?: 0
-                                    val r = roomMins[dateKey]   ?: 0
-                                    val c = caMins[dateKey]     ?: 0
-                                    val l = lessonMins[dateKey] ?: 0
-                                    val total = day.score.coerceAtLeast(q + r + c + l)
-                                    val isToday    = dateKey == dateKeys.last()
-                                    val isSelected = dateKey == selectedDayKey
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (q > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorQuiz))
+                            if (r > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorRoom))
+                            if (c > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorCa))
+                            if (l > 0) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(colorLesson))
+                            Text(if (total > 0) "${total}m" else "–",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (total > 0) BpscColors.Primary else cs.onSurfaceVariant)
+                            IconButton(onClick = { selectedDayKey = null }, modifier = Modifier.size(20.dp)) {
+                                Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
 
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clickable(
-                                                indication = null,
-                                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                            ) {
-                                                selectedDayKey = if (isSelected) null else dateKey
-                                            },
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                        Box(
+                // ── 4-week stacked bar chart — LATEST FIRST ──────────
+                if (data.isNotEmpty() && dateKeys.size == data.size) {
+                    val maxTotal = data.maxOfOrNull { it.score }?.coerceAtLeast(1) ?: 1
+                    // Reverse: newest week at top
+                    val weeks = data.zip(dateKeys).chunked(7).reversed()
+
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        weeks.forEachIndexed { reversedIdx, week ->
+                            // reversedIdx 0 = this week (most recent), last = oldest
+                            val weeksAgo = reversedIdx
+                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(
+                                    if (weeksAgo == 0) "This week" else "$weeksAgo week${if (weeksAgo > 1) "s" else ""} ago",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (weeksAgo == 0) BpscColors.Primary else BpscColors.TextHint,
+                                    fontWeight = if (weeksAgo == 0) FontWeight.Bold else FontWeight.Normal
+                                )
+                                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(4.dp)) {
+                                    week.forEach { (day, dateKey) ->
+                                        val q = quizMins[dateKey]   ?: 0
+                                        val r = roomMins[dateKey]   ?: 0
+                                        val c = caMins[dateKey]     ?: 0
+                                        val l = lessonMins[dateKey] ?: 0
+                                        val total = day.score.coerceAtLeast(q + r + c + l)
+                                        val isToday    = dateKey == dateKeys.last()
+                                        val isSelected = dateKey == selectedDayKey
+
+                                        Column(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(72.dp)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(
-                                                    when {
-                                                        isSelected -> BpscColors.Primary.copy(0.15f)
-                                                        else       -> cs.onSurface.copy(0.06f)
-                                                    }
-                                                ),
-                                            contentAlignment = Alignment.BottomCenter
-                                        ) {
-                                            if (total > 0) {
-                                                val barH = (total.toFloat() / maxTotal).coerceIn(0.05f, 1f)
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .fillMaxHeight(barH)
-                                                        .clip(RoundedCornerShape(6.dp)),
-                                                    verticalArrangement = Arrangement.Bottom
+                                                .weight(1f)
+                                                .clickable(
+                                                    indication = null,
+                                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                                                 ) {
-                                                    listOf(l to colorLesson, c to colorCa, r to colorRoom, q to colorQuiz)
-                                                        .forEach { (mins, color) ->
-                                                            if (mins > 0) Box(
-                                                                Modifier.fillMaxWidth()
-                                                                    .weight(mins.toFloat().coerceAtLeast(0.1f))
-                                                                    .background(color)
-                                                            )
+                                                    selectedDayKey = if (isSelected) null else dateKey
+                                                },
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(72.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(
+                                                        when {
+                                                            isSelected -> BpscColors.Primary.copy(0.15f)
+                                                            else       -> cs.onSurface.copy(0.06f)
                                                         }
+                                                    ),
+                                                contentAlignment = Alignment.BottomCenter
+                                            ) {
+                                                if (total > 0) {
+                                                    val barH = (total.toFloat() / maxTotal).coerceIn(0.05f, 1f)
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .fillMaxHeight(barH)
+                                                            .clip(RoundedCornerShape(6.dp)),
+                                                        verticalArrangement = Arrangement.Bottom
+                                                    ) {
+                                                        listOf(l to colorLesson, c to colorCa, r to colorRoom, q to colorQuiz)
+                                                            .forEach { (mins, color) ->
+                                                                if (mins > 0) Box(
+                                                                    Modifier.fillMaxWidth()
+                                                                        .weight(mins.toFloat().coerceAtLeast(0.1f))
+                                                                        .background(color)
+                                                                )
+                                                            }
+                                                    }
                                                 }
+                                                if (isToday) Box(Modifier.fillMaxSize()
+                                                    .border(2.dp, BpscColors.Accent, RoundedCornerShape(6.dp)))
+                                                if (isSelected) Box(Modifier.fillMaxSize()
+                                                    .border(2.dp, BpscColors.Primary, RoundedCornerShape(6.dp)))
                                             }
-                                            if (isToday) Box(Modifier.fillMaxSize()
-                                                .border(2.dp, BpscColors.Accent, RoundedCornerShape(6.dp)))
-                                            if (isSelected) Box(Modifier.fillMaxSize()
-                                                .border(2.dp, BpscColors.Primary, RoundedCornerShape(6.dp)))
+                                            Text(
+                                                day.day.take(1),
+                                                style      = MaterialTheme.typography.labelSmall,
+                                                color      = when {
+                                                    isSelected -> BpscColors.Primary
+                                                    isToday    -> BpscColors.Accent
+                                                    else       -> BpscColors.TextHint
+                                                },
+                                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
+                                            )
                                         }
-                                        Text(
-                                            day.day.take(1),
-                                            style      = MaterialTheme.typography.labelSmall,
-                                            color      = when {
-                                                isSelected -> BpscColors.Primary
-                                                isToday    -> BpscColors.Accent
-                                                else       -> BpscColors.TextHint
-                                            },
-                                            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
-                                        )
                                     }
                                 }
                             }
@@ -2662,9 +2727,8 @@ private fun ActivityDetailFullScreen(
                     }
                 }
             }
-        }
-    } // end scrollable Column
-  } // end outer Column
+        } // end scrollable Column
+    } // end outer Column
 } // end outer Box (ActivityDetailFullScreen)
 
 @Composable

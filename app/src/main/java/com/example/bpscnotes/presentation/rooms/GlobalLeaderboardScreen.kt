@@ -155,7 +155,7 @@ private fun LeaderboardBody(data: com.example.bpscnotes.data.remote.api.Leaderbo
         }
 
         // Ranks 4+
-        itemsIndexed(rest, key = { _, e -> "r_${e.userId}" }) { _, entry ->
+        itemsIndexed(rest, key = { idx, e -> "r_${e.userId.takeIf { it.isNotBlank() } ?: idx}" }) { _, entry ->
             LeaderboardRow(entry = entry, type = type, isMe = myRank?.userId == entry.userId)
         }
 

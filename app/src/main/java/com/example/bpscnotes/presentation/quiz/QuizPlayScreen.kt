@@ -142,22 +142,6 @@ private fun QuizPlayerContent(
     val questions      = session.questions
     val current        = questions.getOrNull(currentIndex) ?: return
     val state         by viewModel.uiState.collectAsState()
-    var showHint      by remember(currentIndex) { mutableStateOf(false) }
-
-    // Stable per-session option shuffle — prevents memorising positions across retakes.
-    // Seed is session+question so each question shuffles differently but consistently.
-    val shuffleMap = remember(session.id) {
-        session.questions.associate { q ->
-            val indices = (0 until minOf(q.options.size, 4)).toMutableList()
-            indices.shuffle(java.util.Random((session.id + q.id).hashCode().toLong()))
-            q.id to indices
-        }
-    }
-    val displayIndices = shuffleMap[current.id] ?: (0 until current.options.size).toList()
-    val displayQuestion = current.copy(
-        options      = displayIndices.map { current.options.getOrElse(it) { "" } },
-        optionImages = displayIndices.map { current.optionImages.getOrNull(it) }
-    )
 
     // Per-question time = total quiz duration ÷ question count (no cap)
     // e.g. 7 min / 1 question = 420s, 7 min / 4 questions = 105s
@@ -178,13 +162,6 @@ private fun QuizPlayerContent(
     var submitClicked by remember { mutableStateOf(false) }
 
     val selectedLetter = viewModel.getAnswer(current.id)
-    // Map stored original letter → display position letter so the selected highlight
-    // follows the shuffled position, not the original index.
-    val selectedDisplayLetter = selectedLetter?.let { stored ->
-        val origIdx = optionLetters.indexOf(stored)
-        val dispIdx = displayIndices.indexOf(origIdx)
-        if (dispIdx >= 0) optionLetters[dispIdx] else stored
-    }
     val hasAnswered     = selectedLetter != null
     val isLastQuestion  = currentIndex == questions.size - 1
     val answeredCount   = questions.count { q -> viewModel.getAnswer(q.id) != null }
@@ -301,33 +278,20 @@ private fun QuizPlayerContent(
                 }
 
                 // Question card — handles text, image, or both
-                QuestionCard(question = current, showHint = showHint)
+                QuestionCard(question = current)
 
-                // Options — text or image grid (uses shuffled display order)
+                // Options — text or image grid
                 if (current.isImageOptions) {
                     ImageOptionsGrid(
-                        question       = displayQuestion,
-                        selectedLetter = selectedDisplayLetter,
-                        onSelect       = { displayLetter ->
-                            // Map display position back to original letter before recording
-                            val dispIdx = optionLetters.indexOf(displayLetter)
-                            val origIdx = displayIndices.getOrElse(dispIdx) { dispIdx }
-                            val origLetter = optionLetters.getOrElse(origIdx) { displayLetter }
-                            viewModel.recordAnswer(current.id, origLetter)
-                            showHint = false
-                        }
+                        question       = current,
+                        selectedLetter = selectedLetter,
+                        onSelect       = { letter -> viewModel.recordAnswer(current.id, letter) }
                     )
                 } else {
                     TextOptionsList(
-                        question       = displayQuestion,
-                        selectedLetter = selectedDisplayLetter,
-                        onSelect       = { displayLetter ->
-                            val dispIdx = optionLetters.indexOf(displayLetter)
-                            val origIdx = displayIndices.getOrElse(dispIdx) { dispIdx }
-                            val origLetter = optionLetters.getOrElse(origIdx) { displayLetter }
-                            viewModel.recordAnswer(current.id, origLetter)
-                            showHint = false
-                        }
+                        question       = current,
+                        selectedLetter = selectedLetter,
+                        onSelect       = { letter -> viewModel.recordAnswer(current.id, letter) }
                     )
                 }
             }
@@ -336,14 +300,12 @@ private fun QuizPlayerContent(
             QuizBottomBar(
                 isLastQuestion = isLastQuestion,
                 hasAnswered    = hasAnswered,
-                showHint       = showHint,
                 isSubmitting   = state.isSubmitting,
                 submitError    = state.submitError,
                 currentIndex   = currentIndex,
-                onHint         = { showHint = !showHint },
-                onNext         = { currentIndex++; showHint = false },
+                onNext         = { currentIndex++ },
                 onSubmit       = { if (!submitClicked) { submitClicked = true; viewModel.submitQuiz(totalTimeSecs) } },
-                onPrev         = { currentIndex--; showHint = false }
+                onPrev         = { currentIndex-- }
             )
         }
     }
@@ -354,7 +316,7 @@ private fun QuizPlayerContent(
 // QUESTION CARD — text or image question
 // ═════════════════════════════════════════════════════════════════
 @Composable
-private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
+private fun QuestionCard(question: QuizSessionQuestion) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
@@ -397,28 +359,6 @@ private fun QuestionCard(question: QuizSessionQuestion, showHint: Boolean) {
                 )
             }
 
-            // Hint panel
-            AnimatedVisibility(visible = showHint) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFFFF8E1))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("💡", fontSize = 14.sp)
-                    Text(
-                        question.explanation?.takeIf { it.isNotBlank() }
-                            ?: if (question.isImageOptions)
-                                str.quizSelectCorrect
-                            else
-                                str.quizSelectCorrect,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF856404)
-                    )
-                }
-            }
         }
     }
 }
@@ -705,15 +645,13 @@ private fun QuizHeader(
 // ═════════════════════════════════════════════════════════════════
 @Composable
 private fun QuizBottomBar(
-    isLastQuestion: Boolean, hasAnswered: Boolean, showHint: Boolean,
+    isLastQuestion: Boolean, hasAnswered: Boolean,
     isSubmitting: Boolean, submitError: String?,
     currentIndex: Int,
-    onHint: () -> Unit, onNext: () -> Unit,
-    onSubmit: () -> Unit, onPrev: () -> Unit
+    onNext: () -> Unit, onSubmit: () -> Unit, onPrev: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    // Submit error shown as dialog, not inline text
     submitError?.let {
         com.example.bpscnotes.core.ui.AppErrorDialog(
             message      = it,
@@ -730,43 +668,25 @@ private fun QuizBottomBar(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick  = onHint,
-                modifier = Modifier
-                    .weight(1.1f)
-                    .height(50.dp),
-                shape    = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
-                border   = BorderStroke(1.dp, if (showHint) BpscColors.CoinGold else cs.outline),
-                colors   = ButtonDefaults.outlinedButtonColors(contentColor = if (showHint) BpscColors.CoinGold else BpscColors.TextSecondary)
-            ) {
-                Text("💡", fontSize = 14.sp)
-                Spacer(Modifier.width(4.dp))
-                Text(str.quizHint, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Button(
-                onClick  = if (isLastQuestion) onSubmit else onNext,
-                modifier = Modifier
-                    .weight(2.4f)
-                    .height(50.dp),
-                shape    = RoundedCornerShape(12.dp),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = if (isLastQuestion) Color(0xFF2ECC71) else BpscColors.Primary
-                ),
-                enabled = !isSubmitting
-            ) {
-                Text(
-                    when {
-                        isLastQuestion && hasAnswered -> str.quizSubmit
-                        isLastQuestion               -> str.quizFinish
-                        hasAnswered                  -> str.quizNext
-                        else                         -> str.quizSkip
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    fontSize = 15.sp
-                )
-            }
+        Button(
+            onClick  = if (isLastQuestion) onSubmit else onNext,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape    = RoundedCornerShape(12.dp),
+            colors   = ButtonDefaults.buttonColors(
+                containerColor = if (isLastQuestion) Color(0xFF2ECC71) else BpscColors.Primary
+            ),
+            enabled = !isSubmitting
+        ) {
+            Text(
+                when {
+                    isLastQuestion && hasAnswered -> str.quizSubmit
+                    isLastQuestion               -> str.quizFinish
+                    hasAnswered                  -> str.quizNext
+                    else                         -> str.quizSkip
+                },
+                style = MaterialTheme.typography.labelLarge,
+                fontSize = 15.sp
+            )
         }
         if (currentIndex > 0) {
             TextButton(onClick = onPrev, modifier = Modifier.fillMaxWidth()) {
@@ -1198,7 +1118,6 @@ fun ReviewCard(
                 color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
 
             // Options with color coding — handles image options too
-            // Only reveal correct option when user answered correctly; never reveal on wrong/skip
             if (detail.question.isImageOptions) {
                 // 2×2 grid in review
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1207,7 +1126,7 @@ fun ReviewCard(
                             for (col in 0..1) {
                                 val i          = row * 2 + col
                                 val isUserPick = i == detail.selectedIndex
-                                val isCorrect  = detail.isCorrect && i == detail.correctIndex
+                                val isCorrect  = i == detail.correctIndex
                                 val bg = when { isCorrect -> Color(0xFFE8FDF4); isUserPick && !isCorrect -> Color(0xFFFEE8E8); else -> BpscColors.Surface }
                                 val imgUrl = detail.question.optionImages.getOrNull(i)
                                 Box(
@@ -1244,7 +1163,7 @@ fun ReviewCard(
                 detail.question.options.forEachIndexed { i, option ->
                     if (option.isBlank()) return@forEachIndexed
                     val isUserOpt    = i == detail.selectedIndex
-                    val isCorrectOpt = detail.isCorrect && i == detail.correctIndex
+                    val isCorrectOpt = i == detail.correctIndex
                     val bg    = when { isCorrectOpt -> Color(0xFFE8FDF4); isUserOpt && !isCorrectOpt -> Color(0xFFFEE8E8); else -> Color.Transparent }
                     val color = when { isCorrectOpt -> BpscColors.Success; isUserOpt && !isCorrectOpt -> Color(0xFFE74C3C); else -> BpscColors.TextSecondary }
                     Row(

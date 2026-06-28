@@ -63,6 +63,8 @@ data class MockTest(
     /** True when scheduledFor is in the future — test cannot be started yet */
     val isScheduledFuture: Boolean = false,
     val isExamMode: Boolean = false,
+    val isAttempted: Boolean = false,
+    val myLastScore: Int? = null,
 )
 
 data class MockQuestion(
@@ -123,9 +125,11 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         totalAttempts   = attemptCount,
         averageScore    = avgScore.toFloat(),
         isFeatured      = false,
-        coinsReward     = coinsReward,
+        coinsReward       = coinsReward,
         isScheduledFuture = isScheduledFuture,
-        isExamMode      = isExamMode,
+        isExamMode        = isExamMode,
+        isAttempted       = isAttempted,
+        myLastScore       = myLastScore,
     )
 }
 
@@ -728,6 +732,20 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     hasNoQuestions -> Text("No Questions", style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold, fontSize = 10.sp,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 8.dp, vertical = 4.dp))
+                    test.isAttempted -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFE8FDF4))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("✅", fontSize = 10.sp)
+                        Text(
+                            "Attempted${test.myLastScore?.let { " · $it%" } ?: ""}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 10.sp
+                        )
+                    }
                     else -> Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -785,7 +803,7 @@ private fun TestInstructionsScreen(
                         Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFFF57F17).copy(0.25f)).padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("🪙", fontSize = 14.sp)
-                            Text("+${test.coinsReward} Coins", style = MaterialTheme.typography.labelLarge, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                            Text("+${test.coinsReward}", style = MaterialTheme.typography.labelLarge, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     Text(test.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)

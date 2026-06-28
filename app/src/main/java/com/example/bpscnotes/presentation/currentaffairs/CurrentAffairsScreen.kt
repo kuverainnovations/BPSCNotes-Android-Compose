@@ -441,7 +441,7 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
 
                         Text(
                             if (hasMcqs)
-                                "${article.mcqCount} MCQs from this topic"
+                                "${article.mcqCount} MCQs"
                             else
                                 "No MCQs available",
                             style = MaterialTheme.typography.labelSmall,

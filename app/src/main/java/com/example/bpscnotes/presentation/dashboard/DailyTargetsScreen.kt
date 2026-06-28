@@ -396,7 +396,7 @@ private fun DailyTargetHistorySheet(
         modifier = Modifier
             .fillMaxSize()
             .background(cs.background)
-            .statusBarsPadding()
+            //.statusBarsPadding()
     ) {
         Column(
             modifier = Modifier
@@ -408,7 +408,7 @@ private fun DailyTargetHistorySheet(
                 Modifier
                     .fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color(0xFF0D47A1), Color(0xFF1565C0))))
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(start = 20.dp, end = 20.dp, bottom = 16.dp,top=46.dp),
                 Arrangement.SpaceBetween, Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

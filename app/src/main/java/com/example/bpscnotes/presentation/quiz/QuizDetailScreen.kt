@@ -391,5 +391,5 @@ internal fun MarkingSchemeRow(label: String, value: String, valueColor: Color? =
 
 /** Formats a marks value without a trailing ".0" for whole numbers (2.0 → "2", 0.66 stays "0.66"). */
 internal fun formatMarks(value: Double): String {
-    return String.format("%.3f", value)
+    return String.format("%.2f", value)
 }

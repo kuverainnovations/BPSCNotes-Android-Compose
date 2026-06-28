@@ -347,7 +347,6 @@ internal fun QuizSessionScreen(
     var timeLeft           by remember { mutableIntStateOf(totalDurationSecs) }  // shared countdown
     var totalTimeSecs      by remember { mutableIntStateOf(0) }
     var isQuizComplete     by remember { mutableStateOf(false) }
-    var showHint           by remember(currentIndex) { mutableStateOf(false) }
     var showReviewAll      by remember { mutableStateOf(false) }
 
     val current = questions.getOrNull(currentIndex)
@@ -489,15 +488,6 @@ internal fun QuizSessionScreen(
                 Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(current.question, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
-                        AnimatedVisibility(visible = showHint) {
-                            Column {
-                                Spacer(Modifier.height(12.dp))
-                                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFF8E1)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("💡", fontSize = 16.sp)
-                                    Text(str.quizSelectCorrect, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF856404))
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -534,25 +524,19 @@ internal fun QuizSessionScreen(
             val isAnswered = viewModel.getAnswer(current.id) != null
             Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 if (!isAnswered) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(
-                            onClick  = { showHint = !showHint },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape    = RoundedCornerShape(12.dp),
-                            border   = BorderStroke(1.dp, BpscColors.CoinGold),
-                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.CoinGold)
-                        ) { Text("💡", fontSize = 14.sp); Spacer(Modifier.width(4.dp)); Text("Hint", style = MaterialTheme.typography.titleMedium) }
-
-                        OutlinedButton(
-                            onClick = {
-                                if (currentIndex < questions.size - 1) { currentIndex++ }
-                                else { isQuizComplete = true }
-                            },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape    = RoundedCornerShape(12.dp),
-                            border   = BorderStroke(1.dp, cs.outline),
-                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
-                        ) { Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(str.quizSkip, style = MaterialTheme.typography.titleMedium) }
+                    OutlinedButton(
+                        onClick  = {
+                            if (currentIndex < questions.size - 1) { currentIndex++ }
+                            else { isQuizComplete = true }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        border   = BorderStroke(1.dp, cs.outline),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
+                    ) {
+                        Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(str.quizSkip, style = MaterialTheme.typography.titleMedium)
                     }
                 } else {
                     if (state.isSubmitting) {

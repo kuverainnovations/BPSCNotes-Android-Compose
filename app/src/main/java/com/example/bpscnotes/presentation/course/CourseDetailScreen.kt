@@ -355,17 +355,6 @@ fun CourseDetailScreen(
                         }
                     }
 
-                    // Remove this item block — HeroHeader now pinned above, inserted below
-
-                    if (state.error != null) {
-                        item {
-                            Text(
-                                state.error!!, color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF3F3)).padding(12.dp)
-                            )
-                        }
-                    }
-
                     if (course.whatYouLearn.isNotEmpty()) {
                         item { WhatYouLearnSection(course.whatYouLearn, accent) }
                     }
@@ -432,7 +421,7 @@ fun CourseDetailScreen(
                 // ── Pinned collapsing HeroHeader ──────────────
                 Box(
                     Modifier
-                        .height(currentHeaderHeightDp)
+                        .heightIn(max = currentHeaderHeightDp)
                         .clip(RectangleShape)
                 ) {
                     Box(Modifier.onGloballyPositioned { coords ->

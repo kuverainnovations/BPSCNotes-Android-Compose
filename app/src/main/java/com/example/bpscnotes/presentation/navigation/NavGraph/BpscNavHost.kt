@@ -65,7 +65,6 @@ import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.LeaderboardScreen
-import com.example.bpscnotes.presentation.rooms.GlobalLeaderboardScreen
 import com.example.bpscnotes.presentation.studysessions.StudySessionHistoryScreen
 import com.example.bpscnotes.presentation.course.LessonViewerScreen
 import com.example.bpscnotes.presentation.liveclasses.LiveClassViewerScreen
@@ -509,7 +508,14 @@ fun BpscNavHost(
             composable(Screen.Achievements.route)     { AchievementsScreen(navController) }
             composable(Screen.WeeklyChallenges.route) { ChallengesScreen(navController) }
 
-            composable(Screen.Leaderboard.route) { GlobalLeaderboardScreen(navController) }
+            composable(Screen.Leaderboard.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    try { navController.getBackStackEntry(Screen.Main.route) }
+                    catch (_: Exception) { backStackEntry }
+                }
+                val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
+                LeaderboardScreen(navController = navController, viewModel = tiersVM)
+            }
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
             composable(Screen.MyLearning.route)         { MyLearningScreen(navController, startTab = 0, fromScreen = "nav-host") }
             composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, fromScreen = "nav-host") }

@@ -155,29 +155,7 @@ fun CoinWalletScreen(
 
                     // ─── EARN TAB ─────────────────────────────────────
                     0 -> {
-                        // ── Coin Store entry ───────────────────────────
-                        item(key = "coin_store_banner") {
-                            androidx.compose.material3.Card(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .clickable { navController.navigate(Screen.CoinStore.route) },
-                                shape    = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                                colors   = androidx.compose.material3.CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
-                                elevation = androidx.compose.material3.CardDefaults.cardElevation(1.dp)
-                            ) {
-                                Row(
-                                    Modifier.padding(14.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("🏪", fontSize = 28.sp)
-                                    Column(Modifier.weight(1f)) {
-                                        Text("Coin Store", style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                                        Text("Spend coins on rewards & discounts", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                                    }
-                                    Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        }
+                        // Coin Store hidden for this phase — re-enable when store is ready
 
                         // Daily streak layout removed per client request
                         // ── Watch Ad to earn coins ─────────────────────
