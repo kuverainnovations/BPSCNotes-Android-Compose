@@ -29,7 +29,6 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
-import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
 import com.example.bpscnotes.presentation.quiz.components.SectionLabel
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -104,8 +103,8 @@ fun QuizListScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text("Daily Quizzes", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.quizTitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                                Text(str.quizTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text("Daily & Topic Quizzes", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         // Real user coins
@@ -123,26 +122,6 @@ fun QuizListScreen(
                                 color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp
                             )
                         }
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // Real user stats strip
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White.copy(0.1f))
-                            .padding(horizontal = 4.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        val p = state.userProfile
-                        LobbyStatChip("🎯", if (p != null) "${p.accuracy}%" else "--",    "Accuracy")
-                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
-                        LobbyStatChip("🔥", if (p != null) "${p.streak}" else "--",               "Streak")
-                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
-                        LobbyStatChip("🏆", if (p?.rank != null) "#${p.rank}" else "--",          "Rank")
-                        Box(Modifier.width(1.dp).height(24.dp).background(Color.White.copy(0.2f)))
-                        LobbyStatChip("📝", if (p != null) "${p.quizzesAttempted}" else "--",     "Attempted")
                     }
 
                     Spacer(Modifier.height(8.dp))

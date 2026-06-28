@@ -144,6 +144,21 @@ private fun QuizPlayerContent(
     val state         by viewModel.uiState.collectAsState()
     var showHint      by remember(currentIndex) { mutableStateOf(false) }
 
+    // Stable per-session option shuffle — prevents memorising positions across retakes.
+    // Seed is session+question so each question shuffles differently but consistently.
+    val shuffleMap = remember(session.id) {
+        session.questions.associate { q ->
+            val indices = (0 until minOf(q.options.size, 4)).toMutableList()
+            indices.shuffle(java.util.Random((session.id + q.id).hashCode().toLong()))
+            q.id to indices
+        }
+    }
+    val displayIndices = shuffleMap[current.id] ?: (0 until current.options.size).toList()
+    val displayQuestion = current.copy(
+        options      = displayIndices.map { current.options.getOrElse(it) { "" } },
+        optionImages = displayIndices.map { current.optionImages.getOrNull(it) }
+    )
+
     // Per-question time = total quiz duration ÷ question count (no cap)
     // e.g. 7 min / 1 question = 420s, 7 min / 4 questions = 105s
     val perQuestionSecs = (session.durationMins * 60) / questions.size.coerceAtLeast(1)
@@ -163,6 +178,13 @@ private fun QuizPlayerContent(
     var submitClicked by remember { mutableStateOf(false) }
 
     val selectedLetter = viewModel.getAnswer(current.id)
+    // Map stored original letter → display position letter so the selected highlight
+    // follows the shuffled position, not the original index.
+    val selectedDisplayLetter = selectedLetter?.let { stored ->
+        val origIdx = optionLetters.indexOf(stored)
+        val dispIdx = displayIndices.indexOf(origIdx)
+        if (dispIdx >= 0) optionLetters[dispIdx] else stored
+    }
     val hasAnswered     = selectedLetter != null
     val isLastQuestion  = currentIndex == questions.size - 1
     val answeredCount   = questions.count { q -> viewModel.getAnswer(q.id) != null }
@@ -281,22 +303,29 @@ private fun QuizPlayerContent(
                 // Question card — handles text, image, or both
                 QuestionCard(question = current, showHint = showHint)
 
-                // Options — text or image grid
+                // Options — text or image grid (uses shuffled display order)
                 if (current.isImageOptions) {
                     ImageOptionsGrid(
-                        question       = current,
-                        selectedLetter = selectedLetter,
-                        onSelect       = { letter ->
-                            viewModel.recordAnswer(current.id, letter)
+                        question       = displayQuestion,
+                        selectedLetter = selectedDisplayLetter,
+                        onSelect       = { displayLetter ->
+                            // Map display position back to original letter before recording
+                            val dispIdx = optionLetters.indexOf(displayLetter)
+                            val origIdx = displayIndices.getOrElse(dispIdx) { dispIdx }
+                            val origLetter = optionLetters.getOrElse(origIdx) { displayLetter }
+                            viewModel.recordAnswer(current.id, origLetter)
                             showHint = false
                         }
                     )
                 } else {
                     TextOptionsList(
-                        question       = current,
-                        selectedLetter = selectedLetter,
-                        onSelect       = { letter ->
-                            viewModel.recordAnswer(current.id, letter)
+                        question       = displayQuestion,
+                        selectedLetter = selectedDisplayLetter,
+                        onSelect       = { displayLetter ->
+                            val dispIdx = optionLetters.indexOf(displayLetter)
+                            val origIdx = displayIndices.getOrElse(dispIdx) { dispIdx }
+                            val origLetter = optionLetters.getOrElse(origIdx) { displayLetter }
+                            viewModel.recordAnswer(current.id, origLetter)
                             showHint = false
                         }
                     )
@@ -889,7 +918,32 @@ private fun QuizResultScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
+
+                    // Contextual coin message
+                    val coinMsg: String? = when {
+                        result.isFirstAttempt && accuracy.toInt() == 100 && result.coinsEarned > 0 -> null
+                        result.isFirstAttempt && accuracy.toInt() < 100 ->
+                            "Score 100% to earn coins! Better luck next time 💪"
+                        !result.isFirstAttempt && accuracy.toInt() == 100 ->
+                            "You already earned coins for this quiz 🪙"
+                        else -> null
+                    }
+                    if (coinMsg != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(cs.surfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(coinMsg, style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
                     HorizontalDivider(color = cs.outline)
                     Spacer(Modifier.height(10.dp))
 
@@ -1236,14 +1290,6 @@ fun ReviewCard(
                 }
             }
 
-            // Explanation only shown when user answered correctly
-            if (detail.explanation.isNotEmpty() && detail.isCorrect) {
-                HorizontalDivider(color = cs.outline)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("💡", fontSize = 13.sp)
-                    Text(detail.explanation, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 20.sp)
-                }
-            }
         }
     }
 }
