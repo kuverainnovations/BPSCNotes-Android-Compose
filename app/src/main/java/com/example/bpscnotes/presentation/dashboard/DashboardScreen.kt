@@ -830,6 +830,16 @@ private fun DashboardHeader(
                     Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Search
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(0.12f))
+                            .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
+                            .clickable { navController.navigate(Screen.GlobalSearch.route) },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                     // Single wallet entry point — shows coin balance, taps to wallet screen
                     Row(
                         modifier = Modifier

@@ -58,7 +58,9 @@ fun SubjectChip(subject: String) {
 @Composable
 internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    bookmarkedIds: Set<String> = emptySet(),
+    onBookmark: ((questionId: String) -> Unit)? = null,
 ) {
     val str = LocalStrings.current
     Column(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
@@ -75,7 +77,12 @@ internal fun QuizAnswerReviewScreen(
         }
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             itemsIndexed(answerDetails) { index, detail ->
-                ReviewCard(index = index, detail = detail)
+                ReviewCard(
+                    index        = index,
+                    detail       = detail,
+                    isBookmarked = detail.question.id in bookmarkedIds,
+                    onBookmark   = onBookmark,
+                )
             }
         }
     }

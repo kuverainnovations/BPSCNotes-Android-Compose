@@ -595,6 +595,21 @@ fun BpscNavHost(
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
             ) { NotesReaderScreen(navController, it.arguments?.getString("noteId") ?: "") }
 
+            // ── Global Search ─────────────────────────────────────
+            composable(Screen.GlobalSearch.route) {
+                com.example.bpscnotes.presentation.search.GlobalSearchScreen(navController)
+            }
+
+            // ── Bookmarked Questions ──────────────────────────────
+            composable(Screen.BookmarkedQuestions.route) {
+                com.example.bpscnotes.presentation.bookmarks.BookmarkedQuestionsScreen(navController)
+            }
+
+            // ── Coin Store ────────────────────────────────────────
+            composable(Screen.CoinStore.route) {
+                com.example.bpscnotes.presentation.wallet.CoinStoreScreen(navController)
+            }
+
             // ── Lesson Viewer (PDF / Video / Quiz / Live) ─────────
             composable(
                 Screen.LessonViewer.route,

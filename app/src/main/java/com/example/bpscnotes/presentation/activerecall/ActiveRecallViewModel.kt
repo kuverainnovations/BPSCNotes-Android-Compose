@@ -5,15 +5,21 @@ import com.example.bpscnotes.core.network.toUserMessage
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.data.local.Sm2CardDao
+import com.example.bpscnotes.data.local.Sm2CardEntity
+import com.example.bpscnotes.data.local.applyRating
+import com.example.bpscnotes.data.local.isDueToday
 import com.example.bpscnotes.data.remote.api.CoinsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class ActiveRecallUiState(
@@ -22,6 +28,8 @@ data class ActiveRecallUiState(
     val error:       String?           = null,
     val masteredIds: Set<String>       = emptySet(),
     val weakIds:     Set<String>       = emptySet(),
+    // SM-2 scheduling data keyed by card ID
+    val sm2Schedule: Map<String, Sm2CardEntity> = emptyMap(),
     // Notification subject subscriptions (e.g. "all", "Polity", "History")
     val notifTopics: Set<String>       = emptySet()
 )
@@ -29,7 +37,8 @@ data class ActiveRecallUiState(
 @HiltViewModel
 class ActiveRecallViewModel @Inject constructor(
     private val api: CoinsApiService.FlashcardsApiService,
-    private val bus: RefreshEventBus
+    private val bus: RefreshEventBus,
+    private val sm2Dao: Sm2CardDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveRecallUiState())
@@ -39,6 +48,7 @@ class ActiveRecallViewModel @Inject constructor(
         loadAll()
         loadProgress()
         loadNotifPrefs()
+        loadSm2Schedule()
 
         viewModelScope.launch {
             bus.events.collect { event ->
@@ -48,6 +58,42 @@ class ActiveRecallViewModel @Inject constructor(
                     else -> {}
                 }
             }
+        }
+    }
+
+    private fun loadSm2Schedule() {
+        viewModelScope.launch {
+            val schedule = withContext(Dispatchers.IO) {
+                sm2Dao.getAll().associateBy { it.cardId }
+            }
+            _uiState.update { it.copy(sm2Schedule = schedule) }
+        }
+    }
+
+    /** Returns cards due for review today according to SM-2. Falls back to all cards if no schedule data. */
+    fun dueCardsForSubject(subject: String): List<CoinsApiService.FlashcardDto> {
+        val cards = cardsForSubject(subject)
+        val schedule = _uiState.value.sm2Schedule
+        if (schedule.isEmpty()) return cards
+        return cards.filter { card ->
+            val entry = schedule[card.id] ?: return@filter true  // never reviewed = due
+            entry.isDueToday()
+        }
+    }
+
+    /** SM-2 rating. quality: 0=Again, 1=Hard, 2=Good, 3=Easy */
+    fun sm2Rate(cardId: String, quality: Int) {
+        viewModelScope.launch {
+            val existing = withContext(Dispatchers.IO) { sm2Dao.get(cardId) }
+                ?: Sm2CardEntity(cardId = cardId)
+            val updated = existing.applyRating(quality)
+            withContext(Dispatchers.IO) { sm2Dao.upsert(updated) }
+            _uiState.update { state ->
+                state.copy(sm2Schedule = state.sm2Schedule + (cardId to updated))
+            }
+            // Also sync the simple backend rating for continuity
+            val backendRating = when (quality) { 0 -> "weak"; 3 -> "mastered"; else -> "mastered" }
+            saveProgressToBackend(cardId, backendRating, updated.repetitions)
         }
     }
 

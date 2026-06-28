@@ -4,7 +4,7 @@ import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
-import com.example.bpscnotes.BuildConfig
+import com.kuvera.bpscnotes.BuildConfig
 import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService

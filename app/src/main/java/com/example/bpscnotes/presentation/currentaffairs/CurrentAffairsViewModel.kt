@@ -11,6 +11,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.bpscnotes.core.workers.CaMcqSubmitWorker
+import com.example.bpscnotes.data.local.CachedArticleDao
+import com.example.bpscnotes.data.local.toEntity
+import com.example.bpscnotes.data.local.toUiModel
 import com.example.bpscnotes.data.remote.api.CurrentAffairsApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -46,6 +49,7 @@ data class CaArticleDetailState(
 class CurrentAffairsViewModel @Inject constructor(
     private val api: CurrentAffairsApiService,
     private val bus: RefreshEventBus,
+    private val articleDao: CachedArticleDao,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
@@ -88,19 +92,32 @@ class CurrentAffairsViewModel @Inject constructor(
     fun loadArticles(category: String? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = it.articles.isEmpty(), error = null) }
+
+            // 1. Serve cached articles from Room immediately (instant offline display)
+            val cached = withContext(Dispatchers.IO) { articleDao.getAll() }
+            if (cached.isNotEmpty()) {
+                val cachedArticles = cached.map { it.toUiModel() }
+                val cachedBookmarked = cachedArticles.filter { it.isBookmarked }.map { it.id }.toSet()
+                _bookmarkedIds.update { it + cachedBookmarked }
+                _uiState.update { it.copy(allArticles = cachedArticles, articles = cachedArticles, isLoading = true) }
+            }
+
+            // 2. Fetch fresh from API; update Room on success
             try {
-                // Always fetch ALL articles — no server-side category filter
-                // Categories are filtered locally so chips never disappear
-                val response  = api.getAffairs(limit = 60, category = null)
+                val response   = api.getAffairs(limit = 60, category = null)
                 val serverList = response.data?.affairs ?: emptyList()
 
                 val serverBookmarked = serverList.filter { it.isBookmarked }.map { it.id }.toSet()
-                // Merge: keep any locally-toggled bookmarks even if cache returns stale data
                 val mergedBookmarked = serverBookmarked + _bookmarkedIds.value
                 _bookmarkedIds.value = mergedBookmarked
 
                 val articles = serverList.map { dto ->
                     dto.toUiModel(isBookmarked = mergedBookmarked.contains(dto.id))
+                }
+
+                // Persist to Room for next offline session
+                withContext(Dispatchers.IO) {
+                    articleDao.insertAll(articles.map { it.toEntity() })
                 }
 
                 _uiState.update { it.copy(allArticles = articles, articles = articles, isLoading = false) }
@@ -109,7 +126,8 @@ class CurrentAffairsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error     = e.toUserMessage("Failed to load current affairs")
+                        error     = if (cached.isNotEmpty()) null  // silent if we have cache
+                                    else e.toUserMessage("Failed to load current affairs")
                     )
                 }
             }
@@ -142,8 +160,7 @@ class CurrentAffairsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 api.toggleBookmark(id)
-                // Let any other live CurrentAffairsViewModel instance (list vs.
-                // detail screen each have their own) know about this change.
+                withContext(Dispatchers.IO) { articleDao.updateBookmark(id, !wasBookmarked) }
                 bus.emit(RefreshEvent.CaBookmarkChanged(id, !wasBookmarked))
             } catch (e: Exception) {
                 // Revert on failure

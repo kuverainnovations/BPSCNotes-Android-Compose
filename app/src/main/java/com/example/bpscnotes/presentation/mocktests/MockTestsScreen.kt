@@ -62,6 +62,7 @@ data class MockTest(
     val coinsReward: Int = 10,
     /** True when scheduledFor is in the future — test cannot be started yet */
     val isScheduledFuture: Boolean = false,
+    val isExamMode: Boolean = false,
 )
 
 data class MockQuestion(
@@ -123,7 +124,8 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         averageScore    = avgScore.toFloat(),
         isFeatured      = false,
         coinsReward     = coinsReward,
-        isScheduledFuture = isScheduledFuture
+        isScheduledFuture = isScheduledFuture,
+        isExamMode      = isExamMode,
     )
 }
 
@@ -976,6 +978,25 @@ private fun ActiveTestScreen(
     var showNavigator    by remember { mutableStateOf(false) }
     var showSubmitDialog by remember { mutableStateOf(false) }
     var showQuitDialog   by remember { mutableStateOf(false) }
+
+    // Exam Mode: keep screen on + immersive full-screen
+    val window = (LocalContext.current as? android.app.Activity)?.window
+    DisposableEffect(test.isExamMode) {
+        if (test.isExamMode && window != null) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                window.insetsController?.hide(android.view.WindowInsets.Type.statusBars())
+            }
+        }
+        onDispose {
+            if (test.isExamMode && window != null) {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    window.insetsController?.show(android.view.WindowInsets.Type.statusBars())
+                }
+            }
+        }
+    }
 
     // Intercept system back — show quit dialog
     BackHandler { showQuitDialog = true }

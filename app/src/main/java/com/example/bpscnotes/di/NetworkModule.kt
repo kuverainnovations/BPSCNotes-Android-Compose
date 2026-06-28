@@ -224,4 +224,7 @@ object NetworkModule {
     @Provides @Singleton fun provideNotificationsApi(r: Retrofit): NotificationsApiService = r.create(NotificationsApiService::class.java)
     @Provides @Singleton fun provideGlobalLeaderboardApi(r: Retrofit): GlobalLeaderboardApiService = r.create(GlobalLeaderboardApiService::class.java)
     @Provides @Singleton fun provideStudySessionHistoryApi(r: Retrofit): StudySessionHistoryApiService = r.create(StudySessionHistoryApiService::class.java)
+    @Provides @Singleton fun provideSearchApi(r: Retrofit): SearchApiService = r.create(SearchApiService::class.java)
+    @Provides @Singleton fun provideBookmarksApi(r: Retrofit): BookmarksApiService = r.create(BookmarksApiService::class.java)
+    @Provides @Singleton fun provideCoinStoreApi(r: Retrofit): CoinStoreApiService = r.create(CoinStoreApiService::class.java)
 }

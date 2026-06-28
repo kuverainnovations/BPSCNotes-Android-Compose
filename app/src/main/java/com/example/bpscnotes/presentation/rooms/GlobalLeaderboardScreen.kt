@@ -20,7 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
-import com.example.bpscnotes.data.remote.api.LeaderboardEntryDto
+import com.example.bpscnotes.data.remote.api.GlobalLeaderboardEntryDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 // ────────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ private fun TypeTabStrip(selected: String, onSelect: (String) -> Unit) {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(if (sel) BpscColors.brand else Color(0xFFEEEEF5))
+                    .background(if (sel) BpscColors.Primary else Color(0xFFEEEEF5))
                     .clickable { onSelect(tab.type) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -168,7 +168,7 @@ private fun LeaderboardBody(data: com.example.bpscnotes.data.remote.api.Leaderbo
 
 // ── Podium for top 3 (LOW-08) ───────────────────────────────────
 @Composable
-private fun PodiumRow(entries: List<LeaderboardEntryDto>, type: String) {
+private fun PodiumRow(entries: List<GlobalLeaderboardEntryDto>, type: String) {
     val gold   = entries[0]
     val silver = entries[1]
     val bronze = entries[2]
@@ -193,7 +193,7 @@ private fun PodiumRow(entries: List<LeaderboardEntryDto>, type: String) {
 }
 
 @Composable
-private fun PodiumColumn(entry: LeaderboardEntryDto, place: Int, height: Dp, type: String) {
+private fun PodiumColumn(entry: GlobalLeaderboardEntryDto, place: Int, height: Dp, type: String) {
     val podiumColor = when (place) {
         1    -> Color(0xFFFFD700)
         2    -> Color(0xFFC0C0C0)
@@ -247,12 +247,12 @@ private fun PodiumColumn(entry: LeaderboardEntryDto, place: Int, height: Dp, typ
 
 // ── Standard rank row ───────────────────────────────────────────
 @Composable
-private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boolean) {
+private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe: Boolean) {
     Row(
         Modifier
             .fillMaxWidth()
             .then(
-                if (isMe) Modifier.background(BpscColors.brand.copy(0.06f))
+                if (isMe) Modifier.background(BpscColors.Primary.copy(0.06f))
                 else Modifier
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -264,7 +264,7 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boole
             Text(
                 "#${entry.rank}",
                 fontSize = 13.sp, fontWeight = FontWeight.ExtraBold,
-                color = if (isMe) BpscColors.brand else Color(0xFF333355),
+                color = if (isMe) BpscColors.Primary else Color(0xFF333355),
             )
             entry.prevRank?.let { prev ->
                 val delta = prev - entry.rank
@@ -280,7 +280,7 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boole
 
         // Avatar
         Box(
-            Modifier.size(38.dp).clip(CircleShape).background(BpscColors.brand.copy(0.12f)),
+            Modifier.size(38.dp).clip(CircleShape).background(BpscColors.Primary.copy(0.12f)),
             Alignment.Center,
         ) {
             if (!entry.avatarUrl.isNullOrBlank()) {
@@ -291,7 +291,7 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boole
                     modifier = Modifier.fillMaxSize().clip(CircleShape),
                 )
             } else {
-                Text(entry.name.take(1).uppercase(), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand)
+                Text(entry.name.take(1).uppercase(), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
             }
         }
 
@@ -301,13 +301,13 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boole
                 Text(
                     entry.name, fontSize = 14.sp,
                     fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    color = if (isMe) BpscColors.brand else Color(0xFF1A1A2E),
+                    color = if (isMe) BpscColors.Primary else Color(0xFF1A1A2E),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (isMe) {
-                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand,
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.brand.copy(0.1f)).padding(horizontal = 5.dp, vertical = 1.dp))
+                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
+                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
             }
         }
@@ -319,11 +319,11 @@ private fun LeaderboardRow(entry: LeaderboardEntryDto, type: String, isMe: Boole
 
 // ── Pinned current-user row at bottom (LOW-08) ─────────────────
 @Composable
-private fun MyRankStickyRow(entry: LeaderboardEntryDto, type: String) {
+private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
     Box(
         Modifier.fillMaxWidth()
-            .background(BpscColors.brand.copy(0.1f))
-            .border(BorderStroke(1.dp, BpscColors.brand.copy(0.3f))),
+            .background(BpscColors.Primary.copy(0.1f))
+            .border(BorderStroke(1.dp, BpscColors.Primary.copy(0.3f))),
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -332,31 +332,31 @@ private fun MyRankStickyRow(entry: LeaderboardEntryDto, type: String) {
         ) {
             Text(
                 if (entry.rank > 0) "#${entry.rank}" else "—",
-                fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand,
+                fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                 modifier = Modifier.width(36.dp), textAlign = TextAlign.Center,
             )
             Box(
-                Modifier.size(38.dp).clip(CircleShape).background(BpscColors.brand.copy(0.2f)),
+                Modifier.size(38.dp).clip(CircleShape).background(BpscColors.Primary.copy(0.2f)),
                 Alignment.Center,
             ) {
-                Text(entry.name.take(1).uppercase(), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand)
+                Text(entry.name.take(1).uppercase(), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary)
             }
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(entry.name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand,
+                    Text(entry.name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.brand,
-                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.brand.copy(0.15f)).padding(horizontal = 5.dp, vertical = 1.dp))
+                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
+                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.15f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
             }
-            Text(entryValue(entry, type), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BpscColors.brand)
+            Text(entryValue(entry, type), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BpscColors.Primary)
         }
     }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-private fun entryValue(e: LeaderboardEntryDto, type: String): String = when (type) {
+private fun entryValue(e: GlobalLeaderboardEntryDto, type: String): String = when (type) {
     "weekly_coins"  -> "${e.weeklyCoins ?: 0} coins"
     "quiz_accuracy" -> "${String.format("%.1f", e.accuracy ?: 0.0)}%"
     "streak"        -> "${e.streak ?: 0}🔥"
@@ -369,7 +369,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("😕", fontSize = 48.sp)
             Text(message, textAlign = TextAlign.Center, color = Color(0xFF888899))
-            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.brand)) {
+            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Text("Retry")
             }
         }

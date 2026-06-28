@@ -275,7 +275,7 @@ private fun JobDetailBottomBar(job: JobVacancyDto, context: android.content.Cont
                     onClick = { openUrl(context, job.officialLink!!) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.brand),
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                 ) {
                     Icon(Icons.Rounded.ExitToApp, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))

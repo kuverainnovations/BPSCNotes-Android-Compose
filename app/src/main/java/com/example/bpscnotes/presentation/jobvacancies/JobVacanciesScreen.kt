@@ -56,7 +56,7 @@ enum class JobCategory(val label: String, val emoji: String, val color: Color, v
     Other       ("Other",        "📌", Color(0xFF7F8C8D), Color(0xFFF2F3F4)),
 }
 
-private fun String.toJobCategory(): JobCategory = when (this.trim()) {
+internal fun String.toJobCategory(): JobCategory = when (this.trim()) {
     "BPSC"         -> JobCategory.BPSC
     "Bihar Govt"   -> JobCategory.BiharGovt
     "Central Govt" -> JobCategory.CentralGovt
@@ -332,7 +332,7 @@ fun JobVacanciesScreen(
                             }
                             JobCard(job = job, isSaved = savedJobs.contains(job.id),
                                 onSave  = { viewModel.toggleSave(job.id) },
-                                onClick = { selectedJob = job })
+                                onClick = { navController.navigate(Screen.JobDetail.createRoute(job.id)) })
                         }
                     }
                 }

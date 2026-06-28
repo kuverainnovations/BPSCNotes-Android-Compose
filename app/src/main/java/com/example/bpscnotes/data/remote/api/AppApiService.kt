@@ -201,6 +201,7 @@ data class QuizPreviewDto(
     @SerializedName("negative_marking_enabled") val negativeMarkingEnabled: Boolean = false,
     @SerializedName("marks_per_correct")        val marksPerCorrect: Double = 1.0,
     @SerializedName("marks_per_wrong")          val marksPerWrong: Double = 0.0,
+    @SerializedName("is_exam_mode")             val isExamMode: Boolean = false,
 ) {
     /** Total Marks shown on the test details screen = questions × marks/correct */
     val totalMarks: Double get() = totalQuestions * marksPerCorrect
@@ -812,7 +813,7 @@ interface UserStatsApiService {
 // MED-17, LOW-08
 // ══════════════════════════════════════════════════════════════
 
-data class LeaderboardEntryDto(
+data class GlobalLeaderboardEntryDto(
     val rank: Int = 0,
     @SerializedName("user_id")     val userId:   String = "",
     val name:    String = "",
@@ -831,8 +832,8 @@ data class LeaderboardEntryDto(
 )
 
 data class LeaderboardData(
-    val leaderboard: List<LeaderboardEntryDto> = emptyList(),
-    val myRank: LeaderboardEntryDto? = null,
+    val leaderboard: List<GlobalLeaderboardEntryDto> = emptyList(),
+    val myRank: GlobalLeaderboardEntryDto? = null,
     val type: String = "coins",
 )
 
@@ -1449,3 +1450,119 @@ data class DistrictDto(
 data class DistrictsResponseData(
     val districts: List<DistrictDto> = emptyList()
 )
+// ══════════════════════════════════════════════════════════════
+// GLOBAL SEARCH DTOs  — GET /search — LOW-11
+// ══════════════════════════════════════════════════════════════
+
+data class SearchResultQuiz(
+    val id: String = "",
+    val title: String = "",
+    val subject: String = "",
+    val type: String = "",
+    @SerializedName("total_questions") val totalQuestions: Int = 0,
+    @SerializedName("duration_mins")   val durationMins: Int = 0,
+)
+
+data class SearchResultArticle(
+    val id: String = "",
+    val title: String = "",
+    val summary: String? = null,
+    val category: String = "",
+    val date: String = "",
+)
+
+data class SearchResultCourse(
+    val id: String = "",
+    val title: String = "",
+    val description: String? = null,
+    val subject: String = "",
+    val price: Double = 0.0,
+)
+
+data class SearchResultData(
+    val quizzes: List<SearchResultQuiz> = emptyList(),
+    val articles: List<SearchResultArticle> = emptyList(),
+    val courses: List<SearchResultCourse> = emptyList(),
+)
+
+interface SearchApiService {
+    @GET("search")
+    suspend fun search(
+        @Query("q")     q:     String,
+        @Query("types") types: String? = null,
+    ): ApiResponse<SearchResultData>
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUESTION BOOKMARKS DTOs  — NICE-03
+// ══════════════════════════════════════════════════════════════
+
+data class BookmarkToggleData(val bookmarked: Boolean = false)
+
+data class BookmarkedQuestionDto(
+    val id: String = "",
+    val question: String = "",
+    @SerializedName("option_a")    val optionA: String = "",
+    @SerializedName("option_b")    val optionB: String = "",
+    @SerializedName("option_c")    val optionC: String = "",
+    @SerializedName("option_d")    val optionD: String = "",
+    @SerializedName("option_e")    val optionE: String = "",
+    val correct: String = "a",
+    val explanation: String? = null,
+    val hint: String? = null,
+    val subject: String? = null,
+    val difficulty: String? = null,
+    @SerializedName("topic_tag")     val topicTag: String? = null,
+    @SerializedName("quiz_id")       val quizId: String = "",
+    @SerializedName("quiz_title")    val quizTitle: String = "",
+    @SerializedName("bookmarked_at") val bookmarkedAt: String = "",
+)
+
+data class BookmarkedQuestionsData(
+    val questions: List<BookmarkedQuestionDto> = emptyList()
+)
+
+interface BookmarksApiService {
+    @POST("questions/{id}/bookmark")
+    suspend fun toggleBookmark(@Path("id") id: String): ApiResponse<BookmarkToggleData>
+
+    @GET("users/me/bookmarked-questions")
+    suspend fun getBookmarks(
+        @Query("page")  page:  Int = 1,
+        @Query("limit") limit: Int = 20,
+    ): ApiResponse<BookmarkedQuestionsData>
+}
+
+// ══════════════════════════════════════════════════════════════
+// COIN STORE DTOs  — NICE-05
+// ══════════════════════════════════════════════════════════════
+
+data class CoinStoreItemDto(
+    val id: String = "",
+    val title: String = "",
+    val description: String? = null,
+    @SerializedName("coin_cost")  val coinCost: Int = 0,
+    @SerializedName("item_type")  val itemType: String = "badge",
+    @SerializedName("item_value") val itemValue: String? = null,
+    @SerializedName("icon_url")   val iconUrl: String? = null,
+    val stock: Int? = null,
+    @SerializedName("sort_order") val sortOrder: Int = 0,
+)
+
+data class CoinStoreData(
+    val items:   List<CoinStoreItemDto> = emptyList(),
+    val balance: Int = 0,
+)
+
+data class CoinRedeemData(
+    val balance: Int = 0,
+    val item: CoinStoreItemDto? = null,
+)
+
+interface CoinStoreApiService {
+    @GET("coins/store")
+    suspend fun getStoreItems(): ApiResponse<CoinStoreData>
+
+    @POST("coins/store/{itemId}/redeem")
+    suspend fun redeemItem(@Path("itemId") itemId: String): ApiResponse<CoinRedeemData>
+}

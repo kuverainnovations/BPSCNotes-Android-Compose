@@ -138,6 +138,11 @@ sealed class Screen(val route: String) {
             "image_viewer/${imageUrl.encodeUrl()}/${title.encodeUrl()}"
     }
 
+    // Search, Bookmarks & Coin Store
+    object GlobalSearch          : Screen("global_search")
+    object BookmarkedQuestions   : Screen("bookmarked_questions")
+    object CoinStore             : Screen("coin_store")
+
     // Wallet / payments
     object CoinWallet   : Screen("wallet")
     object Subscription : Screen("subscription")

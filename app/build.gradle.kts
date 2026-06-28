@@ -100,6 +100,12 @@ dependencies {
     // WorkManager — for durable background retry (e.g., CA MCQ submit)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Room — offline cache for Current Affairs articles (NICE-06)
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
     // JSoup — reliable HTML-to-plain-text conversion for share intents
     implementation("org.jsoup:jsoup:1.17.2")
 

@@ -1,5 +1,7 @@
 package com.example.bpscnotes.presentation.activerecall
 
+import com.example.bpscnotes.data.local.Sm2CardEntity
+import com.example.bpscnotes.data.local.isDueToday
 import com.example.bpscnotes.core.language.LocalStrings
 import androidx.compose.ui.platform.LocalContext
 import com.example.bpscnotes.core.ui.AppErrorState
@@ -142,9 +144,15 @@ fun ActiveRecallScreen(
                     subjectKey  = activeSubject ?: "",
                     onRate      = { card, rating, currentStreak ->
                         when (rating) {
-                            CardRating.Mastered -> viewModel.markMastered(card.id, currentStreak)
-                            CardRating.Weak     -> viewModel.markWeak(card.id)
-                            CardRating.Skipped  -> Unit
+                            CardRating.Mastered -> {
+                                viewModel.markMastered(card.id, currentStreak)
+                                viewModel.sm2Rate(card.id, 3)  // Easy
+                            }
+                            CardRating.Weak     -> {
+                                viewModel.markWeak(card.id)
+                                viewModel.sm2Rate(card.id, 0)  // Again
+                            }
+                            CardRating.Skipped  -> viewModel.sm2Rate(card.id, 1) // Hard
                         }
                     },
                     onExit = { activeSubject = null; retryWeak = false }
@@ -160,7 +168,8 @@ fun ActiveRecallScreen(
                 weakIds       = weakIds,
                 navController = navController,
                 onStartSubject = { subject -> activeSubject = subject; retryWeak = false },
-                onRetryWeak    = { activeSubject = str.filterAll; retryWeak = true }
+                onRetryWeak    = { activeSubject = str.filterAll; retryWeak = true },
+                sm2Schedule   = state.sm2Schedule,
             )
         }
     }
@@ -780,6 +789,7 @@ private fun FlashcardLobbyScreen(
     navController: NavHostController,
     onStartSubject: (String) -> Unit,
     onRetryWeak: () -> Unit,
+    sm2Schedule: Map<String, Sm2CardEntity> = emptyMap(),
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -789,6 +799,12 @@ private fun FlashcardLobbyScreen(
     val masteredCount = masteredIds.count { it in allCardIds }
     val weakCount     = weakIds.count { it in allCardIds }
     val progress      = if (totalCards > 0) masteredCount.toFloat() / totalCards else 0f
+    // SM-2: count cards due today
+    val dueCount = if (sm2Schedule.isEmpty()) 0
+                   else allCards.count { card ->
+                       val entry = sm2Schedule[card.id] ?: return@count true
+                       entry.isDueToday()
+                   }
 
     Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -822,7 +838,11 @@ private fun FlashcardLobbyScreen(
                             // Stats: Mastered + Needs Work only (Unseen removed per spec)
                             StatPill("✅", "$masteredCount", str.recallMastered, Color(0xFF2ECC71))
                             StatPill("🔄", "$weakCount", "Needs Work", Color(0xFFE74C3C))
-                            StatPill("📊", "${(progress * 100).toInt()}%", "Progress", Color.White)
+                            if (sm2Schedule.isNotEmpty()) {
+                                StatPill("📅", "$dueCount", "Due Today", Color(0xFFFFD54F))
+                            } else {
+                                StatPill("📊", "${(progress * 100).toInt()}%", "Progress", Color.White)
+                            }
                         }
                     }
                 }

@@ -149,7 +149,7 @@ private fun SessionCard(session: StudySessionHistoryDto) {
         ) {
             // Icon
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(BpscColors.brand.copy(0.1f)),
+                Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(BpscColors.Primary.copy(0.1f)),
                 Alignment.Center,
             ) { Text("📖", fontSize = 20.sp) }
 
@@ -173,7 +173,7 @@ private fun SessionCard(session: StudySessionHistoryDto) {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     formatDuration(session.durationSecs),
-                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BpscColors.brand,
+                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BpscColors.Primary,
                 )
                 if (session.xpEarned > 0) {
                     Text(
@@ -203,7 +203,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("😕", fontSize = 48.sp)
             Text(message, textAlign = TextAlign.Center, color = Color(0xFF888899))
-            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.brand)) {
+            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Text("Retry")
             }
         }

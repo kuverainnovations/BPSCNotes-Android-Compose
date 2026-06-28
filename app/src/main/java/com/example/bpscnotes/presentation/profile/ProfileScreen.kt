@@ -144,6 +144,35 @@ fun ProfileScreen(
                     onViewAll    = { navController.navigate(Screen.CoinWallet.route) }
                 )
 
+                // ── My Bookmarks ──────────────────────────────────────
+                androidx.compose.material3.Card(
+                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                        .clickable { navController.navigate(Screen.BookmarkedQuestions.route) },
+                    shape     = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                    colors    = androidx.compose.material3.CardDefaults.cardColors(containerColor = cs.surface),
+                    elevation = androidx.compose.material3.CardDefaults.cardElevation(1.dp)
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(38.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(com.example.bpscnotes.core.ui.t.BpscColors.PrimaryLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Rounded.Bookmark, null, tint = com.example.bpscnotes.core.ui.t.BpscColors.Primary, modifier = Modifier.size(18.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("My Bookmarks", style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text("Saved questions for revision", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                        Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    }
+                }
+
                 // ── Bottom banner ad ─────────────────────────────────
                 if (adManager != null) {
                     BannerAdView(adUnitId = adManager.getBannerAdUnitId())

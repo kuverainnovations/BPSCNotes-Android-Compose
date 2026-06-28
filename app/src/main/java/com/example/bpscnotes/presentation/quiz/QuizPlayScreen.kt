@@ -1133,7 +1133,12 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
 // ANSWER REVIEW — shows correct/wrong with images
 // ═════════════════════════════════════════════════════════════════
 @Composable
-fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
+fun ReviewCard(
+    index: Int,
+    detail: QuizAnswerDetail,
+    isBookmarked: Boolean = false,
+    onBookmark: ((questionId: String) -> Unit)? = null,
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Card(
@@ -1157,12 +1162,24 @@ fun ReviewCard(index: Int, detail: QuizAnswerDetail) {
                     }
                     SubjectChip(detail.question.subject)
                 }
-                Text(
-                    when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        when { detail.isSkipped -> "⏭ Skipped"; detail.isCorrect -> str.quizCorrectAns; else -> str.quizWrongAns },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (onBookmark != null) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark question",
+                            tint = if (isBookmarked) BpscColors.Primary else BpscColors.TextSecondary,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { onBookmark(detail.question.id) }
+                        )
+                    }
+                }
             }
 
             // Show question image in review
