@@ -126,7 +126,7 @@ private fun QuizIntroContent(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text("🪙", fontSize = 14.sp)
-                            Text("+${quiz.coinsReward} ${str.coins}",
+                            Text("+${quiz.coinsReward}",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
                         }

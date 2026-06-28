@@ -42,6 +42,11 @@ class AuthRepositoryImpl @Inject constructor(
         return response
     }
 
+    override suspend fun validateForgotMpinOtp(mobile: String, otp: String): Boolean {
+        val response = api.validateForgotMpinOtp(VerifyOtpRequest("+91$mobile", otp))
+        return response.success
+    }
+
     // ── Registration ────────────────────────────────────────────
     override suspend fun register(
         tempToken: String, name: String, email: String?, district: String?

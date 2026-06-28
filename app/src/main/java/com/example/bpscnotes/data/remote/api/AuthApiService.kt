@@ -19,6 +19,10 @@ interface AuthApiService {
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body body: VerifyOtpRequest): VerifyOtpResponse
 
+    /** Check OTP is valid without consuming it — used by forgot-mpin flow */
+    @POST("auth/validate-otp")
+    suspend fun validateForgotMpinOtp(@Body body: VerifyOtpRequest): ApiResponse<Any>
+
     /** Step 3 — register with name */
     @POST("auth/register")
     suspend fun register(@Body body: RegisterRequest): RegisterResponse

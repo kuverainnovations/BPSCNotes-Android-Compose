@@ -48,10 +48,12 @@ class OtpViewModel @Inject constructor(
     fun verifyOtp(mobile: String, otp: String, context: String = "registration") {
         launchWithLoading {
             if (context == "forgot_mpin") {
-                // For forgot_mpin: we don't call verifyOtp backend endpoint.
-                // We pass the mobile+otp to ResetMpinScreen which calls /auth/reset-mpin.
-                // This way the OTP is consumed exactly once by the reset endpoint.
-                _result.postValue(OtpResult.NavigateToResetMpin(mobile, otp))
+                // Validate OTP without consuming it — the actual consume happens inside /auth/reset-mpin.
+                // This blocks wrong OTPs on the OTP screen instead of letting them through to ResetMpin.
+                val valid = authRepository.validateForgotMpinOtp(mobile, otp)
+                if (valid) {
+                    _result.postValue(OtpResult.NavigateToResetMpin(mobile, otp))
+                }
                 return@launchWithLoading
             }
 

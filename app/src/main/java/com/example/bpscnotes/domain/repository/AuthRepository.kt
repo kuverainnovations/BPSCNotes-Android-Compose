@@ -13,6 +13,8 @@ interface AuthRepository {
     // ── OTP (used only for new registration + forgot MPIN) ──────
     suspend fun sendOtp(mobile: String): SendOtpResponse
     suspend fun verifyOtp(mobile: String, otp: String): VerifyOtpResponse
+    /** Validates OTP without consuming it — for forgot-mpin OTP screen pre-check */
+    suspend fun validateForgotMpinOtp(mobile: String, otp: String): Boolean
 
     // ── Registration ────────────────────────────────────────────
     suspend fun register(tempToken: String, name: String, email: String?, district: String?): RegisterResponse
