@@ -655,7 +655,7 @@ internal fun QuizSummaryScreen(
                         Box(modifier = Modifier.fillMaxWidth(progress).fillMaxHeight().background(Brush.horizontalGradient(listOf(BpscColors.Primary, Color(0xFF64B5F6))), RoundedCornerShape(5.dp)))
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        Text("${result.totalQuestions} questions · ${com.example.bpscnotes.presentation.studysessions.formatDuration(result.timeTakenSecs)}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     }
                 }
             }

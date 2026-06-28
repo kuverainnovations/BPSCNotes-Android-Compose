@@ -191,7 +191,7 @@ fun QuizListScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.horizontalScroll(rememberScrollState())
                     ) {
-                        listOf("all" to "All", "daily" to "📅 Daily", "topic" to "📝 Topic", "mock" to "📋 Mock")
+                        listOf("all" to "All", "daily" to "📅 Daily", "topic" to "📝 Topic")
                             .forEach { (type, label) ->
                                 val selected = state.selectedType == type
                                 Box(
@@ -233,32 +233,22 @@ fun QuizListScreen(
                         contentPadding        = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
                         verticalArrangement   = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (state.dailyQuizzes.isNotEmpty()) {
+                        val visibleDailyQuizzes = state.dailyQuizzes.filter { it.totalQuestions > 0 }
+                        val visibleTopicQuizzes = state.topicQuizzes.filter { it.totalQuestions > 0 }
+                        if (visibleDailyQuizzes.isNotEmpty()) {
                             item { SectionLabel("📅 Daily Quizzes", "Today's scheduled quizzes — resets at midnight") }
-                            items(state.dailyQuizzes, key = { it.id }) { quiz ->
+                            items(visibleDailyQuizzes, key = { it.id }) { quiz ->
                                 QuizCard(quiz = quiz) {
-                                    if (quiz.totalQuestions == 0) {
-                                        android.widget.Toast.makeText(context,
-                                            "\"${quiz.title}\" " + str.quizNoQuestions,
-                                            android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
-                                    }
+                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
                                 }
                             }
                         }
-                        if (state.topicQuizzes.isNotEmpty()) {
+                        if (visibleTopicQuizzes.isNotEmpty()) {
                             item { Spacer(Modifier.height(4.dp)) }
                             item { SectionLabel("📝 " + str.quizTopic + "s", "Practice specific subjects") }
-                            items(state.topicQuizzes, key = { it.id }) { quiz ->
+                            items(visibleTopicQuizzes, key = { it.id }) { quiz ->
                                 QuizCard(quiz = quiz) {
-                                    if (quiz.totalQuestions == 0) {
-                                        android.widget.Toast.makeText(context,
-                                            "\"${quiz.title}\" " + str.quizNoQuestions,
-                                            android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
-                                    }
+                                    navController.navigate(Screen.QuizDetail.createRoute(quiz.id))
                                 }
                             }
                         }

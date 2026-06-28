@@ -224,6 +224,8 @@ fun DashboardScreen(
                             )
                         }
 
+                        Spacer(Modifier.height(8.dp))
+
                         // ── Daily quizzes ──────────────────────────────────────────
                         DailyQuizSection(
                             quizzes = state.dailyQuizzes,
@@ -1349,7 +1351,7 @@ private fun WeeklyConsistencyCard(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         Text(
-                            "📖 Study activity: quizzes + study rooms (min)",
+                            "📖 Study activity: quizzes + CA reading + study rooms (min)",
                             style    = MaterialTheme.typography.labelSmall,
                             color    = BpscColors.TextHint,
                             fontSize = 9.sp,

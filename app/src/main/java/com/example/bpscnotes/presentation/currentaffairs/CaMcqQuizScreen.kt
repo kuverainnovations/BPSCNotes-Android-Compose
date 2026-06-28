@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.currentaffairs
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -296,7 +297,7 @@ fun CaMcqQuizScreen(
                     if (currentIndex < mcqs.size - 1) currentIndex++
                     else finishQuiz()             // was: showResult = true
                 },
-                onBack        = { if (currentIndex > 0) currentIndex-- else navigateBack() }
+                onBack        = navigateBack
             )
         }
     }
@@ -631,26 +632,38 @@ private fun QuizScreen(
                 }
             }
 
-            // ── Hint — always visible so student can read it before attempting ──
+            // ── Hint — hidden behind toggle so student can attempt first ──
             if (!q.hint.isNullOrBlank()) {
-                Row(
+                var hintVisible by remember(q.id) { mutableStateOf(false) }
+                Column(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFFF8E1)).padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .background(Color(0xFFFFF8E1))
                 ) {
-                    Text("💡", fontSize = 14.sp, modifier = Modifier.padding(top = 1.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            "Hint",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF795548),
-                            fontWeight = FontWeight.Bold
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { hintVisible = !hintVisible }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("💡", fontSize = 14.sp)
+                            Text("Show Hint", style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFF795548), fontWeight = FontWeight.Bold)
+                        }
+                        Icon(
+                            if (hintVisible) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = Color(0xFF795548),
+                            modifier = Modifier.size(18.dp)
                         )
+                    }
+                    AnimatedVisibility(visible = hintVisible) {
                         Text(
                             q.hint,
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF795548),
-                            lineHeight = 18.sp
+                            lineHeight = 18.sp,
+                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                         )
                     }
                 }

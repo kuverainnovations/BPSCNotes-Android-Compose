@@ -184,16 +184,19 @@ class StudyMaterialsViewModel @Inject constructor(
     private var uploadJob:  Job? = null  // tracked so user can cancel mid-upload
 
     init {
-        // FIX: Load persisted downloaded IDs so "Saved" button survives app restart
-        val downloadedIds = tokenStore.getDownloadedIds()
+        // Load persisted downloaded IDs; purge any whose files no longer exist on disk
+        val allIds = tokenStore.getDownloadedIds()
+        val validPaths = allIds.mapNotNull { id ->
+            val path = tokenStore.getLocalPath(id)
+            if (path != null && java.io.File(path).exists()) id to path else null
+        }.toMap()
+        val staleIds = allIds - validPaths.keys
+        staleIds.forEach { tokenStore.removeDownloadedId(it) }
+
         _state.update { it.copy(
-            downloadedIds = downloadedIds,
+            downloadedIds = validPaths.keys,
             purchasedIds  = tokenStore.getPurchasedIds(),
-            localPaths    = downloadedIds.mapNotNull { id ->
-                tokenStore.getLocalPath(id)?.let { id to it }
-            }.toMap(),
-            // Show marketplace rules popup automatically on first-ever visit
-            // to Study Materials. Persisted so it only appears once.
+            localPaths    = validPaths,
             showRulesSheet = !tokenStore.getBoolPref(SEEN_MARKETPLACE_RULES_KEY, false),
         )}
         loadSubjects()

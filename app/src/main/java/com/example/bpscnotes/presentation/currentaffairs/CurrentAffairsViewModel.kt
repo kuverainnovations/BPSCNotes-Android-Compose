@@ -36,7 +36,8 @@ data class CurrentAffairsUiState(
     val allArticles: List<CAArticle> = emptyList(),   // full unfiltered list — for category chips
     val articles: List<CAArticle> = emptyList(),
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val userCoins: Int = 0
 )
 
 data class CaArticleDetailState(
@@ -48,6 +49,7 @@ data class CaArticleDetailState(
 @HiltViewModel
 class CurrentAffairsViewModel @Inject constructor(
     private val api: CurrentAffairsApiService,
+    private val coinsApi: com.example.bpscnotes.data.remote.api.CoinsApiService,
     private val bus: RefreshEventBus,
     private val articleDao: CachedArticleDao,
     @ApplicationContext private val appContext: Context
@@ -76,16 +78,26 @@ class CurrentAffairsViewModel @Inject constructor(
     init {
         loadArticles()
         loadMcqMarkingConfig()
+        loadCoinBalance()
 
         // ── Refresh on bus events ─────────────────────────────
         viewModelScope.launch {
             bus.events.collect { event ->
                 when (event) {
-                    is RefreshEvent.CoinsChanged -> refresh()
+                    is RefreshEvent.CoinsChanged -> { refresh(); loadCoinBalance() }
                     is RefreshEvent.CaBookmarkChanged -> applyBookmarkState(event.affairId, event.isBookmarked)
                     else -> {}
                 }
             }
+        }
+    }
+
+    private fun loadCoinBalance() {
+        viewModelScope.launch {
+            try {
+                val res = coinsApi.getBalance()
+                _uiState.update { it.copy(userCoins = res.data?.balance ?: it.userCoins) }
+            } catch (_: Exception) {}
         }
     }
 

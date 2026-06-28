@@ -259,7 +259,7 @@ fun LoginScreen(navController: NavHostController) {
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable {
                         CustomTabsIntent.Builder().build()
-                            .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy"))
+                            .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy/"))
                     }
                 )
             }

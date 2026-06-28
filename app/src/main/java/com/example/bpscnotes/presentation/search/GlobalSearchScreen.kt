@@ -94,13 +94,14 @@ fun GlobalSearchScreen(
             }
         }
 
+        val results = state.results
         when {
             state.query.isBlank() -> SearchEmptyHint()
             state.isLoading       -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
             state.error != null   -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Search failed. Try again.", color = BpscColors.TextSecondary)
             }
-            state.results == null || (state.results.quizzes.isEmpty() && state.results.articles.isEmpty() && state.results.courses.isEmpty()) -> {
+            results == null || (results.quizzes.isEmpty() && results.articles.isEmpty() && results.courses.isEmpty()) -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("🔍", fontSize = 36.sp)
@@ -109,7 +110,6 @@ fun GlobalSearchScreen(
                 }
             }
             else -> {
-                val results = state.results!!
                 LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                     // Quizzes section
                     if (results.quizzes.isNotEmpty()) {

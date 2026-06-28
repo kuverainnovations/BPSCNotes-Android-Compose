@@ -933,7 +933,7 @@ private fun QuizResultScreen(
                             ))
                     }
                     Row(Modifier.fillMaxWidth(), Arrangement.Start) {
-                        Text("${result.totalQuestions} questions · ${result.timeTakenSecs}s", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        Text("${result.totalQuestions} questions · ${com.example.bpscnotes.presentation.studysessions.formatDuration(result.timeTakenSecs)}", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                     }
                 }
             }
@@ -993,78 +993,6 @@ private fun QuizResultScreen(
                 }
             }
 
-            // ── Per-quiz leaderboard ────────────────────────────────
-            if (isLoadingLeaderboard || leaderboard.isNotEmpty()) {
-                Spacer(Modifier.height(20.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = cs.surface)
-                ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                            Text("🏆 Top Scorers", style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
-                            if (isLoadingLeaderboard) {
-                                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
-                            }
-                        }
-                        HorizontalDivider(color = cs.outline)
-                        leaderboard.forEach { entry ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Rank badge
-                                Box(
-                                    modifier = Modifier.size(32.dp).clip(CircleShape)
-                                        .background(
-                                            when (entry.rankPosition) {
-                                                1 -> Color(0xFFFFD700)
-                                                2 -> Color(0xFFC0C0C0)
-                                                3 -> Color(0xFFCD7F32)
-                                                else -> if (entry.isCurrentUser) BpscColors.PrimaryLight else cs.background
-                                            }
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        if (entry.rankPosition <= 3) listOf("🥇","🥈","🥉")[entry.rankPosition-1]
-                                        else "#${entry.rankPosition}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = if (entry.rankPosition <= 3) 14.sp else 10.sp
-                                    )
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        if (entry.isCurrentUser) "You" else entry.userName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (entry.isCurrentUser) FontWeight.ExtraBold else FontWeight.Medium,
-                                        color = if (entry.isCurrentUser) BpscColors.Primary else cs.onSurface
-                                    )
-                                    Text(
-                                        "${entry.correctAnswers}/${entry.totalQuestions} correct · ${entry.timeTakenSecs}s",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = cs.onSurfaceVariant
-                                    )
-                                }
-                                Text(
-                                    "${entry.score.toInt()}%",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = when {
-                                        entry.score >= 80f -> BpscColors.Success
-                                        entry.score >= 50f -> BpscColors.Primary
-                                        else -> cs.onSurfaceVariant
-                                    },
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             Spacer(Modifier.height(32.dp))
 

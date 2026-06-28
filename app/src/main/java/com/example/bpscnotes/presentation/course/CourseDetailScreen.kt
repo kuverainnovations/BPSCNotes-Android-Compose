@@ -450,27 +450,38 @@ fun CourseDetailScreen(
                 }
             } // end pinned-header Box
 
-            // Bottom bar
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                BottomCta(
-                    course      = course,
-                    accent      = accent,
-                    isEnrolled  = isEnrolled,
-                    allDone     = allDone,
-                    isEnrolling = state.isEnrolling,
-                    onEnroll         = { viewModel.enroll(courseId) },
-                    onShowBuyDialog  = { showBuyDialog = true; dialogCoins = 0 },
-                    // FIX 3: Correct route — same LessonViewer used by lesson tap
-                    onContinue  = {
+            // Bottom bar (non-enrolled) or FAB (enrolled)
+            if (isEnrolled && !allDone) {
+                // FAB for enrolled users: Start / Continue Learning
+                Box(Modifier.fillMaxSize().padding(bottom = 24.dp, end = 20.dp).navigationBarsPadding(), contentAlignment = Alignment.BottomEnd) {
+                    val onContinue = {
                         val next = chapters
                             .flatMap { it.lessons ?: emptyList() }
                             .firstOrNull { it.is_completed != true && !it.is_locked }
-                        if (next != null) {
-                            nav.navigate(Screen.LessonViewer.createRoute(courseId, next.id))
-                        }
-                    },
-                    completedLessons=completedLessons
-                )
+                        if (next != null) nav.navigate(Screen.LessonViewer.createRoute(courseId, next.id))
+                    }
+                    ExtendedFloatingActionButton(
+                        onClick            = onContinue,
+                        containerColor     = accent,
+                        contentColor       = Color.White,
+                        icon               = { Icon(Icons.Rounded.PlayArrow, null) },
+                        text               = { Text(if (completedLessons > 0) str.courseContinueLearning else str.courseStartLearning, fontWeight = FontWeight.Bold) }
+                    )
+                }
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                    BottomCta(
+                        course      = course,
+                        accent      = accent,
+                        isEnrolled  = isEnrolled,
+                        allDone     = allDone,
+                        isEnrolling = state.isEnrolling,
+                        onEnroll         = { viewModel.enroll(courseId) },
+                        onShowBuyDialog  = { showBuyDialog = true; dialogCoins = 0 },
+                        onContinue  = {},
+                        completedLessons = completedLessons
+                    )
+                }
             }
         }
     }

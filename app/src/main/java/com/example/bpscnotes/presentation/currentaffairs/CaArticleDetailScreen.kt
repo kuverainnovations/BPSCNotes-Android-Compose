@@ -116,8 +116,9 @@ private fun buildArticleHtml(
     surface: String, onSurface: String, onSurfaceVariant: String,
     outline: String, primary: String, primaryLight: String,
 ): String {
-    val tagsHtml = if (article.tags.isNotEmpty()) {
-        "<div class=\"tags\">" + article.tags.joinToString("") { "<span>#${escapeHtml(it)}</span>" } + "</div>"
+    val filteredTags = article.tags.filter { !it.equals("general", ignoreCase = true) }
+    val tagsHtml = if (filteredTags.isNotEmpty()) {
+        "<div class=\"tags\">" + filteredTags.joinToString("") { "<span>#${escapeHtml(it)}</span>" } + "</div>"
     } else ""
     val sourceHtml = if (!article.source.isNullOrBlank()) {
         "<p class=\"source\">📌 Source: ${escapeHtml(article.source)}</p>"
@@ -537,10 +538,12 @@ fun CaArticleDetailScreen(
                     ) {
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    article.category, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
+                                if (article.category.isNotBlank() && !article.category.equals("general", ignoreCase = true)) {
+                                    Text(
+                                        article.category, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
                                 if (article.isImportant) {
                                     Row(
                                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF3CD)).padding(horizontal = 6.dp, vertical = 3.dp),

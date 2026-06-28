@@ -80,17 +80,36 @@ fun DailyTargetsScreen(
     val str = LocalStrings.current
     val context = LocalContext.current
 
+    var alertMessage by remember { mutableStateOf<String?>(null) }
+    var alertIsError by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.targetSuccess) {
         state.targetSuccess?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            alertMessage = it; alertIsError = false
             viewModel.clearTargetSuccess()
         }
     }
     LaunchedEffect(state.targetError) {
         state.targetError?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            alertMessage = it; alertIsError = true
             viewModel.clearTargetError()
         }
+    }
+    if (alertMessage != null) {
+        AlertDialog(
+            onDismissRequest = { alertMessage = null },
+            icon = { Text(if (alertIsError) "⚠️" else "✅", fontSize = 28.sp) },
+            title = {
+                Text(
+                    if (alertIsError) "Cannot Complete Yet" else "Target Completed!",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text(alertMessage ?: "", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Button(onClick = { alertMessage = null }) { Text("OK") }
+            }
+        )
     }
 
     // Map API DTOs → UI TargetItems once
@@ -342,47 +361,58 @@ fun DailyTargetsScreen(
 }
 
 // ─────────────────────────────────────────────────────────────
-// HISTORY SHEET — 30-day completion overview
+// HISTORY PAGE — 30-day completion overview (full screen)
 // ─────────────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DailyTargetHistorySheet(
     history:   List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto>,
     onDismiss: () -> Unit
 ) {
-    val cs  = MaterialTheme.colorScheme
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden })
+    val cs   = MaterialTheme.colorScheme
     val dfmt = remember { java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()) }
 
-    ModalBottomSheet(
-        onDismissRequest = {},
-        sheetState       = sheetState,
-        containerColor   = cs.surface,
-        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        dragHandle       = null
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(cs.background)
+            .statusBarsPadding()
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
         ) {
             // Header
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color(0xFF0D47A1), Color(0xFF1565C0))))
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 Arrangement.SpaceBetween, Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Target History", style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
-                    Text("Last 30 days", style = MaterialTheme.typography.bodySmall,
-                        color = cs.onSurfaceVariant)
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, null, tint = cs.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.15f)).clickable { onDismiss() },
+                        Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                    Column {
+                        Text("Target History", style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        Text("Last 30 days", style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(0.7f))
+                    }
                 }
             }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 12.dp)
+            ) {
 
             if (history.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
@@ -428,7 +458,7 @@ private fun DailyTargetHistorySheet(
                         Row(
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(cs.background)
+                                .background(cs.surface)
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             Arrangement.SpaceBetween, Alignment.CenterVertically
                         ) {
@@ -456,9 +486,10 @@ private fun DailyTargetHistorySheet(
                 }
                 Spacer(Modifier.height(8.dp))
             }
-        }
-    }
-}
+        } // content column
+    } // outer column
+  } // box
+} // function
 
 @Composable
 private fun HistoryStat(emoji: String, value: String, label: String) {

@@ -502,30 +502,6 @@ private fun MockTestLobbyScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Explain Full Mock when that filter is active
-                if (selectedType == MockTestType.Full) {
-                    item(key = "full_mock_info") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(BpscColors.PrimaryLight.copy(0.5f))
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("📋", fontSize = 20.sp)
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text("What is a Full Mock Test?",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold, color = BpscColors.Primary)
-                                Text("Simulates the complete BPSC exam — full syllabus, full question count, timed. Best taken as exam practice after completing your preparation.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = BpscColors.TextSecondary)
-                            }
-                        }
-                    }
-                }
                 // Empty state — no tests available
                 if (filtered.isEmpty()) {
                     item {
@@ -1074,7 +1050,7 @@ private fun ActiveTestScreen(
                             Text(timeStr, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
 
-                        // Coins + Navigator + Submit
+                        // Coins + Navigator
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFF57F17).copy(0.3f)).padding(horizontal = 6.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1083,9 +1059,6 @@ private fun ActiveTestScreen(
                             }
                             Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(0.15f)).clickable { showNavigator = true }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.GridView, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            }
-                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.surface).clickable { showSubmitDialog = true }.padding(horizontal = 10.dp, vertical = 7.dp)) {
-                                Text(str.submit, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                             }
                         }
                     }
@@ -1537,14 +1510,8 @@ private fun TestAnalysisScreen(
 
             // Buttons
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onViewLeaderboard, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
+                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                    Icon(Icons.Rounded.Leaderboard, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(str.quizViewLeaderboard, style = MaterialTheme.typography.titleMedium)
-                }
-                OutlinedButton(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(0.4f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                     Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(str.quizRetryTest, style = MaterialTheme.typography.titleMedium)

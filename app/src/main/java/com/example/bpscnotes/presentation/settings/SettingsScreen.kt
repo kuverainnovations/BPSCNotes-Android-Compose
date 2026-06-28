@@ -33,8 +33,9 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
 
 
@@ -572,6 +573,35 @@ private fun SettingsSectionLabel(title: String) {
         fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp))
 }
 
+// ── Custom branded toggle ──────────────────────────────────────
+@Composable
+private fun BpscToggle(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    activeColor: Color = BpscColors.Primary
+) {
+    val thumbOffset by animateDpAsState(if (checked) 22.dp else 2.dp, tween(200), label = "thumb")
+    val trackColor by animateColorAsState(
+        if (checked) activeColor else Color(0xFFCCCCCC), tween(200), label = "track"
+    )
+    Box(
+        modifier = Modifier
+            .width(50.dp).height(28.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(trackColor)
+            .clickable { onCheckedChange(!checked) }
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 2.dp, bottom = 2.dp)
+                .offset(x = thumbOffset)
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+        )
+    }
+}
+
 // ── Toggle row ────────────────────────────────────────────────
 @Composable
 private fun SettingsToggleRow(
@@ -589,11 +619,7 @@ private fun SettingsToggleRow(
             Text(title, style = MaterialTheme.typography.bodyLarge, color = cs.onBackground, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor   = Color.White, checkedTrackColor   = iconTint,
-                uncheckedThumbColor = Color.White, uncheckedTrackColor = BpscColors.TextHint.copy(0.3f)
-            ))
+        BpscToggle(checked = checked, onCheckedChange = onChange, activeColor = iconTint)
     }
 }
 
