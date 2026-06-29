@@ -124,6 +124,7 @@ fun DashboardScreen(
             drawerContent = {
                 BpscDrawer(
                     user = state.user,
+                    notifCount = state.unreadNotifCount,
                     onClose = { scope.launch { drawerState.close() } },
                     navController = navController
                 )
@@ -229,7 +230,6 @@ fun DashboardScreen(
                                 )
                             }
 
-                            Spacer(Modifier.height(8.dp))
 
                             // ── Daily quizzes ──────────────────────────────────────────
                             DailyQuizSection(
@@ -623,8 +623,8 @@ private fun DailyQuizSection(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val context = androidx.compose.ui.platform.LocalContext.current
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+    val context = LocalContext.current
+    Column(modifier = Modifier.padding(bottom = 8.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -747,6 +747,8 @@ private fun DashboardHeader(
 
     val completed = targets.count { it.isCompleted }
     val total     = targets.size
+    val targetProgress = if (total > 0) completed.toFloat() / total else 0f
+    val animTargetProg by animateFloatAsState(targetProgress, tween(1000), label = "headerProg")
 
     Box(
         modifier = Modifier
@@ -795,30 +797,50 @@ private fun DashboardHeader(
             .padding(horizontal = 20.dp)
             .padding(top = 34.dp)) {
 
+            val coinDisplay = when {
+                coins >= 1_000_000 -> "${coins / 1_000_000}M"
+                coins >= 1_000     -> "${String.format("%.1f", coins / 1000f)}k"
+                else               -> "$coins"
+            }
+
             // ── TOP BAR — 3 balanced items, notification always visible ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Menu button
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(0.12f))
-                        .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(12.dp))
-                        .clickable(onClick = onMenuClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.Start,
-                        modifier = Modifier.padding(horizontal = 10.dp)
+                // Menu button with notification badge
+                BadgedBox(badge = {
+                    if (notifCount > 0) Badge(
+                        containerColor = Color(0xFFEF5350),
+                        modifier = Modifier.offset(x = (-4).dp, y = 4.dp)
                     ) {
-                        Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
-                        Box(Modifier.width(11.dp).height(2.dp).background(Color.White.copy(0.6f), RoundedCornerShape(1.dp)))
-                        Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
+                        Text(
+                            if (notifCount > 99) "99+" else "$notifCount",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = Color.White
+                        )
+                    }
+                }) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(0.12f))
+                            .border(0.5.dp, Color.White.copy(0.2f), RoundedCornerShape(12.dp))
+                            .clickable(onClick = onMenuClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalAlignment = Alignment.Start,
+                            modifier = Modifier.padding(horizontal = 10.dp)
+                        ) {
+                            Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
+                            Box(Modifier.width(11.dp).height(2.dp).background(Color.White.copy(0.6f), RoundedCornerShape(1.dp)))
+                            Box(Modifier.width(16.dp).height(2.dp).background(Color.White, RoundedCornerShape(1.dp)))
+                        }
                     }
                 }
 
@@ -846,11 +868,33 @@ private fun DashboardHeader(
                     )
                 }
 
-                // Right — Search + Notification only (coins moved to hero)
+                // Right — Wallet pill + Search
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Wallet + coin pill
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Color.White.copy(0.13f))
+                            .border(0.5.dp, Color.White.copy(0.25f), RoundedCornerShape(22.dp))
+                            .clickable { navController.navigate(Screen.CoinWallet.route) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Rounded.AccountBalanceWallet, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                        Text("🪙", fontSize = 11.sp, lineHeight = 13.sp)
+                        Text(
+                            coinDisplay,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
+                        )
+                    }
+                    // Search circle
                     Box(
                         modifier = Modifier
                             .size(38.dp)
@@ -861,31 +905,6 @@ private fun DashboardHeader(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                    BadgedBox(badge = {
-                        if (notifCount > 0) Badge(containerColor = Color(0xFFEF5350)) {
-                            Text(
-                                if (notifCount > 99) "99+" else "$notifCount",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 9.sp,
-                                color = Color.White
-                            )
-                        }
-                    }) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(0.12f))
-                                .border(0.5.dp, Color.White.copy(0.2f), CircleShape)
-                                .clickable {
-                                    onNotifClick()
-                                    navController.navigate(Screen.NotificationSettings.route)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.Notifications, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
                     }
                 }
             }
@@ -944,32 +963,52 @@ private fun DashboardHeader(
                     }
                 }
 
-                // Coins circle — BPSC frosted glass style
-                val coinDisplay = when {
-                    coins >= 1_000_000 -> "${coins / 1_000_000}M"
-                    coins >= 1_000     -> "${String.format("%.1f", coins / 1000f)}k"
-                    else               -> "$coins"
-                }
+                // Daily target circular progress ring
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFFB300).copy(0.18f))
-                        .border(1.dp, Color(0xFFFFD54F).copy(0.5f), CircleShape)
-                        .clickable { navController.navigate(Screen.CoinWallet.route) },
+                        .size(62.dp)
+                        .clickable { navController.navigate(Screen.DailyTargets.route) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("🪙", fontSize = 18.sp)
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val stroke = 5.dp.toPx()
+                        val inset  = stroke / 2
+                        val arcSz  = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                        // Track
+                        drawArc(Color.White.copy(0.18f), -90f, 360f, false, androidx.compose.ui.geometry.Offset(inset, inset), arcSz, style = Stroke(stroke, cap = StrokeCap.Round))
+                        // Progress
+                        if (animTargetProg > 0f) {
+                            drawArc(
+                                brush      = Brush.sweepGradient(listOf(Color(0xFF42A5F5), Color(0xFF64B5F6), Color.White.copy(0.9f))),
+                                startAngle = -90f,
+                                sweepAngle = animTargetProg * 360f,
+                                useCenter  = false,
+                                topLeft    = androidx.compose.ui.geometry.Offset(inset, inset),
+                                size       = arcSz,
+                                style      = Stroke(stroke, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
                         Text(
-                            coinDisplay,
+                            if (total == 0) "--" else "${(animTargetProg * 100).toInt()}%",
                             style      = MaterialTheme.typography.labelSmall,
-                            color      = Color(0xFFFFE082),
+                            color      = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize   = 10.sp
+                            fontSize   = 13.sp
+                        )
+                        Text(
+                            if (total == 0) "targets" else "done",
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = Color.White.copy(0.65f),
+                            fontSize = 8.sp
                         )
                     }
                 }
+
             }
             Spacer(Modifier.height(14.dp))
 
@@ -1103,37 +1142,7 @@ private fun TodayTargetCard(
                         }
                     }
                 }
-                // Circular progress ring
-                Box(modifier = Modifier.size(54.dp), contentAlignment = Alignment.Center) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val stroke = 6.dp.toPx(); val inset = stroke / 2
-                        val arcSz = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-                        // Empty track — neutral gray
-                        drawArc(Color(0xFFDEE2E6), -90f, 360f, false, Offset(inset, inset), arcSz, style = Stroke(stroke, cap = StrokeCap.Round))
-                        // Progress fill
-                        if (animProg > 0f) {
-                            drawArc(
-                                brush      = Brush.sweepGradient(listOf(Color(0xFF1565C0), Color(0xFF42A5F5), Color(0xFF64B5F6))),
-                                startAngle = -90f,
-                                sweepAngle = animProg * 360f,
-                                useCenter  = false,
-                                topLeft    = Offset(inset, inset),
-                                size       = arcSz,
-                                style      = Stroke(stroke, cap = StrokeCap.Round)
-                            )
-                        }
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        Text(
-                            "${(animProg * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = BpscColors.Primary,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.sp
-                        )
-                        Text("done", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 8.sp)
-                    }
-                }
+                Icon(Icons.Rounded.KeyboardArrowRight, null, tint = cs.outline, modifier = Modifier.size(20.dp))
             }
 
             Spacer(Modifier.height(16.dp))
@@ -2184,6 +2193,7 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 @Composable
 private fun BpscDrawer(
     user: UserDto?,
+    notifCount: Int = 0,
     onClose: () -> Unit,
     navController: NavHostController,
     settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -2314,6 +2324,7 @@ private fun BpscDrawer(
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                         )
                         groupItems.forEach { (icon, label, route) ->
+                            val isNotifItem = route == Screen.NotificationSettings.route
                             Row(modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onClose(); navController.navigate(route) }
@@ -2328,7 +2339,25 @@ private fun BpscDrawer(
                                 }
                                 Text(label, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface,
                                     fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                                Icon(Icons.Rounded.KeyboardArrowRight, null, tint = cs.outline, modifier = Modifier.size(15.dp))
+                                if (isNotifItem && notifCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFEF5350)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            if (notifCount > 99) "99+" else "$notifCount",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                } else {
+                                    Icon(Icons.Rounded.KeyboardArrowRight, null, tint = cs.outline, modifier = Modifier.size(15.dp))
+                                }
                             }
                         }
                         if (gIdx < groups.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = cs.outline, thickness = 0.5.dp)

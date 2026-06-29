@@ -121,6 +121,9 @@ sealed class Screen(val route: String) {
     // Phase 5: Inbox of all chat threads (buyer + uploader roles)
     object ChatInbox : Screen("chat_inbox")
 
+    // Full-screen upload wizard (replaces ModalBottomSheet)
+    object UploadMaterial : Screen("upload_material")
+
     // PDF Viewer with page locking
     object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}/{materialId}/{price}") {
         fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean,

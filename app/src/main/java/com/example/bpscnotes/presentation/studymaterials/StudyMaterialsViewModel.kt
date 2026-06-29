@@ -648,6 +648,7 @@ class StudyMaterialsViewModel @Inject constructor(
                         isUploading     = false,
                         uploadProgress  = 1f,
                         showUploadSheet = false,
+                        uploadSuccess   = response.message ?: "Upload successful",
                         toastMessage    = response.message ?: "Upload successful",
                         // Reset form for next upload
                         uploadTitle = "", uploadDescription = "", uploadSubject = "",

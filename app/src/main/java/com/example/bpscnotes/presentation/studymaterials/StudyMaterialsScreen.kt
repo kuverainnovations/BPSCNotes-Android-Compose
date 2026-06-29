@@ -46,6 +46,7 @@ import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
+import com.example.bpscnotes.core.ui.t.BpscPalette
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
@@ -266,7 +267,7 @@ fun StudyMaterialsScreen(
             StudyMaterialsHeader(
                 stats = state.stats,
                 onBack = { navController.popBackStackSafe() },
-                onUpload = { viewModel.showUpload() },
+                onUpload = { navController.navigate(Screen.UploadMaterial.route) },
                 onShowRules = viewModel::showRules
             )
 
@@ -322,6 +323,20 @@ fun StudyMaterialsScreen(
                 if (state.uploadSuccess != null) {
                     selectedTab = 1  // switch to My Uploads tab after upload
                 }
+            }
+
+            // Switch to My Uploads tab when returning from UploadMaterialScreen after a successful upload
+            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            LaunchedEffect(savedStateHandle) {
+                savedStateHandle
+                    ?.getStateFlow("upload_success", false)
+                    ?.collect { success ->
+                        if (success) {
+                            selectedTab = 1
+                            viewModel.loadMyUploads()
+                            savedStateHandle.set("upload_success", false)
+                        }
+                    }
             }
 
             // Three tabs: Explore / My Uploads / Downloads
@@ -2604,23 +2619,17 @@ fun MyUploadsTab(
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(BpscColors.PrimaryLight), Alignment.Center) {
                             Text(when (item.materialType) { "pdf" -> "📄"; "video" -> "🎬"; else -> "📋" }, fontSize = 22.sp)
                         }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(item.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                // Status badge
-                                val statusColor = when (item.status?.lowercase()) { "approved" -> BpscColors.Success; "rejected" -> Color(0xFFE74C3C); "negotiating" -> Color(0xFF6366F1); else -> BpscColors.TextHint }
-                                val statusLabel = when (item.status?.lowercase()) { "approved" -> str.materialsPublished; "rejected" -> str.materialsRejected; "negotiating" -> "💬 Negotiating"; else -> "⏳ Under Review" }
-                                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(statusColor.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                    Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                                }
+
+                            // Price + language badges
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (item.price > 0) {
                                     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         Text(fmtRs(item.price), style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     }
                                 }
-                                // Language badge — always shown
-                                //val uploadLang = item.language.ifEmpty { "English" }
                                 val uploadLang = item.language?.ifEmpty { "English" } ?: "English"
                                 val (ulBg, ulFg) = when (uploadLang) {
                                     "Hindi"           -> Pair(Color(0xFFFFF3E0), Color(0xFFE65100))
@@ -2631,7 +2640,13 @@ fun MyUploadsTab(
                                     Text(uploadLang, style = MaterialTheme.typography.labelSmall, color = ulFg, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
                             }
-                            // Show rejection reason if rejected
+                            // Compact 3-step tracker — its own row below the badges
+                            MaterialStatusTracker(
+                                status            = item.status ?: "pending",
+                                negotiationStatus = item.negotiationStatus
+                            )
+
+                            // Rejection reason
                             if (item.status?.lowercase() == "rejected" && !item.rejectionReason.isNullOrBlank()) {
                                 Row(
                                     verticalAlignment = Alignment.Top,
@@ -2683,7 +2698,6 @@ fun MyUploadsTab(
                                     Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFF6366F1), modifier = Modifier.size(16.dp))
                                 }
                             } else if (item.status == "negotiating" && item.negotiationStatus == "awaiting_admin") {
-                                // User already responded (counter sent) — waiting on admin
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -3077,4 +3091,110 @@ private fun BasicTextField(
         keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
         decorationBox = decorationBox
     )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compact 3-step journey tracker — sits right-aligned inside each My Uploads card
+//
+// 3 stages:  Submitted → In Review → Live
+//
+// "Approved" and "Live" are the same backend event — approval makes it live
+// instantly. No need for a 4th separate step.
+//
+//   pending      → ✅ Submitted | 🔵 In Review (active) | ⬜ Live
+//   negotiating  → ✅ Submitted | 🟣 Negotiating (active) | ⬜ Live
+//   approved     → ✅ Submitted | ✅ Reviewed | ✅ Live
+//   rejected     → ✅ Submitted | ✅ Reviewed | ❌ Rejected
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun MaterialStatusTracker(
+    status: String,
+    negotiationStatus: String
+) {
+    val statusLc      = status.lowercase()
+    val isApproved    = statusLc == "approved"
+    val isRejected    = statusLc == "rejected"
+    val isNegotiating = statusLc == "negotiating"
+
+    val activeColor = if (isNegotiating) Color(0xFF6366F1) else BpscPalette.Blue500
+
+    // Step 3: label and appearance depend on final status
+    val step3Label = when {
+        isApproved    -> "Live"
+        isRejected    -> "Rejected"
+        isNegotiating -> "Negotiating"
+        else          -> "In Review"
+    }
+
+    // 0=upcoming 1=active 2=done 3=rejected
+    val stepStates = when {
+        isApproved -> listOf(2, 2, 2)
+        isRejected -> listOf(2, 2, 3)
+        else       -> listOf(2, 1, 0)
+    }
+
+    val labels = listOf("Submitted", "In Review", step3Label)
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        labels.forEachIndexed { index, label ->
+            val st = stepStates[index]
+
+            val circleColor = when (st) {
+                2    -> BpscPalette.Green500
+                1    -> activeColor
+                3    -> Color(0xFFE53935)
+                else -> Color(0xFFDDE0E8)
+            }
+            val textColor = when (st) {
+                2    -> BpscPalette.Green500
+                1    -> activeColor
+                3    -> Color(0xFFE53935)
+                else -> Color(0xFFB0B7C3)
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Box(
+                    modifier         = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(circleColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (st) {
+                        2    -> Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(10.dp))
+                        3    -> Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(10.dp))
+                        1    -> Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+                        else -> Unit
+                    }
+                }
+                Text(
+                    label,
+                    fontSize   = 7.sp,
+                    color      = textColor,
+                    fontWeight = if (st != 0) FontWeight.Bold else FontWeight.Normal,
+                    textAlign  = TextAlign.Center,
+                    lineHeight = 8.sp,
+                    maxLines   = 1
+                )
+            }
+
+            if (index < labels.size - 1) {
+                val connectorColor = when {
+                    st == 2 && stepStates[index + 1] == 2 -> BpscPalette.Green500
+                    st == 2 && stepStates[index + 1] == 1 -> activeColor
+                    st == 2 && stepStates[index + 1] == 3 -> Color(0xFFE53935)
+                    else                                   -> Color(0xFFD8DDE6)
+                }
+                HorizontalDivider(
+                    modifier  = Modifier.width(14.dp).padding(bottom = 10.dp),
+                    color     = connectorColor,
+                    thickness = 1.dp
+                )
+            }
+        }
+    }
 }

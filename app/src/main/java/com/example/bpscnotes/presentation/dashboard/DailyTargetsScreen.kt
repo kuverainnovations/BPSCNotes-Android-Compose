@@ -84,8 +84,13 @@ fun DailyTargetsScreen(
     var alertIsError by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.targetSuccess) {
-        state.targetSuccess?.let {
-            alertMessage = it; alertIsError = false
+        state.targetSuccess?.let { msg ->
+            // Show dialog only for completion rewards; toast for create/delete actions
+            if (msg.contains("coins", ignoreCase = true) || msg.contains("🎉")) {
+                alertMessage = msg; alertIsError = false
+            } else {
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
             viewModel.clearTargetSuccess()
         }
     }

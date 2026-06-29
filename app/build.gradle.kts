@@ -56,8 +56,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Compose BOM
-    implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -136,8 +134,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-  //  androidTestImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation(platform("androidx.compose:compose-bom:2025.06.01"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.06.01"))
 
     implementation("androidx.compose.animation:animation")
 

@@ -426,7 +426,6 @@ private fun UploadStep1Content(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Spacer(Modifier.height(4.dp))
         HeroBannerCard()
         WhatYouCanUploadSection(selectedTypeIdx, onTypeIdxSelect)
         BeforeUploadSection()
@@ -437,26 +436,27 @@ private fun UploadStep1Content(
 @Composable
 private fun HeroBannerCard() {
     Card(
-        modifier  = Modifier.fillMaxWidth(),
+        modifier  = Modifier.fillMaxWidth().padding(top = 8.dp),
         shape     = RoundedCornerShape(18.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color(0xFFEEF3FD)),
-        elevation = CardDefaults.cardElevation(0.dp)
+        colors    = CardDefaults.cardColors(containerColor = Color(0xFFE3EBFC)),
+        elevation = CardDefaults.cardElevation(0.5.dp)
     ) {
         Row(
-            modifier              = Modifier.padding(16.dp),
+            modifier              = Modifier.padding(10.dp),
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Box(
                 modifier         = Modifier
-                    .size(76.dp)
+                    .size(70.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFFD8E8FB)),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📚", fontSize = 26.sp)
                     Text("🎓", fontSize = 18.sp)
+                    Text("📚", fontSize = 26.sp)
+
                 }
             }
 
@@ -465,7 +465,7 @@ private fun HeroBannerCard() {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    "Share Quality Notes.\nEmpower Aspirants.",
+                    "Share Quality Notes. Empower Aspirants.",
                     style      = MaterialTheme.typography.titleMedium,
                     color      = Color(0xFF1A1D2E),
                     fontWeight = FontWeight.ExtraBold,

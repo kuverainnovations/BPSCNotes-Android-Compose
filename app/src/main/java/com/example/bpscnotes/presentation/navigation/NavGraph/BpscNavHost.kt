@@ -75,6 +75,7 @@ import com.example.bpscnotes.presentation.rooms.StudySessionViewModel
 import com.example.bpscnotes.presentation.rooms.TierRoomsViewModel
 import com.example.bpscnotes.presentation.settings.SettingsScreen
 import com.example.bpscnotes.presentation.studymaterials.StudyMaterialsScreen
+import com.example.bpscnotes.presentation.studymaterials.UploadMaterialScreen
 import com.example.bpscnotes.presentation.studymaterials.MaterialChatScreen
 import com.example.bpscnotes.presentation.studymaterials.ChatInboxScreen
 import com.example.bpscnotes.presentation.studymaterials.PdfViewerScreen
@@ -414,6 +415,7 @@ fun BpscNavHost(
 
 
             composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
+            composable(Screen.UploadMaterial.route)   { UploadMaterialScreen(navController) }
             composable(
                 route     = Screen.StudyMaterialsFiltered.route,
                 arguments = listOf(navArgument("type") { type = NavType.StringType })
