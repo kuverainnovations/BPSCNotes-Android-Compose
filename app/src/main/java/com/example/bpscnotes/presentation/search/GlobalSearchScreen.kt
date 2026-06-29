@@ -211,9 +211,10 @@ private fun ArticleResultItem(article: SearchResultArticle, onClick: () -> Unit)
             contentAlignment = Alignment.Center
         ) { Icon(Icons.Rounded.Article, null, tint = Color(0xFFE65100), modifier = Modifier.size(20.dp)) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(article.title, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (!article.summary.isNullOrBlank()) {
-                Text(article.summary, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(article.title.stripHtml(), style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val cleanSummary = article.summary?.stripHtml()
+            if (!cleanSummary.isNullOrBlank()) {
+                Text(cleanSummary, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
@@ -243,3 +244,7 @@ private fun CourseResultItem(course: SearchResultCourse, onClick: () -> Unit) {
     }
     HorizontalDivider(Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outline.copy(0.1f))
 }
+
+private fun String.stripHtml(): String =
+    replace(Regex("<[^>]+>"), "").replace("&nbsp;", " ").replace("&amp;", "&")
+        .replace("&lt;", "<").replace("&gt;", ">").trim()

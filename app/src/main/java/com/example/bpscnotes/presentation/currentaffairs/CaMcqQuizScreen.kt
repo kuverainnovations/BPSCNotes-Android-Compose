@@ -9,8 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -547,7 +545,7 @@ private fun QuizScreen(
             // "Not Attempting" (key="skip") is always available when negative
             // marking is on so users always have a penalty-free escape, even
             // when the admin filled in a real 5th option for letter E.
-            val showNotAttempting = markingConfig.negativeMarkingEnabled
+            val showNotAttempting = true
             val optionPairs = (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC,
                 "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }) +
                     (if (showNotAttempting) listOf("skip" to "Not Attempting This Question") else emptyList())
@@ -601,7 +599,7 @@ private fun QuizScreen(
                                 isCorrect -> Color(0xFF1A7A4A); isWrong -> Color(0xFFB71C1C); isSelected -> BpscColors.Primary
                                 else -> BpscColors.TextPrimary
                             })
-                        if (isNotAttemptOption) {
+                        if (isNotAttemptOption && markingConfig.negativeMarkingEnabled) {
                             Text("0 marks — no penalty",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFE65100).copy(alpha = 0.8f))
@@ -834,10 +832,14 @@ private fun ResultScreen(
                     ResultStat("✅", "$correct", str.quizCorrect, Color(0xFF2ECC71))
                     ResultStat("❌", "$wrong", str.quizWrong, Color(0xFFE74C3C))
                     ResultStat("📝", "${summary.results.size}", "Total", BpscColors.Primary)
-                    if (negativeMarkingEnabled && notAttempted > 0) {
-                        ResultStat("⊘", "$notAttempted", "Safe Skip", Color(0xFFF57F17))
-                    } else if (!negativeMarkingEnabled) {
-                        ResultStat("⏭️", "$blank", "Skipped", BpscColors.TextSecondary)
+                    if (notAttempted > 0) {
+                        ResultStat(
+                            "⊘", "$notAttempted",
+                            if (negativeMarkingEnabled) "Safe Skip" else "Skipped",
+                            Color(0xFFF57F17)
+                        )
+                    } else if (blank > 0) {
+                        ResultStat("⏰", "$blank", "Left Blank", Color(0xFFE74C3C))
                     }
                 }
 
@@ -946,8 +948,11 @@ private fun ReviewScreen(
                 }
             }
         }
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(summary.results) { index, r ->
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            summary.results.forEachIndexed { index, r ->
                 val q = r.mcq
                 val userAnswer = r.userAnswer
                 val correctLetter = r.correctLetter
@@ -1000,9 +1005,9 @@ private fun ReviewScreen(
                                 }
                             }
                         }
-                        Text(q.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
+                        McqQuestionHtml(html = q.question, modifier = Modifier.fillMaxWidth())
                         // Show options: only reveal correct answer if user got it right
-                        val showNotAttemptOpt = summary.negativeMarkingEnabled
+                        val showNotAttemptOpt = true
                         (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() } +
                                 (if (showNotAttemptOpt) listOf("skip" to "Not Attempting This Question") else emptyList()))
@@ -1058,11 +1063,12 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
 // ── McqQuestionHtml ──────────────────────────────────────────────────────────
 // Renders question text that may contain TipTap HTML (tables, bold, lists)
 // using a WebView. Falls back to simple Text if there are no HTML tags.
-// Tables are made horizontally scrollable and sized to fit the card width.
 //
-// Height is measured via a sentinel <div> at end of body using offsetTop,
-// which works even when the WebView is non-scrollable (scrollHeight returns
-// viewport height in that case, not content height).
+// KEY DESIGN: wrapped in key(html) so that factory is re-invoked for every
+// distinct html value. This ensures the onPageFinished closure always captures
+// the correct MutableIntState for the current question — without key(), the
+// factory closure would keep writing to the first question's state object while
+// subsequent questions read from different state objects (Compose closure bug).
 @Composable
 private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
     val isHtml = remember(html) { html.trimStart().startsWith("<") }
@@ -1130,59 +1136,63 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
         """.trimIndent()
     }
 
-    // Physical-pixel height updated by JS after page renders.
-    // Initial: 800px physical (≈267dp on xxhdpi) — enough to avoid a 0-height flash
-    // while still being a reasonable pre-measurement size.
-    var webViewHeight by remember(html) { mutableIntStateOf(800) }
     val density = androidx.compose.ui.platform.LocalDensity.current
+    // Initial height estimate from stripped text length — close enough to avoid a
+    // jarring jump, then corrected by JS after the page renders.
+    val estimatedInitPx = with(density) {
+        val textLen = html.replace(Regex("<[^>]+>"), "").length
+        val dp = (60 + textLen / 3).coerceIn(60, if (html.contains("<table")) 500 else 220)
+        dp.dp.roundToPx()
+    }
+    // State is keyed on html so it resets when the question changes.
+    var webViewHeight by remember(html) { mutableIntStateOf(estimatedInitPx) }
 
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                settings.apply {
-                    javaScriptEnabled      = true
-                    domStorageEnabled      = false
-                    loadWithOverviewMode   = true
-                    useWideViewPort        = true
-                    builtInZoomControls    = false
-                    displayZoomControls    = false
-                    setSupportZoom(false)
-                    @Suppress("DEPRECATION")
-                    layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-                }
-                isScrollContainer            = false
-                isVerticalScrollBarEnabled   = false
-                isHorizontalScrollBarEnabled = false
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                // Tag stores the last-loaded styledHtml so update() can skip reloads
-                // when only the Compose height state changed (prevents infinite reload loop).
-                tag = styledHtml
-                webViewClient = object : android.webkit.WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String) {
-                        // Use sentinel offsetTop — reliable even in non-scrollable WebViews.
-                        // document.body.scrollHeight returns viewport height when overflow
-                        // is hidden by the Compose layout constraint.
-                        view.evaluateJavascript(
-                            "(function(){ var s=document.getElementById('__end__'); return s ? s.offsetTop : document.body.scrollHeight; })()"
-                        ) { result ->
-                            val cssH = result?.trim()?.toFloatOrNull() ?: 0f
-                            if (cssH > 8f) {
-                                webViewHeight = (cssH * ctx.resources.displayMetrics.density).toInt()
+    // key(html) forces AndroidView destruction + recreation whenever html changes.
+    // This guarantees factory's onPageFinished closure captures the CURRENT
+    // webViewHeight state and not a stale one from a previous question.
+    key(html) {
+        AndroidView(
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.apply {
+                        javaScriptEnabled      = true
+                        domStorageEnabled      = false
+                        loadWithOverviewMode   = true
+                        useWideViewPort        = true
+                        builtInZoomControls    = false
+                        displayZoomControls    = false
+                        setSupportZoom(false)
+                        @Suppress("DEPRECATION")
+                        layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+                    }
+                    isScrollContainer            = false
+                    isVerticalScrollBarEnabled   = false
+                    isHorizontalScrollBarEnabled = false
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    webViewClient = object : android.webkit.WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String) {
+                            // view.post defers until after Compose has applied the initial
+                            // height modifier — ensures the WebView is laid out at its
+                            // Compose-determined size before we measure document height.
+                            view.post {
+                                view.evaluateJavascript(
+                                    "(function(){ var s=document.getElementById('__end__'); var h=s?s.offsetTop:0; return h>0?h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight); })()"
+                                ) { result ->
+                                    val cssH = result?.trim()?.toFloatOrNull() ?: 0f
+                                    if (cssH > 8f) {
+                                        webViewHeight = (cssH * ctx.resources.displayMetrics.density).toInt()
+                                    }
+                                }
                             }
                         }
                     }
+                    loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
                 }
-                loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
-            }
-        },
-        update = { wv ->
-            // Only reload when the HTML content actually changed, not on every
-            // height-state recomposition (which would create an infinite reload loop).
-            if (wv.tag != styledHtml) {
-                wv.tag = styledHtml
-                wv.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
-            }
-        },
-        modifier = modifier.height(with(density) { webViewHeight.toDp() })
-    )
+            },
+            // update is empty: key(html) handles recreation on content change;
+            // height changes apply automatically via the modifier below.
+            update = { },
+            modifier = modifier.height(with(density) { webViewHeight.toDp() })
+        )
+    }
 }

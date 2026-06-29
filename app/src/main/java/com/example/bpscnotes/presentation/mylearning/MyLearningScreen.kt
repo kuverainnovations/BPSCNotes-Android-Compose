@@ -1678,7 +1678,7 @@ private fun CourseDetailSheet(
                                 )
                             )
                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                Text("0 🪙", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                                Text("1 🪙 = ₹$coinToInrRate", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                                 Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                             }
                             if (dialogCoins > 0) Text("Using $dialogCoins coins  ·  saves ${fmtRs(coinDiscount)}",

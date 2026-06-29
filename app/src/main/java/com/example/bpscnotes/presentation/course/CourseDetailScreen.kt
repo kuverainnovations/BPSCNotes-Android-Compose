@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -147,7 +148,7 @@ fun CourseDetailScreen(
                                 )
                             )
                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                Text("0 🪙", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
+                                Text("1 🪙 = ₹$coinToInrRate", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                                 Text("$maxApplicable 🪙 max", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9CA3AF))
                             }
                             if (dialogCoins > 0) Text("Using $dialogCoins coins  ·  saves ${fmtRs(coinDiscount)}",
@@ -312,9 +313,10 @@ fun CourseDetailScreen(
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             val density = LocalDensity.current
 
-            // Collapsing header: 420dp initial guess is safely above any real header height,
-            // so the first onGloballyPositioned measurement is always unconstrained.
-            val collapsedHeightDp = 64.dp
+            // Collapsing header: collapsed height = status bar + 16dp top padding + 36dp icon row.
+            // 64dp was too small and clipped the back button on devices with tall status bars.
+            val statusBarDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            val collapsedHeightDp = statusBarDp + 52.dp  // 16dp column padding + 36dp icon row
             var expandedHeightDp by remember { mutableStateOf(500.dp) }
             var expandedHeightLocked by remember { mutableStateOf(false) }
 
@@ -423,9 +425,23 @@ fun CourseDetailScreen(
                 }
 
                 // ── Pinned collapsing HeroHeader ──────────────
+                // layout{} measures children at full natural height (no squishing),
+                // then reports only currentHeaderHeightDp to the parent so clip()
+                // cuts off the bottom visually — icons stay perfectly circular.
                 Box(
                     Modifier
-                        .heightIn(max = currentHeaderHeightDp)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(
+                                Constraints(
+                                    minWidth = constraints.minWidth,
+                                    maxWidth = constraints.maxWidth
+                                )
+                            )
+                            val clippedH = currentHeaderHeightDp.roundToPx()
+                            layout(placeable.width, clippedH) {
+                                placeable.placeRelative(0, 0)
+                            }
+                        }
                         .clip(RectangleShape)
                 ) {
                     Box(Modifier.onGloballyPositioned { coords ->
