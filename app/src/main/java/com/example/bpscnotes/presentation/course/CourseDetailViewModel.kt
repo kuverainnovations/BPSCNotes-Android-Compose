@@ -15,6 +15,7 @@ import com.example.bpscnotes.core.events.RefreshEvent
 import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.data.remote.api.CoursesApiService
+import com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -257,7 +258,34 @@ class CourseDetailViewModel @Inject constructor(
     }
 
     fun clearPurchaseRequired() {
-        _uiState.update { it.copy(purchaseRequired = false) }
+        _uiState.update { it.copy(
+            purchaseRequired        = false,
+            purchaseSessionId       = null,
+            purchaseProviderOrderId = null,
+        )}
+    }
+
+    fun confirmCoursePurchase(cfPaymentId: String) {
+        val courseId = _uiState.value.course?.id ?: return
+        viewModelScope.launch {
+            try {
+                api.confirmCoursePurchase(courseId, ConfirmCoursePurchaseRequest(
+                    cfPaymentId   = cfPaymentId,
+                    paymentMethod = "upi"
+                ))
+                bus.emit(RefreshEvent.CourseEnrolled)
+                cacheInvalidator.evict()
+                _uiState.update { it.copy(enrollSuccess = true) }
+                load(courseId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Payment received but enrollment failed. Contact support. Ref: $cfPaymentId") }
+            }
+        }
+    }
+
+    fun handleCoursePaymentFailure(code: Int, message: String) {
+        if (code == 0) return  // user cancelled — silent
+        _uiState.update { it.copy(error = "Payment failed: $message") }
     }
 
     // ── Certificate sharing ─────────────────────────────────────

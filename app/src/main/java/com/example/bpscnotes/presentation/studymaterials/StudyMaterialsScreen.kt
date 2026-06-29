@@ -1145,6 +1145,7 @@ private fun LibSectionHeader(title: String, subtitle: String) {
 // ════════════════════════════════════════════════════════════
 // MATERIAL CARD — reuse exact existing design
 // ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LibraryItemCard(
     item:         StudyMaterialDto,
@@ -1180,7 +1181,10 @@ private fun LibraryItemCard(
                     }
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalArrangement   = Arrangement.spacedBy(3.dp)
+                    ) {
                         TypeBadge(item.type); if (item.isNew) NewBadge()
                         if (item.isTrending) Text("🔥", fontSize = 12.sp)
                         if (!item.isPremium) FreeBadge()
@@ -1195,7 +1199,8 @@ private fun LibraryItemCard(
                             .background(langBg)
                             .padding(horizontal = 5.dp, vertical = 2.dp)) {
                             Text(lang, style = MaterialTheme.typography.labelSmall,
-                                color = langFg, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                color = langFg, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                                maxLines = 1, softWrap = false)
                         }
                     }
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
@@ -2398,7 +2403,8 @@ private fun TypeBadge(type: MaterialType) {
     val str = LocalStrings.current
     val color = typeColor(type); val bg = typeBg(type)
     Text(type.label, style = MaterialTheme.typography.labelSmall, color = color, fontSize = 9.sp,
-        fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
+        fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
+        modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(bg).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 @Composable private fun TypeBadgeWhite(label: String) {
@@ -2412,7 +2418,8 @@ private fun TypeBadge(type: MaterialType) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
-        fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
+        fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
+        modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 @Composable private fun FreeBadgeWhite() {
@@ -2433,7 +2440,8 @@ private fun TypeBadge(type: MaterialType) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     Text(str.jobsNew, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
-        fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp))
+        fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
+        modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
 }
 // ── Material Rating Widget ──────────────────────────────────

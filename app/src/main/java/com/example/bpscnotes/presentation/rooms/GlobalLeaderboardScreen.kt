@@ -29,10 +29,11 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 private data class LeaderboardTab(val type: String, val label: String, val emoji: String)
 
 private val TABS = listOf(
-    LeaderboardTab("coins",         "All-time",  "🏆"),
-    LeaderboardTab("weekly_coins",  "This Week", "📅"),
-    LeaderboardTab("quiz_accuracy", "Accuracy",  "🎯"),
-    LeaderboardTab("streak",        "Streak",    "🔥"),
+    LeaderboardTab("coins",         "All-time",   "🏆"),
+    LeaderboardTab("weekly_coins",  "This Week",  "📅"),
+    LeaderboardTab("study_time",    "Study Time", "⏱️"),
+    LeaderboardTab("quiz_accuracy", "Accuracy",   "🎯"),
+    LeaderboardTab("streak",        "Streak",     "🔥"),
 )
 
 @Composable
@@ -235,6 +236,10 @@ private fun PodiumColumn(entry: GlobalLeaderboardEntryDto, place: Int, height: D
             modifier = Modifier.widthIn(max = 70.dp), textAlign = TextAlign.Center,
         )
         Text(entryValue(entry, type), fontSize = 10.sp, color = Color(0xFF888899))
+        val podiumMins = entry.totalStudyMinutes ?: 0
+        if (podiumMins > 0) {
+            Text("⏱️ ${fmtStudyTime(podiumMins)}", fontSize = 9.sp, color = Color(0xFFAAAAAA))
+        }
         Spacer(Modifier.height(4.dp))
         // Podium block
         Box(
@@ -295,7 +300,7 @@ private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe:
             }
         }
 
-        // Name
+        // Name + study time
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
@@ -309,6 +314,14 @@ private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe:
                     Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
+            }
+            val mins = entry.totalStudyMinutes ?: 0
+            if (mins > 0) {
+                Text(
+                    "⏱️ ${fmtStudyTime(mins)} in room",
+                    fontSize = 11.sp,
+                    color = Color(0xFF888899),
+                )
             }
         }
 
@@ -348,6 +361,10 @@ private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
                     Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.15f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
+                val stickyMins = entry.totalStudyMinutes ?: 0
+                if (stickyMins > 0) {
+                    Text("⏱️ ${fmtStudyTime(stickyMins)} in room", fontSize = 11.sp, color = BpscColors.Primary.copy(0.7f))
+                }
             }
             Text(entryValue(entry, type), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BpscColors.Primary)
         }
@@ -356,10 +373,22 @@ private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
 
 // ── Helpers ─────────────────────────────────────────────────────
 
+private fun fmtStudyTime(minutes: Int): String {
+    if (minutes <= 0) return "0m"
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h == 0 -> "${m}m"
+        m == 0 -> "${h}h"
+        else   -> "${h}h ${m}m"
+    }
+}
+
 private fun entryValue(e: GlobalLeaderboardEntryDto, type: String): String = when (type) {
     "weekly_coins"  -> "${e.weeklyCoins ?: 0} coins"
     "quiz_accuracy" -> "${String.format("%.1f", e.accuracy ?: 0.0)}%"
     "streak"        -> "${e.streak ?: 0}🔥"
+    "study_time"    -> fmtStudyTime(e.totalStudyMinutes ?: 0)
     else            -> "${e.coins ?: 0} coins"
 }
 

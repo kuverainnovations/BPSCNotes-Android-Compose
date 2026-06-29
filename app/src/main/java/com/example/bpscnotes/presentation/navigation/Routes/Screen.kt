@@ -98,6 +98,7 @@ sealed class Screen(val route: String) {
     object WeeklyChallenges  : Screen("weekly_challenges")
     object ReadingRooms      : Screen("reading_rooms")
     object Leaderboard          : Screen("leaderboard")
+    object GlobalLeaderboard    : Screen("global_leaderboard")
     object StudySessionHistory  : Screen("study_session_history")
     object ReadingRoomActive : Screen("reading_room/{roomId}") {
         fun createRoute(id: String) = "reading_room/$id"

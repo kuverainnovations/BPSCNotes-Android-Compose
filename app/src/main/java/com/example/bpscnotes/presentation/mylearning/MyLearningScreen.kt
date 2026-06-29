@@ -88,6 +88,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -108,6 +109,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.bpscnotes.data.remote.api.CourseDto
+import com.example.bpscnotes.presentation.payment.launchCashfree
 
 // ─────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -1495,7 +1497,7 @@ private fun StoreCourseCard(
                         )
                     }
                 }
-                Box(
+                /*Box(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -1508,34 +1510,37 @@ private fun StoreCourseCard(
                         tint = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextHint,
                         modifier = Modifier.size(15.dp)
                     )
-                }
+                }*/
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                CourseInfoChip(Icons.Rounded.PlayLesson, "${course.totalLessons} lessons")
-                CourseInfoChip(Icons.Rounded.Schedule, "${course.totalHours}h")
-                CourseInfoChip(Icons.Rounded.BarChart, "${course.bpscRelevance}% BPSC")
-                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CourseInfoChip(Icons.Rounded.PlayLesson, "${course.totalLessons} lessons")
+                    CourseInfoChip(Icons.Rounded.Schedule, "${course.totalHours}h")
+                    CourseInfoChip(Icons.Rounded.BarChart, "${course.bpscRelevance}% BPSC")
+                }
                 if (course.isPaid) Column(horizontalAlignment = Alignment.End) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    if (course.originalPrice > course.price) {
                         Text(
-                            "₹${course.originalPrice}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            fmtRs(course.originalPrice),
+                            style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.TextHint,
-                            textDecoration = TextDecoration.LineThrough
-                        )
-                        Text(
-                            fmtRs(course.price),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = BpscColors.Primary,
-                            fontWeight = FontWeight.ExtraBold
+                            textDecoration = TextDecoration.LineThrough,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
+                    Text(
+                        fmtRs(course.price),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = BpscColors.Primary,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                     Text(
                         "🪙 coins applicable",
                         style = MaterialTheme.typography.labelSmall,
@@ -1544,7 +1549,7 @@ private fun StoreCourseCard(
                     )
                 } else Text(
                     "FREE",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = BpscColors.Success,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -1595,6 +1600,7 @@ private fun CourseDetailSheet(
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val state by viewModel.uiState.collectAsState()
     var showEnrollSuccessDialog by remember { mutableStateOf(false) }
@@ -1602,8 +1608,9 @@ private fun CourseDetailSheet(
     var dialogCoins             by remember { mutableStateOf(0) }
 
     // Coin economy for slider
-    val coinToInrRate = viewModel.coinsConfig.economy.coinToInrRate
-    val maxCoinsPer   = viewModel.coinsConfig.economy.maxCoinsPerPurchase
+    val coinToInrRate  = viewModel.coinsConfig.economy.coinToInrRate
+    val globalMaxCoins = viewModel.coinsConfig.economy.maxCoinsPerPurchase
+    val maxCoinsPer    = globalMaxCoins
     val price         = course.price
     val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
     val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
@@ -1726,22 +1733,21 @@ private fun CourseDetailSheet(
         }
     }
 
-    // Paid course: backend returned Cashfree session → navigate to CoursePaymentScreen
-    LaunchedEffect(state.purchaseRequired) {
-        if (state.purchaseRequired && state.purchaseCourseId == course.id) {
-            showBuyDialog = false; dialogCoins = 0
-            onDismiss()
-            navController.navigate(
-                Screen.CoursePayment.createRoute(
-                    state.purchaseCourseId!!,
-                    state.purchaseCourseTitle,
-                    state.purchasePrice,
-                    state.purchaseSessionId,
-                    state.purchaseProviderOrderId,
-                )
-            )
-            viewModel.clearPurchaseRequired()
-        }
+    // Paid course: backend returned Cashfree session → launch SDK directly
+    LaunchedEffect(state.purchaseSessionId) {
+        val sessionId = state.purchaseSessionId ?: return@LaunchedEffect
+        val orderId   = state.purchaseProviderOrderId ?: return@LaunchedEffect
+        if (state.purchaseCourseId != course.id) return@LaunchedEffect
+        showBuyDialog = false; dialogCoins = 0
+        viewModel.clearPurchaseRequired()
+        launchCashfree(
+            context     = context,
+            sessionId   = sessionId,
+            orderId     = orderId,
+            environment = state.purchasePaymentEnvironment,
+            onSuccess   = { cfPaymentId -> viewModel.confirmCoursePurchase(course.id, cfPaymentId) },
+            onFailure   = { code, msg  -> viewModel.handleCoursePaymentFailure(code, msg) }
+        )
     }
 
     if (showEnrollSuccessDialog) {

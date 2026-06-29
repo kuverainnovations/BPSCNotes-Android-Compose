@@ -34,8 +34,10 @@ import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.data.remote.api.CourseReview
 import com.example.bpscnotes.data.remote.api.Lesson
 import com.example.bpscnotes.data.remote.api.RatingDistribution
+import androidx.compose.ui.platform.LocalContext
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
+import com.example.bpscnotes.presentation.payment.launchCashfree
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,9 +60,10 @@ fun CourseDetailScreen(
 ) {
     LaunchedEffect(courseId) { viewModel.load(courseId) }
 
-    val state by viewModel.uiState.collectAsState()
-    val str = LocalStrings.current
-    val cs  = MaterialTheme.colorScheme
+    val state   by viewModel.uiState.collectAsState()
+    val str     = LocalStrings.current
+    val cs      = MaterialTheme.colorScheme
+    val context = LocalContext.current
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("course_detail") }
     var expandedChapter     by remember { mutableStateOf<String?>(null) }
     var showEnrollSuccessDialog by remember { mutableStateOf(false) }
@@ -75,10 +78,11 @@ fun CourseDetailScreen(
         val course = state.course
         val price  = state.purchasePrice.takeIf { it > 0 } ?: course?.price ?: 0.0
         val userCoins = state.userCoins
-        val coinToInrRate = coinsConfig.economy.coinToInrRate
-        val maxCoinsPer   = coinsConfig.economy.maxCoinsPerPurchase
-        val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
-        val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
+        val coinToInrRate  = coinsConfig.economy.coinToInrRate
+        val globalMaxCoins = coinsConfig.economy.maxCoinsPerPurchase
+        val perCourseMax   = course?.maxCoinsRedeemable?.takeIf { it > 0 } ?: globalMaxCoins
+        val priceInCoins   = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
+        val maxApplicable  = minOf(perCourseMax, userCoins, priceInCoins).coerceAtLeast(0)
         val coinDiscount: Double = minOf(price, dialogCoins * coinToInrRate)
         val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
 
@@ -243,21 +247,21 @@ fun CourseDetailScreen(
         )
     }
 
-    // Cashfree session is launched after enroll() returns payment details
-    // The dialog's confirm triggers enroll(); if backend returns a Cashfree
-    // session we launch the SDK directly from LaunchedEffect below.
+    // Launch Cashfree SDK directly when enroll() returns a 402 with payment session.
     LaunchedEffect(state.purchaseSessionId) {
         val sessionId = state.purchaseSessionId ?: return@LaunchedEffect
         val orderId   = state.purchaseProviderOrderId ?: return@LaunchedEffect
-        showBuyDialog = false; dialogCoins = 0
-        val title = state.course?.title ?: ""
-        nav.navigate(
-            Screen.CoursePayment.createRoute(
-                courseId, title, state.purchasePrice,
-                sessionId, orderId, state.purchasePaymentEnvironment,
-            )
-        )
+        showBuyDialog = false
+        dialogCoins   = 0
         viewModel.clearPurchaseRequired()
+        launchCashfree(
+            context     = context,
+            sessionId   = sessionId,
+            orderId     = orderId,
+            environment = state.purchasePaymentEnvironment,
+            onSuccess   = { cfPaymentId -> viewModel.confirmCoursePurchase(cfPaymentId) },
+            onFailure   = { code, msg  -> viewModel.handleCoursePaymentFailure(code, msg) }
+        )
     }
 
     // ── Rating bottom sheet ───────────────────────────────────
@@ -476,7 +480,7 @@ fun CourseDetailScreen(
                             text           = { Text(if (completedLessons > 0) str.courseContinueLearning else str.courseStartLearning, fontWeight = FontWeight.Bold) }
                         )
                     }
-                    // Not enrolled, paid: Buy FAB
+                    // Not enrolled, paid: Buy FAB → dialog → Cashfree
                     course.isPaid -> {
                         ExtendedFloatingActionButton(
                             onClick        = { if (!state.isEnrolling) { showBuyDialog = true; dialogCoins = 0 } },

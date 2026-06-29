@@ -1145,8 +1145,8 @@ private fun TodayTargetCard(
                 Icon(Icons.Rounded.KeyboardArrowRight, null, tint = cs.outline, modifier = Modifier.size(20.dp))
             }
 
-            Spacer(Modifier.height(16.dp))
-            Box(modifier = Modifier
+           // Spacer(Modifier.height(16.dp))
+            /*Box(modifier = Modifier
                 .fillMaxWidth()
                 .height(10.dp)
                 .clip(RoundedCornerShape(5.dp))
@@ -1163,7 +1163,7 @@ private fun TodayTargetCard(
                             )
                         )
                     ))
-            }
+            }*/
             Spacer(Modifier.height(16.dp))
 
             when {
@@ -1181,7 +1181,7 @@ private fun TodayTargetCard(
                     Text(str.dashboardNoTargets, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 else -> {
-                    targets.take(3).forEach { t ->
+                    targets.take(2).forEach { t ->
                         Row(modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1192,13 +1192,13 @@ private fun TodayTargetCard(
                                 Icon(if (t.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null, tint = if (t.isCompleted) BpscColors.Success else BpscColors.TextHint, modifier = Modifier.size(16.dp))
                             }
                             Text(t.title, style = MaterialTheme.typography.bodyMedium, color = if (t.isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text(t.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, modifier = Modifier
+                           /* Text(t.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(BpscColors.PrimaryLight)
-                                .padding(horizontal = 8.dp, vertical = 3.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp))*/
                         }
                     }
-                    if (targets.size > 3) Text("+${targets.size - 3} more topics", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Primary, modifier = Modifier.padding(top = 6.dp))
+                    if (targets.size > 2) Text("+${targets.size - 2} more topics", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Primary, modifier = Modifier.padding(top = 6.dp))
                 }
             }
 
@@ -1452,8 +1452,8 @@ private fun ContinueLearningSection(
         inProgressSession.answeredCount.toFloat() / inProgressSession.totalQuestions
     else 0f
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        SectionHeader(title = "Continue Learning")
-        Spacer(Modifier.height(10.dp))
+       // SectionHeader(title = "Continue Learning")
+        Spacer(Modifier.height(4.dp))
         Card(
             modifier  = Modifier.fillMaxWidth(),
             shape     = RoundedCornerShape(16.dp),
@@ -2233,7 +2233,7 @@ private fun BpscDrawer(
         Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
         // ── Explore (5-8) ────────────────────────────────────
-        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.Leaderboard.route),
+        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.GlobalLeaderboard.route),
         Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
         // ── Account (9-10) ───────────────────────────────────

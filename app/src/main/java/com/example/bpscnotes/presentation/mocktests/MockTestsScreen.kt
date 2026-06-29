@@ -901,7 +901,7 @@ private fun TestInstructionsScreen(
                             add(Triple("⚪", "Unattempted",          "Questions not yet answered"))
                             add(Triple("🟡", "Attempted + Marked",   "Answered but flagged for review"))
                             add(Triple("📖", str.quizNavTitle,   "Tap the grid icon to jump to any question"))
-                            add(Triple("🔖", "Bookmark",             "Save important questions for later"))
+                          //  add(Triple("🔖", "Bookmark",             "Save important questions for later"))
                             add(Triple("⏰", "Auto Submit",          "Test submits automatically when timer ends"))
                             add(Triple("↩️",  "Resume",              str.quizCanResume))
                         }.forEach { (emoji, title, desc) ->

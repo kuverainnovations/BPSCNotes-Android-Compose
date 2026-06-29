@@ -106,7 +106,9 @@ fun computeCaMcqResults(
         val correctLetter = serverAnswers[q.id]?.correct?.takeIf { it.isNotBlank() } ?: q.correct
         // Tapped the standardized "Option E — Not Attempting" slot, which
         // only exists when the admin left option_e blank (see QuizScreen).
-        val isNotAttempting = userAnswer == "e" && q.optionE.isBlank()
+        // "skip" = new Not-Attempting key (works whether or not optionE is real).
+        // "e" + blank optionE = legacy Not-Attempting from old sessions.
+        val isNotAttempting = userAnswer == "skip" || (userAnswer == "e" && q.optionE.isBlank())
         val isBlank   = userAnswer == null
         val isCorrect = !isBlank && !isNotAttempting && userAnswer == correctLetter
         val marks = when {
@@ -542,17 +544,16 @@ private fun QuizScreen(
             }
 
             // Options — correct/wrong only revealed after server answer returns.
-            // Option E: if the admin left it blank AND negative marking is on,
-            // show the standardized BPSC "Not Attempting" choice instead of
-            // hiding the slot — this is how a user avoids the new
-            // leave-it-blank penalty (see computeCaMcqResults).
-            val showNotAttempting = q.optionE.isBlank() && markingConfig.negativeMarkingEnabled
+            // "Not Attempting" (key="skip") is always available when negative
+            // marking is on so users always have a penalty-free escape, even
+            // when the admin filled in a real 5th option for letter E.
+            val showNotAttempting = markingConfig.negativeMarkingEnabled
             val optionPairs = (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC,
                 "d" to q.optionD, "e" to q.optionE).filter { it.second.isNotBlank() }) +
-                    (if (showNotAttempting) listOf("e" to "Not Attempting This Question") else emptyList())
+                    (if (showNotAttempting) listOf("skip" to "Not Attempting This Question") else emptyList())
 
             optionPairs.forEach { (letter, text) ->
-                val isNotAttemptOption = letter == "e" && showNotAttempting
+                val isNotAttemptOption = letter == "skip"
                 val isSelected = answered == letter
                 val correctLetter = serverAns?.correct
                 val isCorrect  = !isNotAttemptOption && correctLetter != null && letter == correctLetter
@@ -587,7 +588,7 @@ private fun QuizScreen(
                             }
                         ), contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isNotAttemptOption) "⊘" else letter.uppercase(),
+                        Text(if (isNotAttemptOption) "⊘" else letter.uppercase().take(1),
                             style = MaterialTheme.typography.labelMedium,
                             color = if (isSelected || isCorrect || isWrong) Color.White else BpscColors.TextHint,
                             fontWeight = FontWeight.ExtraBold)
@@ -1001,10 +1002,10 @@ private fun ReviewScreen(
                         }
                         Text(q.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
                         // Show options: only reveal correct answer if user got it right
-                        val showNotAttemptOpt = q.optionE.isBlank() && summary.negativeMarkingEnabled
+                        val showNotAttemptOpt = summary.negativeMarkingEnabled
                         (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() } +
-                                (if (showNotAttemptOpt) listOf("e" to "Not Attempting This Question") else emptyList()))
+                                (if (showNotAttemptOpt) listOf("skip" to "Not Attempting This Question") else emptyList()))
                             .forEach { (letter, text) ->
                                 val isUser = letter == userAnswer
                                 val isCrct = r.isCorrect && letter == correctLetter
@@ -1015,7 +1016,7 @@ private fun ReviewScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(if (letter == "e" && showNotAttemptOpt) "⊘" else letter.uppercase(), style = MaterialTheme.typography.labelSmall, color = tc, fontWeight = FontWeight.ExtraBold)
+                                    Text(if (letter == "skip") "⊘" else letter.uppercase(), style = MaterialTheme.typography.labelSmall, color = tc, fontWeight = FontWeight.ExtraBold)
                                     Text(text, style = MaterialTheme.typography.bodyMedium, color = tc, modifier = Modifier.weight(1f))
                                     if (isCrct) Icon(Icons.Rounded.Check, null, tint = Color(0xFF2ECC71), modifier = Modifier.size(14.dp))
                                     if (isUser && !isCrct) Icon(Icons.Rounded.Close, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(14.dp))
@@ -1058,33 +1059,38 @@ private fun ResultStat(icon: String, value: String, label: String, color: Color)
 // Renders question text that may contain TipTap HTML (tables, bold, lists)
 // using a WebView. Falls back to simple Text if there are no HTML tags.
 // Tables are made horizontally scrollable and sized to fit the card width.
+//
+// Height is measured via a sentinel <div> at end of body using offsetTop,
+// which works even when the WebView is non-scrollable (scrollHeight returns
+// viewport height in that case, not content height).
 @Composable
 private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
     val isHtml = remember(html) { html.trimStart().startsWith("<") }
 
     if (!isHtml) {
-        // Plain text (older questions) — keep original Text composable
         Text(
             html,
-            style    = MaterialTheme.typography.bodyLarge,
-            color    = BpscColors.TextPrimary,
+            style      = MaterialTheme.typography.bodyLarge,
+            color      = BpscColors.TextPrimary,
             fontWeight = FontWeight.SemiBold,
             lineHeight = 26.sp,
-            modifier = modifier
+            modifier   = modifier
         )
         return
     }
 
-    // Full HTML — wrap in responsive CSS so tables scroll horizontally
-    // and text matches the app's body size/colour.
     val styledHtml = remember(html) {
         """
         <!DOCTYPE html><html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <style>
           * { box-sizing: border-box; }
-          body {
+          html, body {
             margin: 0; padding: 0;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          body {
             font-family: sans-serif;
             font-size: 15px;
             line-height: 1.65;
@@ -1096,7 +1102,6 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
           em, i { font-style: italic; }
           ul, ol { padding-left: 20px; margin: 6px 0; }
           li { margin-bottom: 4px; }
-          /* Tables: horizontally scrollable, full-width, compact */
           .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
           table {
             border-collapse: collapse;
@@ -1120,18 +1125,15 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
         </style></head><body>
         ${html.replace(Regex("<table"), "<div class='table-wrap'><table")
             .replace(Regex("</table>"), "</table></div>")}
+        <div id="__end__" style="clear:both;height:0;padding:0;margin:0;"></div>
         </body></html>
         """.trimIndent()
     }
 
-    // Measure approximate rendered height using a fixed estimate:
-    // plain text lines ≈ 24dp each, tables add ~80dp per row.
-    // We let the WebView be non-scrollable and give it a fixed height
-    // measured by JS so the outer Column scroll works correctly.
-    // Initial height estimate: ~100px base + 20px per 80 chars, avoids 0-height flash
-    var webViewHeight by remember(html) {
-        mutableIntStateOf((100 + (html.length / 80) * 20).coerceIn(80, 400))
-    }
+    // Physical-pixel height updated by JS after page renders.
+    // Initial: 800px physical (≈267dp on xxhdpi) — enough to avoid a 0-height flash
+    // while still being a reasonable pre-measurement size.
+    var webViewHeight by remember(html) { mutableIntStateOf(800) }
     val density = androidx.compose.ui.platform.LocalDensity.current
 
     AndroidView(
@@ -1148,27 +1150,39 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
                     @Suppress("DEPRECATION")
                     layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
                 }
-                isScrollContainer    = false
+                isScrollContainer            = false
                 isVerticalScrollBarEnabled   = false
                 isHorizontalScrollBarEnabled = false
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // Tag stores the last-loaded styledHtml so update() can skip reloads
+                // when only the Compose height state changed (prevents infinite reload loop).
+                tag = styledHtml
                 webViewClient = object : android.webkit.WebViewClient() {
                     override fun onPageFinished(view: WebView, url: String) {
-                        // Measure actual content height after render
+                        // Use sentinel offsetTop — reliable even in non-scrollable WebViews.
+                        // document.body.scrollHeight returns viewport height when overflow
+                        // is hidden by the Compose layout constraint.
                         view.evaluateJavascript(
-                            "(document.body.scrollHeight)"
+                            "(function(){ var s=document.getElementById('__end__'); return s ? s.offsetTop : document.body.scrollHeight; })()"
                         ) { result ->
-                            val px = result?.trim()?.toFloatOrNull() ?: 0f
-                            if (px > 0) webViewHeight = (px * ctx.resources.displayMetrics.density).toInt()
+                            val cssH = result?.trim()?.toFloatOrNull() ?: 0f
+                            if (cssH > 8f) {
+                                webViewHeight = (cssH * ctx.resources.displayMetrics.density).toInt()
+                            }
                         }
                     }
                 }
                 loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
             }
         },
-        update = { wv -> wv.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null) },
-        modifier = modifier.height(
-            with(density) { webViewHeight.toDp() }
-        )
+        update = { wv ->
+            // Only reload when the HTML content actually changed, not on every
+            // height-state recomposition (which would create an infinite reload loop).
+            if (wv.tag != styledHtml) {
+                wv.tag = styledHtml
+                wv.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null)
+            }
+        },
+        modifier = modifier.height(with(density) { webViewHeight.toDp() })
     )
 }

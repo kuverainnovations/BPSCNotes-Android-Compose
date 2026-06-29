@@ -827,6 +827,8 @@ data class GlobalLeaderboardEntryDto(
     @SerializedName("total_attempts") val totalAttempts: Int? = null,
     // streak
     val streak:  Int? = null,
+    // study room time in minutes
+    @SerializedName("total_study_minutes") val totalStudyMinutes: Int? = null,
     // rank delta (server may send previous rank for delta badge)
     @SerializedName("prev_rank")   val prevRank: Int? = null,
 )

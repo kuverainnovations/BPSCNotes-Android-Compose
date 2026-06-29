@@ -39,6 +39,7 @@ import com.example.bpscnotes.core.ui.components.AppTimer
 import com.example.bpscnotes.core.ui.components.SecureScreen
 import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.bookmarks.BookmarksViewModel
 import kotlinx.coroutines.delay
 
 // ═════════════════════════════════════════════════════════════════
@@ -715,11 +716,16 @@ private fun QuizResultScreen(
     val accuracy          = result.accuracy
     val progress         by animateFloatAsState(accuracy.toFloat() / 100f, tween(1200), label = "arc")
 
+    val bookmarksVm: BookmarksViewModel = hiltViewModel()
+    val bookmarkState by bookmarksVm.state.collectAsState()
+
     if (showDetailReview) {
         QuizAnswerReviewScreen(
-            answerDetails = result.answerDetails,
+            answerDetails          = result.answerDetails,
             negativeMarkingEnabled = result.negativeMarkingEnabled,
-            onBack = { showDetailReview = false }
+            bookmarkedIds          = bookmarkState.bookmarkedIds,
+            onBookmark             = { id -> bookmarksVm.toggleBookmark(id) },
+            onBack                 = { showDetailReview = false },
         )
         return
     }

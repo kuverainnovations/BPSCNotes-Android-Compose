@@ -20,10 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavHostController
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
+import com.example.bpscnotes.presentation.bookmarks.BookmarksViewModel
 import com.example.bpscnotes.presentation.quiz.components.LobbyStatChip
 import com.example.bpscnotes.presentation.quiz.components.SectionLabel
 import kotlinx.coroutines.*
@@ -579,10 +581,13 @@ internal fun QuizSummaryScreen(
     val cs = MaterialTheme.colorScheme
     var showReviewAll by remember { mutableStateOf(false) }
     val str = LocalStrings.current
+    val bookmarksVm: BookmarksViewModel = hiltViewModel()
+    val bookmarkState by bookmarksVm.state.collectAsState()
     if (showReviewAll) {
-        // Review screen using populated question data (correct answers + explanations now available)
         QuizAnswerReviewScreen(
             answerDetails = result.answerDetails,
+            bookmarkedIds = bookmarkState.bookmarkedIds,
+            onBookmark    = { id -> bookmarksVm.toggleBookmark(id) },
             onBack        = { showReviewAll = false }
         )
         return
@@ -691,6 +696,8 @@ private fun SummaryStatItem(icon: String, value: String, label: String, color: C
 internal fun QuizAnswerReviewScreen(
     answerDetails: List<QuizAnswerDetail>,
     negativeMarkingEnabled: Boolean = false,
+    bookmarkedIds: Set<String> = emptySet(),
+    onBookmark: ((questionId: String) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
@@ -752,6 +759,15 @@ internal fun QuizAnswerReviewScreen(
                                     color = when { detail.isSkipped -> BpscColors.TextSecondary; detail.isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
                                     fontWeight = FontWeight.Bold
                                 )
+                                if (onBookmark != null) {
+                                    val isBookmarked = detail.question.id in bookmarkedIds
+                                    Icon(
+                                        imageVector = if (isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
+                                        tint = if (isBookmarked) BpscColors.Primary else BpscColors.TextSecondary,
+                                        modifier = Modifier.size(18.dp).clickable { onBookmark(detail.question.id) }
+                                    )
+                                }
                             }
                         }
 

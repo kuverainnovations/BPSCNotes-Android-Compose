@@ -145,7 +145,7 @@ fun ProfileScreen(
                 )
 
                 // ── My Bookmarks ──────────────────────────────────────
-                androidx.compose.material3.Card(
+                /*androidx.compose.material3.Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         .clickable { navController.navigate(Screen.BookmarkedQuestions.route) },
                     shape     = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
@@ -171,7 +171,7 @@ fun ProfileScreen(
                         }
                         Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
-                }
+                }*/
 
                 // ── Bottom banner ad ─────────────────────────────────
                 if (adManager != null) {

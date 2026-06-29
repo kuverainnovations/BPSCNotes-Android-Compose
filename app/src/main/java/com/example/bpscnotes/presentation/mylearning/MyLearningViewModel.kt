@@ -34,11 +34,12 @@ data class MyLearningUiState(
     val justEnrolledId:  String?         = null,   // triggers tab switch in Screen
     val saveToast:       String?         = null,
     val error:           String?         = null,
-    // Set when enroll() hits a 402 for a paid course — navigate to CoursePaymentScreen.
-    val purchaseRequired:    Boolean = false,
-    val purchasePrice:       Double  = 0.0,
-    val purchaseSessionId:      String? = null,   // paymentSessionId → Cashfree SDK
-    val purchaseProviderOrderId: String? = null,   // FIX: Cashfree orderId for Pay button
+    // Set when enroll() hits a 402 for a paid course — launch Cashfree SDK directly.
+    val purchaseRequired:        Boolean = false,
+    val purchasePrice:           Double  = 0.0,
+    val purchaseSessionId:       String? = null,
+    val purchaseProviderOrderId: String? = null,
+    val purchasePaymentEnvironment: String = "sandbox",
     val purchaseCourseId:        String? = null,
     val purchaseCourseTitle:     String  = "",
 )
@@ -173,17 +174,19 @@ class MyLearningViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price           = data.optDouble("price", 0.0)
-                        val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
-                        val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                        val price              = data.optDouble("price", 0.0)
+                        val sessionId          = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                        val providerOrderId    = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                        val paymentEnvironment = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
                         _uiState.update { it.copy(
-                            isEnrolling             = false,
-                            purchaseRequired        = true,
-                            purchasePrice           = price,
-                            purchaseSessionId       = sessionId,
-                            purchaseProviderOrderId = providerOrderId,
-                            purchaseCourseId        = courseId,
-                            purchaseCourseTitle     = courseTitle
+                            isEnrolling                = false,
+                            purchaseRequired           = true,
+                            purchasePrice              = price,
+                            purchaseSessionId          = sessionId,
+                            purchaseProviderOrderId    = providerOrderId,
+                            purchasePaymentEnvironment = paymentEnvironment,
+                            purchaseCourseId           = courseId,
+                            purchaseCourseTitle        = courseTitle
                         )}
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }
@@ -200,7 +203,36 @@ class MyLearningViewModel @Inject constructor(
     }
 
     fun clearPurchaseRequired() {
-        _uiState.update { it.copy(purchaseRequired = false) }
+        _uiState.update { it.copy(
+            purchaseRequired        = false,
+            purchaseSessionId       = null,
+            purchaseProviderOrderId = null,
+        )}
+    }
+
+    fun confirmCoursePurchase(courseId: String, cfPaymentId: String) {
+        viewModelScope.launch {
+            try {
+                coursesApi.confirmCoursePurchase(
+                    courseId,
+                    com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest(
+                        cfPaymentId   = cfPaymentId,
+                        paymentMethod = "upi"
+                    )
+                )
+                bus.emit(RefreshEvent.CourseEnrolled)
+                cacheInvalidator.evict()
+                load()
+                _uiState.update { it.copy(justEnrolledId = courseId) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Payment received but enrollment failed. Contact support. Ref: $cfPaymentId") }
+            }
+        }
+    }
+
+    fun handleCoursePaymentFailure(code: Int, message: String) {
+        if (code == 0) return
+        _uiState.update { it.copy(error = "Payment failed: $message") }
     }
 
     // ── Save / Unsave (Wishlist) ────────────────────────────────

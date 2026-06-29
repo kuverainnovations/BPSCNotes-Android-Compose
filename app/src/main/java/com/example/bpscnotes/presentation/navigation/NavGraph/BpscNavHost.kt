@@ -65,6 +65,8 @@ import com.example.bpscnotes.presentation.quiz.TopicQuizScreen
 import com.example.bpscnotes.presentation.readingrooms.ReadingRoomsScreen
 import com.example.bpscnotes.presentation.rooms.RoomsHubScreen
 import com.example.bpscnotes.presentation.rooms.LeaderboardScreen
+import com.example.bpscnotes.presentation.rooms.GlobalLeaderboardScreen
+import com.example.bpscnotes.presentation.rooms.GlobalLeaderboardViewModel
 import com.example.bpscnotes.presentation.studysessions.StudySessionHistoryScreen
 import com.example.bpscnotes.presentation.course.LessonViewerScreen
 import com.example.bpscnotes.presentation.liveclasses.LiveClassViewerScreen
@@ -517,6 +519,9 @@ fun BpscNavHost(
                 }
                 val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
                 LeaderboardScreen(navController = navController, viewModel = tiersVM)
+            }
+            composable(Screen.GlobalLeaderboard.route) {
+                GlobalLeaderboardScreen(navController = navController)
             }
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
             composable(Screen.MyLearning.route)         { MyLearningScreen(navController, startTab = 0, fromScreen = "nav-host") }
