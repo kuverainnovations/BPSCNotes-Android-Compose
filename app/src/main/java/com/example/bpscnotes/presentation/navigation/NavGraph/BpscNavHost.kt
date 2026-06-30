@@ -443,22 +443,24 @@ fun BpscNavHost(
 
 
             // PDF Viewer — custom in-app renderer with page locking
+            // Route uses query params so file:// URLs (with encoded slashes) never break path matching.
             composable(
                 route     = Screen.PdfViewer.route,
                 arguments = listOf(
-                    navArgument("fileUrl")     { type = NavType.StringType },
-                    navArgument("title")       { type = NavType.StringType },
-                    navArgument("freePages")   { type = NavType.IntType; defaultValue = 3 },
-                    navArgument("isPurchased") { type = NavType.BoolType; defaultValue = false },
+                    navArgument("fileUrl")     { type = NavType.StringType; defaultValue = "" },
+                    navArgument("title")       { type = NavType.StringType; defaultValue = "Document" },
+                    navArgument("freePages")   { type = NavType.IntType;    defaultValue = 3 },
+                    navArgument("isPurchased") { type = NavType.BoolType;   defaultValue = false },
                     navArgument("materialId")  { type = NavType.StringType; defaultValue = "" },
                     navArgument("price")       { type = NavType.StringType; defaultValue = "0" },
                 )
             ) { back ->
-                val fileUrl     = back.arguments?.getString("fileUrl")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
-                val title       = back.arguments?.getString("title")?.let  { java.net.URLDecoder.decode(it, "UTF-8") } ?: "Document"
-                val freePages   = back.arguments?.getInt("freePages")  ?: 3
-                val isPurchased = back.arguments?.getBoolean("isPurchased") ?: false
-                val materialId  = back.arguments?.getString("materialId")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                // Navigation auto-decodes query parameter values — no manual URLDecoder needed.
+                val fileUrl     = back.arguments?.getString("fileUrl")              ?: ""
+                val title       = back.arguments?.getString("title")                ?: "Document"
+                val freePages   = back.arguments?.getInt("freePages")               ?: 3
+                val isPurchased = back.arguments?.getBoolean("isPurchased")         ?: false
+                val materialId  = back.arguments?.getString("materialId")           ?: ""
                 val price       = back.arguments?.getString("price")?.toDoubleOrNull() ?: 0.0
                 PdfViewerScreen(
                     fileUrl       = fileUrl,

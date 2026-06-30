@@ -19,10 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
@@ -44,11 +42,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -233,80 +228,40 @@ private fun buildArticleHtml(
 @Composable
 private fun ArticleContentWebView(html: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var measuring by remember { mutableStateOf(true) }
-    var contentHeight by remember { mutableFloatStateOf(360f) } // dp — sensible default while measuring
-
-    Box(modifier = modifier.fillMaxWidth().height(contentHeight.dp)) {
-        AndroidView(
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    settings.apply {
-                        // JS is enabled ONLY so we can measure document.body.scrollHeight
-                        // below and size this WebView to its real content height — that's
-                        // what lets it sit inline in one continuous scrolling page instead
-                        // of scrolling internally underneath a frozen header. This doesn't
-                        // reopen an injection surface: no <script> tags, event-handler
-                        // attributes, or javascript: URIs survive sanitize-html's allowlist
-                        // server-side, so there's nothing here for the JS engine to run
-                        // beyond our own measurement call.
-                        javaScriptEnabled = true
-                        domStorageEnabled = false
-                        allowContentAccess = false
-                        allowFileAccess = false
-                        loadWithOverviewMode = true
-                        useWideViewPort = false
-                    }
-                    // This WebView no longer owns its own scroll — the outer Compose
-                    // Column scrolls everything (header + this) together.
-                    isVerticalScrollBarEnabled = false
-                    overScrollMode = View.OVER_SCROLL_NEVER
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            // Wait briefly for images to finish loading before
-                            // measuring scrollHeight — images are the main reason
-                            // the initial measurement is shorter than the real content.
-                            // evaluateJavascript schedules after the JS engine has
-                            // processed the page, so 250ms covers most inline images.
-                            view?.postDelayed({
-                                view.evaluateJavascript("""
-                                    (function() {
-                                        // Force layout reflow so all images are sized
-                                        document.body.offsetHeight;
-                                        return document.body.scrollHeight.toString();
-                                    })()
-                                """.trimIndent()) { result ->
-                                    val px = result?.trim('"')?.toFloatOrNull()
-                                    if (px != null && px > 0f) contentHeight = px + 32f
-                                    measuring = false
-                                }
-                            }, 250)
-                        }
-                        // Article links open in the user's browser instead of
-                        // navigating away inside this WebView.
-                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                            val uri = request?.url ?: return false
-                            return try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                                true
-                            } catch (_: Exception) { false }
-                        }
-                    }
-                    loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+    AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                settings.apply {
+                    javaScriptEnabled = false
+                    domStorageEnabled = false
+                    allowContentAccess = false
+                    allowFileAccess = false
+                    loadWithOverviewMode = true
+                    useWideViewPort = true
                 }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
-        if (measuring) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
+                isVerticalScrollBarEnabled = true
+                overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?, request: WebResourceRequest?
+                    ): Boolean {
+                        val uri = request?.url ?: return false
+                        return try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                            true
+                        } catch (_: Exception) { false }
+                    }
+                }
+                loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
             }
-        }
-    }
+        },
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -548,11 +503,8 @@ fun CaArticleDetailScreen(
                 article != null -> {
                     val (catFg, catBg) = CA_DETAIL_CATEGORY_COLORS[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
-                    // ── Everything below scrolls as ONE page — heading,
-                    // meta, and article body move together. Only the
-                    // gradient header above stays fixed. ─────────────────
                     Column(
-                        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                        modifier = Modifier.weight(1f).fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -598,9 +550,8 @@ fun CaArticleDetailScreen(
                         }
                         ArticleContentWebView(
                             html = html,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp)
                         )
-                        Spacer(Modifier.height(24.dp))
                     }
                 }
             }

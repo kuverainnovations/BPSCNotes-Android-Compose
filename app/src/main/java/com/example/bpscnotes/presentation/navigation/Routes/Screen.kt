@@ -126,10 +126,19 @@ sealed class Screen(val route: String) {
     object UploadMaterial : Screen("upload_material")
 
     // PDF Viewer with page locking
-    object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}/{materialId}/{price}") {
+    // All string args are query params so encoded slashes in file:// URLs never break path matching.
+    object PdfViewer : Screen(
+        "pdf_viewer?fileUrl={fileUrl}&title={title}&freePages={freePages}&isPurchased={isPurchased}&materialId={materialId}&price={price}"
+    ) {
         fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean,
                         materialId: String = "", price: Double = 0.0) =
-            "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased/${materialId.ifEmpty { "-" }.encodeUrl()}/$price"
+            "pdf_viewer" +
+            "?fileUrl=${android.net.Uri.encode(fileUrl)}" +
+            "&title=${android.net.Uri.encode(title)}" +
+            "&freePages=$freePages" +
+            "&isPurchased=$isPurchased" +
+            "&materialId=${android.net.Uri.encode(materialId)}" +
+            "&price=$price"
     }
 
     object VideoPlayer : Screen("video_player/{videoUrl}/{title}") {

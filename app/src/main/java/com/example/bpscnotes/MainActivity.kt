@@ -1,16 +1,15 @@
 package com.example.bpscnotes
 
 import android.os.Bundle
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.example.bpscnotes.core.analytics.Analytics
@@ -80,7 +79,8 @@ class MainActivity : ComponentActivity(),
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        // Dismiss system splash instantly (no crossfade) so composable splash takes over
+        installSplashScreen().setOnExitAnimationListener { it.remove() }
         super.onCreate(savedInstanceState)
         // Persist Firebase Installation ID so AuthInterceptor can read it synchronously
         if (com.google.firebase.FirebaseApp.getApps(this).isNotEmpty()) {
@@ -117,13 +117,11 @@ class MainActivity : ComponentActivity(),
         // Track app open
         Event.appOpen()
 
-        enableEdgeToEdge()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor     = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-        }
+        // dark style = light/white icons in status bar (time, wifi, battery)
+        enableEdgeToEdge(
+            statusBarStyle     = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
 
         // Safety-net: if Compose's BackHandler misses a rapid second tap
         //    (race condition during recomposition), catch it here and

@@ -57,21 +57,29 @@ suspend fun downloadPdf(url: String, cacheDir: File, authToken: String = ""): Fi
     return file
 }
 
-/** Render all pages of a PDF file to Bitmaps at 1080px width. */
+/** Render all pages of a PDF file to Bitmaps at exactly 1080px wide.
+ *  Height is capped at 8192px to prevent Compose Constraints overflow:
+ *  keeping bmpWidth fixed at 1080 means ContentScale.FillWidth never
+ *  up-scales a tiny bitmap to an extreme display height. */
 fun renderPdfPages(file: File): List<Bitmap> {
     val bitmaps = mutableListOf<Bitmap>()
     val pfd     = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     PdfRenderer(pfd).use { renderer ->
-        val targetWidth = 1080
+        val targetWidth    = 1080
+        val maxBitmapHeight = 8192
         for (i in 0 until renderer.pageCount) {
             renderer.openPage(i).use { page ->
+                if (page.width <= 0 || page.height <= 0) return@use
                 val scale     = targetWidth.toFloat() / page.width.toFloat()
                 val bmpWidth  = targetWidth
                 val bmpHeight = (page.height * scale).toInt()
-                val bitmap    = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(android.graphics.Color.WHITE)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                bitmaps.add(bitmap)
+                    .coerceIn(1, maxBitmapHeight)
+                try {
+                    val bitmap = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+                    bitmap.eraseColor(android.graphics.Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bitmaps.add(bitmap)
+                } catch (_: Exception) { /* skip unrenderable pages */ }
             }
         }
     }

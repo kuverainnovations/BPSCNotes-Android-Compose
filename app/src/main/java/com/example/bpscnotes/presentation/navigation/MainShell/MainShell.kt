@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.SnackbarDuration
@@ -22,12 +23,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -150,6 +154,17 @@ fun MainShell(
                 kotlinx.coroutines.delay(2000)
                 backPressedOnce.value = false
             }
+        }
+    }
+
+    // Keep nav bar icon colors correct for light/dark mode.
+    // NavigationBar(windowInsets = WindowInsets.navigationBars) extends the surface
+    // background into the system nav bar area — this just ensures icon contrast.
+    val isDark = isSystemInDarkTheme()
+    SideEffect {
+        activity?.window?.let { win ->
+            WindowInsetsControllerCompat(win, win.decorView)
+                .isAppearanceLightNavigationBars = !isDark
         }
     }
 

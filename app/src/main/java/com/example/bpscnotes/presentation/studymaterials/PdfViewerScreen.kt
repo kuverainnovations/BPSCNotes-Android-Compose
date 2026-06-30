@@ -284,14 +284,17 @@ fun PdfViewerScreen(
                                     .clip(RoundedCornerShape(8.dp))
                             ) {
                                 // ── The page bitmap ──────────────────────────
+                                val bmp = pdfPages[pageIndex]
+                                if (bmp.width > 0 && bmp.height > 0) {
                                 Image(
-                                    bitmap              = pdfPages[pageIndex].asImageBitmap(),
+                                    bitmap              = bmp.asImageBitmap(),
                                     contentDescription  = "${str.pdfPageNum} $pageNumber",
                                     modifier            = Modifier
                                         .fillMaxWidth()
                                         .then(if (isLocked) Modifier.blur(16.dp) else Modifier),
                                     contentScale        = ContentScale.FillWidth
                                 )
+                                }
 
                                 // ── Watermark overlay (unlocked pages only) ──
                                 if (!isLocked) {

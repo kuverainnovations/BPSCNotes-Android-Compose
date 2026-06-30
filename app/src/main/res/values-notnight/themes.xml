@@ -5,8 +5,10 @@
         <!-- Dark mode: match app's dark background -->
         <item name="android:windowBackground">#1A6FE8</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#161B22</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <!-- Force white status bar icons on the blue splash background -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
 </resources>

@@ -322,8 +322,8 @@ private fun UploadTopBar(onBack: () -> Unit) {
                 }
             }
 
-            // Trust badge
-            Row(
+            // Trust badge currently hide due to not yet released
+            /*Row(
                 modifier              = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(Color.White.copy(alpha = 0.16f))
@@ -349,7 +349,7 @@ private fun UploadTopBar(onBack: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
+            }*/
         }
     }
 }

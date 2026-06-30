@@ -10,6 +10,8 @@
         <item name="android:navigationBarColor">@android:color/black</item>
         <!-- Remove the default activity open/close animation to eliminate flash -->
         <item name="android:windowAnimationStyle">@null</item>
+        <!-- Force white status bar icons (time, wifi, battery) on the blue splash background -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <!-- Splash screen theme — shown by the OS during cold start before Activity.onCreate() -->

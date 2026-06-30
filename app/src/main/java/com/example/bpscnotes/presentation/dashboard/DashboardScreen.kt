@@ -2228,7 +2228,7 @@ private fun BpscDrawer(
     val menuItems = listOf(
         // ── Study (0-4) ──────────────────────────────────────
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
-        Triple(Icons.Rounded.Quiz,          str.quizDaily + "s",      Screen.QuizList.route),
+        Triple(Icons.Rounded.Quiz,          str.quizDaily + "zes",    Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),

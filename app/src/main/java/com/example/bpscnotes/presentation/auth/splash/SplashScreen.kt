@@ -2,10 +2,6 @@ package com.example.bpscnotes.presentation.auth.splash
 
 import com.example.bpscnotes.core.language.LocalStrings
 import com.kuvera.bpscnotes.R
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,9 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,27 +33,15 @@ import com.example.bpscnotes.data.local.TokenStore
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
     val str = LocalStrings.current
     val context = LocalContext.current
     val tokenStore = remember { TokenStore(context) }
-    val scale = remember { Animatable(0.6f) }
-    val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        launch {
-            scale.animateTo(1f, animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            ))
-        }
-        launch {
-            alpha.animateTo(1f, animationSpec = tween(600))
-        }
-        delay(2200)
+        delay(2000)
         val token = tokenStore.getToken()
         /*val destination = if (token.isNullOrEmpty()) {
             val isOnboarded = tokenStore.isOnboarded()
@@ -121,7 +103,6 @@ fun SplashScreen(navController: NavHostController) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
-                    .scale(scale.value)
                     .size(110.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(Color.White.copy(alpha = 0.15f)),
@@ -143,7 +124,6 @@ fun SplashScreen(navController: NavHostController) {
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White,
                 fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.alpha(alpha.value)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -152,7 +132,6 @@ fun SplashScreen(navController: NavHostController) {
                 text = str.splashTagline,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.75f),
-                modifier = Modifier.alpha(alpha.value)
             )
         }
 

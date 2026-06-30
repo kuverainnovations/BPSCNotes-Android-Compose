@@ -23,7 +23,7 @@ android {
 
     buildTypes {
         debug {
-            //buildConfigField("String", "BASE_URL", "\"https://api-stg.bpscnotes.in/api/v1/\"")
+//            buildConfigField("String", "BASE_URL", "\"https://api-stg.bpscnotes.in/api/v1/\"")
             buildConfigField("String", "BASE_URL", "\"https://api.bpscnotes.in/api/v1/\"")
         }
         release {
