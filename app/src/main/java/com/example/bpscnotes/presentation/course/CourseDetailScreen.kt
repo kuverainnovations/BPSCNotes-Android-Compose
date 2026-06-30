@@ -453,7 +453,7 @@ fun CourseDetailScreen(
                     }) {
                         HeroHeader(
                             course, accent, totalLessons, completedLessons, animProg,
-                            isEnrolled, collapseProgress
+                            isEnrolled, { collapseProgress }
                         ) { nav.popBackStackSafe() }
                     }
                 }
@@ -1001,13 +1001,10 @@ private fun ReviewCard(review: CourseReview) {
 private fun HeroHeader(
     course: CourseDto, accent: Color, totalLessons: Int,
     completedLessons: Int, animProg: Float, isEnrolled: Boolean,
-    collapseProgress: Float,
+    collapseProgress: () -> Float,  // lambda so HeroHeader never recomposes on scroll
     onBack: () -> Unit
 ) {
     val str = LocalStrings.current
-    // Detail content fades out in the first 60% of collapse; compact title fades in at 40%+
-    val detailAlpha = (1f - collapseProgress * 1.8f).coerceIn(0f, 1f)
-    val compactTitleAlpha = ((collapseProgress - 0.35f) * 2.5f).coerceIn(0f, 1f)
 
     Box(
         Modifier.fillMaxWidth().background(
@@ -1020,11 +1017,12 @@ private fun HeroHeader(
             )
         ).statusBarsPadding()
     ) {
-        if (detailAlpha > 0f) {
-            Canvas(Modifier.matchParentSize().alpha(detailAlpha)) {
-                drawCircle(Color.White.copy(0.06f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
-                drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
-            }
+        // Decorative circles — graphicsLayer keeps alpha change in draw phase, no recompose
+        Canvas(Modifier.matchParentSize().graphicsLayer {
+            alpha = (1f - collapseProgress() * 1.8f).coerceIn(0f, 1f)
+        }) {
+            drawCircle(Color.White.copy(0.06f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
+            drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
         }
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Top row: back + compact title (on collapse) + share
@@ -1034,19 +1032,17 @@ private fun HeroHeader(
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f)).clickable(onClick = onBack), Alignment.Center) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-                if (compactTitleAlpha > 0f) {
-                    Text(
-                        courseTitle,
-                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp).alpha(compactTitleAlpha),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
+                Text(
+                    courseTitle,
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp).graphicsLayer {
+                        alpha = ((collapseProgress() - 0.35f) * 2.5f).coerceIn(0f, 1f)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Box(
                     Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f))
                         .clickable {
@@ -1063,12 +1059,13 @@ private fun HeroHeader(
                     Icon(Icons.Rounded.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             }
-            // Detail content — fades out on collapse
-            if (detailAlpha > 0f) {
-                Column(
-                    modifier = Modifier.alpha(detailAlpha),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+            // Detail content — always in layout; alpha in draw phase only (no recompose on scroll)
+            Column(
+                modifier = Modifier.graphicsLayer {
+                    alpha = (1f - collapseProgress() * 1.8f).coerceIn(0f, 1f)
+                },
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Badge(course.subject, accent, Color.White)
                         if (course.isPaid) Badge("PRO", BpscColors.CoinGold, Color(0xFFFFF8E1))
@@ -1113,7 +1110,6 @@ private fun HeroHeader(
                         }
                     }
                 }
-            }
         }
     }
 }

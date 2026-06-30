@@ -305,7 +305,8 @@ fun DownloadsScreen(
                                                         fileUrl     = localUrl,
                                                         title       = item.title,
                                                         freePages   = Int.MAX_VALUE,
-                                                        isPurchased = true
+                                                        isPurchased = true,
+                                                        materialId  = item.id
                                                     )
                                                 )
                                             }

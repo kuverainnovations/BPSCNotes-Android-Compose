@@ -2769,6 +2769,7 @@ fun DownloadsTab(
             }
         }
         else -> LazyColumn(
+            modifier            = Modifier.fillMaxSize(),
             contentPadding      = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -2808,13 +2809,11 @@ fun DownloadsTab(
                             Text(item.title, style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold, color = cs.onSurface,
                                 maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(item.subject, style = MaterialTheme.typography.labelSmall,
-                                    color = BpscColors.Primary)
-                                if (item.pageCount > 0) {
-                                    Text("• ${item.pageCount} pages", style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.TextHint)
-                                }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 // Language badge — always shown
                                 val dlLang = item.language.ifEmpty { "English" }
                                 val (dlBg2, dlFg2) = when (dlLang) {
@@ -2825,6 +2824,14 @@ fun DownloadsTab(
                                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(dlBg2).padding(horizontal = 5.dp, vertical = 1.dp)) {
                                     Text(dlLang, style = MaterialTheme.typography.labelSmall,
                                         color = dlFg2, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Text(item.subject, style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f))
+                                if (item.pageCount > 0) {
+                                    Text("• ${item.pageCount} pg", style = MaterialTheme.typography.labelSmall,
+                                        color = BpscColors.TextHint, maxLines = 1)
                                 }
                             }
                             // Lock indicator
@@ -2867,7 +2874,7 @@ fun DownloadsTab(
                                     }
                                 }
                                 Button(
-                                    onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, item.isPurchased,item.id,item.price) },
+                                    onClick  = { onOpenPdf(item.fileUrl ?: "", item.title, item.freePages, hasFullAccess, item.id, item.price) },
                                     shape    = RoundedCornerShape(10.dp),
                                     modifier = Modifier.height(36.dp),
                                     colors   = ButtonDefaults.buttonColors(

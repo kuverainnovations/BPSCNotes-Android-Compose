@@ -575,29 +575,49 @@ private fun SettingsSectionLabel(title: String) {
 
 // ── Custom branded toggle ──────────────────────────────────────
 @Composable
-private fun BpscToggle(
+internal fun BpscToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    activeColor: Color = BpscColors.Primary
+    activeColor: Color = BpscColors.Primary,
+    enabled: Boolean = true
 ) {
-    val thumbOffset by animateDpAsState(if (checked) 22.dp else 2.dp, tween(200), label = "thumb")
-    val trackColor by animateColorAsState(
-        if (checked) activeColor else Color(0xFFCCCCCC), tween(200), label = "track"
+    val thumbOffset by animateDpAsState(
+        targetValue = if (checked) 22.dp else 2.dp,
+        animationSpec = tween(200),
+        label = "thumb"
     )
+
+    val trackColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> Color(0xFFE0E0E0)
+            checked -> activeColor
+            else -> Color(0xFFCCCCCC)
+        },
+        animationSpec = tween(200),
+        label = "track"
+    )
+
+    val thumbColor = if (enabled) Color.White else Color(0xFFF5F5F5)
+
     Box(
         modifier = Modifier
-            .width(50.dp).height(28.dp)
+            .width(50.dp)
+            .height(28.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(trackColor)
-            .clickable { onCheckedChange(!checked) }
+            .clickable(
+                enabled = enabled,
+                onClick = { onCheckedChange(!checked) }
+            )
+            .alpha(if (enabled) 1f else 0.6f)
     ) {
         Box(
             modifier = Modifier
-                .padding(top = 2.dp, bottom = 2.dp)
+                .padding(vertical = 2.dp)
                 .offset(x = thumbOffset)
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(thumbColor)
         )
     }
 }

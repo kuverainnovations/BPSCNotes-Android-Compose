@@ -100,7 +100,8 @@ fun PdfViewerScreen(
     var showBuyDialog  by remember { mutableStateOf(false) }
     var dialogCoins    by remember { mutableStateOf(0) }     // coin slider
 
-    val effectiveFreePages = if (isPurchased) Int.MAX_VALUE else freePages.coerceAtLeast(1)
+    val effectiveMaterialId = if (materialId == "-") "" else materialId
+    val effectiveFreePages  = if (isPurchased) Int.MAX_VALUE else freePages.coerceAtLeast(1)
 
     // Download + render PDF in background
     LaunchedEffect(fileUrl) {
@@ -125,9 +126,9 @@ fun PdfViewerScreen(
 
     // FIX: Show the exact same PurchaseConfirmDialog used in the materials list.
     // No coins, gold button, triggers real Cashfree payment.
-    if (showBuyDialog && materialId.isNotBlank()) {
+    if (showBuyDialog && effectiveMaterialId.isNotBlank()) {
         val dummyDto = StudyMaterialDto(
-            id = materialId,
+            id = effectiveMaterialId,
             title = title,
             description = null,
             subject = "",
@@ -140,20 +141,20 @@ fun PdfViewerScreen(
         )
         PurchaseConfirmDialog(
             item                 = dummyDto,
-            isPurchasing         = purchaseState.purchasingId == materialId || purchaseState.isConfirmingPurchase,
+            isPurchasing         = purchaseState.purchasingId == effectiveMaterialId || purchaseState.isConfirmingPurchase,
             coinsToApply         = dialogCoins,
             onCoinsToApplyChange = { dialogCoins = it },
             userCoins            = purchaseState.userCoins,
             maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
-            onConfirm    = { viewModel.purchaseMaterial(materialId, price, title, dialogCoins) },
+            onConfirm    = { viewModel.purchaseMaterial(effectiveMaterialId, price, title, dialogCoins) },
             onDismiss    = { showBuyDialog = false; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }
 
     // Navigate back to materials list after successful purchase so user can see unlocked state
     LaunchedEffect(purchaseState.purchaseSuccess) {
-        if (purchaseState.purchaseSuccess != null && materialId.isNotBlank()) {
+        if (purchaseState.purchaseSuccess != null && effectiveMaterialId.isNotBlank()) {
             showBuyDialog = false; dialogCoins = 0
             navController.popBackStackSafe()
         }
@@ -188,7 +189,7 @@ fun PdfViewerScreen(
                             color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
                         if (totalPages > 0) {
                             Text(
-                                if (isPurchased) "$totalPages ${str.quizQuestions} · ${str.pdfFullAccess}"
+                                if (isPurchased) "$totalPages Pages · ${str.pdfFullAccess}"
                                 else "$freePages / $totalPages ${str.coursesFree}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isPurchased) Color(0xFF4CAF50) else Color(0xFFFFA726)

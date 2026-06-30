@@ -44,6 +44,7 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.BpscPalette
 import com.example.bpscnotes.data.remote.api.MaterialType
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
+import com.example.bpscnotes.presentation.settings.BpscToggle
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type options shown in the card grid (visual groupings map to 3 backend types)
@@ -186,7 +187,7 @@ fun UploadMaterialScreen(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()).imePadding()
             ) {
                 UploadStepIndicator(currentStep = currentStep)
 
@@ -220,23 +221,38 @@ fun UploadMaterialScreen(
             }
 
             UploadBottomBar(
-                currentStep    = currentStep,
+                currentStep = currentStep,
                 policyAccepted = policyAccepted,
-                fileUri        = fileUri,
-                title          = state.uploadTitle,
-                subject        = state.uploadSubject,
-                isUploading    = state.isUploading,
-                onContinue     = { currentStep = 2 },
-                onSubmit       = {
+                fileUri = fileUri,
+                title = state.uploadTitle,
+                subject = state.uploadSubject,
+                isUploading = state.isUploading,
+                uploadIsPremium = state.uploadIsPremium,
+                uploadPrice = state.uploadPrice,
+                onContinue = { currentStep = 2 },
+                onSubmit = {
                     fileUri?.let { uri ->
-                        val tags  = state.uploadTags
-                            .split(",").map { it.trim() }.filter { it.isNotBlank() }
-                        val fp    = state.uploadFreePages.toIntOrNull() ?: 3
+                        val tags = state.uploadTags
+                            .split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+
+                        val fp = state.uploadFreePages.toIntOrNull() ?: 3
                         val price = state.uploadPrice.toIntOrNull() ?: 0
+
                         viewModel.uploadMaterial(
-                            uri, state.uploadTitle, state.uploadDescription,
-                            state.uploadSubject, state.uploadType, state.uploadAuthor,
-                            tags, 0, state.uploadIsPremium, fp, price, state.uploadLanguage
+                            uri,
+                            state.uploadTitle,
+                            state.uploadDescription,
+                            state.uploadSubject,
+                            state.uploadType,
+                            state.uploadAuthor,
+                            tags,
+                            0,
+                            state.uploadIsPremium,
+                            fp,
+                            price,
+                            state.uploadLanguage
                         )
                     }
                 }
@@ -982,14 +998,25 @@ private fun PremiumCard(
                         color = BpscColors.TextSecondary
                     )
                 }
-                Switch(
-                    checked         = state.uploadIsPremium,
-                    onCheckedChange = { onFormChange(null, null, null, null, null, null, it, null, null, null) },
-                    enabled         = !isUploading,
-                    colors          = SwitchDefaults.colors(
-                        checkedThumbColor = BpscPalette.Gold,
-                        checkedTrackColor = BpscPalette.Gold.copy(alpha = 0.3f)
-                    )
+
+                BpscToggle(
+                    checked = state.uploadIsPremium,
+                    onCheckedChange = {
+                        onFormChange(
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            it,
+                            null,
+                            null,
+                            null
+                        )
+                    },
+                    activeColor = BpscPalette.Gold,
+                    enabled = !isUploading
                 )
             }
 
@@ -1055,11 +1082,22 @@ private fun UploadBottomBar(
     title:          String,
     subject:        String,
     isUploading:    Boolean,
+    uploadIsPremium: Boolean,
+    uploadPrice: String,
     onContinue:     () -> Unit,
     onSubmit:       () -> Unit
 ) {
     val canContinue = policyAccepted
-    val canSubmit   = fileUri != null && title.isNotBlank() && subject.isNotBlank() && !isUploading
+
+    val premiumPriceValid =
+        !uploadIsPremium || (uploadPrice.toIntOrNull() ?: 0) > 0
+
+    val canSubmit =
+        fileUri != null &&
+                title.isNotBlank() &&
+                subject.isNotBlank() &&
+                premiumPriceValid &&
+                !isUploading
 
     Surface(
         tonalElevation  = 8.dp,

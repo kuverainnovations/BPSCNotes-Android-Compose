@@ -129,7 +129,7 @@ sealed class Screen(val route: String) {
     object PdfViewer : Screen("pdf_viewer/{fileUrl}/{title}/{freePages}/{isPurchased}/{materialId}/{price}") {
         fun createRoute(fileUrl: String, title: String, freePages: Int, isPurchased: Boolean,
                         materialId: String = "", price: Double = 0.0) =
-            "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased/${materialId.encodeUrl()}/$price"
+            "pdf_viewer/${fileUrl.encodeUrl()}/${title.encodeUrl()}/$freePages/$isPurchased/${materialId.ifEmpty { "-" }.encodeUrl()}/$price"
     }
 
     object VideoPlayer : Screen("video_player/{videoUrl}/{title}") {
