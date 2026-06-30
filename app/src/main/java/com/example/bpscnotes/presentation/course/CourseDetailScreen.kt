@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -345,12 +346,17 @@ fun CourseDetailScreen(
 
             // HeroHeader is pinned — only the content below it scrolls
             Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
-                // Content column with top padding = locked expanded height (never changes)
                 LazyColumn(
                     modifier       = Modifier.fillMaxSize().background(cs.background),
-                    contentPadding = PaddingValues(top = expandedHeightDp, bottom = 110.dp),
+                    contentPadding = PaddingValues(bottom = 110.dp),
                     state          = listState
                 ) {
+                    // Spacer item[0] — same height as the expanded header.
+                    // firstVisibleItemScrollOffset on THIS item = true scroll from the very top
+                    // with no 1-frame lag (unlike layoutInfo which is updated in the layout phase).
+                    item {
+                        Spacer(Modifier.fillMaxWidth().height(expandedHeightDp))
+                    }
 
                     if (state.error != null) {
                         item {
@@ -425,24 +431,18 @@ fun CourseDetailScreen(
                 }
 
                 // ── Pinned collapsing HeroHeader ──────────────
-                // layout{} measures children at full natural height (no squishing),
-                // then reports only currentHeaderHeightDp to the parent so clip()
-                // cuts off the bottom visually — icons stay perfectly circular.
+                // graphicsLayer clip runs in the DRAW phase on the GPU —
+                // no layout invalidation on every frame → zero jank.
                 Box(
                     Modifier
-                        .layout { measurable, constraints ->
-                            val placeable = measurable.measure(
-                                Constraints(
-                                    minWidth = constraints.minWidth,
-                                    maxWidth = constraints.maxWidth
-                                )
-                            )
-                            val clippedH = currentHeaderHeightDp.roundToPx()
-                            layout(placeable.width, clippedH) {
-                                placeable.placeRelative(0, 0)
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            val clipH = currentHeaderHeightDp.toPx()
+                            clip = true
+                            shape = GenericShape { size, _ ->
+                                addRect(Rect(0f, 0f, size.width, clipH))
                             }
                         }
-                        .clip(RectangleShape)
                 ) {
                     Box(Modifier.onGloballyPositioned { coords ->
                         val measuredDp = with(density) { coords.size.height.toDp() }

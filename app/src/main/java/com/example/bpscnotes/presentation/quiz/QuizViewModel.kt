@@ -38,12 +38,15 @@ data class QuizSessionQuestion(
     val questionImageUrl: String? = null,
     val optionType: String = "text",
     val optionImages: List<String?> = emptyList(),
+    val questionSubtype: String = "standard",
+    val matchData: com.example.bpscnotes.data.remote.api.MatchData? = null,
 ) {
     val correctIndex: Int get() = when (correctOptionLetter?.lowercase()) {
         "a" -> 0; "b" -> 1; "c" -> 2; "d" -> 3; else -> -1
     }
     val isImageQuestion: Boolean get() = questionType == "image" && !questionImageUrl.isNullOrBlank()
     val isImageOptions:  Boolean get() = optionType == "image"
+    val isMatchQuestion: Boolean get() = questionSubtype == "match" && matchData != null
 }
 
 data class QuizSession(
@@ -312,7 +315,9 @@ class QuizViewModel @Inject constructor(
                         questionType     = q.questionType,
                         questionImageUrl = q.questionImageUrl,
                         optionType       = q.optionType,
-                        optionImages     = q.optionImages
+                        optionImages     = q.optionImages,
+                        questionSubtype  = q.questionSubtype,
+                        matchData        = q.matchData,
                     )
                 }
                 if (questions.isEmpty()) throw Exception("This quiz has no questions yet. Ask admin to add questions.")

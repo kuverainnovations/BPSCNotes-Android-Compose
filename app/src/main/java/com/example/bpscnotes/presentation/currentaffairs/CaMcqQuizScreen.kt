@@ -539,6 +539,16 @@ private fun QuizScreen(
                     html     = q.question,
                     modifier = Modifier.fillMaxWidth().padding(18.dp)
                 )
+                if (q.isMatchQuestion && q.matchData != null) {
+                    com.example.bpscnotes.presentation.quiz.MatchTableWidget(
+                        matchData = q.matchData!!,
+                        modifier  = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+                    )
+                }
             }
 
             // Options — correct/wrong only revealed after server answer returns.

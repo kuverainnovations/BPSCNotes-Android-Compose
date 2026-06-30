@@ -490,6 +490,15 @@ internal fun QuizSessionScreen(
                 Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(3.dp)) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(current.question, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
+                        if (current.isMatchQuestion && current.matchData != null) {
+                            Spacer(Modifier.height(10.dp))
+                            MatchTableWidget(
+                                matchData = current.matchData!!,
+                                modifier  = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, cs.outlineVariant, RoundedCornerShape(10.dp))
+                            )
+                        }
                     }
                 }
 
@@ -772,6 +781,15 @@ internal fun QuizAnswerReviewScreen(
                         }
 
                         Text(detail.question.question, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
+                        if (detail.question.isMatchQuestion && detail.question.matchData != null) {
+                            Spacer(Modifier.height(8.dp))
+                            MatchTableWidget(
+                                matchData = detail.question.matchData!!,
+                                modifier  = Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, cs.outlineVariant, RoundedCornerShape(10.dp))
+                            )
+                        }
 
                         detail.question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed
@@ -822,4 +840,76 @@ internal fun SubjectChip(subject: String) {
     val (fg, bg) = colors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
     Text(subject, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 9.sp,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 7.dp, vertical = 2.dp))
+}
+
+@Composable
+fun MatchTableWidget(
+    matchData: com.example.bpscnotes.data.remote.api.MatchData,
+    modifier: Modifier = Modifier
+) {
+    val list1 = matchData.list1
+    val list2 = matchData.list2
+    val rows = maxOf(list1.size, list2.size)
+    val cs = MaterialTheme.colorScheme
+
+    Column(modifier = modifier) {
+        // Header row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1565C0), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text(
+                "List-I", modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+            )
+            Box(Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.3f)))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "List-II", modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+            )
+        }
+        // Data rows
+        repeat(rows) { i ->
+            val item1 = list1.getOrNull(i)
+            val item2 = list2.getOrNull(i)
+            val isLast = i == rows - 1
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (i % 2 == 0) cs.surface else cs.surfaceVariant.copy(alpha = 0.4f),
+                        if (isLast) RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp) else RoundedCornerShape(0.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (item1 != null) {
+                    Text(
+                        text = "${item1.label}.  ${item1.text}",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurface
+                    )
+                } else Spacer(Modifier.weight(1f))
+
+                Box(Modifier.width(1.dp).heightIn(min = 20.dp).background(cs.outlineVariant))
+                Spacer(Modifier.width(12.dp))
+
+                if (item2 != null) {
+                    Text(
+                        text = "${item2.label}.  ${item2.text}",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurface
+                    )
+                } else Spacer(Modifier.weight(1f))
+            }
+            if (!isLast) HorizontalDivider(color = cs.outlineVariant.copy(alpha = 0.5f))
+        }
+    }
 }

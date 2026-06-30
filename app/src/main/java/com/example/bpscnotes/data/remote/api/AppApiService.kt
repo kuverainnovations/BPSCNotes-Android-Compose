@@ -226,6 +226,12 @@ enum class QuestionType { text, image }
 // mixed = options have text + optional image below
 enum class OptionType { text, image, mixed }
 
+data class MatchItem(val label: String = "", val text: String = "")
+data class MatchData(
+    @SerializedName("list1") val list1: List<MatchItem> = emptyList(),
+    @SerializedName("list2") val list2: List<MatchItem> = emptyList()
+)
+
 data class QuizQuestionDto(
     val id: String = "",
     @SerializedName("question_text")      val questionText: String = "",
@@ -247,8 +253,11 @@ data class QuizQuestionDto(
     @SerializedName("option_b_image")     val optionBImage: String? = null,
     @SerializedName("option_c_image")     val optionCImage: String? = null,
     @SerializedName("option_d_image")     val optionDImage: String? = null,
+    @SerializedName("question_subtype")   val questionSubtype: String = "standard",
+    @SerializedName("match_data")         val matchData: MatchData? = null,
 ) {
     val isImageQuestion: Boolean get() = questionType == "image" && !questionImageUrl.isNullOrBlank()
+    val isMatchQuestion: Boolean get() = questionSubtype == "match" && matchData != null
     val isImageOptions:  Boolean get() = optionType == "image"
     val optionImages:    List<String?> get() = listOf(optionAImage, optionBImage, optionCImage, optionDImage)
     val optionTexts:     List<String>  get() = listOf(optionA, optionB, optionC, optionD)
@@ -691,8 +700,12 @@ data class CaMcqDto(
     val correct: String = "a",
     val hint: String? = null,
     val explanation: String? = null,
-    val difficulty: String = "medium"
-)
+    val difficulty: String = "medium",
+    @com.google.gson.annotations.SerializedName("question_subtype") val questionSubtype: String = "standard",
+    @com.google.gson.annotations.SerializedName("match_data") val matchData: MatchData? = null,
+) {
+    val isMatchQuestion: Boolean get() = questionSubtype == "match" && matchData != null
+}
 
 data class CaMcqsResponseData(
     val mcqs: List<CaMcqDto> = emptyList()
