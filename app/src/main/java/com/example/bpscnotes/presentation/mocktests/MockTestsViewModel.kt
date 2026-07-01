@@ -83,13 +83,25 @@ data class QuizLeaderboardData(
 @HiltViewModel
 class MockTestsViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
-    private val statsApi: UserStatsApiService
+    private val statsApi: UserStatsApiService,
+    private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
+    private val bus: com.example.bpscnotes.core.events.RefreshEventBus,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MockTestsUiState())
     val uiState: StateFlow<MockTestsUiState> = _uiState.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+        // Daily/Topic quiz screen (separate ViewModel instance) broadcasts this
+        // on submit — pick it up so a mock test's own attempt/score status
+        // (shown via the same /quizzes list) doesn't go stale here either.
+        viewModelScope.launch {
+            bus.events.collect { event ->
+                if (event is com.example.bpscnotes.core.events.RefreshEvent.QuizCompleted) load()
+            }
+        }
+    }
 
     fun load() {
         viewModelScope.launch {
@@ -192,7 +204,25 @@ class MockTestsViewModel @Inject constructor(
                         backgroundSecs = backgroundSecs,
                     )
                 ).data
-                _uiState.update { it.copy(isSubmitting = false, submitResult = result) }
+                _uiState.update { state ->
+                    state.copy(
+                        isSubmitting = false,
+                        submitResult = result,
+                        // Same fix as QuizViewModel's Daily/Topic quiz submit: without this,
+                        // the mock test list kept showing "not attempted" / the old score
+                        // until something else happened to reload it — this ViewModel never
+                        // evicted the /quizzes cache or updated its own list after a submit.
+                        // maxOf guards against a retry flashing a lower score than a
+                        // previous best before the reload below corrects it.
+                        allTests = result?.let { r ->
+                            state.allTests.map { q ->
+                                if (q.id == quizId) q.copy(isAttempted = true, myLastScore = maxOf(q.myLastScore ?: 0, r.score)) else q
+                            }
+                        } ?: state.allTests
+                    )
+                }
+                cacheInvalidator.evict(com.example.bpscnotes.core.network.CacheInvalidator.QUIZ_ENDPOINTS)
+                bus.emit(com.example.bpscnotes.core.events.RefreshEvent.QuizCompleted)
             } catch (e: Exception) {
                 Log.e("MockTestsVM", "submitTest: ${e.message}", e)
                 _uiState.update {

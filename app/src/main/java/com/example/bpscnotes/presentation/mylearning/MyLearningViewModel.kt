@@ -67,6 +67,17 @@ class MyLearningViewModel @Inject constructor(
                     is RefreshEvent.LessonCompleted,
                     is RefreshEvent.CourseProgressChanged,
                     is RefreshEvent.CourseEnrolled -> load()
+                    // Course Details screen holds its own CourseDetailViewModel —
+                    // it can't reach this list's state directly. Patch the id set
+                    // in place instead of a full load() (same pattern as
+                    // CaBookmarkChanged for Current Affairs).
+                    is RefreshEvent.CourseSaveChanged -> {
+                        _uiState.update { state ->
+                            val newIds = if (event.isSaved) state.savedCourseIds + event.courseId
+                                         else               state.savedCourseIds - event.courseId
+                            state.copy(savedCourseIds = newIds)
+                        }
+                    }
                     else -> {}
                 }
             }
@@ -255,6 +266,13 @@ class MyLearningViewModel @Inject constructor(
                     coursesApi.saveCourse(courseId)
                     _uiState.update { it.copy(saveToast = "Course saved! View in My Courses → Saved tab") }
                 }
+                // /courses/saved is served with Cache-Control: public, max-age=300 —
+                // without evicting it here first, this re-fetch reliably returns the
+                // OkHttp disk-cached response from BEFORE the save/unsave above, which
+                // is exactly what made the toggle look like it "auto-deselected"
+                // immediately after tapping Save.
+                cacheInvalidator.evict()
+
                 // Re-fetch saved list silently so savedCourses list (full course
                 // objects, for the Saved tab) is accurate. A failure here must NOT
                 // touch savedCourseIds — it has nothing to do with whether the

@@ -472,15 +472,18 @@ class QuizViewModel @Inject constructor(
                             subjectBreakdown        = data.subjectBreakdown,
                         ),
                         isSubmitting    = false,
-                        // Update isAttempted AND myLastScore locally for immediate UI update
+                        // Update isAttempted AND myLastScore locally for immediate UI update.
+                        // Backend now surfaces best-ever score (a retry can legitimately score
+                        // lower), so take the max here too — otherwise a bad retry would flash
+                        // a lower number in the list until the reload below corrects it back.
                         dailyQuizzes    = state.dailyQuizzes.map { q ->
-                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = maxOf(q.myLastScore ?: 0, data.score)) else q
                         },
                         topicQuizzes    = state.topicQuizzes.map { q ->
-                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = maxOf(q.myLastScore ?: 0, data.score)) else q
                         },
                         mockTestQuizzes = state.mockTestQuizzes.map { q ->
-                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = data.score) else q
+                            if (q.id == session.id) q.copy(isAttempted = true, myLastScore = maxOf(q.myLastScore ?: 0, data.score)) else q
                         }
                     )
                 }

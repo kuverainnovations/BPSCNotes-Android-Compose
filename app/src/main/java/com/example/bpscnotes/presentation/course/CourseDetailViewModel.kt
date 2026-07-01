@@ -275,6 +275,16 @@ class CourseDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (isSaved) api.unsaveCourse(courseId) else api.saveCourse(courseId)
+                // /courses/saved is cached for 5 min (Cache-Control: public,
+                // max-age=300) — without evicting it, navigating back to the
+                // course list would show this course's old saved-state until
+                // that cache expires.
+                cacheInvalidator.evict()
+                // MyLearningViewModel (the list) is a separate ViewModel instance
+                // scoped to a different nav destination — it never sees this
+                // toggle unless told. Without this, "back to list" kept showing
+                // the pre-toggle saved state until the list's own load() ran.
+                bus.emit(RefreshEvent.CourseSaveChanged(courseId, !isSaved))
             } catch (e: Exception) {
                 Log.w("CourseDetailVM", "toggleSave: ${e.message}")
                 _uiState.update { it.copy(isSaved = isSaved) } // revert on failure

@@ -22,6 +22,12 @@ sealed class RefreshEvent {
     // hiltViewModel()) — this keeps their local bookmark state in sync
     // without forcing a full reload, same pattern as CoinsChanged.
     data class CaBookmarkChanged(val affairId: String, val isBookmarked: Boolean) : RefreshEvent()
+    // Course Details screen and the course list screen hold separate
+    // CourseDetailViewModel/MyLearningViewModel instances — this keeps the
+    // list's savedCourseIds in sync with a save/unsave done from the
+    // details screen without forcing a full reload, same pattern as
+    // CaBookmarkChanged above.
+    data class CourseSaveChanged(val courseId: String, val isSaved: Boolean) : RefreshEvent()
 }
 
 @Singleton
