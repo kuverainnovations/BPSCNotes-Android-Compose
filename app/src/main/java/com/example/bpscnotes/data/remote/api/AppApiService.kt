@@ -84,7 +84,6 @@ data class CourseDto(
     @SerializedName("has_reviewed")
     val hasReviewed: Boolean = false,
     val reviews: List<CourseReview>? = null,
-    @SerializedName("max_coins_redeemable") val maxCoinsRedeemable: Int? = null,
 )
 
 data class CoursesResponseData(val courses: List<CourseDto> = emptyList())
@@ -1261,7 +1260,8 @@ data class CoinRuleConfigDto(
 
 data class CoinsEconomyDto(
     val coinToInrRate: Double = 1.0,
-    val maxCoinsPerPurchase: Int = 50,
+    val maxCoinDiscountPctCourse: Int = 10,
+    val maxCoinDiscountPctMaterial: Int = 10,
     val maxCoinDiscountPctSubscription: Int = 30,
 )
 

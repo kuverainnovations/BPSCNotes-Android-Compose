@@ -260,6 +260,7 @@ class CourseDetailViewModel @Inject constructor(
     fun clearPurchaseRequired() {
         _uiState.update { it.copy(
             purchaseRequired        = false,
+            purchasePrice           = 0.0,
             purchaseSessionId       = null,
             purchaseProviderOrderId = null,
         )}

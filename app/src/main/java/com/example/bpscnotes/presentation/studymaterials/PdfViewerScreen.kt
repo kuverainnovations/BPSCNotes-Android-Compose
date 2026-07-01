@@ -145,7 +145,7 @@ fun PdfViewerScreen(
             coinsToApply         = dialogCoins,
             onCoinsToApplyChange = { dialogCoins = it },
             userCoins            = purchaseState.userCoins,
-            maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+            maxCoinDiscountPct   = viewModel.coinsConfig.economy.maxCoinDiscountPctMaterial,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
             onConfirm    = { viewModel.purchaseMaterial(effectiveMaterialId, price, title, dialogCoins) },
             onDismiss    = { showBuyDialog = false; dialogCoins = 0; viewModel.clearPurchaseMessages() }

@@ -138,7 +138,6 @@ data class StoreItem(
     val offerEndsHours: Int = 0, val tags: List<String> = emptyList(),
     val trialLessonTitle: String = "", val description: String = "",
     val reviews: List<CourseReview> = emptyList(), val syllabus: List<String> = emptyList(),
-    val maxCoinsRedeemable: Int? = null,
 )
 
 data class CourseReview(val name: String, val rating: Float, val comment: String, val date: String)
@@ -177,7 +176,6 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     bpscRelevance     = bpsc_relevance,
     syllabusCoverage  = syllabus_coverage,
     isPaid            = isPaid,
-    maxCoinsRedeemable = maxCoinsRedeemable,
     isFeatured        = is_featured,
     isLimitedOffer    = is_limited_offer,
     // API can send explicit null for list fields — orEmpty() guards every one
@@ -1609,11 +1607,14 @@ private fun CourseDetailSheet(
 
     // Coin economy for slider
     val coinToInrRate  = viewModel.coinsConfig.economy.coinToInrRate
-    val globalMaxCoins = viewModel.coinsConfig.economy.maxCoinsPerPurchase
-    val maxCoinsPer    = globalMaxCoins
-    val price         = course.price
-    val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
-    val maxApplicable = minOf(maxCoinsPer, userCoins, priceInCoins).coerceAtLeast(0)
+    val maxDiscountPct = viewModel.coinsConfig.economy.maxCoinDiscountPctCourse
+    val price          = course.price
+    val maxDiscountInr = price * maxDiscountPct / 100.0
+   // val maxApplicable  = if (coinToInrRate > 0) minOf(kotlin.math.floor(maxDiscountInr / coinToInrRate).toInt(), userCoins).coerceAtLeast(0) else 0
+    val maxApplicable = minOf(
+        (price * maxDiscountPct / 100.0).toInt(),
+        userCoins
+    ).coerceAtLeast(0)
     val coinDiscount: Double = minOf(price, dialogCoins * coinToInrRate)
     val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
 

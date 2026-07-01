@@ -78,13 +78,17 @@ fun CourseDetailScreen(
     // ── Course purchase dialog (same design as material purchase) ──
     if (showBuyDialog) {
         val course = state.course
-        val price  = state.purchasePrice.takeIf { it > 0 } ?: course?.price ?: 0.0
+        val price  = course?.price ?: 0.0
         val userCoins = state.userCoins
         val coinToInrRate  = coinsConfig.economy.coinToInrRate
-        val globalMaxCoins = coinsConfig.economy.maxCoinsPerPurchase
-        val perCourseMax   = course?.maxCoinsRedeemable?.takeIf { it > 0 } ?: globalMaxCoins
-        val priceInCoins   = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
-        val maxApplicable  = minOf(perCourseMax, userCoins, priceInCoins).coerceAtLeast(0)
+        val maxPct         = coinsConfig.economy.maxCoinDiscountPctCourse
+        val maxDiscountInr = price * maxPct / 100.0
+       // val maxApplicable  = if (coinToInrRate > 0) minOf(kotlin.math.floor(maxDiscountInr / coinToInrRate).toInt(), userCoins).coerceAtLeast(0) else 0
+        val maxApplicable = minOf(
+            (price * maxPct / 100.0).toInt(),
+            userCoins
+        ).coerceAtLeast(0)
+
         val coinDiscount: Double = minOf(price, dialogCoins * coinToInrRate)
         val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
 

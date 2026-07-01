@@ -215,7 +215,7 @@ fun StudyMaterialsScreen(
             coinsToApply         = dialogCoins,
             onCoinsToApplyChange = { dialogCoins = it },
             userCoins            = state.userCoins,
-            maxCoinsPerPurchase  = viewModel.coinsConfig.economy.maxCoinsPerPurchase,
+            maxCoinDiscountPct   = viewModel.coinsConfig.economy.maxCoinDiscountPctMaterial,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
             onConfirm    = { viewModel.purchaseMaterial(item.id, item.price, item.title, dialogCoins) },
             onDismiss    = { showPurchaseDialog = null; dialogCoins = 0; viewModel.clearPurchaseMessages() }
@@ -2910,7 +2910,7 @@ fun PurchaseConfirmDialog(
     coinsToApply: Int = 0,
     onCoinsToApplyChange: (Int) -> Unit = {},
     userCoins:    Int = 0,
-    maxCoinsPerPurchase: Int = 50,
+    maxCoinDiscountPct: Int = 10,
     coinToInrRate: Double = 1.0,
     onConfirm:    () -> Unit,
     onDismiss:    () -> Unit
@@ -2923,10 +2923,16 @@ fun PurchaseConfirmDialog(
     // are preserved and displayed correctly instead of being truncated to Int.
     val coinDiscount: Double = minOf(price, coinsToApply * coinToInrRate)
     val amountDue:    Double = (price - coinDiscount).coerceAtLeast(0.0)
-    // priceInCoins: ceiling so user never needs more coins than available price
-    val priceInCoins  = if (coinToInrRate > 0) kotlin.math.ceil(price / coinToInrRate).toInt() else 0
-    val maxApplicable = remember(price, userCoins, maxCoinsPerPurchase, coinToInrRate) {
-        minOf(maxCoinsPerPurchase, userCoins, priceInCoins)
+    // maxApplicable: % of purchase price convertible to coins, capped by user balance
+    /*val maxApplicable = remember(price, userCoins, maxCoinDiscountPct, coinToInrRate) {
+        val maxDiscountInr = price * maxCoinDiscountPct / 100.0
+        if (coinToInrRate > 0) minOf(kotlin.math.floor(maxDiscountInr / coinToInrRate).toInt(), userCoins) else 0
+    }*/
+    val maxApplicable = remember(price, userCoins, maxCoinDiscountPct) {
+        minOf(
+            (price * maxCoinDiscountPct / 100.0).toInt(),
+            userCoins
+        )
     }
 
     AlertDialog(
