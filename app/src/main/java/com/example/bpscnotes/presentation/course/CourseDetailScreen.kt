@@ -457,7 +457,8 @@ fun CourseDetailScreen(
                     }) {
                         HeroHeader(
                             course, accent, totalLessons, completedLessons, animProg,
-                            isEnrolled, { collapseProgress }
+                            isEnrolled, { collapseProgress },
+                            state.isSaved, { viewModel.toggleSave() }
                         ) { nav.popBackStackSafe() }
                     }
                 }
@@ -1006,6 +1007,8 @@ private fun HeroHeader(
     course: CourseDto, accent: Color, totalLessons: Int,
     completedLessons: Int, animProg: Float, isEnrolled: Boolean,
     collapseProgress: () -> Float,  // lambda so HeroHeader never recomposes on scroll
+    isSaved: Boolean,
+    onToggleSave: () -> Unit,
     onBack: () -> Unit
 ) {
     val str = LocalStrings.current
@@ -1047,6 +1050,18 @@ private fun HeroHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Box(
+                    Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f))
+                        .clickable(onClick = onToggleSave), Alignment.Center
+                ) {
+                    Icon(
+                        if (isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                        null,
+                        tint = if (isSaved) BpscColors.CoinGold else Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
                 Box(
                     Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(0.2f))
                         .clickable {

@@ -53,6 +53,8 @@ data class CourseDetailUiState(
     val certificateId: String? = null,
     val isDownloadingCert: Boolean = false,
     val certError: String? = null,
+    // Save / bookmark
+    val isSaved: Boolean = false,
 )
 
 @HiltViewModel
@@ -133,6 +135,15 @@ class CourseDetailViewModel @Inject constructor(
                     }
                 }
 
+                val savedVal = kotlinx.coroutines.supervisorScope {
+                    try {
+                        api.getSavedCourses().data?.courses?.any { it.id == courseId } ?: false
+                    } catch (e: Exception) {
+                        Log.w("CourseDetailVM", "getSavedCourses: ${e.message}")
+                        false
+                    }
+                }
+
                 _uiState.update {
                     it.copy(
                         course            = detail.course,
@@ -142,7 +153,8 @@ class CourseDetailViewModel @Inject constructor(
                         certificateUrl    = certUrl?.certificateUrl,
                         certificateId     = certUrl?.id,
                         // Restore submitted state if user already reviewed this course
-                        isRatingSubmitted = reviewedCourseIds.contains(courseId)
+                        isRatingSubmitted = reviewedCourseIds.contains(courseId),
+                        isSaved           = savedVal
                     )
                 }
             } catch (e: Exception) {
@@ -247,6 +259,25 @@ class CourseDetailViewModel @Inject constructor(
                         ratingError        = "Could not submit review. Please try again."
                     )
                 }
+            }
+        }
+    }
+
+    // ── Save / Unsave (Wishlist) ────────────────────────────────
+
+    fun toggleSave() {
+        val courseId = _uiState.value.course?.id ?: return
+        val isSaved  = _uiState.value.isSaved
+
+        // Optimistic update
+        _uiState.update { it.copy(isSaved = !isSaved) }
+
+        viewModelScope.launch {
+            try {
+                if (isSaved) api.unsaveCourse(courseId) else api.saveCourse(courseId)
+            } catch (e: Exception) {
+                Log.w("CourseDetailVM", "toggleSave: ${e.message}")
+                _uiState.update { it.copy(isSaved = isSaved) } // revert on failure
             }
         }
     }

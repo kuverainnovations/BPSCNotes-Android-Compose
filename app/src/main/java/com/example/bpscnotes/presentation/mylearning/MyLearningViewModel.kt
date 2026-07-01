@@ -255,9 +255,16 @@ class MyLearningViewModel @Inject constructor(
                     coursesApi.saveCourse(courseId)
                     _uiState.update { it.copy(saveToast = "Course saved! View in My Courses → Saved tab") }
                 }
-                // Re-fetch saved list silently so savedCourses list is accurate
-                val updated = try { coursesApi.getSavedCourses().data?.courses ?: emptyList() } catch (_: Exception) { emptyList() }
-                _uiState.update { it.copy(savedCourses = updated, savedCourseIds = updated.map { c -> c.id }.toSet()) }
+                // Re-fetch saved list silently so savedCourses list (full course
+                // objects, for the Saved tab) is accurate. A failure here must NOT
+                // touch savedCourseIds — it has nothing to do with whether the
+                // save/unsave above succeeded, and previously overwrote it to an
+                // empty set on any transient error, making the toggle look like it
+                // "auto-deselected" even though the save had gone through.
+                try {
+                    val updated = coursesApi.getSavedCourses().data?.courses ?: emptyList()
+                    _uiState.update { it.copy(savedCourses = updated, savedCourseIds = updated.map { c -> c.id }.toSet()) }
+                } catch (_: Exception) { /* keep optimistic state; next load() will resync */ }
             } catch (e: Exception) {
                 // Revert optimistic update on failure
                 _uiState.update { state ->

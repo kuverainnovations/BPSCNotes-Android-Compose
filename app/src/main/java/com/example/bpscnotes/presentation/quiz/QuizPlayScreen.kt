@@ -846,12 +846,15 @@ private fun QuizResultScreen(
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Contextual coin message
+                    // Contextual coin message — canEarnCoins reflects whether coins had
+                    // NOT yet been paid out for this quiz going into this attempt (not
+                    // whether this was attempt #1), so a 100% on a later retry still
+                    // shows the congrats state instead of "already earned".
                     val coinMsg: String? = when {
-                        result.isFirstAttempt && accuracy.toInt() == 100 && result.coinsEarned > 0 -> null
-                        result.isFirstAttempt && accuracy.toInt() < 100 ->
+                        result.canEarnCoins && accuracy.toInt() == 100 && result.coinsEarned > 0 -> null
+                        result.canEarnCoins && accuracy.toInt() < 100 ->
                             "Score 100% to earn coins! Better luck next time 💪"
-                        !result.isFirstAttempt && accuracy.toInt() == 100 ->
+                        !result.canEarnCoins && accuracy.toInt() == 100 ->
                             "You already earned coins for this quiz 🪙"
                         else -> null
                     }

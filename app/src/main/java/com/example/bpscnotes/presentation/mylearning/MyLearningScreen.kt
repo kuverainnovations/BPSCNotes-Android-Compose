@@ -11,6 +11,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -490,6 +492,7 @@ private fun StoreTab(
     var selectedSubject by remember { mutableStateOf(str.filterAll) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf<StoreItem?>(null) }
+    var showSavedOnly by remember { mutableStateOf(false) }
     // FIX 6: Use savedCourseIds from ViewModel (API-backed) instead of in-memory wishlist
     val focusManager = LocalFocusManager.current
 
@@ -498,7 +501,8 @@ private fun StoreTab(
         val matchesSearch = searchQuery.isEmpty() ||
                 course.title.contains(searchQuery, ignoreCase = true) ||
                 course.tags.any { it.contains(searchQuery, ignoreCase = true) }
-        matchesSub && matchesSearch
+        val matchesSaved = !showSavedOnly || savedCourseIds.contains(course.id)
+        matchesSub && matchesSearch && matchesSaved
     }
     val featured = filtered.filter { it.isFeatured }
     val free = filtered.filter { !it.isPaid }
@@ -536,7 +540,7 @@ private fun StoreTab(
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 decorationBox = { inner ->
                     if (searchQuery.isEmpty()) Text(
-                        str.materialsSearchHint,
+                        str.marketSearchHint,
                         style = MaterialTheme.typography.bodyLarge,
                         color = BpscColors.TextHint
                     )
@@ -552,11 +556,43 @@ private fun StoreTab(
                     .clickable { searchQuery = "" })
         }
 
-        // Subject filter — dynamic from API
+        // Subject filter — dynamic from API, pinned "Saved" toggle first
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (showSavedOnly) BpscColors.CoinGold else Color.White)
+                        .border(
+                            1.dp,
+                            if (showSavedOnly) BpscColors.CoinGold else cs.outline,
+                            RoundedCornerShape(20.dp)
+                        )
+                        .clickable { showSavedOnly = !showSavedOnly }
+                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            if (showSavedOnly) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            null,
+                            tint = if (showSavedOnly) Color.White else BpscColors.TextHint,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            "Saved",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (showSavedOnly) Color.White else BpscColors.TextSecondary,
+                            fontWeight = if (showSavedOnly) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
             items(subjects) { sub ->
                 val sel = selectedSubject == sub
                 Box(
@@ -606,14 +642,16 @@ private fun StoreTab(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            str.courseNoCoursesYet,
+                            if (showSavedOnly) "No saved courses yet" else str.courseNoCoursesYet,
                             style = MaterialTheme.typography.titleLarge,
                             color = cs.onSurface,
                             fontWeight = FontWeight.Bold,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            if (searchQuery.isNotEmpty() || selectedSubject != str.filterAll)
+                            if (showSavedOnly)
+                                "Tap the bookmark icon on a course to save it for later"
+                            else if (searchQuery.isNotEmpty() || selectedSubject != str.filterAll)
                                 "Try a different subject or search term"
                             else
                                 "Courses will appear here once added by admin",
@@ -1354,6 +1392,7 @@ private fun UploadNotesSheet(onDismiss: () -> Unit) {
 // ─────────────────────────────────────────────────────────────
 // STORE COURSE CARD
 // ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StoreCourseCard(
     course: StoreItem,
@@ -1408,9 +1447,9 @@ private fun StoreCourseCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    Row(
+                    FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (!course.isPaid) Text(
                             "FREE",
@@ -1495,7 +1534,7 @@ private fun StoreCourseCard(
                         )
                     }
                 }
-                /*Box(
+                Box(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -1508,7 +1547,7 @@ private fun StoreCourseCard(
                         tint = if (isWishlisted) BpscColors.CoinGold else BpscColors.TextHint,
                         modifier = Modifier.size(15.dp)
                     )
-                }*/
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1853,11 +1892,13 @@ private fun CourseDetailSheet(
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 26.sp
                     )
-                    Text(
-                        "By ${course.instructor}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(0.8f)
-                    )
+                    if (course.instructor.isNotBlank()) {
+                        Text(
+                            "By ${course.instructor}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(0.8f)
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         SheetStatWhite("⭐", "${course.rating} (${course.reviewCount})")
                         SheetStatWhite(

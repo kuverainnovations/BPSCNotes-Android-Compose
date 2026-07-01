@@ -1406,7 +1406,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         pdfLoadingPdf="Loading PDF…", pdfCantLoad="Couldn't load PDF",
         pdfGoBack="Go Back", pdfNoPages="No pages found",
         marketTitle="Marketplace", marketSubtitle="Buy & sell study notes",
-        marketSell="Sell Notes", marketSearchHint="Search notes, subjects…",
+        marketSell="Sell Notes", marketSearchHint="Search courses…",
         marketNoNotes="No notes yet",
         placeholdersBilledMonthly="Billed monthly",
         placeholdersBilledQuarterly="Billed every 3 months",

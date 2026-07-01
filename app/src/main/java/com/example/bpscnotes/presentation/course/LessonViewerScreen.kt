@@ -108,11 +108,21 @@ fun LessonViewerScreen(
                             reachedEnd = true  // video: show button once loaded
                             VideoPlayer(lesson.video_url ?: lesson.notes_url)
                         }
-                        "pdf", "notes" -> PdfViewer(
-                            notesUrl    = lesson.notes_url,
-                            lessonId    = lesson.id,
-                            onReachEnd  = { reachedEnd = true }
-                        )
+                        "pdf", "notes" -> {
+                            // Admin can upload a video file to a lesson left on the
+                            // default "PDF/Notes" type. Fall back to the video player
+                            // so the upload isn't stranded behind a mismatched type.
+                            if (lesson.notes_url.isNullOrBlank() && !lesson.video_url.isNullOrBlank()) {
+                                reachedEnd = true
+                                VideoPlayer(lesson.video_url)
+                            } else {
+                                PdfViewer(
+                                    notesUrl    = lesson.notes_url,
+                                    lessonId    = lesson.id,
+                                    onReachEnd  = { reachedEnd = true }
+                                )
+                            }
+                        }
                         "live"         -> {
                             reachedEnd = true
                             LiveClassView(lesson)
