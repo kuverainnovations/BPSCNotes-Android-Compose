@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:133585364580:android:d3b9e4b73f05d76c30e171",
+        "mobilesdk_app_id": "1:133585364580:android:17652ac19896295330e171",
         "android_client_info": {
-          "package_name": "com.kuvera.bpscnotes"
+          "package_name": "com.bpscnotes.app"
         }
       },
       "oauth_client": [],
