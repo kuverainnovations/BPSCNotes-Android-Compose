@@ -321,6 +321,27 @@ class StudyMaterialsViewModel @Inject constructor(
     fun setSortBy(sort: String)           { _state.update { it.copy(sortBy          = sort)    }; loadMaterials(reset = true) }
     fun toggleBookmarksOnly()             { _state.update { it.copy(showBookmarksOnly = !it.showBookmarksOnly) }; loadMaterials(reset = true) }
 
+    // FIX: FilterDialog used to call selectType/selectSubject/.../toggleBookmarksOnly
+    // straight from each chip tap, so the list behind the dialog re-filtered on every
+    // tap instead of waiting for "Apply". The dialog now holds its own draft selection
+    // and commits it all here in one shot when "Apply" is pressed.
+    fun applyFilters(
+        type:          MaterialType?,
+        subject:       String,
+        language:      String,
+        sort:          String,
+        bookmarksOnly: Boolean
+    ) {
+        _state.update { it.copy(
+            selectedType      = type,
+            selectedSubject   = subject,
+            selectedLanguage  = language,
+            sortBy            = sort,
+            showBookmarksOnly = bookmarksOnly,
+        )}
+        loadMaterials(reset = true)
+    }
+
     // FIX Issue 6: Reset all active filters in one tap
     fun resetFilters() {
         _state.update { it.copy(

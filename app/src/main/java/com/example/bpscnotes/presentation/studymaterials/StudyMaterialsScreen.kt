@@ -289,11 +289,10 @@ fun StudyMaterialsScreen(
                     stats             = state.stats,
                     bookmarkedCount   = state.bookmarkedIds.size,
                     showBookmarksOnly = state.showBookmarksOnly,
-                    onTypeSelect      = viewModel::selectType,
-                    onSubjectSelect   = viewModel::selectSubject,
-                    onLanguageSelect  = viewModel::selectLanguage,
-                    onSortSelect      = viewModel::setSortBy,
-                    onToggleBookmarks = viewModel::toggleBookmarksOnly,
+                    // FIX: dialog now collects selections locally and commits them all
+                    // at once here when "Apply" is tapped, instead of live-updating the
+                    // list behind the dialog on every chip tap.
+                    onApply           = viewModel::applyFilters,
                     // FIX Issue 6: Reset All clears every active filter in one tap
                     onResetFilters    = viewModel::resetFilters,
                     onDismiss         = { showFilterDialog = false }
@@ -709,16 +708,21 @@ private fun FilterDialog(
     stats:           StatsData?,
     bookmarkedCount: Int,
     showBookmarksOnly: Boolean,
-    onTypeSelect:    (MaterialType?) -> Unit,
-    onSubjectSelect: (String) -> Unit,
-    onLanguageSelect: (String) -> Unit,
-    onSortSelect:    (String) -> Unit,
-    onToggleBookmarks: () -> Unit,
+    onApply:         (MaterialType?, String, String, String, Boolean) -> Unit,
     onResetFilters:  () -> Unit = {},   // FIX Issue 6: clear all filters at once
     onDismiss:       () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
+
+    // FIX: tapping a chip used to call straight into the ViewModel, so the list
+    // behind this dialog re-filtered on every tap instead of on "Apply". These are
+    // draft selections, local to the dialog, only committed via onApply below.
+    var draftType          by remember { mutableStateOf(selectedType) }
+    var draftSubject       by remember { mutableStateOf(selectedSubject) }
+    var draftLanguage      by remember { mutableStateOf(selectedLanguage) }
+    var draftSort          by remember { mutableStateOf(sortBy) }
+    var draftBookmarksOnly by remember { mutableStateOf(showBookmarksOnly) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -744,9 +748,9 @@ private fun FilterDialog(
                     // counts moved out to a compact strip at the top of the list page.
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                            .background(if (showBookmarksOnly) BpscColors.CoinGold.copy(0.12f) else BpscColors.Surface)
-                            .border(1.dp, if (showBookmarksOnly) BpscColors.CoinGold else Color.Transparent, RoundedCornerShape(14.dp))
-                            .clickable(onClick = onToggleBookmarks)
+                            .background(if (draftBookmarksOnly) BpscColors.CoinGold.copy(0.12f) else BpscColors.Surface)
+                            .border(1.dp, if (draftBookmarksOnly) BpscColors.CoinGold else Color.Transparent, RoundedCornerShape(14.dp))
+                            .clickable { draftBookmarksOnly = !draftBookmarksOnly }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -759,7 +763,7 @@ private fun FilterDialog(
                         Text(
                             "$bookmarkedCount",
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (showBookmarksOnly) Color(0xFF856404) else BpscColors.TextHint,
+                            color = if (draftBookmarksOnly) Color(0xFF856404) else BpscColors.TextHint,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -769,10 +773,10 @@ private fun FilterDialog(
                         Text("Type", style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TypeChip(label = str.filterAll, emoji = "📋", selected = selectedType == null) { onTypeSelect(null) }
+                            TypeChip(label = str.filterAll, emoji = "📋", selected = draftType == null) { draftType = null }
                             MaterialType.values().forEach { type ->
-                                TypeChip(label = type.label, emoji = type.emoji, selected = selectedType == type) {
-                                    onTypeSelect(if (selectedType == type) null else type)
+                                TypeChip(label = type.label, emoji = type.emoji, selected = draftType == type) {
+                                    draftType = if (draftType == type) null else type
                                 }
                             }
                         }
@@ -784,7 +788,7 @@ private fun FilterDialog(
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("All", "English", "Hindi", "Hindi + English").forEach { lang ->
-                                val sel = selectedLanguage == lang
+                                val sel = draftLanguage == lang
                                 Text(
                                     lang,
                                     style = MaterialTheme.typography.labelSmall,
@@ -794,7 +798,7 @@ private fun FilterDialog(
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(if (sel) BpscColors.Primary else BpscColors.Surface)
                                         .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                                        .clickable { onLanguageSelect(lang) }
+                                        .clickable { draftLanguage = lang }
                                         .padding(horizontal = 12.dp, vertical = 7.dp)
                                 )
                             }
@@ -807,7 +811,7 @@ private fun FilterDialog(
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             subjects.forEach { subj ->
-                                val sel = selectedSubject == subj
+                                val sel = draftSubject == subj
                                 Text(
                                     subj,
                                     style = MaterialTheme.typography.labelSmall,
@@ -817,7 +821,7 @@ private fun FilterDialog(
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(if (sel) BpscColors.Primary else BpscColors.Surface)
                                         .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                                        .clickable { onSubjectSelect(subj) }
+                                        .clickable { draftSubject = subj }
                                         .padding(horizontal = 12.dp, vertical = 7.dp)
                                 )
                             }
@@ -830,7 +834,7 @@ private fun FilterDialog(
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest).forEach { (key, label) ->
-                                val sel = sortBy == key
+                                val sel = draftSort == key
                                 Text(
                                     label,
                                     style = MaterialTheme.typography.labelSmall,
@@ -839,7 +843,7 @@ private fun FilterDialog(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(if (sel) BpscColors.Primary else BpscColors.Surface)
-                                        .clickable { onSortSelect(key) }
+                                        .clickable { draftSort = key }
                                         .padding(horizontal = 14.dp, vertical = 7.dp)
                                 )
                             }
@@ -849,7 +853,10 @@ private fun FilterDialog(
 
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = onDismiss,
+                    onClick = {
+                        onApply(draftType, draftSubject, draftLanguage, draftSort, draftBookmarksOnly)
+                        onDismiss()
+                    },
                     modifier = Modifier.fillMaxWidth().height(46.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
@@ -1018,7 +1025,13 @@ private fun MaterialsList(
     // so they always show here even if they'd rank outside the first page of the
     // downloads-sorted main list. We also union them into "All Resources" below so
     // a pinned item is findable there too, not just via search.
-    val pinned       = state.pinnedMaterials
+    // FIX: the pinned endpoint has no bookmarkedOnly param, so pinned items used to keep
+    // showing (and get merged back into "All Resources") even with "Saved only" active —
+    // gate them on state.bookmarkedIds here so "Saved only" actually excludes, not just sorts.
+    val pinned       = if (state.showBookmarksOnly)
+        state.pinnedMaterials.filter { state.bookmarkedIds.contains(it.id) }
+    else
+        state.pinnedMaterials
     val pinnedIds    = pinned.map { it.id }.toSet()
     val trending     = state.materials.filter { it.isTrending && it.id !in pinnedIds }
     val newItems     = state.materials.filter { it.isNew && !it.isTrending && it.id !in pinnedIds }
@@ -1044,18 +1057,26 @@ private fun MaterialsList(
             }
             item {
                 val visiblePinned = if (pinnedExpanded) pinned else pinned.take(2)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(end = 4.dp, bottom = 4.dp)
+                // FIX: plain Row + IntrinsicSize.Max (not LazyRow) so every visible card is
+                // measured together and stretched to match the tallest neighbor — LazyRow
+                // measures each item independently, which let cards whose chip row wrapped
+                // to a second line grow taller than cards next to them.
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .height(IntrinsicSize.Max)
+                        .padding(end = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(visiblePinned, key = { "pin_${it.id}" }) { item ->
-                        Box(modifier = Modifier.width(260.dp)) {
+                    visiblePinned.forEach { item ->
+                        Box(modifier = Modifier.width(260.dp).fillMaxHeight()) {
                             LibraryItemCard(
                                 item          = item,
                                 isBookmarked  = state.bookmarkedIds.contains(item.id),
                                 isDownloaded  = state.downloadedIds.contains(item.id),
                                 isDownloading = state.downloadingId == item.id,
                                 purchasedIds  = state.purchasedIds,
+                                modifier      = Modifier.fillMaxHeight(),
                                 onBookmark    = { onBookmark(item.id) },
                                 onDownload    = { onDownload(item) },
                                 onPurchase    = { onPurchase(item) },
@@ -1064,27 +1085,25 @@ private fun MaterialsList(
                         }
                     }
                     if (pinned.size > 2) {
-                        item(key = "pin_toggle") {
-                            Box(
-                                modifier = Modifier
-                                    .width(72.dp)
-                                    .fillMaxHeight()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(BpscColors.PrimaryLight)
-                                    .clickable { pinnedExpanded = !pinnedExpanded },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(
-                                        if (pinnedExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                                        null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        if (pinnedExpanded) "Less" else "+${pinned.size - 2}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold
-                                    )
-                                }
+                        Box(
+                            modifier = Modifier
+                                .width(72.dp)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(BpscColors.PrimaryLight)
+                                .clickable { pinnedExpanded = !pinnedExpanded },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(
+                                    if (pinnedExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                    null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    if (pinnedExpanded) "Less" else "+${pinned.size - 2}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold
+                                )
                             }
                         }
                     }
@@ -1153,6 +1172,7 @@ private fun LibraryItemCard(
     isDownloaded: Boolean,
     isDownloading: Boolean,
     purchasedIds: Set<String> = emptySet(),
+    modifier:     Modifier = Modifier,
     onBookmark:   () -> Unit,
     onDownload:   () -> Unit,
     onPurchase:   () -> Unit = {},
@@ -1164,7 +1184,7 @@ private fun LibraryItemCard(
     val color = typeColor(item.type)
     val bg    = typeBg(item.type)
 
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onView),
+    Card(modifier = modifier.fillMaxWidth().clickable(onClick = onView),
         shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cs.surface),
         elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
