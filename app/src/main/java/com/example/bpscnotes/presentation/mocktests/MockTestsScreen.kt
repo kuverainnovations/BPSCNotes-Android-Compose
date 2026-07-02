@@ -193,7 +193,6 @@ fun MockTestsScreen(
 
     // Test session state
     val userAnswers   = remember { mutableStateMapOf<String, Int>() }
-    val bookmarked    = remember { mutableStateListOf<String>() }
     val reviewMarked  = remember { mutableStateListOf<String>() }
     var finalScore    by remember { mutableStateOf(0f) }
 
@@ -237,7 +236,7 @@ fun MockTestsScreen(
                 navController   = navController,
                 onStartTest     = { test ->
                     selectedTest = test
-                    userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
+                    userAnswers.clear(); reviewMarked.clear()
                     screenState  = MockTestState.Instructions
                 },
                 onCustomTest    = { showCustomSheet = true },
@@ -275,7 +274,6 @@ fun MockTestsScreen(
                                 test          = test,
                                 questions     = questions,
                                 userAnswers   = userAnswers,
-                                bookmarked    = bookmarked,
                                 reviewMarked  = reviewMarked,
                                 onSubmit      = { score ->
                                     finalScore = score
@@ -321,7 +319,7 @@ fun MockTestsScreen(
                     screenState = MockTestState.Leaderboard
                 },
                 onRetry           = {
-                    userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
+                    userAnswers.clear(); reviewMarked.clear()
                     screenState = MockTestState.Active
                 },
                 onExit            = {
@@ -358,7 +356,7 @@ fun MockTestsScreen(
             onDismiss   = { showCustomSheet = false },
             onStart     = { customTest ->
                 selectedTest = customTest
-                userAnswers.clear(); bookmarked.clear(); reviewMarked.clear()
+                userAnswers.clear(); reviewMarked.clear()
                 showCustomSheet = false
                 screenState     = MockTestState.Instructions
             }
@@ -896,12 +894,12 @@ private fun TestInstructionsScreen(
                             if (test.negativeMarkingEnabled) {
                                 add(Triple("✅", "Marking Scheme", "Each correct answer carries +${formatMarks(test.marksPerCorrect.toDouble())} marks; each incorrect answer carries -${formatMarks(test.negativeMarking.toDouble())} marks. No marks are deducted for unanswered questions."))
                             }
+                            // FIX: removed "Marked for Review" / "Attempted + Marked" rows —
+                            // they described the flag/mark-for-review feature, which was
+                            // removed from the question screen and can no longer be triggered.
                             add(Triple("🟢", "Attempted",            "Questions you have answered"))
-                            add(Triple("🔵", "Marked for Review",    "Questions you want to revisit"))
                             add(Triple("⚪", "Unattempted",          "Questions not yet answered"))
-                            add(Triple("🟡", "Attempted + Marked",   "Answered but flagged for review"))
                             add(Triple("📖", str.quizNavTitle,   "Tap the grid icon to jump to any question"))
-                          //  add(Triple("🔖", "Bookmark",             "Save important questions for later"))
                             add(Triple("⏰", "Auto Submit",          "Test submits automatically when timer ends"))
                             add(Triple("↩️",  "Resume",              str.quizCanResume))
                         }.forEach { (emoji, title, desc) ->
@@ -960,7 +958,6 @@ private fun ActiveTestScreen(
     test: MockTest,
     questions: List<MockQuestion>,
     userAnswers: MutableMap<String, Int>,
-    bookmarked: MutableList<String>,
     reviewMarked: MutableList<String>,
     onSubmit: (Float) -> Unit,
     onExit: () -> Unit,
@@ -1103,44 +1100,16 @@ private fun ActiveTestScreen(
                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Q number + subject + bookmark
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(32.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
-                            contentAlignment = Alignment.Center
-                        ) { Text("${currentIndex + 1}", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp) }
-                        SubjectBadge(current.subject)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Mark for review
-                        Box(
-                            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                                .background(if (reviewMarked.contains(current.id)) Color(0xFFE8F0FD) else BpscColors.Surface)
-                                .clickable {
-                                    if (reviewMarked.contains(current.id)) reviewMarked.remove(current.id)
-                                    else reviewMarked.add(current.id)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Icons.Rounded.Flag, null, tint = if (reviewMarked.contains(current.id)) BpscColors.Primary else BpscColors.TextHint, modifier = Modifier.size(16.dp)) }
-                        // Bookmark
-                        Box(
-                            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                                .background(if (bookmarked.contains(current.id)) Color(0xFFFFF8E1) else BpscColors.Surface)
-                                .clickable {
-                                    if (bookmarked.contains(current.id)) bookmarked.remove(current.id)
-                                    else bookmarked.add(current.id)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) { Icon(
-                            if (bookmarked.contains(current.id)) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                            null, tint = if (bookmarked.contains(current.id)) BpscColors.CoinGold else BpscColors.TextHint,
-                            modifier = Modifier.size(16.dp)) }
-                    }
+                // Q number + subject
+                // FIX: removed the "mark for review" flag and "save/bookmark" buttons
+                // that used to sit here — per product request, this screen no longer
+                // offers per-question flag/save controls.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(BpscColors.PrimaryLight),
+                        contentAlignment = Alignment.Center
+                    ) { Text("${currentIndex + 1}", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp) }
+                    SubjectBadge(current.subject)
                 }
 
                 // Question text
