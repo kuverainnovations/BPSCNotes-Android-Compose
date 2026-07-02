@@ -169,9 +169,12 @@ fun PdfViewerScreen(
         viewModel.consumePendingPurchase()
         showBuyDialog = false; dialogCoins = 0
         launchCashfree(
-            context   = context,
-            sessionId = sessionId,
-            orderId   = orderId,
+            context     = context,
+            sessionId   = sessionId,
+            orderId     = orderId,
+            // FIX: was omitted, so this always defaulted to "sandbox" regardless
+            // of the backend's configured Cashfree environment.
+            environment = pending.paymentEnvironment ?: "sandbox",
             onSuccess = { cfPaymentId -> viewModel.confirmMaterialPurchase(cfPaymentId) },
             onFailure = { code, msg  -> viewModel.handleMaterialPaymentFailure(code, msg) }
         )

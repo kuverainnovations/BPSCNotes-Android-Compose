@@ -196,9 +196,13 @@ fun StudyMaterialsScreen(
         showPurchaseDialog = null; dialogCoins = 0
 
         launchCashfree(
-            context   = context,
-            sessionId = sessionId,
-            orderId   = orderId,
+            context     = context,
+            sessionId   = sessionId,
+            orderId     = orderId,
+            // FIX: was omitted, so this always defaulted to "sandbox" regardless
+            // of the backend's configured Cashfree environment (courses/subscriptions
+            // already pass this through correctly).
+            environment = pending.paymentEnvironment ?: "sandbox",
             onSuccess = { cfPaymentId ->
                 viewModel.confirmMaterialPurchase(cfPaymentId)
             },

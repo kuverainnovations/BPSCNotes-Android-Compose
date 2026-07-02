@@ -292,6 +292,7 @@ data class InitPurchaseData(
     val amountDueInr:     Int     = 0,
     val paymentSessionId: String? = null,   // → Cashfree Android SDK
     val providerOrderId:  String? = null,
+    val paymentEnvironment: String? = null, // 'sandbox' | 'production' — drives CFSession.Environment
     val materialTitle:    String? = null,
     // present when purchase completed immediately (free or fully coin-covered)
     val coinsSpent:       Int     = 0,

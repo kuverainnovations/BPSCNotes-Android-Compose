@@ -608,6 +608,21 @@ fun launchCashfree(
                 //.setTheme(theme)
                 .build()
 
+            // FIX: doPayment() alone does not wire up a result listener — the SDK
+            // requires a separate setCheckoutCallback() registration to ever invoke
+            // onPaymentVerify/onPaymentFailure. Without this, Cashfree successfully
+            // captures the payment but the app never learns about it: no confirm
+            // call is sent to the backend, so the purchase/enrollment never gets
+            // persisted (survives even a full app restart, since neither the local
+            // state nor the server ever recorded it).
+            val checkoutCallback = activity as? CFCheckoutResponseCallback
+            if (checkoutCallback == null) {
+                onFailure(-1, "Payment listener not available")
+                return
+            }
+            CFPaymentGatewayService.getInstance()
+                .setCheckoutCallback(checkoutCallback)
+
             CFPaymentGatewayService.getInstance()
                 .doPayment(activity, checkout)
 
