@@ -3,7 +3,7 @@ package com.example.bpscnotes.di
 import android.content.Context
 import com.example.bpscnotes.core.network.AuthInterceptor
 import com.example.bpscnotes.data.remote.api.*
-import com.kuvera.bpscnotes.BuildConfig
+import com.bpscnotes.app.BuildConfig
 import com.example.bpscnotes.presentation.nofification.NotificationsApiService
 import dagger.Module
 import dagger.Provides

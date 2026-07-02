@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.kuvera.bpscnotes"
+    namespace = "com.bpscnotes.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.kuvera.bpscnotes"
+        applicationId = "com.bpscnotes.app"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -23,8 +23,8 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"https://api-stg.bpscnotes.in/api/v1/\"")
-//            buildConfigField("String", "BASE_URL", "\"https://api.bpscnotes.in/api/v1/\"")
+//            buildConfigField("String", "BASE_URL", "\"https://api-stg.bpscnotes.in/api/v1/\"")
+            buildConfigField("String", "BASE_URL", "\"https://api.bpscnotes.in/api/v1/\"")
         }
         release {
             isMinifyEnabled = false

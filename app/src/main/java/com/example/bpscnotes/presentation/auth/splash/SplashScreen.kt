@@ -1,7 +1,7 @@
 package com.example.bpscnotes.presentation.auth.splash
 
 import com.example.bpscnotes.core.language.LocalStrings
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

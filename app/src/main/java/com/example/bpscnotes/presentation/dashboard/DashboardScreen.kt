@@ -855,7 +855,7 @@ private fun DashboardHeader(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(com.kuvera.bpscnotes.R.drawable.ic_bpsc_logo),
+                        painter = androidx.compose.ui.res.painterResource(com.bpscnotes.app.R.drawable.ic_bpsc_logo),
                         contentDescription = "BPSCNotes",
                         modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
                     )

@@ -1,7 +1,7 @@
 package com.example.bpscnotes.presentation.auth.onboarding
 
 import com.example.bpscnotes.core.language.LocalStrings
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOutCubic

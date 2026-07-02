@@ -1,6 +1,6 @@
 package com.example.bpscnotes.presentation.auth.login
 
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

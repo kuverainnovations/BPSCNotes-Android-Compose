@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 
 val NunitoFamily = FontFamily(
     Font(R.font.nunito_regular,   FontWeight.Normal),

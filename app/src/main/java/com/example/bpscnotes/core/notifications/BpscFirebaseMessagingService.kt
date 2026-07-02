@@ -9,7 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.bpscnotes.MainActivity
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import com.example.bpscnotes.core.analytics.Event
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage

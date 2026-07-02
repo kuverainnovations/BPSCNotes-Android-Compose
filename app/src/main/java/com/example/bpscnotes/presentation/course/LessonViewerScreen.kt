@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader

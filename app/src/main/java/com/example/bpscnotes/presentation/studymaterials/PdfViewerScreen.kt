@@ -1,6 +1,6 @@
 package com.example.bpscnotes.presentation.studymaterials
 
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 import com.example.bpscnotes.core.network.toUserMessage
 import com.example.bpscnotes.core.pdf.downloadPdf
 import com.example.bpscnotes.core.pdf.renderPdfPages

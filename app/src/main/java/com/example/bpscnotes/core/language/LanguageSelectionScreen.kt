@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
-import com.kuvera.bpscnotes.R
+import com.bpscnotes.app.R
 
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.local.TokenStore
