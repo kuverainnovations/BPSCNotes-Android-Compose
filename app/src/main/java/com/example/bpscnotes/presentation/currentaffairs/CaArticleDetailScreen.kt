@@ -8,8 +8,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,8 +21,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
@@ -42,8 +47,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +58,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -302,7 +311,18 @@ fun CaArticleDetailScreen(
     val article = detailState.article
     val isBookmarked = article?.let { bookmarkedIds.contains(it.id) } ?: false
 
-    Box(modifier = Modifier.fillMaxSize().background(cs.background)) {
+    // FIX: header (top bar + MCQ CTA card) used to be a fixed, non-collapsible,
+    // non-scrollable block that ate up roughly half the screen before the
+    // article content even started, with no way for the user to see more of
+    // the article without it. BoxWithConstraints + a draggable handle lets the
+    // user resize the split themselves, clamped to a 25%–75% range; the header
+    // is also now scrollable internally so it never clips/overlaps when
+    // dragged down to its minimum size.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(cs.background)) {
+        val density = LocalDensity.current
+        val totalHeightPx = with(density) { maxHeight.toPx() }
+        var headerFraction by remember { mutableFloatStateOf(0.25f) }
+
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── Hero header — status bar, top bar, and the MCQ CTA all sit
@@ -312,6 +332,7 @@ fun CaArticleDetailScreen(
             // CTA only appears once the article has loaded.
             Box(
                 modifier = Modifier.fillMaxWidth()
+                    .weight(headerFraction)
                     .background(
                         Brush.linearGradient(
                             listOf(Color(0xFF0A2472), Color(0xFF1565C0), Color(0xFF1E88E5)),
@@ -320,7 +341,7 @@ fun CaArticleDetailScreen(
                     )
                     .statusBarsPadding()
             ) {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -344,7 +365,8 @@ fun CaArticleDetailScreen(
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             if (article != null) {
-                                Box(
+                                //hide for phase 1
+                                /*Box(
                                     modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
                                         .clickable(enabled = !isDownloadingPdf) {
                                             scope.launch {
@@ -376,7 +398,7 @@ fun CaArticleDetailScreen(
                                     } else {
                                         Icon(Icons.Rounded.Download, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                     }
-                                }
+                                }*/
                                 Box(
                                     modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
                                         .clickable {
@@ -487,6 +509,25 @@ fun CaArticleDetailScreen(
                     }
                 }
             }
+
+            // ── Drag handle — resizes the header/content split, clamped 25%–75% ──
+            Box(
+                modifier = Modifier.fillMaxWidth().height(18.dp)
+                    .background(cs.surface)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { change, dragAmount ->
+                            change.consume()
+                            headerFraction = (headerFraction + dragAmount / totalHeightPx).coerceIn(0.25f, 0.75f)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier.width(36.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(cs.outline.copy(alpha = 0.5f))
+                )
+            }
             HorizontalDivider(color = cs.outline.copy(alpha = 0.3f))
 
             when {
@@ -504,7 +545,7 @@ fun CaArticleDetailScreen(
                     val (catFg, catBg) = CA_DETAIL_CATEGORY_COLORS[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
 
                     Column(
-                        modifier = Modifier.weight(1f).fillMaxWidth()
+                        modifier = Modifier.weight(1f - headerFraction).fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
