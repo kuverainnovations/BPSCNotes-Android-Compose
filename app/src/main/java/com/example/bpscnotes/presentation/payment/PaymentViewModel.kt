@@ -105,9 +105,16 @@ class PaymentViewModel @Inject constructor(
 
     private fun collectGPlayPurchases() {
         viewModelScope.launch {
+            // billing.purchasesFlow is a shared singleton flow — also consumed
+            // by GPlayCoursePurchaseManager for one-time course purchases.
+            // Filtering to known subscription product ids stops this from
+            // reacting to a course purchase (which would otherwise get sent
+            // to subscriptions/gplay/verify and fail there for the wrong reason).
             billing.purchasesFlow.collect { purchases ->
-                purchases.firstOrNull()?.let { purchase ->
-                    val productId = purchase.products.firstOrNull() ?: return@let
+                purchases.firstOrNull { purchase ->
+                    purchase.products.any { it in PLAN_TO_GPLAY_PRODUCT.values }
+                }?.let { purchase ->
+                    val productId = purchase.products.first { it in PLAN_TO_GPLAY_PRODUCT.values }
                     verifyGPlayPurchase(purchase.purchaseToken, productId)
                 }
             }

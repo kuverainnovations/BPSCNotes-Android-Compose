@@ -2,10 +2,12 @@ package com.example.bpscnotes.presentation.course
 
 import com.example.bpscnotes.core.network.toUserMessage
 
+import android.app.Activity
 import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bpscnotes.app.BuildConfig
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest
@@ -16,7 +18,9 @@ import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest
+import com.example.bpscnotes.data.remote.api.GPlayCourseVerifyRequest
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
+import com.example.bpscnotes.presentation.payment.GPlayCoursePurchaseManager
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,9 +43,11 @@ data class CourseDetailUiState(
     // Payment required
     val purchaseRequired: Boolean = false,
     val purchasePrice: Double = 0.0,
-    val purchaseSessionId: String? = null,          // paymentSessionId → Cashfree SDK
+    val purchaseSessionId: String? = null,          // paymentSessionId → Cashfree SDK (debug builds only)
     val purchaseProviderOrderId: String? = null,    // Cashfree order ID for LaunchedEffect
     val purchasePaymentEnvironment: String = "sandbox", // 'sandbox' | 'production' → CFSession.Environment
+    val gplayPurchaseCourseId: String? = null,      // non-null triggers Play Billing launch (release builds only)
+    val isGPlayPurchasing: Boolean = false,
     // Rating
     val showRatingSheet: Boolean = false,
     val isSubmittingRating: Boolean = false,
@@ -66,6 +72,7 @@ class CourseDetailViewModel @Inject constructor(
     private val cacheInvalidator: CacheInvalidator,
     private val okHttpClient: OkHttpClient,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
+    private val gplay: GPlayCoursePurchaseManager,
     @ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
@@ -183,18 +190,31 @@ class CourseDetailViewModel @Inject constructor(
                         val body = e.response()?.errorBody()?.string() ?: ""
                         val json = org.json.JSONObject(body)
                         val data = json.optJSONObject("data") ?: json
-                        val price               = data.optDouble("price", 0.0)
-                        val sessionId           = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
-                        val providerOrderId     = data.optString("providerOrderId").takeIf { it.isNotBlank() }
-                        val paymentEnvironment  = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
-                        _uiState.update { it.copy(
-                            isEnrolling                 = false,
-                            purchaseRequired            = true,
-                            purchasePrice               = price,
-                            purchaseSessionId           = sessionId,
-                            purchaseProviderOrderId     = providerOrderId,
-                            purchasePaymentEnvironment  = paymentEnvironment,
-                        )}
+                        val price = data.optDouble("price", 0.0)
+                        if (BuildConfig.DEBUG) {
+                            val sessionId           = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                            val providerOrderId     = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                            val paymentEnvironment  = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
+                            _uiState.update { it.copy(
+                                isEnrolling                 = false,
+                                purchaseRequired            = true,
+                                purchasePrice               = price,
+                                purchaseSessionId           = sessionId,
+                                purchaseProviderOrderId     = providerOrderId,
+                                purchasePaymentEnvironment  = paymentEnvironment,
+                            )}
+                        } else {
+                            // Release build — Google Play Billing. The Cashfree
+                            // session fields in this response are ignored; the
+                            // exact price comes from Play's ProductDetails once
+                            // queried (see startGPlayCoursePurchase).
+                            _uiState.update { it.copy(
+                                isEnrolling           = false,
+                                purchaseRequired      = true,
+                                purchasePrice          = price,
+                                gplayPurchaseCourseId = courseId,
+                            )}
+                        }
                     } catch (_: Exception) {
                         _uiState.update { it.copy(isEnrolling = false, error = "Purchase required") }
                     }
@@ -305,6 +325,58 @@ class CourseDetailViewModel @Inject constructor(
             purchaseSessionId       = null,
             purchaseProviderOrderId = null,
         )}
+    }
+
+    fun clearGPlayPurchase() {
+        _uiState.update { it.copy(gplayPurchaseCourseId = null) }
+    }
+
+    // Release-build counterpart to the Cashfree purchaseSessionId flow above.
+    // GPlayCoursePurchaseManager is shared with MyLearningViewModel — this
+    // method is the only place course-purchase GPlay logic is duplicated
+    // (once, per ViewModel, calling into the shared manager) rather than
+    // reimplemented independently.
+    fun startGPlayCoursePurchase(activity: Activity, courseId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGPlayPurchasing = true, error = null) }
+            try {
+                val details = gplay.queryProductDetails(courseId)
+                if (details == null) {
+                    _uiState.update { it.copy(isGPlayPurchasing = false, error = "This course isn't available on Google Play yet. Please try again shortly.") }
+                    return@launch
+                }
+                val result = gplay.launchPurchase(activity, details)
+                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    _uiState.update { it.copy(isGPlayPurchasing = false, error = "Could not open Google Play checkout (${result.debugMessage})") }
+                    return@launch
+                }
+                val clientPriceInr = gplay.priceInrOf(details)
+                val purchase = gplay.awaitPurchase(courseId)
+                verifyGPlayCoursePurchase(courseId, purchase.purchaseToken, clientPriceInr)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isGPlayPurchasing = false, error = e.message ?: "Purchase failed") }
+            }
+        }
+    }
+
+    private fun verifyGPlayCoursePurchase(courseId: String, purchaseToken: String, clientPriceInr: Double) {
+        viewModelScope.launch {
+            try {
+                api.verifyGPlayCoursePurchase(courseId, GPlayCourseVerifyRequest(
+                    purchaseToken   = purchaseToken,
+                    clientPriceInr  = clientPriceInr
+                ))
+                bus.emit(RefreshEvent.CourseEnrolled)
+                cacheInvalidator.evict()
+                _uiState.update { it.copy(isGPlayPurchasing = false, enrollSuccess = true) }
+                load(courseId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    isGPlayPurchasing = false,
+                    error = "Payment received but enrollment failed. Contact support with purchase token: ${purchaseToken.take(16)}…"
+                )}
+            }
+        }
     }
 
     fun confirmCoursePurchase(cfPaymentId: String) {

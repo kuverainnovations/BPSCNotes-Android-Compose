@@ -171,6 +171,11 @@ data class ConfirmCoursePurchaseRequest(
     val paymentMethod: String = "upi"
 )
 
+data class GPlayCourseVerifyRequest(
+    val purchaseToken: String,          // from Purchase.purchaseToken (BillingClient)
+    val clientPriceInr: Double          // price read off the ProductDetails used to launch the flow
+)
+
 // ══════════════════════════════════════════════════════════════
 // QUIZ DTOs
 // ══════════════════════════════════════════════════════════════
@@ -654,6 +659,13 @@ interface CoursesApiService {
 
     @POST("courses/{id}/enroll")
     suspend fun enrollCourse(@Path("id") id: String, @Body dto: EnrollCourseRequest = EnrollCourseRequest()): ApiResponse<Any>
+
+    /** POST /courses/:id/purchase/gplay/verify — verify Google Play one-time-product purchase, enroll in course */
+    @POST("courses/{id}/purchase/gplay/verify")
+    suspend fun verifyGPlayCoursePurchase(
+        @Path("id") id: String,
+        @Body dto: GPlayCourseVerifyRequest
+    ): ApiResponse<Any>
 
     @POST("courses/{id}/save")
     suspend fun saveCourse(@Path("id") id: String): ApiResponse<Any>

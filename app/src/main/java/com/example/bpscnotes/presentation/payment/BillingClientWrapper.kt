@@ -47,13 +47,24 @@ class BillingClientWrapper @Inject constructor(
         }
     }
 
-    suspend fun queryProductDetails(productIds: List<String>): List<ProductDetails> {
+    // productType defaults to SUBS to keep the existing single call site
+    // (PaymentViewModel's subscription flow) source-compatible. Course
+    // purchases pass BillingClient.ProductType.INAPP explicitly.
+    //
+    // For one-time products, the offer token to pass into launchBillingFlow
+    // comes from productDetails.oneTimePurchaseOfferDetailsList — each
+    // entry has an .offerToken, analogous to subscriptionOfferDetails for
+    // SUBS. This wrapper doesn't pick one; the caller does (Phase 5).
+    suspend fun queryProductDetails(
+        productIds: List<String>,
+        productType: String = BillingClient.ProductType.SUBS
+    ): List<ProductDetails> {
         if (!ensureConnected()) return emptyList()
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(productIds.map { id ->
                 QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(id)
-                    .setProductType(BillingClient.ProductType.SUBS)
+                    .setProductType(productType)
                     .build()
             })
             .build()
@@ -61,6 +72,35 @@ class BillingClientWrapper @Inject constructor(
         return if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK)
             result.productDetailsList ?: emptyList()
         else emptyList()
+    }
+
+    // Restore/recovery: surfaces purchases Google already has on record for
+    // this user+productType, independent of the purchasesFlow emitted by
+    // the PurchasesUpdatedListener (which only fires for purchases made in
+    // the current billing-flow session). Needed because a purchase can
+    // complete without the app ever seeing it happen in-session — killed
+    // mid-flow, completed while briefly offline, etc. Callers should run
+    // this on app/screen start and re-submit anything PURCHASED-but-unseen
+    // to the same backend verify endpoint a fresh purchase uses; there is
+    // no client-side acknowledge here on purpose — acknowledgement already
+    // happens server-side in CoursesService.verifyGPlayCoursePurchase after
+    // it verifies the token, and Google only needs it done once, from
+    // either side.
+    suspend fun queryPurchases(productType: String): List<Purchase> {
+        if (!ensureConnected()) return emptyList()
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(productType)
+            .build()
+        return suspendCancellableCoroutine { cont ->
+            client.queryPurchasesAsync(params) { result, purchases ->
+                if (cont.isActive) {
+                    cont.resume(
+                        if (result.responseCode == BillingClient.BillingResponseCode.OK) purchases
+                        else emptyList()
+                    )
+                }
+            }
+        }
     }
 
     fun launchBillingFlow(

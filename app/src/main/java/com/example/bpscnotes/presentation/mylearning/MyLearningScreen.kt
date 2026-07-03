@@ -1790,6 +1790,17 @@ private fun CourseDetailSheet(
         )
     }
 
+    // Release build: backend returned 402 with no Cashfree session (see
+    // MyLearningViewModel.enrollWithCoins) — launch Google Play Billing instead.
+    LaunchedEffect(state.gplayPurchaseCourseId) {
+        val gplayCourseId = state.gplayPurchaseCourseId ?: return@LaunchedEffect
+        if (gplayCourseId != course.id) return@LaunchedEffect
+        val activity = context as? android.app.Activity ?: return@LaunchedEffect
+        showBuyDialog = false; dialogCoins = 0
+        viewModel.clearGPlayPurchase()
+        viewModel.startGPlayCoursePurchase(activity, gplayCourseId)
+    }
+
     if (showEnrollSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showEnrollSuccessDialog = false; onDismiss() },

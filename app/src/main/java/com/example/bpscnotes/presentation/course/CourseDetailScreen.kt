@@ -270,6 +270,17 @@ fun CourseDetailScreen(
         )
     }
 
+    // Release build: backend returned 402 with no Cashfree session (see
+    // CourseDetailViewModel.enroll) — launch Google Play Billing instead.
+    LaunchedEffect(state.gplayPurchaseCourseId) {
+        val gplayCourseId = state.gplayPurchaseCourseId ?: return@LaunchedEffect
+        val activity = context as? android.app.Activity ?: return@LaunchedEffect
+        showBuyDialog = false
+        dialogCoins   = 0
+        viewModel.clearGPlayPurchase()
+        viewModel.startGPlayCoursePurchase(activity, gplayCourseId)
+    }
+
     // ── Rating bottom sheet ───────────────────────────────────
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     if (state.showRatingSheet) {
