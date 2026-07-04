@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.bpscnotes.app.BuildConfig
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -235,7 +236,17 @@ fun StudyMaterialsScreen(
             userCoins            = state.userCoins,
             maxCoinDiscountPct   = viewModel.coinsConfig.economy.maxCoinDiscountPctMaterial,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
-            onConfirm    = { viewModel.purchaseMaterial(item.id, item.price, item.title, dialogCoins) },
+            // Release builds must use Google Play Billing for this real-money digital
+            // purchase (Play Payments Policy) — Cashfree/coins stay debug-only.
+            onConfirm    = {
+                if (BuildConfig.DEBUG) {
+                    viewModel.purchaseMaterial(item.id, item.price, item.title, dialogCoins)
+                } else {
+                    (context as? android.app.Activity)?.let {
+                        viewModel.startGPlayMaterialPurchase(it, item.id, item.title)
+                    }
+                }
+            },
             onDismiss    = { showPurchaseDialog = null; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }
@@ -2996,7 +3007,12 @@ fun PurchaseConfirmDialog(
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 }
 
-                if (maxApplicable > 0) {
+                // Coin discount only applies to the debug/Cashfree path — Google Play
+                // Billing (release builds) always charges the material's full synced
+                // price with no way to accept a server-computed discount at checkout,
+                // so the slider is hidden there rather than showing a discount that
+                // silently wouldn't be honored.
+                if (maxApplicable > 0 && BuildConfig.DEBUG) {
                     // ── Coin redemption card ─────────────────────────────
                     Column(
                         modifier = Modifier.fillMaxWidth()

@@ -73,6 +73,7 @@ class CourseDetailViewModel @Inject constructor(
     private val okHttpClient: OkHttpClient,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val gplay: GPlayCoursePurchaseManager,
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
     @ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
@@ -345,7 +346,7 @@ class CourseDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "This course isn't available on Google Play yet. Please try again shortly.") }
                     return@launch
                 }
-                val result = gplay.launchPurchase(activity, details)
+                val result = gplay.launchPurchase(activity, details, obfuscatedAccountId = tokenStore.getUserId() ?: "")
                 if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "Could not open Google Play checkout (${result.debugMessage})") }
                     return@launch

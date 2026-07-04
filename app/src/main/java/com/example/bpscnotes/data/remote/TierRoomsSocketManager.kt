@@ -62,8 +62,8 @@ data class RoomMessageEvent(
 class TierRoomsSocketManager @Inject constructor(private val tokenStore: TokenStore) {
     companion object {
         private const val TAG       = "TierRoomsSocket"
-                private const val BASE_URL  = "https://api.bpscnotes.in"
-//        private const val BASE_URL  = "https://api-stg.bpscnotes.in"
+//                private const val BASE_URL  = "https://api.bpscnotes.in"
+        private const val BASE_URL  = "https://api-stg.bpscnotes.in"
         private const val NAMESPACE = "/tier-rooms"
     }
 

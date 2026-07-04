@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.studymaterials
 
+import com.bpscnotes.app.BuildConfig
 import com.bpscnotes.app.R
 import com.example.bpscnotes.core.network.toUserMessage
 import com.example.bpscnotes.core.pdf.downloadPdf
@@ -147,7 +148,17 @@ fun PdfViewerScreen(
             userCoins            = purchaseState.userCoins,
             maxCoinDiscountPct   = viewModel.coinsConfig.economy.maxCoinDiscountPctMaterial,
             coinToInrRate        = viewModel.coinsConfig.economy.coinToInrRate,
-            onConfirm    = { viewModel.purchaseMaterial(effectiveMaterialId, price, title, dialogCoins) },
+            // Release builds must use Google Play Billing for this real-money digital
+            // purchase (Play Payments Policy) — Cashfree/coins stay debug-only.
+            onConfirm    = {
+                if (BuildConfig.DEBUG) {
+                    viewModel.purchaseMaterial(effectiveMaterialId, price, title, dialogCoins)
+                } else {
+                    (context as? android.app.Activity)?.let {
+                        viewModel.startGPlayMaterialPurchase(it, effectiveMaterialId, title)
+                    }
+                }
+            },
             onDismiss    = { showBuyDialog = false; dialogCoins = 0; viewModel.clearPurchaseMessages() }
         )
     }

@@ -32,14 +32,19 @@ class GPlayCoursePurchaseManager @Inject constructor(
             BillingClient.ProductType.INAPP
         ).firstOrNull()
 
-    fun launchPurchase(activity: Activity, productDetails: ProductDetails): BillingResult {
+    // obfuscatedAccountId binds this purchase to the buyer's user id so the
+    // backend verify call (verifyGPlayCoursePurchase) can confirm a purchase
+    // token actually belongs to whoever is redeeming it, instead of trusting
+    // the caller's userId alone — required, not optional, so no call site can
+    // accidentally skip it.
+    fun launchPurchase(activity: Activity, productDetails: ProductDetails, obfuscatedAccountId: String): BillingResult {
         // The installed Billing Library (7.1.1) predates offer tokens for
         // one-time products entirely — ProductDetails.OneTimePurchaseOfferDetails
         // only exposes price fields (checked directly against the decompiled
         // class: getPriceAmountMicros/getFormattedPrice/getPriceCurrencyCode,
         // no getOfferToken). Only subscriptions have offer tokens in this
         // version, so this is always null for a course purchase.
-        return billing.launchBillingFlow(activity, productDetails, offerToken = null)
+        return billing.launchBillingFlow(activity, productDetails, offerToken = null, obfuscatedAccountId = obfuscatedAccountId)
     }
 
     // Price the app is about to launch the flow at, in rupees — this is

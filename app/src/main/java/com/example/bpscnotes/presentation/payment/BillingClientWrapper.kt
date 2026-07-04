@@ -106,7 +106,15 @@ class BillingClientWrapper @Inject constructor(
     fun launchBillingFlow(
         activity: Activity,
         productDetails: ProductDetails,
-        offerToken: String?
+        offerToken: String?,
+        // Google's account-binding field — passed through verbatim to the
+        // backend's purchase record (externalAccountIdentifiers) so a
+        // verify call can confirm the purchase belongs to the requesting
+        // user instead of trusting a client-supplied id alone. Optional and
+        // defaults to null to keep the existing course/subscription call
+        // sites source-compatible; only the new study-materials gplay path
+        // passes it.
+        obfuscatedAccountId: String? = null
     ): BillingResult {
         val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(productDetails)
@@ -115,6 +123,7 @@ class BillingClientWrapper @Inject constructor(
 
         val billingFlowParams = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(productParams))
+            .apply { if (obfuscatedAccountId != null) setObfuscatedAccountId(obfuscatedAccountId) }
             .build()
 
         return client.launchBillingFlow(activity, billingFlowParams)

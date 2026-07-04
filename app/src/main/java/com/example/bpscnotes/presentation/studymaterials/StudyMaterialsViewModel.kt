@@ -170,6 +170,7 @@ class StudyMaterialsViewModel @Inject constructor(
     private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
     @ApplicationContext private val context: Context,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
+    private val gplayMaterial: com.example.bpscnotes.presentation.payment.GPlayMaterialPurchaseManager,
     private val bus: RefreshEventBus) : ViewModel() {
 
     private val _state = MutableStateFlow(StudyMaterialsUiState())
@@ -443,7 +444,7 @@ class StudyMaterialsViewModel @Inject constructor(
         if (_state.value.downloadedIds.contains(material.id)) {
             val localPath = tokenStore.getLocalPath(material.id)
             if (localPath != null && java.io.File(localPath).exists()) {
-                _state.update { it.copy(toastMessage = "Already downloaded — open from My Learning") }
+                _state.update { it.copy(toastMessage = "Already downloaded — open from My Downloads") }
                 return
             }
             // File deleted — remove stale record and re-download
@@ -1189,6 +1190,52 @@ class StudyMaterialsViewModel @Inject constructor(
 
     fun clearPurchaseMessages() {
         _state.update { it.copy(purchaseSuccess = null, purchaseError = null) }
+    }
+
+    // ── Release-build purchase path: Google Play Billing ─────────
+    // Play policy requires digital-content purchases to go through Play
+    // Billing — this is the release-build counterpart to purchaseMaterial()
+    // above, which stays Cashfree/coins-only and is only ever called from
+    // debug builds now (see the BuildConfig.DEBUG branch at the call sites
+    // in StudyMaterialsScreen.kt / PdfViewerScreen.kt). No coin discount
+    // here — Play always charges the material's full synced price.
+    fun startGPlayMaterialPurchase(activity: android.app.Activity, materialId: String, title: String) {
+        if (_state.value.purchasedIds.contains(materialId)) return
+        viewModelScope.launch {
+            _state.update { it.copy(purchasingId = materialId, purchaseError = null) }
+            try {
+                val details = gplayMaterial.queryProductDetails(materialId)
+                if (details == null) {
+                    _state.update { it.copy(
+                        purchasingId  = null,
+                        purchaseError = "This material isn't available for purchase yet. Please try again shortly."
+                    )}
+                    return@launch
+                }
+                val userId = tokenStore.getUserId() ?: ""
+                val result = gplayMaterial.launchPurchase(activity, details, obfuscatedAccountId = userId)
+                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    _state.update { it.copy(
+                        purchasingId  = null,
+                        purchaseError = "Could not open Google Play checkout (${result.debugMessage})"
+                    )}
+                    return@launch
+                }
+                val purchase = gplayMaterial.awaitPurchase(materialId)
+                val res = api.verifyGplayMaterialPurchase(materialId, VerifyGplayMaterialRequest(purchase.purchaseToken))
+                tokenStore.addPurchasedId(materialId)
+                _state.update { it.copy(
+                    purchasingId     = null,
+                    purchaseSuccess  = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
+                    purchasedIds     = it.purchasedIds + materialId,
+                    selectedMaterial = if (it.selectedMaterial?.id == materialId)
+                        it.selectedMaterial.copy(isPurchased = true) else it.selectedMaterial,
+                )}
+                loadStats()
+            } catch (e: Exception) {
+                _state.update { it.copy(purchasingId = null, purchaseError = e.toUserMessage("Purchase failed")) }
+            }
+        }
     }
 
 // ── Rating ──────────────────────────────────────────────────

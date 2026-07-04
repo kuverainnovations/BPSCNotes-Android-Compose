@@ -188,6 +188,11 @@ data class MaterialDetailData(
     @SerializedName("free_pages")      val freePages: Int = 3,
     @SerializedName("is_purchased")    val isPurchased: Boolean = false,
     @SerializedName("buyer_count")     val buyerCount: Int = 0,
+    // Google Play one-time product id, synced when the material's price
+    // becomes final (approval / negotiation acceptance). Null until then —
+    // the release-build Play Billing purchase path isn't available for a
+    // material that hasn't synced yet.
+    @SerializedName("gplay_product_id") val gplayProductId: String? = null,
 ) {
     val type: MaterialType get() = MaterialType.fromKey(materialType)
     val resolvedUrl: String? get() = fileUrl ?: downloadUrl
@@ -306,6 +311,8 @@ data class ConfirmPurchaseRequest(
     val cfPaymentId:     String,            // from Cashfree SDK
     val paymentMethod:   String? = null,
 )
+
+data class VerifyGplayMaterialRequest(val purchaseToken: String)
 
 data class PurchaseResultData(
     val purchased:        Boolean = false,
@@ -471,6 +478,10 @@ interface StudyMaterialsApiService {
     /** POST /study-materials/:id/purchase/confirm — finalize after Cashfree payment succeeds */
     @POST("study-materials/{id}/purchase/confirm")
     suspend fun confirmPurchase(@Path("id") id: String, @Body body: ConfirmPurchaseRequest): ApiResponse<PurchaseResultData>
+
+    /** POST /study-materials/:id/purchase/gplay/verify — finalize after Google Play Billing succeeds (release builds) */
+    @POST("study-materials/{id}/purchase/gplay/verify")
+    suspend fun verifyGplayMaterialPurchase(@Path("id") id: String, @Body body: VerifyGplayMaterialRequest): ApiResponse<PurchaseResultData>
 
     /** GET /study-materials/wallet — seller's ₹ wallet balance + transaction history */
     @GET("study-materials/wallet")

@@ -59,7 +59,8 @@ class MyLearningViewModel @Inject constructor(
     private val bus:        RefreshEventBus,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     private val cacheInvalidator: CacheInvalidator,
-    private val gplay: GPlayCoursePurchaseManager
+    private val gplay: GPlayCoursePurchaseManager,
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyLearningUiState())
@@ -285,7 +286,7 @@ class MyLearningViewModel @Inject constructor(
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "This course isn't available on Google Play yet. Please try again shortly.") }
                     return@launch
                 }
-                val result = gplay.launchPurchase(activity, details)
+                val result = gplay.launchPurchase(activity, details, obfuscatedAccountId = tokenStore.getUserId() ?: "")
                 if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "Could not open Google Play checkout (${result.debugMessage})") }
                     return@launch
