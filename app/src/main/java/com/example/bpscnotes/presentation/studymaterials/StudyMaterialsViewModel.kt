@@ -1215,14 +1215,19 @@ class StudyMaterialsViewModel @Inject constructor(
                     materialId,
                     com.example.bpscnotes.data.remote.api.RateMaterialRequest(stars, review?.trim()?.ifBlank { null })
                 )
+                val newAvg = res.data?.avgRating
                 _state.update { it.copy(
                     isSubmittingRating = false,
                     myRatingStars      = stars,
                     myRatingReview     = review?.trim()?.ifBlank { null },
                     ratingSuccess      = "Thanks for your rating!",
                     ratingError        = null,
+                    // Patch the open detail sheet immediately so the avg rating
+                    // doesn't look stale until the sheet is closed and reopened.
+                    selectedMaterial   = if (it.selectedMaterial?.id == materialId && newAvg != null)
+                        it.selectedMaterial.copy(rating = newAvg) else it.selectedMaterial,
                 )}
-                // Refresh list so the updated avg rating reflects immediately
+                // Refresh list so the updated avg rating reflects immediately there too
                 refresh()
             } catch (e: Exception) {
                 _state.update { it.copy(

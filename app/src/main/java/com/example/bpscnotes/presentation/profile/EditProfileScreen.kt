@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.profile
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -65,9 +66,12 @@ fun EditProfileScreen(
     var imageUriToCrop     by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
 
-    // Gallery picker — opens crop dialog after selection
+    // Gallery picker — Android Photo Picker (no storage/media permission needed on
+    // any API level; system provides it on 13+ natively and backports it to older
+    // versions via Google Play system updates, falling back to the Storage Access
+    // Framework otherwise). Opens crop dialog after selection.
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
             imageUriToCrop = it
@@ -171,7 +175,7 @@ fun EditProfileScreen(
 
                 // ── Avatar ────────────────────────────────────
                 Box(modifier = Modifier.align(Alignment.CenterHorizontally)
-                    .clickable { imagePickerLauncher.launch("image/*") }) {
+                    .clickable { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                     Box(modifier = Modifier.size(90.dp).clip(CircleShape)
                         .background(Brush.linearGradient(
                             listOf(Color(0xFF1565C0), Color(0xFF0D47A1)))),
@@ -205,7 +209,7 @@ fun EditProfileScreen(
                         .background(Color(0xFF1565C0))
                         .border(2.dp, cs.surface, CircleShape)
                         .align(Alignment.BottomEnd)
-                        .clickable { imagePickerLauncher.launch("image/*") },
+                        .clickable { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         contentAlignment = Alignment.Center) {
                         if (state.isUploadingAvatar) {
                             CircularProgressIndicator(

@@ -12,4 +12,10 @@
 /captures
 .externalNativeBuild
 .cxx
+
+# Signing secrets — never commit
+/app/BPSC KEYSTORE/
+app/keystore.properties
+*.jks
+*.keystore
 local.properties

@@ -175,6 +175,20 @@ fun StudyMaterialsScreen(
         state.purchaseError?.let { snackbarHost.showSnackbar(it) }
     }
 
+    // Rating feedback
+    LaunchedEffect(state.ratingSuccess) {
+        state.ratingSuccess?.let {
+            snackbarHost.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.clearRatingMessages()
+        }
+    }
+    LaunchedEffect(state.ratingError) {
+        state.ratingError?.let {
+            snackbarHost.showSnackbar(it)
+            viewModel.clearRatingMessages()
+        }
+    }
+
     // Phase 5: navigate to chat screen once a thread is ready
     LaunchedEffect(state.pendingChatId) {
         val chatId = state.pendingChatId ?: return@LaunchedEffect
@@ -2087,33 +2101,11 @@ private fun UploadSheet(
         }
     }
 
-    // Request READ_MEDIA_VIDEO + READ_MEDIA_IMAGES on Android 13+
-    // or READ_EXTERNAL_STORAGE on older — without this, openInputStream() returns null
-    val mediaPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ ->
-        // Launch picker regardless — partial grant still allows document picker to work
-        filePicker.launch("*/*")
-    }
-
+    // GetContent() hands off to the system document/gallery picker and never requires
+    // any storage/media runtime permission on any API level — no permission check needed.
     fun launchFilePicker() {
         val mime = "application/pdf" // VIDEO disabled — Phase 2
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val perms = arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES)
-            val allGranted = perms.all {
-                androidx.core.content.ContextCompat.checkSelfPermission(context, it) ==
-                        android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-            if (allGranted) filePicker.launch(mime) else mediaPermissionLauncher.launch(perms)
-        } else if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
-            val perm = android.Manifest.permission.READ_EXTERNAL_STORAGE
-            if (androidx.core.content.ContextCompat.checkSelfPermission(context, perm) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) filePicker.launch(mime)
-            else mediaPermissionLauncher.launch(arrayOf(perm))
-        } else {
-            filePicker.launch(mime)
-        }
+        filePicker.launch(mime)
     }
 
     // Block sheet from physically closing while upload is in progress
