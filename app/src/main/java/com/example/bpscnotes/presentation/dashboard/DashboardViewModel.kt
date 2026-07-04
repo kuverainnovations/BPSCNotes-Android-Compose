@@ -106,6 +106,7 @@ class DashboardViewModel @Inject constructor(
                     is RefreshEvent.LessonCompleted,
                     is RefreshEvent.CoinsChanged,
                     is RefreshEvent.CourseEnrolled,
+                    is RefreshEvent.StudySessionEnded,
                     is RefreshEvent.TargetUpdated  -> loadDashboard()
                     is RefreshEvent.ProfileUpdated -> loadDashboard()
                     is RefreshEvent.AvatarUpdated  ->

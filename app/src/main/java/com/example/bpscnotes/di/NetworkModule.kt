@@ -105,8 +105,20 @@ object NetworkModule {
             } catch (_: Exception) {}
         }
 
-        // Cache successful GET responses for 5 minutes
+        // Cache successful GET responses for 5 minutes.
+        // EXCEPT live per-user counters: study time accrues over the room
+        // SOCKET (no REST mutation ever evicts the cache), so a cached
+        // /users/stats kept "Today's time" frozen until an app restart
+        // happened to fire a POST (QA issue 5, 04-Jul). Serve those fresh.
         if (request.method == "GET" && response.code == 200) {
+            val path = request.url.encodedPath
+            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs/alert-prefs")
+            if (volatilePaths.any { path.endsWith(it) || path.contains(it) }) {
+                return@Interceptor response.newBuilder()
+                    .header("Cache-Control", "no-store")
+                    .removeHeader("Pragma")
+                    .build()
+            }
             val maxAge = 5 * 60 // 5 minutes
             return@Interceptor response.newBuilder()
                 .header("Cache-Control", "public, max-age=$maxAge")

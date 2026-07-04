@@ -555,6 +555,9 @@ data class DailyTargetDto(
     val difficulty: String = "medium",
     @SerializedName("time_slot")           val timeSlot: String = "morning",
     @SerializedName("is_carried_forward")  val isCarriedForward: Boolean = false,
+    // Original creation time — carry-forward copies inherit it from their
+    // source row, so this dates back to when the target was first planned.
+    @SerializedName("created_at")          val createdAt: String? = null,
     @SerializedName("linked_quiz_id")      val linkedQuizId: String? = null,
     @SerializedName("linked_note_id")      val linkedNoteId: String? = null
 )
@@ -1016,8 +1019,14 @@ interface JobsApiService {
         @Path("id") jobId: String
     ): ApiResponse<JobDetailData>
 
+    /** Idempotent: POST always saves, DELETE always unsaves (mirrors course saves). */
     @POST("jobs/{id}/save")
-    suspend fun toggleSaveJob(
+    suspend fun saveJob(
+        @Path("id") jobId: String
+    ): ApiResponse<Any>
+
+    @DELETE("jobs/{id}/save")
+    suspend fun unsaveJob(
         @Path("id") jobId: String
     ): ApiResponse<Any>
 

@@ -45,6 +45,7 @@ import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.BpscDropdown
 import com.example.bpscnotes.core.ui.AppLoader
+import com.example.bpscnotes.core.ui.sheetFlickerFix
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.ui.t.BpscPalette
@@ -1874,7 +1875,10 @@ private fun MaterialDetailSheet(
             }
 
             // Body
-            Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())
+            val detailScroll = rememberScrollState()
+            Column(modifier = Modifier.weight(1f, fill = false)
+                .sheetFlickerFix(detailScroll)
+                .verticalScroll(detailScroll)
                 .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                 // ── Rate this material (only after access) ──
@@ -2138,8 +2142,10 @@ private fun UploadSheet(
         sheetState       = sheetState,
         containerColor   = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
+        val uploadSheetScroll = rememberScrollState()
         Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp)
-            .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            .sheetFlickerFix(uploadSheetScroll)
+            .verticalScroll(uploadSheetScroll), verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
             Text(str.materialsUploadTitle, style = MaterialTheme.typography.headlineSmall,
                 color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
@@ -2210,9 +2216,10 @@ private fun UploadSheet(
             // Type description
             Text(
                 when (selType) {
-                    MaterialType.PDF   -> "📄 Study notes, summaries, handwritten scans, any PDF material"
-                    MaterialType.PYQ   -> "📝 Previous Year Question papers from past BPSC / UPSC exams"
-                    MaterialType.BOOK  -> "📚 Reference books, standard textbooks, study guides (PDF)"
+                    MaterialType.PDF         -> "📄 Study notes, summaries, any PDF material"
+                    MaterialType.PYQ         -> "📝 Previous Year Question papers from past BPSC / UPSC exams"
+                    MaterialType.BOOK        -> "📚 Reference books, standard textbooks, study guides (PDF)"
+                    MaterialType.HANDWRITTEN -> "✏️ Scanned handwritten notes shared as PDF"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = BpscColors.TextSecondary,
@@ -2560,14 +2567,16 @@ private fun MaterialRatingWidget(
 
 // ── Helpers ───────────────────────────────────────────────────
 private fun typeColor(type: MaterialType) = when (type) {
-    MaterialType.PDF   -> Color(0xFFE74C3C)
-    MaterialType.PYQ   -> Color(0xFF9B59B6)
-    MaterialType.BOOK  -> Color(0xFF1565C0)
+    MaterialType.PDF         -> Color(0xFFE74C3C)
+    MaterialType.PYQ         -> Color(0xFF9B59B6)
+    MaterialType.BOOK        -> Color(0xFF1565C0)
+    MaterialType.HANDWRITTEN -> Color(0xFFF39C12)
 }
 private fun typeBg(type: MaterialType) = when (type) {
-    MaterialType.PDF   -> Color(0xFFFEE8E8)
-    MaterialType.PYQ   -> Color(0xFFF3E8FD)
-    MaterialType.BOOK  -> Color(0xFFE8F0FD)
+    MaterialType.PDF         -> Color(0xFFFEE8E8)
+    MaterialType.PYQ         -> Color(0xFFF3E8FD)
+    MaterialType.BOOK        -> Color(0xFFE8F0FD)
+    MaterialType.HANDWRITTEN -> Color(0xFFFFF8E1)
 }
 private fun formatCount(count: Int): String {
     return if (count >= 1000) "${"%.1f".format(count / 1000f)}k" else "$count"

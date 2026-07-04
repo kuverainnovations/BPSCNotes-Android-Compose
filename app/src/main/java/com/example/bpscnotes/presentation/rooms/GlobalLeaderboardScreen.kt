@@ -236,8 +236,10 @@ private fun PodiumColumn(entry: GlobalLeaderboardEntryDto, place: Int, height: D
             modifier = Modifier.widthIn(max = 70.dp), textAlign = TextAlign.Center,
         )
         Text(entryValue(entry, type), fontSize = 10.sp, color = Color(0xFF888899))
+        // On the Study Time tab entryValue() above IS the study time —
+        // repeating it here showed every duration twice (QA issue 8).
         val podiumMins = entry.totalStudyMinutes ?: 0
-        if (podiumMins > 0) {
+        if (podiumMins > 0 && type != "study_time") {
             Text("⏱️ ${fmtStudyTime(podiumMins)}", fontSize = 9.sp, color = Color(0xFFAAAAAA))
         }
         Spacer(Modifier.height(4.dp))
@@ -316,7 +318,7 @@ private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe:
                 }
             }
             val mins = entry.totalStudyMinutes ?: 0
-            if (mins > 0) {
+            if (mins > 0 && type != "study_time") {
                 Text(
                     "⏱️ ${fmtStudyTime(mins)} in room",
                     fontSize = 11.sp,
@@ -362,7 +364,7 @@ private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.15f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
                 val stickyMins = entry.totalStudyMinutes ?: 0
-                if (stickyMins > 0) {
+                if (stickyMins > 0 && type != "study_time") {
                     Text("⏱️ ${fmtStudyTime(stickyMins)} in room", fontSize = 11.sp, color = BpscColors.Primary.copy(0.7f))
                 }
             }

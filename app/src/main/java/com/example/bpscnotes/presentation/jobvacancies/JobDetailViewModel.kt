@@ -51,12 +51,14 @@ class JobDetailViewModel @Inject constructor(
 
     fun toggleSave() {
         val job = _uiState.value.job ?: return
+        val wasSaved = job.isSaved
+        _uiState.update { it.copy(job = it.job?.copy(isSaved = !wasSaved)) }
         viewModelScope.launch {
             try {
-                api.toggleSaveJob(job.id)
-                _uiState.update { it.copy(job = it.job?.copy(isSaved = !job.isSaved)) }
+                if (wasSaved) api.unsaveJob(job.id) else api.saveJob(job.id)
             } catch (e: Exception) {
                 Log.e(TAG, "toggleSave: ${e.message}", e)
+                _uiState.update { it.copy(job = it.job?.copy(isSaved = wasSaved)) }
             }
         }
     }

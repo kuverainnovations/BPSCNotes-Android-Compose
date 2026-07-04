@@ -504,8 +504,11 @@ private fun StoreTab(
         val matchesSaved = !showSavedOnly || savedCourseIds.contains(course.id)
         matchesSub && matchesSearch && matchesSaved
     }
+    // Sections must be mutually exclusive — a free featured course used to
+    // appear under BOTH "Featured" and "Free", and saved courses showed once
+    // per matching section on the Saved filter (QA issue 10).
     val featured = filtered.filter { it.isFeatured }
-    val free = filtered.filter { !it.isPaid }
+    val free = filtered.filter { !it.isPaid && !it.isFeatured }
     val paid = filtered.filter { it.isPaid && !it.isFeatured }
 
     Column(
@@ -667,6 +670,25 @@ private fun StoreTab(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
+                // Saved view: one flat list — each saved course exactly once,
+                // no category grouping (QA issue 10).
+                if (showSavedOnly) {
+                    item { StoreSectionHeader("🔖 Saved Courses", "${filtered.size} courses") }
+                    items(filtered, key = { it.id }) { course ->
+                        StoreCourseCard(
+                            course,
+                            savedCourseIds.contains(course.id),
+                            { viewModel.toggleSave(course.id)
+                            }) { selectedCourse = course }; Spacer(Modifier.height(12.dp))
+                    }
+                    item {
+                        if (adManager != null) {
+                            BannerAdView(adUnitId = adManager.getBannerAdUnitId())
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    return@LazyColumn
+                }
                 if (featured.isNotEmpty()) {
                     item { StoreSectionHeader(str.jobsFeatured, "${featured.size} courses") }
                     items(featured) { course ->
@@ -1556,8 +1578,8 @@ private fun StoreCourseCard(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CourseInfoChip(Icons.Rounded.PlayLesson, "${course.totalLessons} lessons")
-                    CourseInfoChip(Icons.Rounded.Schedule, "${course.totalHours}h")
-                    CourseInfoChip(Icons.Rounded.BarChart, "${course.bpscRelevance}% BPSC")
+                    if (course.totalHours > 0f) CourseInfoChip(Icons.Rounded.Schedule, "${course.totalHours}h")
+                    if (course.bpscRelevance > 0) CourseInfoChip(Icons.Rounded.BarChart, "${course.bpscRelevance}% BPSC")
                 }
                 if (course.isPaid) Column(horizontalAlignment = Alignment.End) {
                     if (course.originalPrice > course.price) {
@@ -1916,7 +1938,7 @@ private fun CourseDetailSheet(
                             "👥",
                             "${(course.studentsEnrolled / 1000f).let { if (it >= 1f) "${it.toInt()}k" else "${course.studentsEnrolled}" }} enrolled"
                         )
-                        SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
+                        if (course.bpscRelevance > 0) SheetStatWhite("📊", "${course.bpscRelevance}% BPSC")
                     }
                 }
             }
@@ -1940,20 +1962,16 @@ private fun CourseDetailSheet(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // QA 04-Jul issue 3: never show 0-value tiles — only stats the
+                // admin actually filled in are rendered.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    DetailStat("📚", "${course.totalLessons}", "Lessons"); DetailStat(
-                    "⏱️",
-                    "${course.totalHours}h",
-                    "Duration"
-                )
-                    DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus"); DetailStat(
-                    "🎯",
-                    "${course.bpscRelevance}%",
-                    "BPSC Rel."
-                )
+                    DetailStat("📚", "${course.totalLessons}", "Lessons")
+                    if (course.totalHours > 0f) DetailStat("⏱️", "${course.totalHours}h", "Duration")
+                    if (course.syllabusCoverage > 0) DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus")
+                    if (course.bpscRelevance > 0) DetailStat("🎯", "${course.bpscRelevance}%", "BPSC Rel.")
                 }
                 Text(
                     str.courseAbout,

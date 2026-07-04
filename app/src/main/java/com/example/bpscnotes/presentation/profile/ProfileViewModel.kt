@@ -294,6 +294,26 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    // QA 04-Jul issue 15: allow removing the uploaded photo entirely.
+    fun removeAvatar() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, error = null) }
+            try {
+                authApi.deleteAvatar()
+                _uiState.update { it.copy(
+                    isUploadingAvatar = false,
+                    user = it.user?.copy(avatarUrl = null),
+                    successMessage = "Profile photo removed"
+                ) }
+                bus.emit(RefreshEvent.AvatarUpdated(""))   // clears avatar everywhere
+                bus.emit(RefreshEvent.ProfileUpdated)
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileVM", "removeAvatar failed: ${e.message}", e)
+                _uiState.update { it.copy(isUploadingAvatar = false, error = e.toUserMessage("Could not remove photo")) }
+            }
+        }
+    }
+
     fun clearMessages() = _uiState.update { it.copy(error = null, successMessage = null) }
 
     // ── Badge system ───────────────────────────────────────────
@@ -317,10 +337,14 @@ class ProfileViewModel @Inject constructor(
         val activity = stats?.weeklyActivity ?: emptyList()
         val today    = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
             .let { if (it == java.util.Calendar.SUNDAY) 6 else it - 2 }
-        // Take the last 7 days from the 28-day activity list
+        // Take the last 7 days from the 28-day activity list. lastSeven is
+        // ordered oldest→today, so lastSeven[6] is TODAY — align each Mon–Sun
+        // label to its real entry instead of mapping positionally (which only
+        // lined up when today happened to be Sunday).
         val lastSeven = if (activity.size >= 7) activity.takeLast(7) else activity
         return labels.mapIndexed { i, label ->
-            val has = lastSeven.getOrNull(i)?.activity?.toString()?.toDoubleOrNull() ?: 0.0
+            val idx = lastSeven.size - 1 - (today - i)   // i==today → last entry
+            val has = if (i <= today) lastSeven.getOrNull(idx)?.activity?.toString()?.toDoubleOrNull() ?: 0.0 else 0.0
             WeekDayUi(
                 label,
                 when { i == today -> DayStatus.TODAY; has > 0.0 -> DayStatus.DONE; else -> DayStatus.MISSED }

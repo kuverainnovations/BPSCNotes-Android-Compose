@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -232,6 +233,36 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                         label = "Download Notification PDF",
                         color = Color(0xFFE74C3C),
                         onClick = { openUrl(context, job.pdfUrl) },
+                    )
+                }
+            }
+        }
+
+        // Source & disclaimer — Play policy: govt info must cite its official source
+        Card(
+            shape  = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text("ℹ️ Source & Disclaimer", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF795548))
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "This job information is sourced from the official government notification. " +
+                    "BPSCNotes is not a government app and is not affiliated with any government entity. " +
+                    "Please verify all details (dates, eligibility, fees) on the official website before applying.",
+                    fontSize = 12.sp, color = Color(0xFF6D4C41), lineHeight = 18.sp,
+                )
+                val sourceUrl = job.notificationUrl?.takeIf { it.isNotBlank() }
+                    ?: job.officialLink?.takeIf { it.isNotBlank() }
+                    ?: job.pdfUrl?.takeIf { it.isNotBlank() }
+                if (sourceUrl != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "🔗 View official source",
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1565C0),
+                        modifier = Modifier.clickable { openUrl(context, sourceUrl) },
                     )
                 }
             }

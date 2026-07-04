@@ -54,6 +54,10 @@ interface AuthApiService {
         @Part avatar: okhttp3.MultipartBody.Part
     ): ApiResponse<AvatarUploadData>
 
+    /** DELETE /users/avatar — remove profile picture */
+    @DELETE("users/avatar")
+    suspend fun deleteAvatar(): ApiResponse<Any>
+
     /** POST /auth/logout — invalidate server-side token */
     @POST("auth/logout")
     suspend fun logOut(): ApiResponse<Any>

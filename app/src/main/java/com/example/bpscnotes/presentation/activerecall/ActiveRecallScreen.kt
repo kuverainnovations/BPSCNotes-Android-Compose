@@ -54,8 +54,8 @@ private const val ADS_EVERY_N_CARDS = 10       // show ad break after every 10 c
 private const val ADS_PER_BREAK     = 1        // show 1 ad per break
 private const val AD_DURATION_SECS  = 30       // 30 seconds per ad (auto-advance)
 
-// Test ad unit ID — replace with your real ID before release
-private const val AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+// All AdMob unit IDs live in AdManager (single place to swap for release)
+private val AD_UNIT_ID = com.example.bpscnotes.core.ads.AdManager.BANNER_AD_UNIT_ID
 
 // ─────────────────────────────────────────────────────────────
 // UI-ONLY MODELS

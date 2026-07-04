@@ -469,7 +469,13 @@ private fun VideoPlayer(videoUrl: String?) {
                         }
                     }
                     webChromeClient = WebChromeClient()
-                    if (html != null) loadData(html, "text/html", "UTF-8")
+                    // loadData() treats the string as a data: URL, so raw '#'
+                    // (e.g. CSS background:#000) truncates the page → blank
+                    // player. loadDataWithBaseURL has no such encoding trap and
+                    // gives the YouTube iframe a real https origin to embed from.
+                    if (html != null) loadDataWithBaseURL(
+                        "https://bpscnotes.in", html, "text/html", "UTF-8", null
+                    )
                     else loadUrl(embedUrl)
                     webViewRef = this
                 }

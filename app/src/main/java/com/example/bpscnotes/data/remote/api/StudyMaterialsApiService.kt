@@ -13,9 +13,10 @@ import retrofit2.http.*
 
 // ── Enums ─────────────────────────────────────────────────────
 enum class MaterialType(val apiKey: String, val label: String, val emoji: String) {
-    PDF( "pdf",  "PDF Notes",    "📄"),
-    PYQ( "pyq",  "Prev. Papers", "📝"),
-    BOOK("book", "Books",        "📚");
+    PDF(        "pdf",         "PDF Notes",    "📄"),
+    PYQ(        "pyq",         "Prev. Papers", "📝"),
+    BOOK(       "book",        "Books",        "📚"),
+    HANDWRITTEN("handwritten", "Handwritten",  "✏️");
     // VIDEO — disabled, Phase 2
 
     companion object {

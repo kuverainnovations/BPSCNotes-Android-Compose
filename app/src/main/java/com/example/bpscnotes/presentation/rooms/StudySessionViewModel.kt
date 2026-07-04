@@ -400,6 +400,9 @@ class StudySessionViewModel @Inject constructor(
                         sessionId = null,
                     )
                 }
+                // Dashboard holds its stats in a long-lived ViewModel — without
+                // this event "time spent today" stays frozen until app restart.
+                bus.emit(RefreshEvent.StudySessionEnded)
             } catch (e: Exception) {
                 Log.e(TAG, "endSession failed: ${e.message}", e)
                 // Build a local summary from what we already know so the summary
@@ -429,6 +432,7 @@ class StudySessionViewModel @Inject constructor(
                         error     = "Offline — showing approximate session data"
                     )
                 }
+                bus.emit(RefreshEvent.StudySessionEnded)
             }
         }
     }

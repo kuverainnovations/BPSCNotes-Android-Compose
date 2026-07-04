@@ -181,10 +181,12 @@ fun EditProfileScreen(
                             listOf(Color(0xFF1565C0), Color(0xFF0D47A1)))),
                         contentAlignment = Alignment.Center) {
                         if (selectedAvatarUri != null) {
-                            // Show newly selected image
+                            // Show newly selected image — Crop fills the circle
+                            // without letterboxing/distortion (QA issue 15).
                             AsyncImage(
                                 model = selectedAvatarUri,
                                 contentDescription = "Profile photo",
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape)
                             )
                         } else if (!user?.avatarUrl.isNullOrBlank()) {
@@ -192,6 +194,7 @@ fun EditProfileScreen(
                             AsyncImage(
                                 model = user?.avatarUrl,
                                 contentDescription = "Profile photo",
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape)
                             )
                         } else {
@@ -220,6 +223,25 @@ fun EditProfileScreen(
                         } else {
                             Icon(Icons.Rounded.CameraAlt, null, tint = Color.White, modifier = Modifier.size(14.dp))
                         }
+                    }
+                }
+
+                // Remove photo — only when there is one (QA issue 15)
+                if (selectedAvatarUri != null || !user?.avatarUrl.isNullOrBlank()) {
+                    TextButton(
+                        onClick = {
+                            selectedAvatarUri = null
+                            viewModel.removeAvatar()
+                        },
+                        enabled  = !state.isUploadingAvatar,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            "Remove photo",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
 
@@ -407,14 +429,22 @@ private fun ImageCropDialog(
                         if (viewW > 0 && boxSize > 0) {
                             val imgW = bitmap.width.toFloat()
                             val imgH = bitmap.height.toFloat()
-                            // Scale factors from view coords → bitmap coords
-                            val scaleX = imgW / viewW
-                            val scaleY = imgH / viewH
-                            val bx = (boxLeft * scaleX).toInt().coerceIn(0, bitmap.width - 1)
-                            val by = (boxTop  * scaleY).toInt().coerceIn(0, bitmap.height - 1)
-                            val bw = (boxSize * scaleX).toInt().coerceIn(1, bitmap.width - bx)
-                            val bh = (boxSize * scaleY).toInt().coerceIn(1, bitmap.height - by)
-                            val cropped = android.graphics.Bitmap.createBitmap(bitmap, bx, by, bw, bh)
+                            // The preview renders with ContentScale.Fit — ONE uniform
+                            // scale plus centering offsets. The old mapping used
+                            // separate X/Y scales over the whole view, so the square
+                            // selection became a non-square region force-resized to
+                            // 512×512 → the "stretched, not what I cropped" avatar
+                            // (QA issue 15).
+                            val scale = minOf(viewW / imgW, viewH / imgH)
+                            val offX  = (viewW - imgW * scale) / 2f
+                            val offY  = (viewH - imgH * scale) / 2f
+                            val bx = ((boxLeft - offX) / scale).toInt().coerceIn(0, bitmap.width  - 1)
+                            val by = ((boxTop  - offY) / scale).toInt().coerceIn(0, bitmap.height - 1)
+                            val side = (boxSize / scale).toInt()
+                                .coerceAtMost(bitmap.width  - bx)
+                                .coerceAtMost(bitmap.height - by)
+                                .coerceAtLeast(1)
+                            val cropped = android.graphics.Bitmap.createBitmap(bitmap, bx, by, side, side)
                             val scaled  = android.graphics.Bitmap.createScaledBitmap(cropped, 512, 512, true)
                             val file    = java.io.File(context.cacheDir, "avatar_${System.currentTimeMillis()}.jpg")
                             file.outputStream().use { scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }

@@ -56,12 +56,28 @@ class JobVacanciesViewModel @Inject constructor(
     }
 
     // ── Load alert prefs from server ──────────────────────────
-    // Server holds the canonical list; local prefs are a cache.
+    // Local prefs record the user's intent; the server is the push-delivery
+    // target. If the server comes back EMPTY while we hold local selections
+    // (a failed earlier sync, a backend redeploy that lost the table, an old
+    // backend build without the endpoint), re-push local instead of adopting
+    // the empty list — adopting it is how enabled alerts kept "un-saving"
+    // themselves after reopening the page (QA issue 13, regressed twice).
     private fun loadAlertPrefsFromServer() {
         viewModelScope.launch {
             try {
                 val res = api.getAlertPrefs()
                 val server = res.data?.subscribed?.toSet() ?: return@launch
+                val local  = tokenStore.getJobAlertCategories()
+                if (server.isEmpty() && local.isNotEmpty()) {
+                    try {
+                        api.syncAlertPrefs(mapOf("categories" to local.toList()))
+                        Log.i(TAG, "loadAlertPrefs: server empty, re-pushed ${local.size} local prefs")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "loadAlertPrefs re-push failed: ${e.message}")
+                    }
+                    // Either way keep showing the user's local selections.
+                    return@launch
+                }
                 tokenStore.setJobAlertCategories(server)
                 _uiState.update { it.copy(alertCategories = server) }
             } catch (e: Exception) {
@@ -105,18 +121,26 @@ class JobVacanciesViewModel @Inject constructor(
     }
 
     // ── Toggle save ───────────────────────────────────────────
+    // Optimistic flip, then the explicit idempotent endpoint for the
+    // *intended* end state (POST=save, DELETE=unsave). The old blind
+    // toggle endpoint flipped on server state, so drift made saves
+    // land backwards (QA issue 14). Reverts on failure.
     fun toggleSave(jobId: String) {
+        val wasSaved = _uiState.value.jobs.firstOrNull { it.id == jobId }?.isSaved == true
+        val setSaved = { saved: Boolean ->
+            _uiState.update { state ->
+                state.copy(jobs = state.jobs.map { job ->
+                    if (job.id == jobId) job.copy(isSaved = saved) else job
+                })
+            }
+        }
+        setSaved(!wasSaved)
         viewModelScope.launch {
             try {
-                api.toggleSaveJob(jobId)
-                _uiState.update { state ->
-                    state.copy(jobs = state.jobs.map { job ->
-                        if (job.id == jobId) job.copy(isSaved = !(job.isSaved))
-                        else job
-                    })
-                }
+                if (wasSaved) api.unsaveJob(jobId) else api.saveJob(jobId)
             } catch (e: Exception) {
                 Log.e(TAG, "toggleSave failed", e)
+                setSaved(wasSaved)   // revert optimistic update
             }
         }
     }

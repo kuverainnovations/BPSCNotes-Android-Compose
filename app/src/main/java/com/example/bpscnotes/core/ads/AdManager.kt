@@ -47,7 +47,7 @@ class AdManager @Inject constructor(
         // Test IDs from Google — safe to use during development.
         private const val REWARDED_AD_UNIT_ID     = "ca-app-pub-3940256099942544/5224354917"  // test
         private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"  // test
-        private const val BANNER_AD_UNIT_ID       = "ca-app-pub-3940256099942544/6300978111"  // test
+        const val BANNER_AD_UNIT_ID               = "ca-app-pub-3940256099942544/6300978111"  // test
         private const val NATIVE_AD_UNIT_ID       = "ca-app-pub-3940256099942544/2247696110"  // test
         // Medium-rectangle unit shown inside the custom 15s timer overlay
         // before a Current Affairs article opens (CaAdGateScreen). Kept as

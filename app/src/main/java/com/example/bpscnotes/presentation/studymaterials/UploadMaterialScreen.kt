@@ -63,7 +63,7 @@ private val UPLOAD_TYPES = listOf(
     UploadTypeOption("📄", "PDFs &",       "Guides",      Color(0xFFFFEBEE), MaterialType.PDF),
     UploadTypeOption("📝", "PYQs &",       "Papers",      Color(0xFFF3E5F5), MaterialType.PYQ),
     UploadTypeOption("📚", "Books &",      "References",  Color(0xFFE8F5E9), MaterialType.BOOK),
-    UploadTypeOption("✏️", "Handwritten",  "Notes",       Color(0xFFFFF8E1), MaterialType.PDF),
+    UploadTypeOption("✏️", "Handwritten",  "Notes",       Color(0xFFFFF8E1), MaterialType.HANDWRITTEN),
 )
 
 // Step labels and icons for the 4-step progress indicator
@@ -184,13 +184,15 @@ fun UploadMaterialScreen(
                 }
             )
 
+            // Pinned above the scroll area — QA asked for the step tracker to
+            // stay fixed while the page content scrolls (issue 11).
+            UploadStepIndicator(currentStep = currentStep)
+
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()).imePadding()
             ) {
-                UploadStepIndicator(currentStep = currentStep)
-
                 if (currentStep == 1) {
                     UploadStep1Content(
                         selectedTypeIdx = selectedTypeIdx,

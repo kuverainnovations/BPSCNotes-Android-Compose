@@ -540,13 +540,25 @@ private fun ListTabContent(
     val today   = items.filter { !it.target.isCarriedForward }
     var editingTarget by remember { mutableStateOf<TargetItem?>(null) }
 
+    // Show the true age of the oldest pending target — a target
+    // pending for 3 days must not keep claiming "From yesterday".
+    val carriedSubtitle = remember(carried) {
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val todayMs = fmt.parse(fmt.format(java.util.Date()))?.time ?: 0L
+        val oldestDays = carried
+            .mapNotNull { it.target.createdAt?.take(10) }
+            .mapNotNull { runCatching { fmt.parse(it) }.getOrNull()?.time }
+            .maxOfOrNull { ((todayMs - it) / 86_400_000L).toInt() } ?: 1
+        if (oldestDays <= 1) "From yesterday" else "Pending for $oldestDays days"
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         if (carried.isNotEmpty()) {
-            item { SectionLabel("📅", "Carried Forward", "From yesterday") }
+            item { SectionLabel("📅", "Carried Forward", carriedSubtitle) }
             items(carried, key = { it.target.id }) { item ->
                 TargetListCard(item = item, isCompleted = item.target.isCompleted, onToggleComplete = { onToggleComplete(item.target.id) }, onDelete = { onDelete(item.target.id) }, onEdit = { editingTarget = item })
             }

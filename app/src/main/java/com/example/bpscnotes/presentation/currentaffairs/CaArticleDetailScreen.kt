@@ -116,7 +116,12 @@ private fun buildArticleHtml(
         "<div class=\"tags\">" + filteredTags.joinToString("") { "<span>#${escapeHtml(it)}</span>" } + "</div>"
     } else ""
     val sourceHtml = if (!article.source.isNullOrBlank()) {
-        "<p class=\"source\">📌 Source: ${escapeHtml(article.source)}</p>"
+        val src = escapeHtml(article.source)
+        // Play policy: link to the original source when it's a URL (e.g. .gov sites)
+        if (article.source.startsWith("http", ignoreCase = true))
+            "<p class=\"source\">📌 Source: <a href=\"$src\">$src</a></p>"
+        else
+            "<p class=\"source\">📌 Source: $src</p>"
     } else ""
 
     // Summary as an italic lead paragraph before the full body.

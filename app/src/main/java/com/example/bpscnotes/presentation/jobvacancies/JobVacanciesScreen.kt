@@ -32,6 +32,7 @@ import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.sheetFlickerFix
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
@@ -124,6 +125,9 @@ fun JobVacanciesScreen(
         onRefresh = { viewModel.load() }
     ) {    var searchQuery      by remember { mutableStateOf("") }
         var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
+        // QA issue 14: saved jobs had no page to view them — the 🔖 Saved
+        // chip below filters the list to bookmarked jobs.
+        var showSavedOnly    by remember { mutableStateOf(false) }
         val savedJobs = remember(vmState.jobs) {
             vmState.jobs
                 .filter { it.isSaved == true }
@@ -140,15 +144,16 @@ fun JobVacanciesScreen(
             allJobs.map { it.category?.toJobCategory() }.distinct().sortedBy { it?.label }
         }
 
-        val filtered = remember(allJobs, searchQuery, selectedCategory) {
+        val filtered = remember(allJobs, searchQuery, selectedCategory, showSavedOnly) {
             allJobs.filter { job ->
                 val matchCat    = selectedCategory == null || (job.category ?: "").toJobCategory() == selectedCategory
+                val matchSaved  = !showSavedOnly || job.isSaved
                 val matchSearch = searchQuery.isEmpty() ||
                         job.title.contains(searchQuery, true) ||
                         job.department?.contains(searchQuery, true) == true ||
                         job.location?.contains(searchQuery, true) == true ||
                         job.qualification?.contains(searchQuery, true) == true
-                matchCat && matchSearch
+                matchCat && matchSaved && matchSearch
             }.sortedWith(compareBy { it.applyEndDate.parseToMillis() })
         }
 
@@ -248,15 +253,32 @@ fun JobVacanciesScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        val sel = selectedCategory == null
+                        val sel = selectedCategory == null && !showSavedOnly
                         Box(
                             Modifier.clip(RoundedCornerShape(20.dp))
                                 .background(if (sel) BpscColors.Primary else Color.White)
                                 .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                                .clickable { selectedCategory = null }
+                                .clickable { selectedCategory = null; showSavedOnly = false }
                                 .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(str.filterAll, style = MaterialTheme.typography.bodyMedium,
+                                color = if (sel) Color.White else BpscColors.TextSecondary,
+                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                    item {
+                        val sel = showSavedOnly
+                        Row(
+                            Modifier.clip(RoundedCornerShape(20.dp))
+                                .background(if (sel) BpscColors.Primary else Color.White)
+                                .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
+                                .clickable { showSavedOnly = !showSavedOnly }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text("🔖", fontSize = 13.sp)
+                            Text(str.jobsSaved, style = MaterialTheme.typography.bodyMedium,
                                 color = if (sel) Color.White else BpscColors.TextSecondary,
                                 fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
                         }
@@ -310,6 +332,21 @@ fun JobVacanciesScreen(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Source disclaimer — Play policy: govt info must cite official sources
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFFF8E1),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    "ℹ️ Job details are sourced from official government websites (bpsc.bihar.gov.in, bssc.bihar.gov.in, etc.). " +
+                                    "BPSCNotes is not a government app. Verify on the official site before applying.",
+                                    fontSize = 11.sp, color = Color(0xFF6D4C41), lineHeight = 16.sp,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                )
+                            }
+                        }
                         // Featured
                         val featured = filtered.filter { it.isFeatured }
                         if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {
@@ -499,8 +536,11 @@ private fun JobDetailSheet(
             }
 
             // ── Scrollable body ────────────────────────────────
+            val jobSheetScroll = rememberScrollState()
             Column(
-                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp),
+                Modifier.weight(1f, fill = false)
+                    .sheetFlickerFix(jobSheetScroll)
+                    .verticalScroll(jobSheetScroll).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
 

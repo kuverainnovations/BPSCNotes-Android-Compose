@@ -13,6 +13,8 @@ sealed class RefreshEvent {
     object QuizCompleted     : RefreshEvent()
     object TargetUpdated     : RefreshEvent()
     object NotificationReceived : RefreshEvent()   // fires when push arrives → update badge
+    /** Emitted after a study session ends so Dashboard/Profile refresh "time spent today". */
+    object StudySessionEnded : RefreshEvent()
     /** Emitted after a subscription is activated so all screens re-check isPurchased/isSubscribed. */
     object SubscriptionChanged  : RefreshEvent()
     data class CourseProgressChanged(val courseId: String) : RefreshEvent()

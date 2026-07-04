@@ -622,11 +622,24 @@ private fun StudyHeatmapCard(studyDays: List<Int>, isDark: Boolean) {
                 }
             }
 
-            // 4 rows × 7 days — large cells, clear colors
-            repeat(4) { row ->
+            // Weekday-aligned grid. The old version filled 4×7 sequentially,
+            // so "today" (last item) always rendered in the last cell — the
+            // Sunday column — no matter the real weekday (QA issue 9). Pad the
+            // start/end so every date sits under its true Mon–Sun header.
+            val todayCol = (java.util.Calendar.getInstance()
+                .get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7   // Mon=0 … Sun=6
+            val trailPad = 6 - todayCol
+            val leadPad  = (7 - ((totalDays + trailPad) % 7)) % 7
+            val cells: List<Int?> =
+                List(leadPad) { null } + days.indices.toList() + List(trailPad) { null }
+            repeat(cells.size / 7) { row ->
                 Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {
                     repeat(7) { col ->
-                        val dayIdx    = row * 7 + col
+                        val dayIdx = cells[row * 7 + col]
+                        if (dayIdx == null) {
+                            Spacer(Modifier.weight(1f).aspectRatio(1f))
+                            return@repeat
+                        }
                         val mins      = days.getOrElse(dayIdx) { 0 }
                         val isSelected = selectedIdx == dayIdx
                         val isToday   = dayIdx == totalDays - 1
