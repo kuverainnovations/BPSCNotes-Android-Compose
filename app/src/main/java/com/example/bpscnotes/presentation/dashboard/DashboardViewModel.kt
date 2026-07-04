@@ -147,7 +147,12 @@ class DashboardViewModel @Inject constructor(
                 val learningJob = async { safeGet("learning") { authApi.getLearningProgress().data?.inProgressSession } }
 
                 val user       = userJob.await()
-                val courses    = coursesJob.await() ?: emptyList()
+                // "Recommended for You" must only suggest courses the user
+                // does NOT already have — the API returns the user's
+                // enrollment inline, so enrolled/purchased ones are dropped
+                // here (QA 04-Jul issue 16).
+                val courses    = (coursesJob.await() ?: emptyList())
+                    .filter { it.enrollment == null }
                 val quizzes    = quizzesJob.await() ?: emptyList()
                 val banners    = bannersJob.await() ?: emptyList()
                 val stats      = statsJob.await()

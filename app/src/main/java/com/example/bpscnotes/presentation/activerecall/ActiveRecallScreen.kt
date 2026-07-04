@@ -641,8 +641,10 @@ private fun FlashcardSessionScreen(
                 // Hint is now shown in header row (above the card) — not here
             }
 
-            // Bottom actions
-            Row(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Bottom actions — navigationBarsPadding keeps the buttons above
+            // the gesture bar; without it they rendered half-clipped
+            // ("screen not fitting the device", QA issue 17).
+            Row(modifier = Modifier.fillMaxWidth().background(cs.surface).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (!isFlipped) {
                     OutlinedButton(
                         onClick = { rateAndNext(CardRating.Skipped) },
@@ -1081,10 +1083,34 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
     val hasBackImage = !card.backImageUrl.isNullOrBlank()
     val str=LocalStrings.current
 
+    // A short answer with no image/example/MCQ used to sit in the top-left
+    // corner of a mostly empty card (QA issue 17) — for that case render a
+    // centered layout mirroring the front face; rich content keeps the
+    // scrollable top-down layout.
+    val minimalBack = !hasBackImage && card.example.isBlank() && card.relatedMcq == null
+
     Card(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = cs.surface), elevation = CardDefaults.cardElevation(8.dp)) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().height(6.dp).background(Brush.horizontalGradient(listOf(Color(0xFF2ECC71), Color(0xFF1ABC9C)))))
-            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (minimalBack) {
+                Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        FlashSubjectChip(card.subject)
+                        Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("✅", fontSize = 10.sp); Text(str.recallAnswer, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("💡", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
+                        Text(card.answer, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 28.sp)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+            } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     FlashSubjectChip(card.subject)
                     Row(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

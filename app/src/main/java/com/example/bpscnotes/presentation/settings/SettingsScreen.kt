@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
@@ -442,6 +443,55 @@ fun SettingsScreen(
 
                 // ── Account Actions ───────────────────────────────
                 SettingsSectionLabel("⚠️  " + str.settingsAccount + " Actions")
+
+                // QA 04-Jul issue 18: logging out was instantaneous — confirm first.
+                var showLogoutConfirm by remember { mutableStateOf(false) }
+                if (showLogoutConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showLogoutConfirm = false },
+                        containerColor   = cs.surface,
+                        shape            = RoundedCornerShape(24.dp),
+                        icon = {
+                            Box(
+                                modifier = Modifier.size(52.dp).clip(CircleShape).background(Color(0xFFFCE4EC)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.Logout, null, tint = Color(0xFFC62828), modifier = Modifier.size(24.dp))
+                            }
+                        },
+                        title = {
+                            Text(
+                                "Log out?",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = cs.onSurface
+                            )
+                        },
+                        text = {
+                            Text(
+                                "Are you sure you want to log out? Your progress is saved and will be here when you sign back in.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick  = { showLogoutConfirm = false; settingsViewModel.logOut() },
+                                shape    = RoundedCornerShape(12.dp),
+                                colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
+                            ) {
+                                Text(str.settingsLogout, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showLogoutConfirm = false }) {
+                                Text("Cancel", color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    )
+                }
+
                 Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(20.dp),
@@ -449,10 +499,10 @@ fun SettingsScreen(
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column {
-                        // LOG OUT — calls POST /auth/logout + clears token
+                        // LOG OUT — confirm dialog first, then POST /auth/logout + clear token
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .clickable(enabled = !settingsState.isLoggingOut) { settingsViewModel.logOut() }
+                                .clickable(enabled = !settingsState.isLoggingOut) { showLogoutConfirm = true }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment     = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
