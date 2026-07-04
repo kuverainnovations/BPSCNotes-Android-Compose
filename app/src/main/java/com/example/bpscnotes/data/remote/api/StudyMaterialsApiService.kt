@@ -188,6 +188,9 @@ data class MaterialDetailData(
     val price: Double = 0.0,
     @SerializedName("free_pages")      val freePages: Int = 3,
     @SerializedName("is_purchased")    val isPurchased: Boolean = false,
+    // Strict flag mirroring the backend's rate rule: TRUE only after a
+    // purchase or a recorded download — free materials start FALSE.
+    @SerializedName("has_accessed")    val hasAccessed: Boolean = false,
     @SerializedName("buyer_count")     val buyerCount: Int = 0,
     // Google Play one-time product id, synced when the material's price
     // becomes final (approval / negotiation acceptance). Null until then —

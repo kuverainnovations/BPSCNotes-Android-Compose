@@ -129,25 +129,25 @@ private fun buildArticleHtml(
         "<p class=\"lead\">${article.summary}</p><hr class=\"lead-rule\">"
     } else ""
 
-    // ── New content sections — each wrapped in a labelled section div ──
+    // ── Content sections — colored blocks WITHOUT the section-key labels.
+    // QA 05-Jul: the "KEY POINTS / EXAM RELEVANCE / IMPORTANT FACTS" header
+    // rows are noise — the admin's own headings inside the content carry the
+    // meaning; the tinted block + accent border still visually separates them.
     // Only rendered if the admin populated the field (non-empty after strip).
     val keyPointsHtml = if (article.keyPoints.stripHtmlTags().isNotBlank()) {
         """<div class="section-block key-points">
-          <div class="section-label">🔑 Key Points</div>
           ${article.keyPoints}
         </div>"""
     } else ""
 
     val examRelevanceHtml = if (article.examRelevance.stripHtmlTags().isNotBlank()) {
         """<div class="section-block exam-relevance">
-          <div class="section-label">🎯 Exam Relevance</div>
           ${article.examRelevance}
         </div>"""
     } else ""
 
     val importantFactsHtml = if (article.importantFacts.stripHtmlTags().isNotBlank()) {
         """<div class="section-block important-facts">
-          <div class="section-label">📊 Important Facts &amp; Figures</div>
           ${article.importantFacts}
         </div>"""
     } else ""

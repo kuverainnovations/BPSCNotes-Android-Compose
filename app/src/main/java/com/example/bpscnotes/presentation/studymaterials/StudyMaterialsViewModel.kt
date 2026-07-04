@@ -389,6 +389,25 @@ class StudyMaterialsViewModel @Inject constructor(
 
     fun closeDetail() = _state.update { it.copy(selectedMaterial = null, buyers = null) }
 
+    /**
+     * Records the material as accessed when the user opens/reads it —
+     * POST /:id/download writes the material_downloads row the backend's
+     * rate rule checks, and hasAccessed flips locally so the rating stars
+     * appear immediately (QA: tapping stars before access threw a 400).
+     */
+    fun markOpened(materialId: String) {
+        _state.update { st ->
+            val sel = st.selectedMaterial
+            if (sel != null && sel.id == materialId && !sel.hasAccessed)
+                st.copy(selectedMaterial = sel.copy(hasAccessed = true))
+            else st
+        }
+        viewModelScope.launch {
+            runCatching { api.recordDownload(materialId) }
+                .onFailure { android.util.Log.w("MaterialsVM", "markOpened: ${it.message}") }
+        }
+    }
+
     // ── Phase 5: Chat with uploader ─────────────────────────────
 // Gets or creates the buyer's chat thread for this material, then
 // signals the screen to navigate via pendingChatId.

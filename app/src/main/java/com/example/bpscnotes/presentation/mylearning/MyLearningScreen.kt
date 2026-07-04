@@ -1578,7 +1578,7 @@ private fun StoreCourseCard(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CourseInfoChip(Icons.Rounded.PlayLesson, "${course.totalLessons} lessons")
-                    if (course.totalHours > 0f) CourseInfoChip(Icons.Rounded.Schedule, "${course.totalHours}h")
+                    CourseInfoChip(Icons.Rounded.Schedule, if (course.totalHours > 0f) "${course.totalHours}h" else "—")
                     if (course.bpscRelevance > 0) CourseInfoChip(Icons.Rounded.BarChart, "${course.bpscRelevance}% BPSC")
                 }
                 if (course.isPaid) Column(horizontalAlignment = Alignment.End) {
@@ -1962,16 +1962,18 @@ private fun CourseDetailSheet(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // QA 04-Jul issue 3: never show 0-value tiles — only stats the
-                // admin actually filled in are rendered.
+                // QA 04-Jul issue 3 (round 2): keep all four tiles — hiding
+                // them left the row looking empty. Duration is now computed
+                // from lesson durations server-side; a value the admin hasn't
+                // provided shows "—" instead of a fake 0.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     DetailStat("📚", "${course.totalLessons}", "Lessons")
-                    if (course.totalHours > 0f) DetailStat("⏱️", "${course.totalHours}h", "Duration")
-                    if (course.syllabusCoverage > 0) DetailStat("📊", "${course.syllabusCoverage}%", "Syllabus")
-                    if (course.bpscRelevance > 0) DetailStat("🎯", "${course.bpscRelevance}%", "BPSC Rel.")
+                    DetailStat("⏱️", if (course.totalHours > 0f) "${course.totalHours}h" else "—", "Duration")
+                    DetailStat("📊", if (course.syllabusCoverage > 0) "${course.syllabusCoverage}%" else "—", "Syllabus")
+                    DetailStat("🎯", if (course.bpscRelevance > 0) "${course.bpscRelevance}%" else "—", "BPSC Rel.")
                 }
                 Text(
                     str.courseAbout,

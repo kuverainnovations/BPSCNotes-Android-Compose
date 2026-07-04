@@ -544,6 +544,9 @@ fun StudyMaterialsScreen(
                 viewModel.downloadMaterial(dto)
             },
             onOpenPdf      = { url, title, freePages, isPurchased,id,price ->
+                // Opening counts as access — records the row the rating rule
+                // checks and unlocks the stars (QA rate-400 follow-up)
+                viewModel.markOpened(id)
                 openMaterial(
                     context, navController,
                     // Use local file path if downloaded — works offline, no network needed
@@ -1882,13 +1885,32 @@ private fun MaterialDetailSheet(
                 .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
                 // ── Rate this material (only after access) ──
-                if (isPurchased) {
+                // The backend only accepts ratings from users with a purchase
+                // or a recorded download. isPurchased is TRUE for every free
+                // material, so gating on it alone made the stars throw
+                // "You can only rate materials you have accessed" (QA log).
+                val canRate = material.hasAccessed || isDownloaded
+                if (canRate) {
                     MaterialRatingWidget(
                         currentStars = myRatingStars,
                         isSubmitting = isSubmittingRating,
                         avgRating    = material.rating,
                         onStarTap    = onSubmitRating,
                     )
+                } else if (isPurchased) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                            .background(cs.surfaceVariant.copy(0.5f)).padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("⭐", fontSize = 14.sp)
+                        Text(
+                            "Open the material once to rate it",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant
+                        )
+                    }
                 }
 
                 if (!material.description.isNullOrEmpty()) {
