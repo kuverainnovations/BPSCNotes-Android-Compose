@@ -59,6 +59,7 @@ data class CAArticle(
     val examRelevance: String,      // TipTap HTML — which exam + why
     val importantFacts: String,     // TipTap HTML — numbers/names/dates
     val category: String,
+    val categories: List<String> = emptyList(),  // multi-category (Issue 19); category = first entry
     val rawDate: String,      // original ISO string — used for grouping/sorting
     val date: String,             // formatted for display e.g. "31 May 2026"
     val readMinutes: Int,
@@ -101,6 +102,8 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         examRelevance  = examRelevance  ?: "",
         importantFacts = importantFacts ?: "",
         category    = category,
+        categories  = categories?.filter { it.isNotBlank() }?.ifEmpty { null }
+                      ?: if (category.isNotBlank()) listOf(category) else emptyList(),
         rawDate     = date,
         date        = formatCaDate(date),
         readMinutes = readMins,

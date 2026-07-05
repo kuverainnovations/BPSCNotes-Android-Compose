@@ -359,6 +359,7 @@ data class CurrentAffairDto(
     @SerializedName("exam_relevance")   val examRelevance:  String? = null,
     @SerializedName("important_facts")  val importantFacts: String? = null,
     val category: String = "",
+    val categories: List<String>? = null,
     val source: String? = null,
     val date: String = "",
     @SerializedName("is_important")    val isImportant: Boolean = false,

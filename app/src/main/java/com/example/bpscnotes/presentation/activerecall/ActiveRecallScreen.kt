@@ -559,59 +559,13 @@ private fun FlashcardSessionScreen(
                 }
             }
 
-            // Navigation arrows
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left arrow — previous card (Revise Again)
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (currentIndex > 0) Color(0xFFF59E0B).copy(0.15f)
-                            else Color.Transparent
-                        )
-                        .clickable(enabled = currentIndex > 0) {
-                            rateAndNext(CardRating.Weak)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.KeyboardArrowLeft,
-                        contentDescription = "Previous",
-                        tint = if (currentIndex > 0) Color(0xFFF59E0B) else Color.Transparent,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                // Right arrow — next card (Got it / Mastered)
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(BpscColors.Success.copy(0.15f))
-                        .clickable {
-                            rateAndNext(CardRating.Mastered)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.KeyboardArrowRight,
-                        contentDescription = "Next",
-                        tint = BpscColors.Success,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-            // Flip card
-            Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+            // Flip card — fills the space between header and actions.
+            // QA issue 17 rework: the arrow row that used to sit here duplicated
+            // the Revise/Got-It buttons below and squeezed the card to 85% height.
+            Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -648,41 +602,45 @@ private fun FlashcardSessionScreen(
                 if (!isFlipped) {
                     OutlinedButton(
                         onClick = { rateAndNext(CardRating.Skipped) },
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, cs.outline),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary),
                     ) {
-                        Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Skip", style = MaterialTheme.typography.titleMedium)
+                        Text("Skip", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                     Button(
                         onClick = { isFlipped = true },
-                        modifier = Modifier.weight(2f).height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(2f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                     ) {
-                        Icon(Icons.Rounded.Flip, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Rounded.Flip, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(str.recallRevealAnswer, style = MaterialTheme.typography.titleMedium)
+                        Text(str.recallRevealAnswer, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     Button(
                         onClick = { rateAndNext(CardRating.Weak) },
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                     ) {
-                        Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium)
+                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(str.recallReviseAgain, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                     Button(
                         onClick = { rateAndNext(CardRating.Mastered) },
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Success),
                     ) {
-                        Text(str.recallGotItBtn, style = MaterialTheme.typography.titleMedium)
+                        Icon(Icons.Rounded.Check, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(str.recallGotItBtn, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
             }
@@ -1056,8 +1014,11 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
                         FlashSubjectChip(card.subject);  Spacer(Modifier.weight(1f))
                         Text(card.topic, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("❓", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
+                            Text("❓", fontSize = 24.sp)
+                        }
+                        Spacer(Modifier.height(20.dp))
                         Text(card.question, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, lineHeight = 28.sp)
                     }
                     if (card.hint.isNotBlank()) {
@@ -1105,7 +1066,10 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("💡", fontSize = 36.sp); Spacer(Modifier.height(16.dp))
+                        Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFE8FDF4)), contentAlignment = Alignment.Center) {
+                            Text("💡", fontSize = 24.sp)
+                        }
+                        Spacer(Modifier.height(20.dp))
                         Text(card.answer, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 28.sp)
                     }
                     Spacer(Modifier.height(4.dp))

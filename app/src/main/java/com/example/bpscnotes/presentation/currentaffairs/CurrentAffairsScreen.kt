@@ -133,7 +133,7 @@ fun CurrentAffairsScreen(
 
     // Categories derived from full unfiltered list — never changes when user picks a filter
     val dynamicCategories: List<String> = remember(allArticles) {
-        listOf(str.filterAll) + allArticles.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
+        listOf(str.filterAll) + allArticles.flatMap { it.categories.ifEmpty { listOf(it.category) } }.distinct().filter { it.isNotBlank() }.sorted()
     }
 
     val filtered = allArticles.filter { article ->
@@ -143,7 +143,8 @@ fun CurrentAffairsScreen(
             3 -> bookmarkedIds.contains(article.id)
             else -> true
         }
-        val matchesCat = selectedCategory == str.filterAll || article.category == selectedCategory
+        val matchesCat = selectedCategory == str.filterAll ||
+                article.categories.ifEmpty { listOf(article.category) }.contains(selectedCategory)
         val matchesSearch = searchQuery.isNullOrEmpty() ||
                 article.headline.stripHtmlTags().contains(searchQuery, ignoreCase = true) ||
                 article.summary.stripHtmlTags().contains(searchQuery, ignoreCase = true) ||
@@ -389,7 +390,7 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
     val categoryColors = mapOf("Economy" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "International" to Pair(Color(0xFF3498DB), Color(0xFFE8F4FD)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)), "Education" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Sports" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)))
-    val (catFg, catBg) = categoryColors[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+    val cardCategories = article.categories.ifEmpty { listOf(article.category) }.filter { it.isNotBlank() }
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onReadMore() },  // FIX: whole card clickable
@@ -399,8 +400,11 @@ private fun CAArticleCard(article: CAArticle, isBookmarked: Boolean, markingConf
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(article.category, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp))
+                Row(modifier = Modifier.weight(1f, fill = false).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    cardCategories.forEach { cat ->
+                        val (catFg, catBg) = categoryColors[cat] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+                        Text(cat, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp))
+                    }
                     if (article.isImportant) Row(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF3CD)).padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) { Text("⭐", fontSize = 9.sp); Text(str.caImportant, style = MaterialTheme.typography.labelSmall, color = Color(0xFF856404), fontSize = 9.sp, fontWeight = FontWeight.Bold) }
                     if (article.isPrelims) Text("P", style = MaterialTheme.typography.labelSmall, color = Color(0xFF1ABC9C), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFE8FDF8)).padding(horizontal = 5.dp, vertical = 2.dp))
                     if (article.isMains) Text("M", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9B59B6), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF3E8FD)).padding(horizontal = 5.dp, vertical = 2.dp))

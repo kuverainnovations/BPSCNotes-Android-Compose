@@ -8,6 +8,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -507,16 +509,18 @@ fun CaArticleDetailScreen(
                     )
                 }
                 article != null -> {
-                    val (catFg, catBg) = CA_DETAIL_CATEGORY_COLORS[article.category] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+                    val detailCategories = article.categories.ifEmpty { listOf(article.category) }
+                        .filter { it.isNotBlank() && !it.equals("general", ignoreCase = true) }
 
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                if (article.category.isNotBlank() && !article.category.equals("general", ignoreCase = true)) {
+                            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                detailCategories.forEach { cat ->
+                                    val (catFg, catBg) = CA_DETAIL_CATEGORY_COLORS[cat] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
                                     Text(
-                                        article.category, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold,
+                                        cat, style = MaterialTheme.typography.labelSmall, color = catFg, fontWeight = FontWeight.Bold, maxLines = 1,
                                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(catBg).padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
                                 }
