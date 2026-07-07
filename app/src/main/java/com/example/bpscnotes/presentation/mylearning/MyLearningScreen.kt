@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.mylearning
 
+import com.bpscnotes.app.BuildConfig
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -1600,12 +1601,6 @@ private fun StoreCourseCard(
                         maxLines = 1,
                         softWrap = false
                     )
-                    Text(
-                        "🪙 coins applicable",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = BpscColors.CoinGold,
-                        fontSize = 9.sp
-                    )
                 } else Text(
                     "FREE",
                     style = MaterialTheme.typography.titleMedium,
@@ -1700,7 +1695,10 @@ private fun CourseDetailSheet(
                         Text(fmtRs(price), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
-                    if (maxApplicable > 0) {
+                    // Redeem-coins slider — debug/Cashfree builds only (see
+                    // CourseDetailScreen for the same guard). Release uses Play
+                    // Billing at full catalog price, which can't take a coin discount.
+                    if (maxApplicable > 0 && BuildConfig.DEBUG) {
                         Column(
                             modifier = Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))

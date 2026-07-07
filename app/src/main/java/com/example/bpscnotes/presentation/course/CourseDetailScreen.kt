@@ -1,5 +1,6 @@
 package com.example.bpscnotes.presentation.course
 
+import com.bpscnotes.app.BuildConfig
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -112,8 +113,11 @@ fun CourseDetailScreen(
                         Text(fmtRs(price), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
-                    // Coin slider
-                    if (maxApplicable > 0) {
+                    // Coin slider — debug/Cashfree builds only. In release the
+                    // course is bought via Google Play Billing at the full catalog
+                    // price, which can't accept a coin discount (Play policy), so
+                    // hiding this prevents charging full price after deducting coins.
+                    if (maxApplicable > 0 && BuildConfig.DEBUG) {
                         Column(
                             modifier = Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))

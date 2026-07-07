@@ -3,6 +3,7 @@ package com.example.bpscnotes.presentation.studymaterials
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -29,11 +30,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -619,6 +623,20 @@ private fun BeforeUploadSection() {
 
 @Composable
 private fun PolicyAndWarningSection(policyAccepted: Boolean, onPolicyChange: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    // Each policy name below is a real tappable link (Chrome Custom Tab,
+    // same pattern as SettingsScreen's privacy/terms rows). Tapping a link
+    // opens the page; tapping anywhere else on the row still toggles the
+    // checkbox — LinkAnnotation only consumes taps on the linked words.
+    // "Terms of Use" shares the /terms-of-service/ page Settings already
+    // points to, so there's a single terms page to maintain.
+    val linkStyle = TextLinkStyles(
+        style = SpanStyle(color = BpscPalette.Blue500, fontWeight = FontWeight.SemiBold)
+    )
+    fun policyLink(url: String) = LinkAnnotation.Url(url, linkStyle) { link ->
+        CustomTabsIntent.Builder().build()
+            .launchUrl(context, Uri.parse((link as LinkAnnotation.Url).url))
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Checkbox + policy text
         Row(
@@ -649,19 +667,19 @@ private fun PolicyAndWarningSection(policyAccepted: Boolean, onPolicyChange: (Bo
             Text(
                 buildAnnotatedString {
                     append("I confirm this content is original and I agree to the ")
-                    withStyle(SpanStyle(color = BpscPalette.Blue500, fontWeight = FontWeight.SemiBold)) {
+                    withLink(policyLink("https://bpscnotes.in/creator-policy/")) {
                         append("Creator Policy")
                     }
                     append(", ")
-                    withStyle(SpanStyle(color = BpscPalette.Blue500, fontWeight = FontWeight.SemiBold)) {
+                    withLink(policyLink("https://bpscnotes.in/community-guidelines/")) {
                         append("Community Guidelines")
                     }
                     append(", ")
-                    withStyle(SpanStyle(color = BpscPalette.Blue500, fontWeight = FontWeight.SemiBold)) {
+                    withLink(policyLink("https://bpscnotes.in/copyright-policy/")) {
                         append("Copyright Policy")
                     }
                     append(" and ")
-                    withStyle(SpanStyle(color = BpscPalette.Blue500, fontWeight = FontWeight.SemiBold)) {
+                    withLink(policyLink("https://bpscnotes.in/terms-of-service/")) {
                         append("Terms of Use")
                     }
                     append(".")
