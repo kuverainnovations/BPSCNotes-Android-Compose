@@ -263,8 +263,8 @@ fun UploadMaterialScreen(
                     }
                 }
             )
-
-            UploadFooter()
+//not required this client said remove it
+           // UploadFooter()
         }
     }
 }

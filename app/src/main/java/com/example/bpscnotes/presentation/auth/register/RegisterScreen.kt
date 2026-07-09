@@ -64,9 +64,12 @@ fun RegisterScreen(
     LaunchedEffect(registerSuccess) {
         if (registerSuccess) {
             viewModel.onNavigationConsumed()
-            // Mark wizard as pending so SplashScreen can re-route if app is killed mid-wizard
+            // Mark setup as pending so SplashScreen can re-route if app is killed mid-setup
             TokenStore(context).saveOnboardingCompleted(false)
-            navController.navigate(Screen.OnboardingWizard.route) {
+            // ExamSetupScreen replaced OnboardingWizard as the post-register
+            // setup flow (2026-07-10) — its ViewModel sets onboardingCompleted
+            // back to true on finish/skip.
+            navController.navigate(Screen.ExamSetup.route) {
                 popUpTo(Screen.Login.route) { inclusive = true }
             }
         }

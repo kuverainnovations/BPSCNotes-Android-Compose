@@ -167,8 +167,12 @@ class ExamSetupViewModel @Inject constructor(
                         secondaryExam = state.selectedSecondary.firstOrNull()?.name
                     )
                 )
-                // Save locally so SplashScreen knows setup is done
+                // Save locally so SplashScreen knows setup is done.
+                // saveOnboardingCompleted(true) is the flag Splash actually
+                // routes on (RegisterScreen sets it false as "setup pending") —
+                // without it users would loop back here on every cold start.
                 tokenStore.setExamSetupDone()
+                tokenStore.saveOnboardingCompleted(true)
                 tokenStore.saveUserPrimaryExam(primary.name)
                 // prep level no longer saved
 
@@ -188,6 +192,7 @@ class ExamSetupViewModel @Inject constructor(
     // ── Skip (user can skip) ──────────────────────────────────
     fun skip() {
         tokenStore.setExamSetupDone()
+        tokenStore.saveOnboardingCompleted(true)
         _uiState.update { it.copy(isDone = true) }
     }
 }

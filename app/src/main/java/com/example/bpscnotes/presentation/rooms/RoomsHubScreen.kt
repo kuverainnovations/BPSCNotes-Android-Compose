@@ -476,7 +476,7 @@ private fun RoomsHeroHeader(
                         .clip(CircleShape)
                         .background(dotColor))
 
-                    RoomActionIcon(emoji = "ℹ️", contentDescription = "Room Info", onClick = onRoomInfo)
+                    RoomActionIcon(icon = Icons.Rounded.Info, contentDescription = "Room Info", onClick = onRoomInfo)
                     // Leaderboard moved inside the room itself
                     // (StudyFocusScreen's top bar) — it only makes sense
                     // once you've actually joined, per the redesign spec's
@@ -546,16 +546,28 @@ private fun RoomsHeroHeader(
 }
 
 @Composable
-private fun RoomActionIcon(emoji: String, contentDescription: String, onClick: () -> Unit) {
+private fun RoomActionIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    // Frosted-glass chip matching the hero's translucent surfaces — a tinted
+    // vector glyph instead of an emoji so it renders identically on every OEM.
     Box(
         modifier = Modifier
             .size(34.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(0.12f))
+            .background(Color.White.copy(0.15f))
+            .border(1.dp, Color.White.copy(0.25f), CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(emoji, fontSize = 15.sp)
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(19.dp)
+        )
     }
 }
 

@@ -64,8 +64,10 @@ fun SplashScreen(navController: NavHostController) {
         // from Settings.
         val savedMobile = tokenStore.getUserMobile()
         val destination = when {
+            // Post-registration setup pending → ExamSetupScreen (primary/
+            // secondary exam picker). Replaced OnboardingWizard 2026-07-10.
             tokenStore.hasValidToken() && tokenStore.getOnboardingCompleted() == false ->
-                Screen.OnboardingWizard.route
+                Screen.ExamSetup.route
             tokenStore.hasValidToken()              -> Screen.Main.route
             !savedMobile.isNullOrBlank() && tokenStore.hasMpin() ->
                 Screen.MpinLogin.createRoute(savedMobile)

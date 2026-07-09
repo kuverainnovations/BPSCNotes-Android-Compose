@@ -22,6 +22,21 @@ import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
 import com.example.bpscnotes.presentation.payment.CashfreePaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
+import com.example.bpscnotes.presentation.shared.UpdateGateDialog
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.tappableElement
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.core.config.AppConfigRepository
 import com.example.bpscnotes.core.config.CoinsConfigRepository
 import kotlinx.coroutines.launch
@@ -148,15 +163,56 @@ class MainActivity : ComponentActivity(),
             val currentLanguage by com.example.bpscnotes.core.language.LanguageManager.language.collectAsState()
             BPSCNotesTheme(darkMode = settingsState.darkMode, language = currentLanguage) {
                 val navController = rememberNavController()
-                BpscNavHost(
-                    navController        = navController,
-                    adManager            = adManager,
-                    // FIX Issue 2: pass intent extras so NavHost can deep-link
-                    // on cold start (app was closed when notification was tapped)
-                    initialNotifScreen   = initialScreen,
-                    initialNotifType     = initialNotifType,
-                    initialNotifCourseId = initialCourseId,
+                // The strip painted under the (transparent) 3-button nav bar
+                // must match the current screen: theme background for normal
+                // pages, the gradient's end color on full-bleed dark screens
+                // (splash, MPIN) so the blue continues behind the buttons.
+                val currentRoute = navController
+                    .currentBackStackEntryAsState().value?.destination?.route
+                val darkStripColor = when (currentRoute) {
+                    Screen.Splash.route -> Color(0xFF0D47A1)
+                    Screen.MpinLogin.route, Screen.CreateMpin.route,
+                    Screen.ResetMpin.route, Screen.ChangeMpin.route -> Color(0xFF1E3A8A)
+                    else -> null
+                }
+                val stripColor by animateColorAsState(
+                    targetValue = darkStripColor ?: MaterialTheme.colorScheme.background,
+                    label = "navBarStrip"
                 )
+                // Nav-bar icon contrast must follow what's behind the buttons,
+                // not the enableEdgeToEdge() call above (which runs before the
+                // theme is known and forces light icons).
+                val lightNavIcons = !settingsState.darkMode && darkStripColor == null
+                SideEffect {
+                    WindowCompat.getInsetsController(window, window.decorView)
+                        .isAppearanceLightNavigationBars = lightNavIcons
+                }
+                // Keep the app above the system navigation bar on 3-button
+                // devices: tappableElement is the bar height there but ZERO on
+                // gesture navigation, so gesture devices keep full edge-to-edge.
+                // windowInsetsPadding() consumes what it applies, so the many
+                // per-screen navigationBarsPadding() calls downstream become
+                // no-ops instead of double-padding.
+                Box(
+                    Modifier
+                        .background(stripColor)
+                        .windowInsetsPadding(
+                            WindowInsets.tappableElement
+                                .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+                        )
+                ) {
+                    BpscNavHost(
+                        navController        = navController,
+                        adManager            = adManager,
+                        // FIX Issue 2: pass intent extras so NavHost can deep-link
+                        // on cold start (app was closed when notification was tapped)
+                        initialNotifScreen   = initialScreen,
+                        initialNotifType     = initialNotifType,
+                        initialNotifCourseId = initialCourseId,
+                    )
+                    val appConfig by appConfigRepo.config.collectAsState()
+                    UpdateGateDialog(appConfig)
+                }
             }
         }
     }
