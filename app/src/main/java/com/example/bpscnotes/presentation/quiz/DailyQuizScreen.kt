@@ -381,6 +381,37 @@ internal fun QuizSessionScreen(
         if (isQuizComplete) viewModel.submitQuiz(totalTimeSecs)
     }
 
+    // Confirm before submitting on the last question — tapping Submit/Skip
+    // used to submit instantly with no "Are you sure?" (QA 09-Jul issue 18).
+    // Timer expiry still auto-submits without asking.
+    var showSubmitConfirm by remember { mutableStateOf(false) }
+    if (showSubmitConfirm) {
+        val answeredCount = state.selectedAnswers.count { it.value.isNotBlank() }
+        val unanswered    = questions.size - answeredCount
+        AlertDialog(
+            onDismissRequest = { showSubmitConfirm = false },
+            containerColor   = cs.surface,
+            shape            = RoundedCornerShape(20.dp),
+            title = { Text(str.quizSubmitTestTitle, fontWeight = FontWeight.Bold) },
+            text  = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Answered: $answeredCount / ${questions.size}", style = MaterialTheme.typography.bodyLarge)
+                    if (unanswered > 0) Text("⚠️ $unanswered questions unanswered", style = MaterialTheme.typography.bodyLarge, color = Color(0xFFE74C3C))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showSubmitConfirm = false; isQuizComplete = true },
+                    colors  = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                    shape   = RoundedCornerShape(10.dp)
+                ) { Text(str.quizSubmit) }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showSubmitConfirm = false }, shape = RoundedCornerShape(10.dp)) { Text(str.back) }
+            }
+        )
+    }
+
     // ── Single quiz-wide countdown timer ──────────────────────
     LaunchedEffect(Unit) {
         while (timeLeft > 0 && !isQuizComplete) {
@@ -538,7 +569,7 @@ internal fun QuizSessionScreen(
                     OutlinedButton(
                         onClick  = {
                             if (currentIndex < questions.size - 1) { currentIndex++ }
-                            else { isQuizComplete = true }
+                            else { showSubmitConfirm = true }
                         },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape    = RoundedCornerShape(12.dp),
@@ -558,7 +589,7 @@ internal fun QuizSessionScreen(
                         Button(
                             onClick  = {
                                 if (currentIndex < questions.size - 1) { currentIndex++ }
-                                else { isQuizComplete = true }
+                                else { showSubmitConfirm = true }
                             },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape    = RoundedCornerShape(14.dp),
@@ -592,11 +623,23 @@ internal fun QuizSummaryScreen(
     val str = LocalStrings.current
     val bookmarksVm: BookmarksViewModel = hiltViewModel()
     val bookmarkState by bookmarksVm.state.collectAsState()
+    val bookmarkContext = androidx.compose.ui.platform.LocalContext.current
     if (showReviewAll) {
         QuizAnswerReviewScreen(
             answerDetails = result.answerDetails,
             bookmarkedIds = bookmarkState.bookmarkedIds,
-            onBookmark    = { id -> bookmarksVm.toggleBookmark(id) },
+            // Toast tells the user the tap DID something and where saved
+            // questions live (QA 09-Jul issue 15: "save is not under any function")
+            onBookmark    = { id ->
+                val wasSaved = id in bookmarkState.bookmarkedIds
+                bookmarksVm.toggleBookmark(id)
+                android.widget.Toast.makeText(
+                    bookmarkContext,
+                    if (wasSaved) "Removed from saved questions"
+                    else "Saved ✓ — find it in Profile → My Bookmarks",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            },
             onBack        = { showReviewAll = false }
         )
         return

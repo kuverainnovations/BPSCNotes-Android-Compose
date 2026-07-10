@@ -135,7 +135,9 @@ class DashboardViewModel @Inject constructor(
                     params
                 } }
                 val quizzesJob = async { safeGet("quizzes") {
-                    quizzesApi.getQuizzes(type = "daily", limit = 3, exam = userPrimaryExam).data?.quizzes
+                    // today=true: the rail is titled "Today's Quizzes" — only
+                    // quizzes scheduled for / created today belong here (QA 09-Jul issue 3)
+                    quizzesApi.getQuizzes(type = "daily", limit = 3, exam = userPrimaryExam, today = true).data?.quizzes
                 } }
                 val bannersJob = async { safeGet("banners") { bannersApi.getBanners().data?.banners } }
                 val statsJob   = async { safeGet("stats")   { statsApi.getStats().data } }

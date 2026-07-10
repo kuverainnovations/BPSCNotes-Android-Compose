@@ -178,7 +178,7 @@ fun SettingsScreen(
                             Column(Modifier.weight(1f)) {
                                 Text("Change MPIN", style = MaterialTheme.typography.titleSmall,
                                     color = cs.onSurface)
-                                Text("Update your 6-digit login MPIN",
+                                Text("Update your 4-digit login MPIN",
                                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                             }
                             Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant,

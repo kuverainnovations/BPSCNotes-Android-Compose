@@ -184,6 +184,15 @@ internal fun QuizReviewScreen(
                             lineHeight = 22.sp
                         )
 
+                        // Match-the-following: lists must be visible in review
+                        // too (QA 09-Jul issue 5)
+                        if (question.isMatchQuestion && question.matchData != null) {
+                            MatchTableWidget(
+                                matchData = question.matchData!!,
+                                modifier  = Modifier.fillMaxWidth()
+                            )
+                        }
+
                         // Options — skip empty ones (questions may have 2 or 3 options)
                         question.options.forEachIndexed { i, option ->
                             if (option.isBlank()) return@forEachIndexed

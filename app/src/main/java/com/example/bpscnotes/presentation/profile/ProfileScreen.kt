@@ -145,7 +145,10 @@ fun ProfileScreen(
                 )
 
                 // ── My Bookmarks ──────────────────────────────────────
-                /*androidx.compose.material3.Card(
+                // Re-enabled (was commented out): this is the ONLY entry
+                // point to BookmarkedQuestionsScreen — with it disabled the
+                // analysis-page save button led nowhere (QA 09-Jul issue 15).
+                androidx.compose.material3.Card(
                     modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                         .clickable { navController.navigate(Screen.BookmarkedQuestions.route) },
                     shape     = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
@@ -171,7 +174,7 @@ fun ProfileScreen(
                         }
                         Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
-                }*/
+                }
 
                 // ── Bottom banner ad ─────────────────────────────────
                 if (adManager != null) {

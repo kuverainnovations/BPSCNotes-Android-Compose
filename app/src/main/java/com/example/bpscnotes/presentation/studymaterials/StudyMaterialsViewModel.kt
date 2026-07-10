@@ -463,7 +463,7 @@ class StudyMaterialsViewModel @Inject constructor(
         if (_state.value.downloadedIds.contains(material.id)) {
             val localPath = tokenStore.getLocalPath(material.id)
             if (localPath != null && java.io.File(localPath).exists()) {
-                _state.update { it.copy(toastMessage = "Already downloaded — open from My Downloads") }
+                _state.update { it.copy(toastMessage = "Already downloaded — open from the Downloads tab") }
                 return
             }
             // File deleted — remove stale record and re-download
@@ -508,7 +508,9 @@ class StudyMaterialsViewModel @Inject constructor(
                     downloadingId = null,
                     downloadedIds = it.downloadedIds + material.id,
                     localPaths    = it.localPaths + (material.id to localFile.absolutePath),
-                    toastMessage  = "✅ Downloaded — open from My Learning tab"
+                    // Downloads live in Student Hub → Downloads tab, not My
+                    // Learning (QA 09-Jul issue 17)
+                    toastMessage  = "✅ Downloaded — open from the Downloads tab"
                 )}
                 loadDownloadHistory()
 

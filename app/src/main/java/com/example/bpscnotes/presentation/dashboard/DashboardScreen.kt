@@ -245,8 +245,10 @@ fun DashboardScreen(
                             )
 
                             // ── Recommended courses ────────────────────────────────────
+                            // Already-enrolled courses don't belong in a
+                            // recommendation rail (QA 09-Jul issue 9)
                             RecommendedSection(
-                                courses = state.courses,
+                                courses = state.courses.filter { it.enrollment == null },
                                 isLoading = state.isLoading,
                                 navController = navController
                             )
@@ -1643,7 +1645,10 @@ private fun RecommendedSection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             SectionHeader(title = str.dashboardRecommended)
-            TextButton(onClick = { navController.navigate(Screen.MyLearning.route) }) {
+            // MyLearningCourses opens the Marketplace/Store tab (all courses).
+            // MyLearning(startTab=0) landed on "My Courses" — wrong place for
+            // a recommendations "See All" (QA 09-Jul issue 9).
+            TextButton(onClick = { navController.navigate(Screen.MyLearningCourses.route) }) {
                 Text(str.seeAll, color = BpscColors.Primary, style = MaterialTheme.typography.bodyMedium)
             }
         }

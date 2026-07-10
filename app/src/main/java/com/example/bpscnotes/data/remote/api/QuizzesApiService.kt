@@ -17,7 +17,8 @@ interface QuizzesApiService {
         @Query("type")    type: String? = null,
         @Query("subject") subject: String? = null,
         @Query("date")    date: String? = null,
-        @Query("exam")    exam: String? = null
+        @Query("exam")    exam: String? = null,
+        @Query("today")   today: Boolean? = null
     ): ApiResponse<QuizzesResponseData>
 
     /**

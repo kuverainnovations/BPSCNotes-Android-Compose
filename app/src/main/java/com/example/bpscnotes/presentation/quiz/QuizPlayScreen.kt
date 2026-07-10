@@ -297,6 +297,39 @@ private fun QuizPlayerContent(
                 }
             }
 
+            // Confirm before submitting — Finish used to submit instantly
+            // with no "Are you sure?" (QA 09-Jul issue 18). Same dialog
+            // pattern MockTestsScreen already uses.
+            var showSubmitConfirm by remember { mutableStateOf(false) }
+            if (showSubmitConfirm) {
+                val unanswered = questions.size - answeredCount
+                AlertDialog(
+                    onDismissRequest = { showSubmitConfirm = false },
+                    containerColor   = cs.surface,
+                    shape            = RoundedCornerShape(20.dp),
+                    title = { Text(str.quizSubmitTestTitle, fontWeight = FontWeight.Bold) },
+                    text  = {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Answered: $answeredCount / ${questions.size}", style = MaterialTheme.typography.bodyLarge)
+                            if (unanswered > 0) Text("⚠️ $unanswered questions unanswered", style = MaterialTheme.typography.bodyLarge, color = Color(0xFFE74C3C))
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showSubmitConfirm = false
+                                if (!submitClicked) { submitClicked = true; viewModel.submitQuiz(totalTimeSecs) }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                            shape  = RoundedCornerShape(10.dp)
+                        ) { Text(str.quizSubmit) }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showSubmitConfirm = false }, shape = RoundedCornerShape(10.dp)) { Text(str.back) }
+                    }
+                )
+            }
+
             // ── BOTTOM BAR ───────────────────────────────────────
             QuizBottomBar(
                 isLastQuestion = isLastQuestion,
@@ -305,7 +338,7 @@ private fun QuizPlayerContent(
                 submitError    = state.submitError,
                 currentIndex   = currentIndex,
                 onNext         = { currentIndex++ },
-                onSubmit       = { if (!submitClicked) { submitClicked = true; viewModel.submitQuiz(totalTimeSecs) } },
+                onSubmit       = { showSubmitConfirm = true },
                 onPrev         = { currentIndex-- }
             )
         }
@@ -357,6 +390,16 @@ private fun QuestionCard(question: QuizSessionQuestion) {
                     color      = BpscColors.TextPrimary,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 24.sp
+                )
+            }
+
+            // Match-the-following: render the List-I/List-II table — without it
+            // students only saw the combination options and couldn't answer
+            // (QA 09-Jul issue 5). Same widget DailyQuizScreen already uses.
+            if (question.isMatchQuestion && question.matchData != null) {
+                MatchTableWidget(
+                    matchData = question.matchData!!,
+                    modifier  = Modifier.fillMaxWidth()
                 )
             }
 
@@ -586,9 +629,21 @@ private fun QuizHeader(
                     .clickable(onClick = onExit), Alignment.Center) {
                     Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // weight(1f) so a long quiz title can never squeeze the
+                // fixed-size timer ring / menu icon (QA 09-Jul issue 19)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                ) {
                     Text("Q ${currentIndex + 1} / $totalCount", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(title, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), maxLines = 1)
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(0.6f),
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier
@@ -718,13 +773,25 @@ private fun QuizResultScreen(
 
     val bookmarksVm: BookmarksViewModel = hiltViewModel()
     val bookmarkState by bookmarksVm.state.collectAsState()
+    val bookmarkContext = androidx.compose.ui.platform.LocalContext.current
 
     if (showDetailReview) {
         QuizAnswerReviewScreen(
             answerDetails          = result.answerDetails,
             negativeMarkingEnabled = result.negativeMarkingEnabled,
             bookmarkedIds          = bookmarkState.bookmarkedIds,
-            onBookmark             = { id -> bookmarksVm.toggleBookmark(id) },
+            // Toast confirms the save and points to where bookmarks live
+            // (QA 09-Jul issue 15)
+            onBookmark             = { id ->
+                val wasSaved = id in bookmarkState.bookmarkedIds
+                bookmarksVm.toggleBookmark(id)
+                android.widget.Toast.makeText(
+                    bookmarkContext,
+                    if (wasSaved) "Removed from saved questions"
+                    else "Saved ✓ — find it in Profile → My Bookmarks",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            },
             onBack                 = { showDetailReview = false },
         )
         return
@@ -845,6 +912,34 @@ private fun QuizResultScreen(
                     }
 
                     Spacer(Modifier.height(8.dp))
+
+                    // Marks earned — the marking scheme was shown before the
+                    // quiz but the marks gained were never displayed anywhere
+                    // (QA 09-Jul issue 4). Backend already sends the breakdown.
+                    if (result.totalMarks > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BpscColors.PrimaryLight)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val marksText = buildString {
+                                append("📊 Marks: ")
+                                append("%.2f".format(result.finalScore.takeIf { it != 0.0 } ?: result.marksObtained))
+                                append(" / ")
+                                append("%.2f".format(result.totalMarks))
+                                if (result.negativeMarkingEnabled && result.negativeMarks > 0) {
+                                    append("  (−%.2f negative)".format(result.negativeMarks))
+                                }
+                            }
+                            Text(marksText, style = MaterialTheme.typography.labelMedium,
+                                color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
 
                     // Contextual coin message — canEarnCoins reflects whether coins had
                     // NOT yet been paid out for this quiz going into this attempt (not
@@ -1125,6 +1220,15 @@ fun ReviewCard(
 
             Text(detail.question.question, style = MaterialTheme.typography.bodyLarge,
                 color = cs.onSurface, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
+
+            // Match-the-following: show the lists in analysis too, else the
+            // options (A-3,B-4…) are meaningless in review (QA 09-Jul issue 5)
+            if (detail.question.isMatchQuestion && detail.question.matchData != null) {
+                MatchTableWidget(
+                    matchData = detail.question.matchData!!,
+                    modifier  = Modifier.fillMaxWidth()
+                )
+            }
 
             // Options with color coding — handles image options too
             if (detail.question.isImageOptions) {

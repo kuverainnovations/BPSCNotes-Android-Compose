@@ -43,19 +43,27 @@ class AdManager @Inject constructor(
         private const val TAG = "AdManager"
 
         // ── AdMob Unit IDs ─────────────────────────────────────
-        // Production units (AdMob app ca-app-pub-9485599840415539~3452468884,
-        // set in AndroidManifest). New units may serve limited/test fill until
-        // the app is live on Play and approved in AdMob.
-        private const val REWARDED_AD_UNIT_ID     = "ca-app-pub-9485599840415539/2379060365"
-        private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-9485599840415539/2187488673"
-        const val BANNER_AD_UNIT_ID               = "ca-app-pub-9485599840415539/4785696463"
-        private const val NATIVE_AD_UNIT_ID       = "ca-app-pub-9485599840415539/5667533293"
+        // DEBUG builds use Google's official TEST units — real (prod) units
+        // never fill on a sideloaded/unpublished build, which is why every
+        // ad spinner hung forever during QA (09-Jul issue 12). Prod units
+        // (AdMob app ca-app-pub-9485599840415539~3452468884, set in the
+        // AndroidManifest) only serve once the app is live on Play and the
+        // ad units are approved in AdMob — that part is an AdMob-side
+        // waiting game, not a code bug.
+        private val REWARDED_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+            "ca-app-pub-3940256099942544/5224354917" else "ca-app-pub-9485599840415539/2379060365"
+        private val INTERSTITIAL_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+            "ca-app-pub-3940256099942544/1033173712" else "ca-app-pub-9485599840415539/2187488673"
+        val BANNER_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+            "ca-app-pub-3940256099942544/6300978111" else "ca-app-pub-9485599840415539/4785696463"
+        private val NATIVE_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+            "ca-app-pub-3940256099942544/2247696110" else "ca-app-pub-9485599840415539/5667533293"
         // Medium-rectangle unit shown inside the custom 15s timer overlay
         // before a Current Affairs article opens (CaAdGateScreen). Reuses the
         // banner unit for now — create a distinct AdMob unit later so this
         // placement's inventory/CTR is tracked separately from the in-feed
         // list banner above.
-        private const val GATED_READ_AD_UNIT_ID   = "ca-app-pub-9485599840415539/4785696463"
+        private val GATED_READ_AD_UNIT_ID = BANNER_AD_UNIT_ID
 
         // ── Frequency limits ───────────────────────────────────
         private const val INTERSTITIAL_COOLDOWN_MS = 20 * 60 * 1000L  // 20 minutes

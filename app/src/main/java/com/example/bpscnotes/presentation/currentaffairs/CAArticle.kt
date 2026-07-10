@@ -80,10 +80,13 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
     val readMins = if (readTime > 0) readTime
     else maxOf(1, (fullContent ?: summary).split("\\s+".toRegex()).size / 200)
 
-    // Determine prelims/mains from examTags
+    // Determine prelims/mains from examTags ONLY. "Important" is an
+    // independent star flag — folding it into isPrelims made every
+    // important mains-only article show a P badge and pass the Prelims
+    // filter (QA 09-Jul issue 6: admin set "mains", app showed both).
     val examTagsLower = examTags.map { it.lowercase() }
     val isBoth    = examTagsLower.any { it == "both" }
-    val isPrelims = isBoth || isImportant || examTagsLower.any { "prelim" in it || "pt" in it }
+    val isPrelims = isBoth || examTagsLower.any { "prelim" in it || "pt" in it }
     val isMains   = isBoth || examTagsLower.any { "main" in it || "gs" in it }
 
     // MCQ count: use real count from backend (ca_mcqs table)

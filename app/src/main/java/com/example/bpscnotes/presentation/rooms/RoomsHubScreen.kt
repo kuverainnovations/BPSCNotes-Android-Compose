@@ -114,10 +114,16 @@ fun RoomsHubScreen(
         }
     }
 
-    // Re-check session on lifecycle resume (but NOT full data reload)
+    // Re-check session on lifecycle resume + silently refresh the tier data
+    // (stats tiles: Studied/Streak/Quizzes/Accuracy). refreshMyTierCounts()
+    // does NOT flip the loading flag, so no skeleton flicker — but returning
+    // from a study session / quiz now shows fresh numbers instead of the
+    // stale first-load snapshot (QA 09-Jul issue 11 "not updating").
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             sessionViewModel.checkForExistingSession()
+            tiersViewModel.refreshMyTierCounts()
+            tiersViewModel.loadAtRiskStatus()
         }
     }
 
@@ -208,9 +214,19 @@ fun RoomsHubScreen(
                 RoomInfoSheet(tier = state.myTierData?.currentTier, onDismiss = { showRoomInfo = false })
             }
 
-            // Scrollable content
+            // Scrollable content — pull down to force-refresh everything
+            // (tier, stats, leaderboard, room insights): QA 09-Jul issue 11
+            // explicitly asked for pull-to-refresh here.
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = state.isLoadingMyTier,
+                onRefresh = {
+                    tiersViewModel.loadMyTier()
+                    tiersViewModel.loadAtRiskStatus()
+                },
+                modifier = Modifier.fillMaxSize().weight(1f)
+            ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 22.dp)
             ) {
 
@@ -400,6 +416,7 @@ fun RoomsHubScreen(
                     }
                 }
             }
+            } // PullToRefreshBox
         }
 
         // Locked room bottom sheet

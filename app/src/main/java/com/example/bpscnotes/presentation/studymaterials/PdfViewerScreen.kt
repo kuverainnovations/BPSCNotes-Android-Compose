@@ -10,10 +10,16 @@ import com.example.bpscnotes.core.language.LocalStrings
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -263,6 +269,7 @@ fun PdfViewerScreen(
                 }
 
                 else -> {
+                    Box(Modifier.fillMaxSize()) {
                     LazyColumn(
                         state               = listState,
                         modifier            = Modifier.fillMaxSize(),
@@ -444,6 +451,89 @@ fun PdfViewerScreen(
                             }
                         }
                     }
+
+                    // ── Fast scroller (QA 09-Jul issue 7) ─────────────────
+                    // Drag the right-edge thumb to jump through pages; a
+                    // bubble shows the target page while dragging. The list
+                    // header sits at item 0, so page N lives at item index N.
+                    if (pdfPages.size > 3) {
+                        val fsScope = rememberCoroutineScope()
+                        var fsDragging by remember { mutableStateOf(false) }
+                        val fsActive = fsDragging || listState.isScrollInProgress
+                        val fsAlpha by animateFloatAsState(
+                            if (fsActive) 1f else 0.35f, tween(300), label = "fsAlpha"
+                        )
+                        val fsCurrentPage = listState.firstVisibleItemIndex.coerceIn(1, pdfPages.size)
+                        BoxWithConstraints(
+                            Modifier
+                                .fillMaxHeight()
+                                .width(32.dp)
+                                .align(Alignment.CenterEnd)
+                        ) {
+                            val density      = LocalDensity.current
+                            val trackPx      = constraints.maxHeight.toFloat()
+                            val thumbHeight  = 44.dp
+                            val thumbPx      = with(density) { thumbHeight.toPx() }
+                            val fraction     = if (pdfPages.size <= 1) 0f
+                                               else (fsCurrentPage - 1f) / (pdfPages.size - 1f)
+                            val thumbY       = (fraction * (trackPx - thumbPx)).roundToInt()
+
+                            fun fsJump(y: Float) {
+                                val f = ((y - thumbPx / 2) / (trackPx - thumbPx)).coerceIn(0f, 1f)
+                                val page = 1 + (f * (pdfPages.size - 1)).roundToInt()
+                                fsScope.launch { listState.scrollToItem(page) }
+                            }
+
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(pdfPages.size) {
+                                        detectVerticalDragGestures(
+                                            onDragStart  = { fsDragging = true; fsJump(it.y) },
+                                            onDragEnd    = { fsDragging = false },
+                                            onDragCancel = { fsDragging = false }
+                                        ) { change, _ -> change.consume(); fsJump(change.position.y) }
+                                    }
+                            ) {
+                                // Thumb
+                                Box(
+                                    Modifier
+                                        .offset { IntOffset(0, thumbY) }
+                                        .align(Alignment.TopEnd)
+                                        .padding(end = 4.dp)
+                                        .width(6.dp)
+                                        .height(thumbHeight)
+                                        .alpha(fsAlpha)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(BpscColors.Primary)
+                                )
+                                // Page bubble while dragging
+                                if (fsDragging) {
+                                    Box(
+                                        Modifier
+                                            .offset {
+                                                IntOffset(
+                                                    with(density) { (-64).dp.roundToPx() },
+                                                    thumbY
+                                                )
+                                            }
+                                            .align(Alignment.TopEnd)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.Black.copy(0.75f))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            "$fsCurrentPage / ${pdfPages.size}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    } // Box (pages + fast scroller)
                 }
             }
         }

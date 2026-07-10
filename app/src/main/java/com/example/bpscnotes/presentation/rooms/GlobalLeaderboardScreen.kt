@@ -141,12 +141,16 @@ private fun LeaderboardBody(data: com.example.bpscnotes.data.remote.api.Leaderbo
         contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
+        // isNotBlank guard on isMe: when the server omitted user_id, both
+        // sides deserialized to "" so EVERY row matched → "YOU" chip on all
+        // rows (QA 09-Jul). Server now aliases u.id AS user_id; this guard
+        // keeps the bug impossible even against an old backend.
         // Podium top-3 (LOW-08)
         if (top3.size == 3) {
             item(key = "podium") { PodiumRow(entries = top3, type = type) }
         } else {
             items(top3, key = { "top_${it.userId}" }) { entry ->
-                LeaderboardRow(entry = entry, type = type, isMe = myRank?.userId == entry.userId)
+                LeaderboardRow(entry = entry, type = type, isMe = entry.userId.isNotBlank() && myRank?.userId == entry.userId)
             }
         }
 
@@ -157,7 +161,7 @@ private fun LeaderboardBody(data: com.example.bpscnotes.data.remote.api.Leaderbo
 
         // Ranks 4+
         itemsIndexed(rest, key = { idx, e -> "r_${e.userId.takeIf { it.isNotBlank() } ?: idx}" }) { _, entry ->
-            LeaderboardRow(entry = entry, type = type, isMe = myRank?.userId == entry.userId)
+            LeaderboardRow(entry = entry, type = type, isMe = entry.userId.isNotBlank() && myRank?.userId == entry.userId)
         }
 
         // Pinned "my rank" footer (LOW-08) — shown when user is outside top list

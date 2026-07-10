@@ -113,7 +113,12 @@ object NetworkModule {
         if (request.method == "GET" && response.code == 200) {
             val path = request.url.encodedPath
             val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs/alert-prefs")
-            if (volatilePaths.any { path.endsWith(it) || path.contains(it) }) {
+            // Course LIST is admin-curated: a course deleted in the admin panel
+            // must disappear promptly (QA 09-Jul issue 1), and no app-side
+            // mutation ever evicts this URL. endsWith only — course DETAIL
+            // (/courses/{id}) keeps the normal 5-min cache.
+            val adminVolatileList = path.endsWith("/courses")
+            if (adminVolatileList || volatilePaths.any { path.endsWith(it) || path.contains(it) }) {
                 return@Interceptor response.newBuilder()
                     .header("Cache-Control", "no-store")
                     .removeHeader("Pragma")

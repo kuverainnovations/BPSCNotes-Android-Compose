@@ -426,7 +426,11 @@ private fun VideoPlayer(videoUrl: String?) {
         video{width:100%;height:100%;position:fixed;top:0;left:0;object-fit:contain}</style>
         </head>
         <body>
-        <video id='v' src='$embedUrl' autoplay controls playsinline></video>
+        <!-- controlsList='nodownload': the browser's own video menu offered a
+             "Download" item that was never an app feature. It saved nothing
+             viewable in-app and let paid lesson videos leak to public
+             storage (QA 09-Jul issue 8) — so remove it from the controls. -->
+        <video id='v' src='$embedUrl' autoplay controls controlsList='nodownload' playsinline></video>
         <script>
           function setSpeed(r) {
             var v = document.getElementById('v');
