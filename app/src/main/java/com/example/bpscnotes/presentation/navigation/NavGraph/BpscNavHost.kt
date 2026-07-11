@@ -24,6 +24,8 @@ import androidx.navigation.compose.*
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
+import com.example.bpscnotes.presentation.answerwriting.AnswerWritingDetailScreen
+import com.example.bpscnotes.presentation.answerwriting.AnswerWritingScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
 import com.example.bpscnotes.presentation.auth.login.LoginScreen
 import com.example.bpscnotes.presentation.auth.onboarding.OnboardingScreen
@@ -379,6 +381,15 @@ fun BpscNavHost(
 
             composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
             composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
+            // ── Answer Writing (Mains practice) ─────────────────────
+            composable(Screen.AnswerWriting.route) { AnswerWritingScreen(navController) }
+            composable(
+                route = Screen.AnswerWritingDetail.route,
+                arguments = listOf(navArgument("questionId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val questionId = backStackEntry.arguments?.getString("questionId") ?: return@composable
+                AnswerWritingDetailScreen(navController = navController, questionId = questionId)
+            }
             composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
             composable(
                 route = Screen.JobDetail.route,

@@ -71,6 +71,11 @@ sealed class Screen(val route: String) {
     }
     object ActiveRecall   : Screen("active_recall")
     object MockTests      : Screen("mock_tests")
+    // ── Answer Writing (Mains practice) ─────────────────────────
+    object AnswerWriting       : Screen("answer_writing")
+    object AnswerWritingDetail : Screen("answer_writing_detail/{questionId}") {
+        fun createRoute(id: String) = "answer_writing_detail/$id"
+    }
     object JobVacancies   : Screen("job_vacancies")
     object JobDetail      : Screen("job_detail/{jobId}") {
         fun createRoute(id: String) = "job_detail/$id"

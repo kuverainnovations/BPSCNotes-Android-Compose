@@ -1626,6 +1626,74 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
             SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work, Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
             SmallQuickCard("Downloads",   Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
         }
+        Spacer(Modifier.height(10.dp))
+        // Answer Writing — full-width feature banner (Mains practice)
+        AnswerWritingBanner { navController.navigate(Screen.AnswerWriting.route) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANSWER WRITING BANNER — full-width gradient feature card on the dashboard.
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun AnswerWritingBanner(onClick: () -> Unit) {
+    val str = LocalStrings.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF1A237E), Color(0xFF283593), Color(0xFF3949AB)),
+                    Offset(0f, 0f), Offset(800f, 300f)
+                )
+            )
+            .clickable(onClick = onClick)
+    ) {
+        androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+            drawCircle(Color.White.copy(0.06f), 90.dp.toPx(), Offset(size.width - 10.dp.toPx(), -20.dp.toPx()))
+            drawCircle(Color.White.copy(0.05f), 55.dp.toPx(), Offset(30.dp.toPx(), size.height + 10.dp.toPx()))
+        }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(15.dp))
+                    .background(Color.White.copy(0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("✍️", fontSize = 24.sp)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        str.awTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White, fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        "NEW",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF1A237E), fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFFFD54F))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    str.awDashSubtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(0.75f)
+                )
+            }
+            Icon(
+                Icons.Rounded.ChevronRight, null,
+                tint = Color.White.copy(0.8f), modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 

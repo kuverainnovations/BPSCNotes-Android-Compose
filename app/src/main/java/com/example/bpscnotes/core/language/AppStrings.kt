@@ -133,6 +133,37 @@ data class QuizStrings(
     val quizStartCustom: String, val quizSubmitTestTitle: String,
     val quizLoadingQ: String, val quizSettingUp: String, val quizPreparingQ: String,
     val quizYourRank: String,
+    // ── Answer Writing (Mains practice) — defaults are English so only
+    // the Hindi instantiation needs to override them ────────────────────
+    val awTitle: String = "Answer Writing",
+    val awSubtitle: String = "Daily Mains answer practice",
+    val awTodayBadge: String = "TODAY'S QUESTION",
+    val awStartWriting: String = "Start Writing ✍️",
+    val awQuestionsTab: String = "Questions",
+    val awMyAnswersTab: String = "My Answers",
+    val awStatusNew: String = "✍️ Write Now",
+    val awStatusPending: String = "⏳ Under Review",
+    val awStatusReviewed: String = "✅ Reviewed",
+    val awMarks: String = "Marks",
+    val awWordLimit: String = "Word Limit",
+    val awWords: String = "words",
+    val awTips: String = "Writing Tips",
+    val awYourAnswer: String = "Your Answer",
+    val awModelAnswer: String = "Model Answer",
+    val awFeedback: String = "Examiner's Feedback",
+    val awScore: String = "Score",
+    val awWriteHint: String = "Start writing your answer here…",
+    val awSubmit: String = "Submit Answer",
+    val awSubmitting: String = "Submitting…",
+    val awConfirmTitle: String = "Submit your answer?",
+    val awConfirmBody: String = "You get one attempt per question. After submitting, the model answer unlocks and a mentor will review your answer with feedback.",
+    val awOverLimit: String = "over the limit",
+    val awEmpty: String = "No questions yet",
+    val awEmptyBody: String = "New answer-writing questions are posted regularly — check back soon!",
+    val awNoSubmissions: String = "You haven't written any answers yet",
+    val awNoSubmissionsBody: String = "Pick a question and write your first Mains answer!",
+    val awPendingNote: String = "Your answer is with the examiner — you'll get a notification once it's reviewed.",
+    val awDashSubtitle: String = "Mains practice · Model answers · Expert review",
 )
 
 data class ContentStrings(
@@ -763,6 +794,20 @@ data class AppStrings(
     val quizSubmitTestTitle get() = _qz.quizSubmitTestTitle
     val quizLoadingQ get() = _qz.quizLoadingQ; val quizSettingUp get() = _qz.quizSettingUp
     val quizPreparingQ get() = _qz.quizPreparingQ; val quizYourRank get() = _qz.quizYourRank
+    // ── Answer Writing (Mains practice) ───────────────────────────
+    val awTitle get() = _qz.awTitle; val awSubtitle get() = _qz.awSubtitle
+    val awTodayBadge get() = _qz.awTodayBadge; val awStartWriting get() = _qz.awStartWriting
+    val awQuestionsTab get() = _qz.awQuestionsTab; val awMyAnswersTab get() = _qz.awMyAnswersTab
+    val awStatusNew get() = _qz.awStatusNew; val awStatusPending get() = _qz.awStatusPending; val awStatusReviewed get() = _qz.awStatusReviewed
+    val awMarks get() = _qz.awMarks; val awWordLimit get() = _qz.awWordLimit; val awWords get() = _qz.awWords
+    val awTips get() = _qz.awTips; val awYourAnswer get() = _qz.awYourAnswer; val awModelAnswer get() = _qz.awModelAnswer
+    val awFeedback get() = _qz.awFeedback; val awScore get() = _qz.awScore; val awWriteHint get() = _qz.awWriteHint
+    val awSubmit get() = _qz.awSubmit; val awSubmitting get() = _qz.awSubmitting
+    val awConfirmTitle get() = _qz.awConfirmTitle; val awConfirmBody get() = _qz.awConfirmBody
+    val awOverLimit get() = _qz.awOverLimit
+    val awEmpty get() = _qz.awEmpty; val awEmptyBody get() = _qz.awEmptyBody
+    val awNoSubmissions get() = _qz.awNoSubmissions; val awNoSubmissionsBody get() = _qz.awNoSubmissionsBody
+    val awPendingNote get() = _qz.awPendingNote; val awDashSubtitle get() = _qz.awDashSubtitle
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1722,6 +1767,35 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizSubmitTestTitle="टेस्ट जमा करें?",
         quizLoadingQ="प्रश्न लोड हो रहे हैं…", quizSettingUp="आपका टेस्ट सेट हो रहा है",
         quizPreparingQ="प्रश्न तैयार हो रहे हैं…", quizYourRank="आपकी रैंक",
+        awTitle="उत्तर लेखन",
+        awSubtitle="दैनिक मुख्य परीक्षा उत्तर अभ्यास",
+        awTodayBadge="आज का प्रश्न",
+        awStartWriting="लिखना शुरू करें ✍️",
+        awQuestionsTab="प्रश्न",
+        awMyAnswersTab="मेरे उत्तर",
+        awStatusNew="✍️ अभी लिखें",
+        awStatusPending="⏳ समीक्षा में",
+        awStatusReviewed="✅ जांचा गया",
+        awMarks="अंक",
+        awWordLimit="शब्द सीमा",
+        awWords="शब्द",
+        awTips="लेखन सुझाव",
+        awYourAnswer="आपका उत्तर",
+        awModelAnswer="आदर्श उत्तर",
+        awFeedback="परीक्षक की प्रतिक्रिया",
+        awScore="अंक",
+        awWriteHint="यहाँ अपना उत्तर लिखना शुरू करें…",
+        awSubmit="उत्तर जमा करें",
+        awSubmitting="जमा हो रहा है…",
+        awConfirmTitle="अपना उत्तर जमा करें?",
+        awConfirmBody="हर प्रश्न के लिए एक ही प्रयास मिलता है। जमा करने के बाद आदर्श उत्तर खुल जाएगा और मेंटर आपके उत्तर की समीक्षा करेंगे।",
+        awOverLimit="सीमा से अधिक",
+        awEmpty="अभी कोई प्रश्न नहीं",
+        awEmptyBody="नए उत्तर-लेखन प्रश्न नियमित रूप से आते हैं — जल्द वापस देखें!",
+        awNoSubmissions="आपने अभी तक कोई उत्तर नहीं लिखा",
+        awNoSubmissionsBody="कोई प्रश्न चुनें और अपना पहला मुख्य परीक्षा उत्तर लिखें!",
+        awPendingNote="आपका उत्तर परीक्षक के पास है — समीक्षा होते ही आपको सूचना मिलेगी।",
+        awDashSubtitle="मुख्य परीक्षा अभ्यास · आदर्श उत्तर · विशेषज्ञ समीक्षा",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",
