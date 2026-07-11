@@ -65,7 +65,13 @@ data class MockTest(
     val isExamMode: Boolean = false,
     val isAttempted: Boolean = false,
     val myLastScore: Int? = null,
-)
+    // ── Coin unlock — premium tests cost earned coins (0 = free) ──
+    val unlockCostCoins: Int = 0,
+    val isUnlocked: Boolean = true,
+) {
+    /** Locked = has a coin cost this user hasn't paid yet */
+    val isCoinLocked: Boolean get() = unlockCostCoins > 0 && !isUnlocked
+}
 
 data class MockQuestion(
     val id: String,
@@ -130,6 +136,8 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         isExamMode        = isExamMode,
         isAttempted       = isAttempted,
         myLastScore       = myLastScore,
+        unlockCostCoins   = unlockCostCoins,
+        isUnlocked        = isUnlocked,
     )
 }
 
@@ -196,6 +204,43 @@ fun MockTestsScreen(
     val reviewMarked  = remember { mutableStateListOf<String>() }
     var finalScore    by remember { mutableStateOf(0f) }
 
+    // ── Coin unlock (premium tests) ───────────────────────────
+    var unlockTarget by remember { mutableStateOf<MockTest?>(null) }
+    unlockTarget?.let { target ->
+        com.example.bpscnotes.presentation.quiz.CoinUnlockDialog(
+            title           = target.title,
+            unlockCostCoins = target.unlockCostCoins,
+            balance         = state.coinBalance,
+            isUnlocking     = state.isUnlocking,
+            onConfirm       = { viewModel.unlockTest(target.id) },
+            onEarnCoins     = {
+                unlockTarget = null
+                navController.navigate(com.example.bpscnotes.presentation.navigation.Routes.Screen.CoinWallet.route)
+            },
+            onDismiss       = { if (!state.isUnlocking) unlockTarget = null },
+        )
+    }
+    // Auto-proceed to the instructions once the unlock lands
+    LaunchedEffect(state.justUnlockedId) {
+        state.justUnlockedId?.let { unlockedId ->
+            val t = unlockTarget?.takeIf { it.id == unlockedId }
+            unlockTarget = null
+            viewModel.clearUnlockState()
+            if (t != null) {
+                selectedTest = t.copy(isUnlocked = true)
+                userAnswers.clear(); reviewMarked.clear()
+                screenState = MockTestState.Instructions
+            }
+        }
+    }
+    if (state.unlockError != null) {
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = state.unlockError!!,
+            dismissLabel = str.ok,
+            onDismiss    = { viewModel.clearUnlockState() }
+        )
+    }
+
 
 
 
@@ -235,9 +280,15 @@ fun MockTestsScreen(
             MockTestLobbyScreen(
                 navController   = navController,
                 onStartTest     = { test ->
-                    selectedTest = test
-                    userAnswers.clear(); reviewMarked.clear()
-                    screenState  = MockTestState.Instructions
+                    if (test.isCoinLocked) {
+                        // Premium test — confirm the coin spend before starting
+                        viewModel.fetchCoinBalance()
+                        unlockTarget = test
+                    } else {
+                        selectedTest = test
+                        userAnswers.clear(); reviewMarked.clear()
+                        screenState  = MockTestState.Instructions
+                    }
                 },
                 onCustomTest    = { showCustomSheet = true },
                 viewModel       = viewModel
@@ -672,12 +723,15 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                         // Type badge
                         Text(typeLabel, style = MaterialTheme.typography.labelSmall, color = typeColor.first, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(typeColor.second).padding(horizontal = 6.dp, vertical = 2.dp))
-                        // Free/Paid
-                        if (test.isPaid) {
-                            Text("PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                        // Free / coin-locked premium / already unlocked
+                        when {
+                            test.isCoinLocked -> Text("🔒 🪙${test.unlockCostCoins}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309), fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp))
-                        } else {
-                            Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                            test.unlockCostCoins > 0 -> Text("🔓 ${LocalStrings.current.quizPremium}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp))
+                            test.isPaid -> Text("PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp))
+                            else -> Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                         // Negative marking — only shown when the admin actually enabled it for this test
@@ -697,12 +751,12 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     imageVector = when {
                         test.isScheduledFuture -> Icons.Rounded.Schedule
                         hasNoQuestions         -> Icons.Rounded.LockClock
+                        test.isCoinLocked      -> Icons.Rounded.Lock
                         else                   -> Icons.Rounded.ChevronRight
                     },
                     contentDescription = null,
                     tint     = when {
-                        test.isScheduledFuture -> BpscColors.TextHint
-                        hasNoQuestions         -> BpscColors.TextHint
+                        test.isCoinLocked      -> Color(0xFFB45309)
                         else                   -> BpscColors.TextHint
                     },
                     modifier = Modifier.size(20.dp)

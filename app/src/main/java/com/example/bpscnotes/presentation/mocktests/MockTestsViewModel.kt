@@ -12,6 +12,8 @@ import com.example.bpscnotes.data.remote.api.QuizResultData
 import com.example.bpscnotes.data.remote.api.QuizSubmitRequest
 import com.example.bpscnotes.data.remote.api.QuizzesApiService
 import com.example.bpscnotes.data.remote.api.UserStatsApiService
+import com.example.bpscnotes.data.remote.api.CoinsApiService
+import com.example.bpscnotes.data.remote.api.UnlockContentRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +47,13 @@ data class MockTestsUiState(
     // ── Session integrity ──────────────────────────────────────
     val activeSessionId: String?                = null,
     val backgroundSecs: Int                     = 0,
+
+    // ── Coin unlock (premium tests) ─────────────────────────
+    val coinBalance: Int?                       = null,
+    val isUnlocking: Boolean                    = false,
+    val unlockError: String?                    = null,
+    /** Set right after a successful unlock so the screen can auto-proceed */
+    val justUnlockedId: String?                 = null,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
@@ -84,6 +93,7 @@ data class QuizLeaderboardData(
 class MockTestsViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
     private val statsApi: UserStatsApiService,
+    private val coinsApi: CoinsApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     private val bus: com.example.bpscnotes.core.events.RefreshEventBus,
 ) : ViewModel() {
@@ -137,6 +147,47 @@ class MockTestsViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load tests")) }
             }
         }
+    }
+
+    // ── Coin unlock (premium tests) ────────────────────────────
+
+    /** Called when the unlock dialog opens — best-effort balance fetch. */
+    fun fetchCoinBalance() {
+        viewModelScope.launch {
+            try {
+                val bal = coinsApi.getBalance().data?.balance
+                _uiState.update { it.copy(coinBalance = bal) }
+            } catch (_: Exception) { /* dialog copes with null */ }
+        }
+    }
+
+    /** Spend earned coins to permanently unlock a premium test (idempotent server-side). */
+    fun unlockTest(quizId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlocking = true, unlockError = null) }
+            try {
+                val resp = coinsApi.unlockContent(UnlockContentRequest(contentId = quizId))
+                val data = resp.data ?: throw Exception("Unlock failed")
+                _uiState.update { s ->
+                    s.copy(
+                        isUnlocking    = false,
+                        coinBalance    = data.balance,
+                        justUnlockedId = quizId,
+                        allTests       = s.allTests.map { if (it.id == quizId) it.copy(isUnlocked = true) else it },
+                    )
+                }
+                bus.emit(com.example.bpscnotes.core.events.RefreshEvent.CoinsChanged)
+            } catch (e: Exception) {
+                Log.e("MockTestsVM", "unlockTest: ${e.message}", e)
+                _uiState.update {
+                    it.copy(isUnlocking = false, unlockError = e.toUserMessage("Could not unlock — please try again"))
+                }
+            }
+        }
+    }
+
+    fun clearUnlockState() {
+        _uiState.update { it.copy(unlockError = null, justUnlockedId = null) }
     }
 
     /** Fetch questions for a quiz. POST /quizzes/:id/start (creates session, no GET fallback). */

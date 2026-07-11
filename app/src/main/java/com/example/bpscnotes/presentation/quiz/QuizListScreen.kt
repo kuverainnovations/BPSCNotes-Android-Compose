@@ -304,7 +304,21 @@ internal fun QuizCard(quiz: QuizPreviewDto, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (quiz.coinsReward > 0) {
+                    if (quiz.isCoinLocked) {
+                        // Premium — unlocked with earned coins on the detail screen
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFFFF8E1))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("🔒", fontSize = 9.sp)
+                            Text("🪙${quiz.unlockCostCoins}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309), fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        }
+                    } else if (quiz.coinsReward > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(2.dp),

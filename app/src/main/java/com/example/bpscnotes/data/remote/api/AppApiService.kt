@@ -206,9 +206,15 @@ data class QuizPreviewDto(
     @SerializedName("marks_per_correct")        val marksPerCorrect: Double = 1.0,
     @SerializedName("marks_per_wrong")          val marksPerWrong: Double = 0.0,
     @SerializedName("is_exam_mode")             val isExamMode: Boolean = false,
+    // ── Coin unlock — premium tests cost earned coins (0 = free) ──
+    @SerializedName("unlock_cost_coins")        val unlockCostCoins: Int = 0,
+    @SerializedName("is_unlocked")              val isUnlocked: Boolean = true,
 ) {
     /** Total Marks shown on the test details screen = questions × marks/correct */
     val totalMarks: Double get() = totalQuestions * marksPerCorrect
+
+    /** Locked = has a coin cost this user hasn't paid yet */
+    val isCoinLocked: Boolean get() = unlockCostCoins > 0 && !isUnlocked
 }
 
 data class QuizzesResponseData(val quizzes: List<QuizPreviewDto> = emptyList())
@@ -1248,6 +1254,7 @@ data class CoinsBalanceResponseData(
     val totalSpent: Int = 0,
     @SerializedName("check_in_streak")   val checkInStreak: Int = 0,
     @SerializedName("checked_in_today")  val checkedInToday: Boolean = false,
+    @SerializedName("streak_freezes")    val streakFreezes: Int = 0,
     @SerializedName("check_in_days")     val checkInDays: List<CheckInDayDto> = emptyList()
 )
 
@@ -1260,6 +1267,18 @@ data class CoinTransactionsResponseData(
 )
 
 data class AdRewardRequest(val source: String = "wallet")
+
+// ── Coin unlock — POST /coins/unlock ──────────────────────────
+data class UnlockContentRequest(
+    val contentType: String = "quiz",
+    val contentId: String,
+)
+data class UnlockContentData(
+    val unlocked: Boolean = false,
+    val alreadyUnlocked: Boolean = false,
+    val balance: Int = 0,
+    val coinsSpent: Int = 0,
+)
 data class AdConfigDto(
     @com.google.gson.annotations.SerializedName("coinsPerAd") val coinsPerAd: Int = 10,
     @com.google.gson.annotations.SerializedName("minAdsPerSession") val minAdsPerSession: Int = 2
@@ -1349,6 +1368,11 @@ interface CoinsApiService {
      *  the single source for any coin number shown anywhere in the app */
     @GET("coins/config")
     suspend fun getConfig(): ApiResponse<CoinsConfigDto>
+
+    /** POST /coins/unlock — spend earned coins to permanently unlock a
+     *  premium quiz/mock test (server deducts atomically; idempotent) */
+    @POST("coins/unlock")
+    suspend fun unlockContent(@Body body: UnlockContentRequest): ApiResponse<UnlockContentData>
 
     // ══════════════════════════════════════════════════════════════
 // FLASHCARD DTOs — GET /flashcards

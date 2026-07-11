@@ -315,6 +315,36 @@ private fun QuizIntroContent(
                 } catch (e: Exception) { false }
             } ?: false
 
+            // ── Coin-unlock confirmation dialog ────────────────────────
+            var showUnlockDialog by remember { mutableStateOf(false) }
+            if (showUnlockDialog) {
+                CoinUnlockDialog(
+                    title           = quiz.title,
+                    unlockCostCoins = quiz.unlockCostCoins,
+                    balance         = state.coinBalance,
+                    isUnlocking     = state.isUnlocking,
+                    onConfirm       = { viewModel.unlockQuiz(quizId) },
+                    onEarnCoins     = {
+                        showUnlockDialog = false
+                        navController.navigate(Screen.CoinWallet.route)
+                    },
+                    onDismiss       = { if (!state.isUnlocking) showUnlockDialog = false },
+                )
+            }
+            // Close the dialog + toast once the unlock lands
+            LaunchedEffect(state.unlockedMessage, state.unlockError) {
+                state.unlockedMessage?.let {
+                    showUnlockDialog = false
+                    onSetError(it)          // snackbar — reuses the local error channel
+                    viewModel.clearUnlockMessages()
+                }
+                state.unlockError?.let {
+                    showUnlockDialog = false
+                    onSetError(it)
+                    viewModel.clearUnlockMessages()
+                }
+            }
+
             Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(20.dp)) {
                 if (isFutureScheduled) {
                     Button(
@@ -327,6 +357,21 @@ private fun QuizIntroContent(
                         Text("🗓️  Available from ${quiz.scheduledFor?.substring(0, 10) ?: ""}",
                             style = MaterialTheme.typography.titleMedium,
                             color = Color(0xFF757575))
+                    }
+                } else if (quiz.isCoinLocked) {
+                    // Premium test — spend earned coins to unlock before starting
+                    Button(
+                        onClick  = { showUnlockDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape    = RoundedCornerShape(16.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))
+                    ) {
+                        Icon(Icons.Rounded.Lock, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${str.quizUnlockFor} 🪙 ${quiz.unlockCostCoins}",
+                            style = MaterialTheme.typography.titleLarge
+                        )
                     }
                 } else {
                     Button(
@@ -392,4 +437,96 @@ internal fun MarkingSchemeRow(label: String, value: String, valueColor: Color? =
 /** Formats a marks value without a trailing ".0" for whole numbers (2.0 → "2", 0.66 stays "0.66"). */
 internal fun formatMarks(value: Double): String {
     return String.format("%.2f", value)
+}
+
+// ─────────────────────────────────────────────────────────────
+// Coin-unlock confirmation dialog — shown for premium tests.
+// Shared by QuizDetailScreen and MockTestsScreen.
+// balance == null means the balance fetch failed; the dialog still
+// lets the user try (server re-checks and rejects if insufficient).
+// ─────────────────────────────────────────────────────────────
+@Composable
+fun CoinUnlockDialog(
+    title: String,
+    unlockCostCoins: Int,
+    balance: Int?,
+    isUnlocking: Boolean,
+    onConfirm: () -> Unit,
+    onEarnCoins: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val str = LocalStrings.current
+    val cs  = MaterialTheme.colorScheme
+    val notEnough = balance != null && balance < unlockCostCoins
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon  = { Text("🔓", fontSize = 32.sp) },
+        title = {
+            Text(str.quizUnlockTitle, style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold, color = cs.onSurface)
+                Text(str.quizUnlockBody, style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant, lineHeight = 20.sp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(cs.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(str.quizUnlockCost, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        Text("🪙 ${unlockCostCoins}", style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.ExtraBold, color = Color(0xFFB45309))
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(str.quizYourBalance, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        Text(
+                            balance?.let { "🪙 $it" } ?: "—",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (notEnough) cs.error else Color(0xFF059669)
+                        )
+                    }
+                }
+                if (notEnough) {
+                    Text(str.quizNotEnoughCoins, style = MaterialTheme.typography.bodySmall,
+                        color = cs.error, lineHeight = 18.sp)
+                }
+            }
+        },
+        confirmButton = {
+            if (notEnough) {
+                Button(
+                    onClick = onEarnCoins,
+                    shape   = RoundedCornerShape(12.dp),
+                    colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))
+                ) { Text(str.quizEarnCoins, fontWeight = FontWeight.Bold) }
+            } else {
+                Button(
+                    onClick  = onConfirm,
+                    enabled  = !isUnlocking,
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B))
+                ) {
+                    if (isUnlocking) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                        Spacer(Modifier.width(8.dp))
+                        Text(str.quizUnlocking, fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("${str.quizUnlock} · 🪙 ${unlockCostCoins}", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isUnlocking) { Text(str.cancel) }
+        }
+    )
 }

@@ -133,6 +133,18 @@ data class QuizStrings(
     val quizStartCustom: String, val quizSubmitTestTitle: String,
     val quizLoadingQ: String, val quizSettingUp: String, val quizPreparingQ: String,
     val quizYourRank: String,
+    // ── Coin unlock (premium tests) — defaults are English so only the
+    // Hindi instantiation needs to override them ──────────────────────
+    val quizPremium: String = "Premium",
+    val quizUnlockFor: String = "Unlock for",              // + " 🪙 50"
+    val quizUnlockTitle: String = "Unlock this test?",
+    val quizUnlockBody: String = "Spend coins to unlock this test permanently. You can retake it anytime after unlocking.",
+    val quizUnlockCost: String = "Cost",
+    val quizYourBalance: String = "Your coins",
+    val quizUnlock: String = "Unlock 🔓",
+    val quizUnlocking: String = "Unlocking…",
+    val quizNotEnoughCoins: String = "Not enough coins yet — complete quizzes, check in daily or watch ads to earn more!",
+    val quizEarnCoins: String = "Earn Coins 🪙",
 )
 
 data class ContentStrings(
@@ -763,6 +775,12 @@ data class AppStrings(
     val quizSubmitTestTitle get() = _qz.quizSubmitTestTitle
     val quizLoadingQ get() = _qz.quizLoadingQ; val quizSettingUp get() = _qz.quizSettingUp
     val quizPreparingQ get() = _qz.quizPreparingQ; val quizYourRank get() = _qz.quizYourRank
+    // ── Coin unlock (premium tests) ───────────────────────────────
+    val quizPremium get() = _qz.quizPremium; val quizUnlockFor get() = _qz.quizUnlockFor
+    val quizUnlockTitle get() = _qz.quizUnlockTitle; val quizUnlockBody get() = _qz.quizUnlockBody
+    val quizUnlockCost get() = _qz.quizUnlockCost; val quizYourBalance get() = _qz.quizYourBalance
+    val quizUnlock get() = _qz.quizUnlock; val quizUnlocking get() = _qz.quizUnlocking
+    val quizNotEnoughCoins get() = _qz.quizNotEnoughCoins; val quizEarnCoins get() = _qz.quizEarnCoins
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1722,6 +1740,16 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizSubmitTestTitle="टेस्ट जमा करें?",
         quizLoadingQ="प्रश्न लोड हो रहे हैं…", quizSettingUp="आपका टेस्ट सेट हो रहा है",
         quizPreparingQ="प्रश्न तैयार हो रहे हैं…", quizYourRank="आपकी रैंक",
+        quizPremium="प्रीमियम",
+        quizUnlockFor="अनलॉक करें",
+        quizUnlockTitle="यह टेस्ट अनलॉक करें?",
+        quizUnlockBody="सिक्के खर्च करके यह टेस्ट हमेशा के लिए अनलॉक करें। अनलॉक के बाद आप इसे कभी भी दे सकते हैं।",
+        quizUnlockCost="कीमत",
+        quizYourBalance="आपके सिक्के",
+        quizUnlock="अनलॉक करें 🔓",
+        quizUnlocking="अनलॉक हो रहा है…",
+        quizNotEnoughCoins="अभी पर्याप्त सिक्के नहीं हैं — क्विज़ पूरी करें, रोज़ चेक-इन करें या विज्ञापन देखकर सिक्के कमाएं!",
+        quizEarnCoins="सिक्के कमाएं 🪙",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",

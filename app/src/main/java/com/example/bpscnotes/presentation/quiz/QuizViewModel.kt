@@ -129,6 +129,14 @@ data class QuizUiState(
     val isLoadingDetail: Boolean              = false,
     val detailError: String?                  = null,
 
+    // ── Coin unlock (premium tests) ───────────────────────────
+    // Balance is fetched only when the loaded detail is coin-locked,
+    // so the unlock dialog can show "you have X / need Y".
+    val coinBalance: Int?                     = null,
+    val isUnlocking: Boolean                  = false,
+    val unlockError: String?                  = null,
+    val unlockedMessage: String?              = null,
+
     // ── Active session ────────────────────────────────────────
     val activeSession: QuizSession?           = null,
     val isStartingQuiz: Boolean               = false,
@@ -160,6 +168,7 @@ class QuizViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
     private val bus: RefreshEventBus,
     private val authApi: AuthApiService,
+    private val coinsApi: com.example.bpscnotes.data.remote.api.CoinsApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository
 ) : ViewModel() {
@@ -272,6 +281,14 @@ class QuizViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(quizDetail = detail.quiz, isLoadingDetail = false)
                 }
+                // Coin-locked test → fetch balance so the unlock dialog can
+                // show "you have X / need Y". Best-effort; dialog copes with null.
+                if (detail.quiz.isCoinLocked) {
+                    try {
+                        val bal = coinsApi.getBalance().data?.balance
+                        _uiState.update { it.copy(coinBalance = bal) }
+                    } catch (_: Exception) { /* balance stays null */ }
+                }
             } catch (e: Exception) {
                 Log.e("QuizVM", "loadQuizDetail: ${e.message}", e)
                 _uiState.update {
@@ -279,6 +296,46 @@ class QuizViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // ── 2b. COIN UNLOCK (premium tests) ────────────────────────
+
+    /**
+     * Spend earned coins to permanently unlock this quiz/mock test.
+     * Server deducts atomically and is idempotent — re-unlocking an
+     * owned test never charges twice.
+     */
+    fun unlockQuiz(quizId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlocking = true, unlockError = null) }
+            try {
+                val resp = coinsApi.unlockContent(UnlockContentRequest(contentId = quizId))
+                val data = resp.data ?: throw Exception("Unlock failed")
+                _uiState.update { s ->
+                    s.copy(
+                        isUnlocking     = false,
+                        coinBalance     = data.balance,
+                        unlockedMessage = resp.message.ifBlank { "Unlocked! 🔓" },
+                        quizDetail      = s.quizDetail?.copy(isUnlocked = true),
+                        // Reflect the unlock in the lobby lists without a reload
+                        allQuizzes      = s.allQuizzes.map      { if (it.id == quizId) it.copy(isUnlocked = true) else it },
+                        dailyQuizzes    = s.dailyQuizzes.map    { if (it.id == quizId) it.copy(isUnlocked = true) else it },
+                        topicQuizzes    = s.topicQuizzes.map    { if (it.id == quizId) it.copy(isUnlocked = true) else it },
+                        mockTestQuizzes = s.mockTestQuizzes.map { if (it.id == quizId) it.copy(isUnlocked = true) else it },
+                    )
+                }
+                bus.emit(RefreshEvent.CoinsChanged)   // wallet & lobby refresh
+            } catch (e: Exception) {
+                Log.e("QuizVM", "unlockQuiz: ${e.message}", e)
+                _uiState.update {
+                    it.copy(isUnlocking = false, unlockError = e.toUserMessage("Could not unlock — please try again"))
+                }
+            }
+        }
+    }
+
+    fun clearUnlockMessages() {
+        _uiState.update { it.copy(unlockError = null, unlockedMessage = null) }
     }
 
     // ── 3. START (creates session with questions) ─────────────
