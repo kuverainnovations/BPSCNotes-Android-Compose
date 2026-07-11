@@ -25,10 +25,64 @@ class TokenStore @Inject constructor(
     private val prefs: SharedPreferences =
         context.getSharedPreferences("bpsc_prefs", Context.MODE_PRIVATE)
 
+    // Encrypted store for the auth token (a real credential). Built lazily
+    // and DEFENSIVELY: the Android Keystore can be unavailable or corrupt on
+    // some OEM devices or after certain data restores, in which case this is
+    // null and we fall back to standard prefs so the app never crashes over
+    // at-rest encryption. The token still lives in app-private storage either
+    // way; on healthy devices it is now additionally encrypted.
+    private val securePrefs: SharedPreferences? by lazy { buildSecurePrefs() }
+
+    private fun buildSecurePrefs(): SharedPreferences? = try {
+        val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+            .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        androidx.security.crypto.EncryptedSharedPreferences.create(
+            context,
+            "bpsc_secure_prefs",
+            masterKey,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    } catch (e: Exception) {
+        null
+    }
+
     // ── Auth token ─────────────────────────────────────────────
-    fun getToken(): String? = prefs.getString("auth_token", null)
+    // Stored in the encrypted store when available. On read we transparently
+    // migrate any legacy plaintext token from an older install exactly once.
+    fun getToken(): String? {
+        val secure = securePrefs
+        if (secure != null) {
+            try {
+                secure.getString("auth_token", null)?.let { return it }
+                val legacy = prefs.getString("auth_token", null)
+                if (!legacy.isNullOrEmpty()) {
+                    secure.edit().putString("auth_token", legacy).apply()
+                    prefs.edit().remove("auth_token").apply()
+                    return legacy
+                }
+                return null
+            } catch (e: Exception) {
+                // Keystore read failed — fall through to plaintext.
+            }
+        }
+        return prefs.getString("auth_token", null)
+    }
+
     fun saveToken(token: String) {
-        prefs.edit().putString("auth_token", token).apply()
+        val secure = securePrefs
+        var stored = false
+        if (secure != null) {
+            try {
+                secure.edit().putString("auth_token", token).apply()
+                if (prefs.contains("auth_token")) prefs.edit().remove("auth_token").apply()
+                stored = true
+            } catch (e: Exception) {
+                // Fall back to plaintext below.
+            }
+        }
+        if (!stored) prefs.edit().putString("auth_token", token).apply()
         // Keep cached user_id in sync with whatever account this token
         // belongs to. Without this, switching accounts (or a fresh login
         // before the Profile screen has loaded) leaves a stale/absent
@@ -36,7 +90,11 @@ class TokenStore @Inject constructor(
         // message?") to misfire across the whole app.
         decodeUserIdFromJwt(token)?.let { saveUserId(it) }
     }
-    fun clearToken() = prefs.edit().remove("auth_token").apply()
+
+    fun clearToken() {
+        try { securePrefs?.edit()?.remove("auth_token")?.apply() } catch (_: Exception) {}
+        prefs.edit().remove("auth_token").apply()
+    }
     val isLoggedIn: Boolean get() = !getToken().isNullOrEmpty()
 
     // ── User info ──────────────────────────────────────────────
@@ -232,6 +290,7 @@ class TokenStore @Inject constructor(
      *   - is_onboarded / language
      */
     fun clearSessionOnly() {
+        try { securePrefs?.edit()?.remove("auth_token")?.apply() } catch (_: Exception) {}
         prefs.edit()
             .remove("auth_token")
             .remove("user_name")
@@ -273,6 +332,7 @@ class TokenStore @Inject constructor(
      * return, so this can never happen.
      */
     fun logout() {
+        try { securePrefs?.edit()?.remove("auth_token")?.apply() } catch (_: Exception) {}
         prefs.edit()
             .remove("auth_token")
             .remove("user_name")
@@ -296,6 +356,7 @@ class TokenStore @Inject constructor(
      * reason as logout() above.
      */
     fun clearAll() {
+        try { securePrefs?.edit()?.clear()?.apply() } catch (_: Exception) {}
         prefs.edit().clear().commit()
     }
 

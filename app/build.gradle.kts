@@ -25,8 +25,8 @@ android {
         applicationId = "com.bpscnotes.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.1"
+        versionCode = 6
+        versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -112,6 +112,9 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Security — EncryptedSharedPreferences for the auth token at rest
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Image
     implementation("io.coil-kt:coil-compose:2.6.0")
