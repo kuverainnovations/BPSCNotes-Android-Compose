@@ -78,7 +78,11 @@ fun AnswerWritingScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier.size(36.dp).clip(CircleShape)
                                     .background(Color.White.copy(0.15f))
@@ -88,8 +92,16 @@ fun AnswerWritingScreen(
                                 Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                             Column {
-                                Text(str.awTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text(str.awSubtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                                Text(
+                                    str.awTitle, style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White, fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    str.awSubtitle, style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(0.7f),
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                         Text("✍️", fontSize = 26.sp)

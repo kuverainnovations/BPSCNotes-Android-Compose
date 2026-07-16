@@ -67,10 +67,16 @@ fun PeerReviewScreen(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // weight(1f) so the title column yields space to the credit
+                    // pill instead of squeezing it into a letter-per-line strip
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Box(
                             modifier = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.White.copy(0.15f))
@@ -80,11 +86,19 @@ fun PeerReviewScreen(
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Column {
-                            Text(str.awPeerReview, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text(str.awHelpFellow, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                            Text(
+                                str.awPeerReview, style = MaterialTheme.typography.titleLarge,
+                                color = Color.White, fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Text(
+                                str.awHelpFellow, style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(0.7f),
+                                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
-                    // +1 Credit pill
+                    // +1 Credit pill — never wraps
                     Row(
                         modifier = Modifier.clip(RoundedCornerShape(20.dp))
                             .background(Color(0xFFF57F17).copy(0.3f))
@@ -93,7 +107,11 @@ fun PeerReviewScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text("⭐", fontSize = 12.sp)
-                        Text("+1 Credit", style = MaterialTheme.typography.labelMedium, color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "+1 Credit", style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1, softWrap = false
+                        )
                     }
                 }
             }
