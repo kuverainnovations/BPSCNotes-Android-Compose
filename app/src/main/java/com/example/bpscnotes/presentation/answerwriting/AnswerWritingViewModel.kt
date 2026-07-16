@@ -45,6 +45,9 @@ data class AnswerWritingUiState(
     // ── Peer review card (home screen) ────────────────────────
     val reviewStats: ReviewStatsData?               = null,
 
+    // ── Insights tab ──────────────────────────────────────────
+    val insights: com.example.bpscnotes.data.remote.api.AnswerInsightsData? = null,
+
     // ── Detail ────────────────────────────────────────────────
     val question: AnswerQuestionDetailDto?          = null,
     val submission: AnswerSubmissionDto?            = null,
@@ -93,8 +96,12 @@ class AnswerWritingViewModel @Inject constructor(
                 val mine = try { api.getMySubmissions().data?.submissions ?: emptyList() }
                            catch (_: Exception) { emptyList() }
                 val stats = try { api.getReviewStats().data } catch (_: Exception) { null }
+                val insights = try { api.getInsights().data } catch (_: Exception) { null }
                 _uiState.update {
-                    it.copy(questions = questions, mySubmissions = mine, reviewStats = stats, isLoading = false)
+                    it.copy(
+                        questions = questions, mySubmissions = mine,
+                        reviewStats = stats, insights = insights, isLoading = false,
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("AnswerWritingVM", "load: ${e.message}", e)

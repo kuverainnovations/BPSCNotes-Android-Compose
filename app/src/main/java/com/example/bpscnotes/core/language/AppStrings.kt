@@ -203,6 +203,28 @@ data class QuizStrings(
     val awAreaBihar: String = "Bihar Angle",
     val awAreaPresentation: String = "Presentation",
     val awAreaConclusion: String = "Conclusion",
+    // ── Insights tab ─────────────────────────────────────────────────
+    val awInsightsTab: String = "Insights",
+    val awInsightsTitle: String = "Your Activity",
+    val awInsightsSub: String = "Track your progress and contribution.",
+    val awAnswersWritten: String = "Answers Written",
+    val awReviewsReceived: String = "Reviews Received",
+    val awAvgRating: String = "Average Rating",
+    val awWritingStreak: String = "Writing Streak",
+    val awDays: String = "Days",
+    val awThisMonth: String = "this month",
+    val awTotalWords: String = "Total Words",
+    val awMentorScore: String = "Avg Mentor Score",
+    val awGoalTitle: String = "Your Goal",
+    val awGoalBody: String = "Write 10 quality answers this month",
+    val awGoalDone: String = "Completed! 🎉",
+    val awReviewerLevel: String = "Reviewer Level",
+    val awLevelBeginner: String = "Beginner",
+    val awLevelActive: String = "Active Reviewer",
+    val awLevelAdvanced: String = "Advanced Reviewer",
+    val awLevelExpert: String = "Expert Reviewer",
+    val awKeepItUp: String = "Keep it up!",
+    val awNoInsights: String = "Write your first answer to see your stats here!",
 )
 
 data class ContentStrings(
@@ -860,6 +882,14 @@ data class AppStrings(
     val awPeerReviewsReceived get() = _qz.awPeerReviewsReceived; val awUnderPeerReview get() = _qz.awUnderPeerReview
     val awAreaContent get() = _qz.awAreaContent; val awAreaStructure get() = _qz.awAreaStructure; val awAreaAnalysis get() = _qz.awAreaAnalysis
     val awAreaBihar get() = _qz.awAreaBihar; val awAreaPresentation get() = _qz.awAreaPresentation; val awAreaConclusion get() = _qz.awAreaConclusion
+    val awInsightsTab get() = _qz.awInsightsTab; val awInsightsTitle get() = _qz.awInsightsTitle; val awInsightsSub get() = _qz.awInsightsSub
+    val awAnswersWritten get() = _qz.awAnswersWritten; val awReviewsReceived get() = _qz.awReviewsReceived; val awAvgRating get() = _qz.awAvgRating
+    val awWritingStreak get() = _qz.awWritingStreak; val awDays get() = _qz.awDays; val awThisMonth get() = _qz.awThisMonth
+    val awTotalWords get() = _qz.awTotalWords; val awMentorScore get() = _qz.awMentorScore
+    val awGoalTitle get() = _qz.awGoalTitle; val awGoalBody get() = _qz.awGoalBody; val awGoalDone get() = _qz.awGoalDone
+    val awReviewerLevel get() = _qz.awReviewerLevel; val awLevelBeginner get() = _qz.awLevelBeginner; val awLevelActive get() = _qz.awLevelActive
+    val awLevelAdvanced get() = _qz.awLevelAdvanced; val awLevelExpert get() = _qz.awLevelExpert
+    val awKeepItUp get() = _qz.awKeepItUp; val awNoInsights get() = _qz.awNoInsights
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1885,6 +1915,27 @@ val HindiStrings: AppStrings = mkAppStrings(
         awAreaBihar="बिहार दृष्टिकोण",
         awAreaPresentation="प्रस्तुति",
         awAreaConclusion="निष्कर्ष",
+        awInsightsTab="इनसाइट्स",
+        awInsightsTitle="आपकी गतिविधि",
+        awInsightsSub="अपनी प्रगति और योगदान देखें।",
+        awAnswersWritten="लिखे गए उत्तर",
+        awReviewsReceived="मिली समीक्षाएं",
+        awAvgRating="औसत रेटिंग",
+        awWritingStreak="लेखन स्ट्रीक",
+        awDays="दिन",
+        awThisMonth="इस महीने",
+        awTotalWords="कुल शब्द",
+        awMentorScore="औसत मेंटर स्कोर",
+        awGoalTitle="आपका लक्ष्य",
+        awGoalBody="इस महीने 10 अच्छे उत्तर लिखें",
+        awGoalDone="पूरा हुआ! 🎉",
+        awReviewerLevel="समीक्षक स्तर",
+        awLevelBeginner="शुरुआती",
+        awLevelActive="सक्रिय समीक्षक",
+        awLevelAdvanced="उन्नत समीक्षक",
+        awLevelExpert="विशेषज्ञ समीक्षक",
+        awKeepItUp="जारी रखें!",
+        awNoInsights="अपने आंकड़े देखने के लिए पहला उत्तर लिखें!",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",

@@ -103,7 +103,7 @@ fun AnswerWritingScreen(
                             .background(Color.White.copy(0.12f)).padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        listOf(str.awQuestionsTab, str.awMyAnswersTab).forEachIndexed { i, label ->
+                        listOf(str.awQuestionsTab, str.awMyAnswersTab, str.awInsightsTab).forEachIndexed { i, label ->
                             Box(
                                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
                                     .background(if (tab == i) Color.White else Color.Transparent)
@@ -133,7 +133,8 @@ fun AnswerWritingScreen(
                     AppErrorState(message = state.listError!!, onRetry = { viewModel.load() })
 
                 tab == 0 -> QuestionsTab(state.questions, navController)
-                else     -> MyAnswersTab(state.mySubmissions, navController)
+                tab == 1 -> MyAnswersTab(state.mySubmissions, navController)
+                else     -> InsightsTab(state.insights, state.reviewStats)
             }
         }
     }
@@ -509,5 +510,164 @@ private fun EmptyBlock(emoji: String, title: String, body: String) {
             body, style = MaterialTheme.typography.bodyMedium,
             color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 20.sp
         )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// INSIGHTS TAB — personal writing & review stats (client mockup 3,
+// personal slice; community leaderboards come later).
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun InsightsTab(
+    insights: com.example.bpscnotes.data.remote.api.AnswerInsightsData?,
+    reviewStats: com.example.bpscnotes.data.remote.api.ReviewStatsData?,
+) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+
+    if (insights == null || insights.answersWritten == 0) {
+        EmptyBlock("📊", str.awInsightsTitle, str.awNoInsights)
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(str.awInsightsTitle, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+        Text(str.awInsightsSub, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+
+        // ── Stat tiles (2 × 4 grid) ─────────────────────────────
+        val tiles = listOf(
+            InsightTileData("📝", "${insights.answersWritten}", str.awAnswersWritten,
+                if (insights.answersThisMonth > 0) "↑ ${insights.answersThisMonth} ${str.awThisMonth}" else null, Indigo),
+            InsightTileData("💬", "${insights.reviewsGiven}", str.awReviewsGiven, null, BpscColors.Success),
+            InsightTileData("💌", "${insights.reviewsReceived}", str.awReviewsReceived, null, Color(0xFFE91E63)),
+            InsightTileData("⭐", insights.avgRating?.let { "%.1f".format(it) } ?: "—", str.awAvgRating,
+                insights.avgRating?.let { if (it >= 4.0) str.awKeepItUp else null }, Color(0xFFF59E0B)),
+            InsightTileData("🔥", "${insights.writingStreak}", "${str.awWritingStreak} (${str.awDays})",
+                if (insights.writingStreak > 0) str.awKeepItUp else null, Color(0xFFFF5722)),
+            InsightTileData("🏅", insights.avgMentorScore?.let { "%.1f".format(it) } ?: "—", str.awMentorScore, null, Color(0xFF7E57C2)),
+            InsightTileData("🪙", "${insights.reviewCredits}", str.awReviewCredits, null, Color(0xFFB45309)),
+            InsightTileData("✍️", "${insights.totalWords}", str.awTotalWords, null, Color(0xFF00897B)),
+        )
+        tiles.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { t -> InsightTile(t, Modifier.weight(1f)) }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+
+        // ── Monthly goal progress ───────────────────────────────
+        val goalProgress = (insights.answersThisMonth.toFloat() / insights.monthlyGoal).coerceIn(0f, 1f)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = cs.surface),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🎯", fontSize = 18.sp)
+                        Column {
+                            Text(str.awGoalTitle, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                            Text(str.awGoalBody, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        }
+                    }
+                    Text(
+                        "${insights.answersThisMonth} / ${insights.monthlyGoal}",
+                        style = MaterialTheme.typography.titleSmall, color = Indigo, fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { goalProgress },
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                    color = Indigo,
+                    trackColor = IndigoSoft,
+                )
+                if (goalProgress >= 1f) {
+                    Text(str.awGoalDone, style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+        }
+
+        // ── Reviewer level ──────────────────────────────────────
+        val levelInfo = when {
+            insights.reviewsGiven >= 50 -> Triple(str.awLevelExpert, "🏆", null)
+            insights.reviewsGiven >= 20 -> Triple(str.awLevelAdvanced, "🥇", 50)
+            insights.reviewsGiven >= 5  -> Triple(str.awLevelActive, "🥈", 20)
+            else                        -> Triple(str.awLevelBeginner, "🌱", 5)
+        }
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = IndigoSoft.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(levelInfo.second, fontSize = 26.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(str.awReviewerLevel, style = MaterialTheme.typography.labelSmall, color = Indigo, fontWeight = FontWeight.Bold)
+                    Text(levelInfo.first, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    levelInfo.third?.let { nextAt ->
+                        Spacer(Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { (insights.reviewsGiven.toFloat() / nextAt).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                            color = Indigo, trackColor = Color.White,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "${insights.reviewsGiven} / $nextAt",
+                            style = MaterialTheme.typography.labelSmall, color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp
+                        )
+                    }
+                }
+                if (reviewStats?.canReview == true) {
+                    Text(
+                        "⭐ ${reviewStats.reviewCredits}",
+                        style = MaterialTheme.typography.titleSmall, color = Color(0xFFB45309), fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFF8E1))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+private data class InsightTileData(
+    val emoji: String, val value: String, val label: String, val note: String?, val color: Color,
+)
+
+@Composable
+private fun InsightTile(t: InsightTileData, modifier: Modifier) {
+    val cs = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(t.emoji, fontSize = 14.sp)
+                Text(t.label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp, maxLines = 1)
+            }
+            Text(t.value, style = MaterialTheme.typography.headlineSmall, color = t.color, fontWeight = FontWeight.ExtraBold)
+            t.note?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 10.sp)
+            }
+        }
     }
 }

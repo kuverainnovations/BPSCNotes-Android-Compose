@@ -88,6 +88,22 @@ data class AnswerQuestionDetailData(
     val peerReviews: List<PeerReviewDto> = emptyList(),
 )
 
+// ── Insights — GET /answer-writing/insights ───────────────────
+
+data class AnswerInsightsData(
+    val answersWritten: Int = 0,
+    val answersThisMonth: Int = 0,
+    val reviewsGiven: Int = 0,
+    val reviewsReceived: Int = 0,
+    val avgRating: Double? = null,
+    val avgMentorScore: Double? = null,
+    val mentorReviewed: Int = 0,
+    val reviewCredits: Int = 0,
+    val totalWords: Int = 0,
+    val writingStreak: Int = 0,
+    val monthlyGoal: Int = 10,
+)
+
 // ── Peer review — GET /answer-writing/review/* ────────────────
 
 data class ReviewStatsData(
@@ -168,6 +184,9 @@ interface AnswerWritingApiService {
     ): ApiResponse<SubmitAnswerData>
 
     // ── Peer review ────────────────────────────────────────────
+
+    @GET("answer-writing/insights")
+    suspend fun getInsights(): ApiResponse<AnswerInsightsData>
 
     @GET("answer-writing/review/stats")
     suspend fun getReviewStats(): ApiResponse<ReviewStatsData>
