@@ -162,12 +162,110 @@ private fun QuestionsTab(questions: List<AnswerQuestionDto>, navController: NavH
                 }
             }
         }
+        // Peer review card — review others' answers, earn credits
+        item(key = "peer_review") { PeerReviewCard(navController) }
+
         items(questions.filter { it.id != today?.id }, key = { it.id }) { q ->
             QuestionCard(q) {
                 navController.navigate(Screen.AnswerWritingDetail.createRoute(q.id))
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PEER REVIEW CARD — stats + Review Now, or the reason it's locked.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun PeerReviewCard(
+    navController: NavHostController,
+    viewModel: AnswerWritingViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    val stats = state.reviewStats ?: return
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFE8FDF4)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Rounded.Groups, null, tint = BpscColors.Success, modifier = Modifier.size(20.dp))
+                    }
+                    Column {
+                        Text(str.awPeerReview, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            str.awPeerReviewSub, style = MaterialTheme.typography.bodySmall,
+                            color = cs.onSurfaceVariant, lineHeight = 16.sp, fontSize = 11.sp
+                        )
+                    }
+                }
+                if (stats.canReview) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.5.dp, BpscColors.Success, RoundedCornerShape(12.dp))
+                            .clickable { navController.navigate(Screen.PeerReview.route) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(str.awReviewNow, style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
+                        Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+
+            if (!stats.canReview) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFFFF8E1)).padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("🔒", fontSize = 13.sp)
+                    Text(
+                        if (stats.lockedReason == "no_submission") str.awReviewLockedNoSub else str.awReviewLockedNotReviewed,
+                        style = MaterialTheme.typography.bodySmall, color = Color(0xFF7A5B00), lineHeight = 17.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = cs.outline.copy(0.3f))
+            Spacer(Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                PeerStat("${stats.reviewsGiven}", str.awReviewsGiven, BpscColors.Success, Modifier.weight(1f))
+                PeerStat("${stats.pendingAvailable}", str.awPendingReviews, Indigo, Modifier.weight(1f))
+                PeerStat("${stats.reviewCredits} ⭐", str.awReviewCredits, Color(0xFF7E57C2), Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeerStat(value: String, label: String, color: Color, modifier: Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.titleMedium, color = color, fontWeight = FontWeight.ExtraBold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -250,9 +348,9 @@ private fun HeroMeta(emoji: String, label: String) {
 private fun statusLabel(q: AnswerQuestionDto): String {
     val str = LocalStrings.current
     return when (q.myStatus) {
-        "reviewed"  -> str.awStatusReviewed
-        "submitted" -> str.awStatusPending
-        else        -> str.awStatusNew
+        "reviewed", "peer_reviewed" -> str.awStatusReviewed
+        "submitted"                 -> str.awStatusPending
+        else                        -> str.awStatusNew
     }
 }
 
@@ -261,9 +359,9 @@ private fun QuestionCard(q: AnswerQuestionDto, onClick: () -> Unit) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val (chipBg, chipColor) = when (q.myStatus) {
-        "reviewed"  -> Color(0xFFE8FDF4) to BpscColors.Success
-        "submitted" -> Color(0xFFFFF8E1) to Color(0xFFB45309)
-        else        -> IndigoSoft to Indigo
+        "reviewed", "peer_reviewed" -> Color(0xFFE8FDF4) to BpscColors.Success
+        "submitted"                 -> Color(0xFFFFF8E1) to Color(0xFFB45309)
+        else                        -> IndigoSoft to Indigo
     }
 
     Card(

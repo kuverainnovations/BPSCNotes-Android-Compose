@@ -1,7 +1,12 @@
 package com.example.bpscnotes.presentation.answerwriting
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,16 +22,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
+import java.io.File
 
 // ─────────────────────────────────────────────────────────────
 // ANSWER WRITING — detail. Two modes:
@@ -106,28 +116,57 @@ private fun DetailContent(
     }
 
     var showConfirm by remember { mutableStateOf(false) }
+    // Answer mode: type in the app, or photograph a handwritten answer
+    var photoMode by rememberSaveable(questionId) { mutableStateOf(false) }
+    val context = LocalContext.current
     val words = state.draftText.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size
     val overLimit = words > q.wordLimit
+    val canSend = if (photoMode) state.selectedImages.isNotEmpty() else words > 0
+
+    // ── Photo pickers ────────────────────────────────────────────
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        uris.take(AnswerWritingViewModel.MAX_PHOTOS - state.selectedImages.size).forEach { viewModel.addImage(it) }
+    }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok) pendingCameraUri?.let { viewModel.addImage(it) }
+        pendingCameraUri = null
+    }
+    fun launchCamera() {
+        val dir = File(context.cacheDir, "answer-photos").apply { mkdirs() }
+        val file = File(dir, "answer_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        pendingCameraUri = uri
+        cameraLauncher.launch(uri)
+    }
+    // The manifest declares CAMERA, so runtime permission is required first
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchCamera()
+    }
 
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { if (!state.isSubmitting) showConfirm = false },
-            icon = { Text("✍️", fontSize = 30.sp) },
+            icon = { Text(if (photoMode) "📷" else "✍️", fontSize = 30.sp) },
             title = { Text(str.awConfirmTitle, fontWeight = FontWeight.ExtraBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(str.awConfirmBody, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp)
                     Text(
-                        "$words / ${q.wordLimit} ${str.awWords}" + if (overLimit) " · ${str.awOverLimit}" else "",
+                        if (photoMode) "${state.selectedImages.size} ${str.awPhotos}"
+                        else "$words / ${q.wordLimit} ${str.awWords}" + if (overLimit) " · ${str.awOverLimit}" else "",
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (overLimit) cs.error else BpscColors.Success,
+                        color = if (!photoMode && overLimit) cs.error else BpscColors.Success,
                         fontWeight = FontWeight.Bold
                     )
                 }
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.submit(questionId, elapsedSecs) },
+                    onClick = {
+                        if (photoMode) viewModel.submitPhotos(questionId, elapsedSecs, context)
+                        else viewModel.submit(questionId, elapsedSecs)
+                    },
                     enabled = !state.isSubmitting,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Indigo)
@@ -248,6 +287,94 @@ private fun DetailContent(
             }
 
             if (isWriting) {
+                // ── Mode toggle: type in-app or photograph the notebook ──
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                        .background(IndigoSoft.copy(alpha = 0.6f)).padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    listOf(false to str.awTypeMode, true to str.awPhotoMode).forEach { (mode, label) ->
+                        Box(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+                                .background(if (photoMode == mode) Color.White else Color.Transparent)
+                                .clickable { photoMode = mode }
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label, style = MaterialTheme.typography.labelLarge,
+                                color = if (photoMode == mode) Indigo else BpscColors.TextHint,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                if (photoMode) {
+                    // ── Photo pad — handwritten answer photos ──────
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(str.awPhotoHint, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, lineHeight = 18.sp)
+
+                            if (state.selectedImages.isNotEmpty()) {
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    items(state.selectedImages) { uri ->
+                                        Box {
+                                            AsyncImage(
+                                                model = uri,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.size(110.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                            )
+                                            Box(
+                                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                                                    .size(22.dp).clip(CircleShape)
+                                                    .background(Color.Black.copy(0.55f))
+                                                    .clickable { viewModel.removeImage(uri) },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                                Text(
+                                    "${state.selectedImages.size} / ${AnswerWritingViewModel.MAX_PHOTOS} ${str.awPhotos}",
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint
+                                )
+                            }
+
+                            if (state.selectedImages.size < AnswerWritingViewModel.MAX_PHOTOS) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    OutlinedButton(
+                                        onClick = { cameraPermission.launch(android.Manifest.permission.CAMERA) },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                    ) {
+                                        Icon(Icons.Rounded.PhotoCamera, null, modifier = Modifier.size(17.dp), tint = Indigo)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(str.awTakePhoto, color = Indigo, fontWeight = FontWeight.Bold)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { galleryLauncher.launch("image/*") },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                    ) {
+                                        Icon(Icons.Rounded.PhotoLibrary, null, modifier = Modifier.size(17.dp), tint = Indigo)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(str.awFromGallery, color = Indigo, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
                 // ── Writing pad ─────────────────────────────────
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -298,6 +425,7 @@ private fun DetailContent(
                         )
                     }
                 }
+                }   // end type/photo mode branch
             } else {
                 // ── Submitted: status → score/feedback → model answer → my answer ──
                 SubmittedStatusCard(submission!!)
@@ -340,11 +468,44 @@ private fun DetailContent(
                             )
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            submission.answerText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = cs.onSurfaceVariant, lineHeight = 22.sp
-                        )
+                        val myImages = submission.answerImages.orEmpty()
+                        if (myImages.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                myImages.forEach { url ->
+                                    AsyncImage(
+                                        model = url,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier.fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                submission.answerText ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant, lineHeight = 22.sp
+                            )
+                        }
+                    }
+                }
+
+                // ── Peer reviews received (anonymous) ──────────
+                if (state.peerReviews.isNotEmpty()) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("🤝", fontSize = 15.sp)
+                                Text(str.awPeerReviewsReceived, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                            }
+                            state.peerReviews.forEach { pr -> PeerReviewReceivedRow(pr) }
+                        }
                     }
                 }
             }
@@ -356,7 +517,7 @@ private fun DetailContent(
             Box(modifier = Modifier.fillMaxWidth().background(cs.surface).padding(16.dp).navigationBarsPadding().imePadding()) {
                 Button(
                     onClick = { showConfirm = true },
-                    enabled = words > 0 && !state.isSubmitting,
+                    enabled = canSend && !state.isSubmitting,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Indigo)
@@ -414,11 +575,23 @@ private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.ap
                         }
                     }
                 } else {
-                    Text("⏳", fontSize = 28.sp)
+                    Text(if (submission.peerReviewCount > 0) "🤝" else "⏳", fontSize = 28.sp)
                     Column {
-                        Text(str.awStatusPending, style = MaterialTheme.typography.titleSmall, color = Color(0xFFB45309), fontWeight = FontWeight.ExtraBold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(str.awStatusPending, style = MaterialTheme.typography.titleSmall, color = Color(0xFFB45309), fontWeight = FontWeight.ExtraBold)
+                            if (submission.avgPeerRating != null && submission.peerReviewCount > 0) {
+                                Text(
+                                    "⭐ ${"%.1f".format(submission.avgPeerRating)} · ${submission.peerReviewCount}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color(0xFF7A5B00), fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                                        .background(Color.White.copy(0.65f))
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(2.dp))
-                        Text(str.awPendingNote, style = MaterialTheme.typography.bodySmall, color = Color(0xFF7A5B00), lineHeight = 17.sp)
+                        Text(str.awUnderPeerReview, style = MaterialTheme.typography.bodySmall, color = Color(0xFF7A5B00), lineHeight = 17.sp)
                     }
                 }
             }
@@ -439,6 +612,68 @@ private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.ap
                     )
                 }
             }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// One anonymous peer review received on my answer.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.PeerReviewDto) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    val areaLabel = when (review.improvementArea) {
+        "content"      -> str.awAreaContent
+        "structure"    -> str.awAreaStructure
+        "analysis"     -> str.awAreaAnalysis
+        "bihar_angle"  -> str.awAreaBihar
+        "presentation" -> str.awAreaPresentation
+        "conclusion"   -> str.awAreaConclusion
+        else           -> null
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .background(cs.surfaceVariant.copy(alpha = 0.4f)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "⭐".repeat(review.rating.coerceIn(0, 5)),
+                style = MaterialTheme.typography.labelLarge
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val (vLabel, vColor) = when (review.verdict) {
+                    "yes"    -> str.yes to BpscColors.Success
+                    "partly" -> str.awPartly to Color(0xFFB45309)
+                    else     -> str.no to Color(0xFFE74C3C)
+                }
+                Text(
+                    vLabel, style = MaterialTheme.typography.labelSmall,
+                    color = vColor, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                        .background(vColor.copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+                areaLabel?.let {
+                    Text(
+                        it, style = MaterialTheme.typography.labelSmall,
+                        color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(IndigoSoft).padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+        }
+        if (!review.suggestion.isNullOrBlank()) {
+            Text(
+                "“${review.suggestion}”",
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant, lineHeight = 18.sp
+            )
         }
     }
 }

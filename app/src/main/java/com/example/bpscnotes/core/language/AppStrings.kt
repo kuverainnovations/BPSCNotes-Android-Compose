@@ -164,6 +164,45 @@ data class QuizStrings(
     val awNoSubmissionsBody: String = "Pick a question and write your first Mains answer!",
     val awPendingNote: String = "Your answer is with the examiner — you'll get a notification once it's reviewed.",
     val awDashSubtitle: String = "Mains practice · Model answers · Expert review",
+    // ── Handwritten photo answers ────────────────────────────────────
+    val awTypeMode: String = "⌨️ Type",
+    val awPhotoMode: String = "📷 Photos",
+    val awPhotoHint: String = "Write your answer in your notebook, then photograph each page in order (up to 5 photos).",
+    val awTakePhoto: String = "Camera",
+    val awFromGallery: String = "Gallery",
+    val awPhotos: String = "photos",
+    // ── Peer review ──────────────────────────────────────────────────
+    val awPeerReview: String = "Peer Review",
+    val awPeerReviewSub: String = "Review answers written by other aspirants and earn review credits.",
+    val awReviewNow: String = "Review Now",
+    val awReviewsGiven: String = "Reviews Given",
+    val awPendingReviews: String = "To Review",
+    val awReviewCredits: String = "Review Credits",
+    val awReviewLockedNoSub: String = "Submit your own answer first to unlock peer reviewing.",
+    val awReviewLockedNotReviewed: String = "Reviewing unlocks once your own answer gets its first review.",
+    val awHelpFellow: String = "Help a fellow aspirant. Earn a review credit.",
+    val awReviewBannerTitle: String = "Give an honest, constructive review.",
+    val awReviewBannerBody: String = "Your review will help another aspirant improve.",
+    val awAnonymous: String = "Anonymous",
+    val awStudentAnswer: String = "Student's Answer",
+    val awYourReview: String = "Your Review",
+    val awReviewQ1: String = "1. Did the answer address the question demand?",
+    val awReviewQ2: String = "2. Overall Answer Rating",
+    val awReviewQ3: String = "3. What needs the most improvement?",
+    val awReviewQ4: String = "4. One suggestion to improve the answer",
+    val awPartly: String = "Partly",
+    val awSuggestionHint: String = "E.g., Add more recent examples and a stronger conclusion with way forward.",
+    val awSubmitReview: String = "Submit Review & Earn 1 Credit",
+    val awNoMoreReviews: String = "All caught up!",
+    val awNoMoreReviewsBody: String = "No answers waiting for your review right now — check back later.",
+    val awPeerReviewsReceived: String = "Peer Reviews on Your Answer",
+    val awUnderPeerReview: String = "Your answer has been submitted and is being reviewed by peers.",
+    val awAreaContent: String = "Content",
+    val awAreaStructure: String = "Structure",
+    val awAreaAnalysis: String = "Analysis",
+    val awAreaBihar: String = "Bihar Angle",
+    val awAreaPresentation: String = "Presentation",
+    val awAreaConclusion: String = "Conclusion",
 )
 
 data class ContentStrings(
@@ -808,6 +847,19 @@ data class AppStrings(
     val awEmpty get() = _qz.awEmpty; val awEmptyBody get() = _qz.awEmptyBody
     val awNoSubmissions get() = _qz.awNoSubmissions; val awNoSubmissionsBody get() = _qz.awNoSubmissionsBody
     val awPendingNote get() = _qz.awPendingNote; val awDashSubtitle get() = _qz.awDashSubtitle
+    val awTypeMode get() = _qz.awTypeMode; val awPhotoMode get() = _qz.awPhotoMode; val awPhotoHint get() = _qz.awPhotoHint
+    val awTakePhoto get() = _qz.awTakePhoto; val awFromGallery get() = _qz.awFromGallery; val awPhotos get() = _qz.awPhotos
+    val awPeerReview get() = _qz.awPeerReview; val awPeerReviewSub get() = _qz.awPeerReviewSub; val awReviewNow get() = _qz.awReviewNow
+    val awReviewsGiven get() = _qz.awReviewsGiven; val awPendingReviews get() = _qz.awPendingReviews; val awReviewCredits get() = _qz.awReviewCredits
+    val awReviewLockedNoSub get() = _qz.awReviewLockedNoSub; val awReviewLockedNotReviewed get() = _qz.awReviewLockedNotReviewed
+    val awHelpFellow get() = _qz.awHelpFellow; val awReviewBannerTitle get() = _qz.awReviewBannerTitle; val awReviewBannerBody get() = _qz.awReviewBannerBody
+    val awAnonymous get() = _qz.awAnonymous; val awStudentAnswer get() = _qz.awStudentAnswer; val awYourReview get() = _qz.awYourReview
+    val awReviewQ1 get() = _qz.awReviewQ1; val awReviewQ2 get() = _qz.awReviewQ2; val awReviewQ3 get() = _qz.awReviewQ3; val awReviewQ4 get() = _qz.awReviewQ4
+    val awPartly get() = _qz.awPartly; val awSuggestionHint get() = _qz.awSuggestionHint; val awSubmitReview get() = _qz.awSubmitReview
+    val awNoMoreReviews get() = _qz.awNoMoreReviews; val awNoMoreReviewsBody get() = _qz.awNoMoreReviewsBody
+    val awPeerReviewsReceived get() = _qz.awPeerReviewsReceived; val awUnderPeerReview get() = _qz.awUnderPeerReview
+    val awAreaContent get() = _qz.awAreaContent; val awAreaStructure get() = _qz.awAreaStructure; val awAreaAnalysis get() = _qz.awAreaAnalysis
+    val awAreaBihar get() = _qz.awAreaBihar; val awAreaPresentation get() = _qz.awAreaPresentation; val awAreaConclusion get() = _qz.awAreaConclusion
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1796,6 +1848,43 @@ val HindiStrings: AppStrings = mkAppStrings(
         awNoSubmissionsBody="कोई प्रश्न चुनें और अपना पहला मुख्य परीक्षा उत्तर लिखें!",
         awPendingNote="आपका उत्तर परीक्षक के पास है — समीक्षा होते ही आपको सूचना मिलेगी।",
         awDashSubtitle="मुख्य परीक्षा अभ्यास · आदर्श उत्तर · विशेषज्ञ समीक्षा",
+        awTypeMode="⌨️ टाइप करें",
+        awPhotoMode="📷 फोटो",
+        awPhotoHint="अपनी कॉपी में उत्तर लिखें, फिर हर पेज की फोटो क्रम से लें (अधिकतम 5 फोटो)।",
+        awTakePhoto="कैमरा",
+        awFromGallery="गैलरी",
+        awPhotos="फोटो",
+        awPeerReview="सहपाठी समीक्षा",
+        awPeerReviewSub="अन्य अभ्यर्थियों के उत्तरों की समीक्षा करें और रिव्यू क्रेडिट कमाएं।",
+        awReviewNow="अभी समीक्षा करें",
+        awReviewsGiven="समीक्षाएं दीं",
+        awPendingReviews="समीक्षा हेतु",
+        awReviewCredits="रिव्यू क्रेडिट",
+        awReviewLockedNoSub="सहपाठी समीक्षा शुरू करने के लिए पहले अपना उत्तर जमा करें।",
+        awReviewLockedNotReviewed="जब आपके उत्तर की पहली समीक्षा हो जाएगी, तब आप दूसरों की समीक्षा कर सकेंगे।",
+        awHelpFellow="एक साथी अभ्यर्थी की मदद करें। रिव्यू क्रेडिट कमाएं।",
+        awReviewBannerTitle="ईमानदार और रचनात्मक समीक्षा दें।",
+        awReviewBannerBody="आपकी समीक्षा दूसरे अभ्यर्थी को बेहतर बनने में मदद करेगी।",
+        awAnonymous="गुमनाम",
+        awStudentAnswer="छात्र का उत्तर",
+        awYourReview="आपकी समीक्षा",
+        awReviewQ1="1. क्या उत्तर ने प्रश्न की मांग को संबोधित किया?",
+        awReviewQ2="2. उत्तर की समग्र रेटिंग",
+        awReviewQ3="3. सबसे अधिक सुधार किसमें चाहिए?",
+        awReviewQ4="4. उत्तर सुधारने के लिए एक सुझाव",
+        awPartly="आंशिक रूप से",
+        awSuggestionHint="जैसे: हाल के उदाहरण जोड़ें और निष्कर्ष को मजबूत बनाएं।",
+        awSubmitReview="समीक्षा जमा करें और 1 क्रेडिट कमाएं",
+        awNoMoreReviews="सब हो गया!",
+        awNoMoreReviewsBody="अभी समीक्षा के लिए कोई उत्तर नहीं है — बाद में देखें।",
+        awPeerReviewsReceived="आपके उत्तर पर सहपाठी समीक्षाएं",
+        awUnderPeerReview="आपका उत्तर जमा हो गया है और सहपाठियों द्वारा समीक्षा हो रही है।",
+        awAreaContent="विषय-वस्तु",
+        awAreaStructure="संरचना",
+        awAreaAnalysis="विश्लेषण",
+        awAreaBihar="बिहार दृष्टिकोण",
+        awAreaPresentation="प्रस्तुति",
+        awAreaConclusion="निष्कर्ष",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",
