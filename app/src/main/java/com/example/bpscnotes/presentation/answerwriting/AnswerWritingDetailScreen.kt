@@ -272,10 +272,11 @@ private fun DetailContent(
             // Writing tips (pre-submit only)
             if (isWriting && !q.tips.isNullOrBlank()) {
                 Card(
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
                 ) {
-                    Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("💡", fontSize = 16.sp)
                         Column {
                             Text(str.awTips, style = MaterialTheme.typography.labelMedium, color = Color(0xFFB45309), fontWeight = FontWeight.Bold)
@@ -422,6 +423,8 @@ private fun DetailContent(
                             modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
                             color = if (overLimit) cs.error else Indigo,
                             trackColor = IndigoSoft,
+                            gapSize = 0.dp,
+                            drawStopIndicator = {},   // no M3 end-dot — clean bar
                         )
                     }
                 }
@@ -571,7 +574,7 @@ private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.ap
                     Column {
                         Text(str.awStatusReviewed, style = MaterialTheme.typography.titleSmall, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
                         submission.reviewedAt?.let {
-                            Text(it.take(10), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(formatShortDate(it), style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
                 } else {

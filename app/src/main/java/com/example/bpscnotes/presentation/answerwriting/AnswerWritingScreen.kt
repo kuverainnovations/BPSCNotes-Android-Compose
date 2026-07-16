@@ -40,6 +40,12 @@ private val HeroGradient = listOf(Color(0xFF1A237E), Color(0xFF283593), Color(0x
 private val Indigo       = Color(0xFF3949AB)
 private val IndigoSoft   = Color(0xFFE8EAF6)
 
+/** "2026-07-12…" → "12 Jul" (API-24-safe — no java.time) */
+internal fun formatShortDate(iso: String): String = try {
+    val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(iso.take(10))
+    if (parsed != null) java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(parsed) else iso.take(10)
+} catch (_: Exception) { iso.take(10) }
+
 @Composable
 fun AnswerWritingScreen(
     navController: NavHostController,
@@ -400,7 +406,7 @@ private fun QuestionCard(q: AnswerQuestionDto, onClick: () -> Unit) {
                     }
                     q.scheduledFor?.let {
                         Text(
-                            it.take(10), style = MaterialTheme.typography.labelSmall,
+                            formatShortDate(it), style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.TextHint, fontSize = 10.sp
                         )
                     }
@@ -495,7 +501,7 @@ private fun MyAnswersTab(submissions: List<AnswerSubmissionDto>, navController: 
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "${s.wordCount} ${str.awWords} · ${s.createdAt?.take(10) ?: ""}",
+                            "${s.wordCount} ${str.awWords} · ${s.createdAt?.let { formatShortDate(it) } ?: ""}",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint
                         )
                     }
@@ -603,6 +609,8 @@ private fun InsightsTab(
                     modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                     color = Indigo,
                     trackColor = IndigoSoft,
+                    gapSize = 0.dp,
+                    drawStopIndicator = {},
                 )
                 if (goalProgress >= 1f) {
                     Text(str.awGoalDone, style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
@@ -636,6 +644,8 @@ private fun InsightsTab(
                             progress = { (insights.reviewsGiven.toFloat() / nextAt).coerceIn(0f, 1f) },
                             modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
                             color = Indigo, trackColor = Color.White,
+                            gapSize = 0.dp,
+                            drawStopIndicator = {},
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
