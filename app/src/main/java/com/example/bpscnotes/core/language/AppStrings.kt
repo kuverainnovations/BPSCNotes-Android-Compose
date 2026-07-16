@@ -225,6 +225,7 @@ data class QuizStrings(
     val awLevelExpert: String = "Expert Reviewer",
     val awKeepItUp: String = "Keep it up!",
     val awNoInsights: String = "Write your first answer to see your stats here!",
+    val awChars: String = "chars",
 )
 
 data class ContentStrings(
@@ -889,7 +890,7 @@ data class AppStrings(
     val awGoalTitle get() = _qz.awGoalTitle; val awGoalBody get() = _qz.awGoalBody; val awGoalDone get() = _qz.awGoalDone
     val awReviewerLevel get() = _qz.awReviewerLevel; val awLevelBeginner get() = _qz.awLevelBeginner; val awLevelActive get() = _qz.awLevelActive
     val awLevelAdvanced get() = _qz.awLevelAdvanced; val awLevelExpert get() = _qz.awLevelExpert
-    val awKeepItUp get() = _qz.awKeepItUp; val awNoInsights get() = _qz.awNoInsights
+    val awKeepItUp get() = _qz.awKeepItUp; val awNoInsights get() = _qz.awNoInsights; val awChars get() = _qz.awChars
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1936,6 +1937,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         awLevelExpert="विशेषज्ञ समीक्षक",
         awKeepItUp="जारी रखें!",
         awNoInsights="अपने आंकड़े देखने के लिए पहला उत्तर लिखें!",
+        awChars="अक्षर",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",

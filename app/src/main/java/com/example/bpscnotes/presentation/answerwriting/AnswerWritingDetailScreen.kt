@@ -403,7 +403,7 @@ private fun DetailContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "$words / ${q.wordLimit} ${str.awWords}",
+                                "$words / ${q.wordLimit} ${str.awWords} · ${state.draftText.length} ${str.awChars}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = if (overLimit) cs.error else Indigo,
                                 fontWeight = FontWeight.Bold
