@@ -38,12 +38,12 @@ class GPlayCoursePurchaseManager @Inject constructor(
     // the caller's userId alone — required, not optional, so no call site can
     // accidentally skip it.
     fun launchPurchase(activity: Activity, productDetails: ProductDetails, obfuscatedAccountId: String): BillingResult {
-        // The installed Billing Library (7.1.1) predates offer tokens for
-        // one-time products entirely — ProductDetails.OneTimePurchaseOfferDetails
-        // only exposes price fields (checked directly against the decompiled
-        // class: getPriceAmountMicros/getFormattedPrice/getPriceCurrencyCode,
-        // no getOfferToken). Only subscriptions have offer tokens in this
-        // version, so this is always null for a course purchase.
+        // PBL 8+ supports multiple purchase options/offers per one-time
+        // product, each with its own offer token. Our synced catalog products
+        // (gplay-catalog.util.ts) only ever have the single default
+        // purchase option, which launchBillingFlow resolves when no offer
+        // token is passed — so null stays correct until the catalog starts
+        // creating additional purchase options or offers.
         return billing.launchBillingFlow(activity, productDetails, offerToken = null, obfuscatedAccountId = obfuscatedAccountId)
     }
 

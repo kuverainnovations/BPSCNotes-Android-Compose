@@ -1,8 +1,8 @@
 [versions]
 agp = "8.13.2"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
-hilt = "2.52"
+kotlin = "2.3.21"
+ksp = "2.3.10"
+hilt = "2.58"
 coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
