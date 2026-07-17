@@ -15,6 +15,7 @@ import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.CoursesApiService
 import com.example.bpscnotes.data.remote.api.GPlayCourseVerifyRequest
 import com.example.bpscnotes.presentation.payment.GPlayCoursePurchaseManager
+import com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -210,9 +211,16 @@ class MyLearningViewModel @Inject constructor(
                             )}
                         } else {
                             // Release build — Google Play Billing. The Cashfree
-                            // session fields in this response are ignored; the
-                            // exact price comes from Play's ProductDetails once
-                            // queried (see startGPlayCoursePurchase).
+                            // session is kept aside (not in uiState) in case the
+                            // user picks Cashfree on Google's billing-choice
+                            // screen; the Play price still comes from
+                            // ProductDetails (see startGPlayCoursePurchase).
+                            val sessionId          = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                            val providerOrderId    = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                            val paymentEnvironment = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
+                            pendingCashfreeSession = if (sessionId != null && providerOrderId != null) {
+                                PendingCashfreeSession(sessionId, providerOrderId, paymentEnvironment)
+                            } else null
                             _uiState.update { it.copy(
                                 isEnrolling           = false,
                                 purchaseRequired      = true,
@@ -236,6 +244,19 @@ class MyLearningViewModel @Inject constructor(
         }
     }
 
+    // User choice billing (release builds): the 402's Cashfree session is
+    // held here — NOT in uiState, where a non-null purchaseSessionId
+    // auto-launches the Cashfree SDK via the screen's LaunchedEffect. Only
+    // promoted to uiState if the user picks Cashfree on Google's
+    // billing-choice screen. Same shape as CourseDetailViewModel.
+    private data class PendingCashfreeSession(
+        val sessionId: String,
+        val providerOrderId: String,
+        val environment: String,
+    )
+    private var pendingCashfreeSession: PendingCashfreeSession? = null
+    private var pendingExternalTxToken: String? = null
+
     fun clearPurchaseRequired() {
         _uiState.update { it.copy(
             purchaseRequired        = false,
@@ -250,10 +271,12 @@ class MyLearningViewModel @Inject constructor(
                 coursesApi.confirmCoursePurchase(
                     courseId,
                     com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest(
-                        cfPaymentId   = cfPaymentId,
-                        paymentMethod = "upi"
+                        cfPaymentId              = cfPaymentId,
+                        paymentMethod            = "upi",
+                        externalTransactionToken = pendingExternalTxToken
                     )
                 )
+                pendingExternalTxToken = null
                 bus.emit(RefreshEvent.CourseEnrolled)
                 cacheInvalidator.evict()
                 load()
@@ -292,8 +315,32 @@ class MyLearningViewModel @Inject constructor(
                     return@launch
                 }
                 val clientPriceInr = gplay.priceInrOf(details)
-                val purchase = gplay.awaitPurchase(courseId)
-                verifyGPlayCoursePurchase(courseId, purchase.purchaseToken, clientPriceInr)
+                when (val outcome = gplay.awaitPurchaseOrUserChoice(courseId)) {
+                    is GPlayPurchaseOutcome.PlayPurchase ->
+                        verifyGPlayCoursePurchase(courseId, outcome.purchase.purchaseToken, clientPriceInr)
+
+                    is GPlayPurchaseOutcome.AlternativeBillingChosen -> {
+                        // User picked Cashfree on Google's billing-choice
+                        // screen — promote the held Cashfree session into
+                        // uiState so the screen launches the Cashfree SDK,
+                        // and keep the token for the confirm call.
+                        val session = pendingCashfreeSession
+                        if (session == null) {
+                            _uiState.update { it.copy(
+                                isGPlayPurchasing = false,
+                                error = "Payment option unavailable right now. Please try again."
+                            )}
+                        } else {
+                            pendingExternalTxToken = outcome.externalTransactionToken
+                            _uiState.update { it.copy(
+                                isGPlayPurchasing          = false,
+                                purchaseSessionId          = session.sessionId,
+                                purchaseProviderOrderId    = session.providerOrderId,
+                                purchasePaymentEnvironment = session.environment,
+                            )}
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isGPlayPurchasing = false, error = e.message ?: "Purchase failed") }
             }

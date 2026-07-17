@@ -116,7 +116,11 @@ data class SubscriptionStatusData(
 data class CreateSubscriptionRequest(
     val plan: String,
     val couponCode: String? = null,
-    val coinsToUse: Int = 0
+    val coinsToUse: Int = 0,
+    // Set when the user picked Cashfree on Google Play's billing-choice
+    // screen (user choice billing) — stored at creation so the backend can
+    // report the payment to Play even if only the webhook completes it.
+    val externalTransactionToken: String? = null
 )
 
 data class CreateSubscriptionResponse(
@@ -139,7 +143,10 @@ data class PaymentBreakdown(
 data class ConfirmSubscriptionRequest(
     val cfPaymentId: String,            // from Cashfree SDK onPaymentSuccess
     val paymentMethod: String = "upi",
-    val upiId: String? = null
+    val upiId: String? = null,
+    // Fallback delivery of the user-choice-billing token (normally already
+    // stored at create time via CreateSubscriptionRequest).
+    val externalTransactionToken: String? = null
 )
 
 data class GPlayVerifyRequest(
@@ -168,7 +175,10 @@ data class EnrollCourseRequest(
 
 data class ConfirmCoursePurchaseRequest(
     val cfPaymentId: String,            // from Cashfree SDK
-    val paymentMethod: String = "upi"
+    val paymentMethod: String = "upi",
+    // Set when the user picked Cashfree on Google Play's billing-choice
+    // screen — backend reports the payment to the Play Developer API.
+    val externalTransactionToken: String? = null
 )
 
 data class GPlayCourseVerifyRequest(

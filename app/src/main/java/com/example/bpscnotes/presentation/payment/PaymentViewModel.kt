@@ -93,6 +93,12 @@ class PaymentViewModel @Inject constructor(
     // Keyed by Play product ID; populated in loadPlans() when useGPlay is true
     private val productDetailsCache = mutableMapOf<String, ProductDetails>()
 
+    // User choice billing: token from Google's billing-choice screen when
+    // the user picks Cashfree there. Sent with the subscription create call
+    // (so the backend can report to Play even when only the webhook
+    // completes the payment) and again as a fallback on confirm.
+    private var pendingExternalTxToken: String? = null
+
     init {
         val useGPlay = !BuildConfig.DEBUG
         _state.update { it.copy(useGPlay = useGPlay) }
@@ -100,6 +106,26 @@ class PaymentViewModel @Inject constructor(
         loadUserInfo()
         if (useGPlay) {
             collectGPlayPurchases()
+            collectUserChoiceSelections()
+        }
+    }
+
+    // Counterpart to collectGPlayPurchases for the other way a launched
+    // Play billing flow can resolve: the user picking Cashfree on Google's
+    // billing-choice screen. Filtered to subscription product ids for the
+    // same reason as collectGPlayPurchases — course/material user-choice
+    // selections are handled by their own ViewModels.
+    private fun collectUserChoiceSelections() {
+        viewModelScope.launch {
+            billing.userChoiceFlow.collect { details ->
+                if (details.products.any { it.id in PLAN_TO_GPLAY_PRODUCT.values }) {
+                    pendingExternalTxToken = details.externalTransactionToken
+                    // Run the standard Cashfree flow: create the order (token
+                    // rides along) — Case 3 in createOrder() then surfaces
+                    // paymentSessionId, which auto-launches the Cashfree SDK.
+                    createOrder()
+                }
+            }
         }
     }
 
@@ -304,7 +330,8 @@ class PaymentViewModel @Inject constructor(
                 val res = api.createSubscription(CreateSubscriptionRequest(
                     plan       = plan.id ?: "monthly",
                     couponCode = if (s.couponApplied) s.couponCode else null,
-                    coinsToUse = s.coinsToUse
+                    coinsToUse = s.coinsToUse,
+                    externalTransactionToken = pendingExternalTxToken
                 ))
                 val data = res.data ?: throw Exception("Invalid response from server")
                 val finalAmt        = data.breakdown.finalAmount
@@ -359,8 +386,10 @@ class PaymentViewModel @Inject constructor(
             try {
                 api.confirmSubscription(subId, ConfirmSubscriptionRequest(
                     cfPaymentId   = cfPaymentId,
-                    paymentMethod = "upi"
+                    paymentMethod = "upi",
+                    externalTransactionToken = pendingExternalTxToken
                 ))
+                pendingExternalTxToken = null
                 val bonusCoins = _state.value.selectedPlan?.bonusCoins ?: 0
                 val plan       = _state.value.selectedPlan?.id ?: "subscription"
                 Event.paymentSuccess(plan, _state.value.finalAmount, "cashfree")
@@ -378,6 +407,7 @@ class PaymentViewModel @Inject constructor(
     }
 
     fun handlePaymentFailure(code: Int, message: String) {
+        pendingExternalTxToken = null
         if (code == 0) {
             // User cancelled — clear session, no error shown
             _state.update { it.copy(paymentSessionId = null) }

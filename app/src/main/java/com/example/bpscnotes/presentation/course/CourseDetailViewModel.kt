@@ -21,6 +21,7 @@ import com.example.bpscnotes.data.remote.api.ConfirmCoursePurchaseRequest
 import com.example.bpscnotes.data.remote.api.GPlayCourseVerifyRequest
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.example.bpscnotes.presentation.payment.GPlayCoursePurchaseManager
+import com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -81,6 +82,22 @@ class CourseDetailViewModel @Inject constructor(
     val uiState: StateFlow<CourseDetailUiState> = _uiState.asStateFlow()
 
     private var activeCourseId: String = ""
+
+    // User choice billing (release builds): the 402 response's Cashfree
+    // session is held here — NOT in uiState, where a non-null
+    // purchaseSessionId immediately auto-launches the Cashfree SDK via the
+    // screen's LaunchedEffect. It's only promoted to uiState if the user
+    // picks Cashfree on Google's billing-choice screen.
+    private data class PendingCashfreeSession(
+        val sessionId: String,
+        val providerOrderId: String,
+        val environment: String,
+    )
+    private var pendingCashfreeSession: PendingCashfreeSession? = null
+
+    // Token from UserChoiceDetails — rides along on the Cashfree confirm
+    // call so the backend can report the payment to the Play Developer API.
+    private var pendingExternalTxToken: String? = null
 
     init {
         viewModelScope.launch {
@@ -206,9 +223,16 @@ class CourseDetailViewModel @Inject constructor(
                             )}
                         } else {
                             // Release build — Google Play Billing. The Cashfree
-                            // session fields in this response are ignored; the
-                            // exact price comes from Play's ProductDetails once
-                            // queried (see startGPlayCoursePurchase).
+                            // session is kept aside (not in uiState) in case the
+                            // user picks Cashfree on Google's billing-choice
+                            // screen; the Play price still comes from
+                            // ProductDetails (see startGPlayCoursePurchase).
+                            val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
+                            val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
+                            val paymentEnvironment = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
+                            pendingCashfreeSession = if (sessionId != null && providerOrderId != null) {
+                                PendingCashfreeSession(sessionId, providerOrderId, paymentEnvironment)
+                            } else null
                             _uiState.update { it.copy(
                                 isEnrolling           = false,
                                 purchaseRequired      = true,
@@ -352,8 +376,33 @@ class CourseDetailViewModel @Inject constructor(
                     return@launch
                 }
                 val clientPriceInr = gplay.priceInrOf(details)
-                val purchase = gplay.awaitPurchase(courseId)
-                verifyGPlayCoursePurchase(courseId, purchase.purchaseToken, clientPriceInr)
+                when (val outcome = gplay.awaitPurchaseOrUserChoice(courseId)) {
+                    is GPlayPurchaseOutcome.PlayPurchase ->
+                        verifyGPlayCoursePurchase(courseId, outcome.purchase.purchaseToken, clientPriceInr)
+
+                    is GPlayPurchaseOutcome.AlternativeBillingChosen -> {
+                        // User picked Cashfree on Google's billing-choice
+                        // screen. Promote the 402's Cashfree session into
+                        // uiState — the screen's LaunchedEffect launches the
+                        // Cashfree SDK from there — and hold the token for
+                        // the confirm call.
+                        val session = pendingCashfreeSession
+                        if (session == null) {
+                            _uiState.update { it.copy(
+                                isGPlayPurchasing = false,
+                                error = "Payment option unavailable right now. Please try again."
+                            )}
+                        } else {
+                            pendingExternalTxToken = outcome.externalTransactionToken
+                            _uiState.update { it.copy(
+                                isGPlayPurchasing          = false,
+                                purchaseSessionId          = session.sessionId,
+                                purchaseProviderOrderId    = session.providerOrderId,
+                                purchasePaymentEnvironment = session.environment,
+                            )}
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isGPlayPurchasing = false, error = e.message ?: "Purchase failed") }
             }
@@ -385,9 +434,11 @@ class CourseDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 api.confirmCoursePurchase(courseId, ConfirmCoursePurchaseRequest(
-                    cfPaymentId   = cfPaymentId,
-                    paymentMethod = "upi"
+                    cfPaymentId              = cfPaymentId,
+                    paymentMethod            = "upi",
+                    externalTransactionToken = pendingExternalTxToken
                 ))
+                pendingExternalTxToken = null
                 bus.emit(RefreshEvent.CourseEnrolled)
                 cacheInvalidator.evict()
                 _uiState.update { it.copy(enrollSuccess = true) }

@@ -7,10 +7,27 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+
+// How a launched Play billing flow resolved once the user got past
+// Google's billing-choice screen (user choice billing, India program).
+sealed interface GPlayPurchaseOutcome {
+    /** User paid through Google Play — verify purchaseToken as before. */
+    data class PlayPurchase(val purchase: Purchase) : GPlayPurchaseOutcome
+
+    /**
+     * User picked our alternative (Cashfree) on the choice screen. The
+     * token must ride along to the backend with the Cashfree confirm call
+     * so the payment gets reported to the Play Developer API.
+     */
+    data class AlternativeBillingChosen(val externalTransactionToken: String) : GPlayPurchaseOutcome
+}
 
 @Singleton
 class BillingClientWrapper @Inject constructor(
@@ -18,6 +35,18 @@ class BillingClientWrapper @Inject constructor(
 ) {
     private val _purchasesFlow = MutableSharedFlow<List<Purchase>>(extraBufferCapacity = 1)
     val purchasesFlow: SharedFlow<List<Purchase>> = _purchasesFlow.asSharedFlow()
+
+    // User choice billing (India): when the app is enrolled in the program,
+    // launchBillingFlow shows Google's billing-choice screen first. If the
+    // user picks our alternative (Cashfree), this fires INSTEAD of the
+    // purchases listener, carrying the externalTransactionToken the backend
+    // must report to Play after the Cashfree payment succeeds. While the
+    // Play Console enrollment is not yet active, Google never shows the
+    // choice screen and this flow simply never emits — the Play-billing
+    // path behaves exactly as before, so this is safe to ship ahead of
+    // enrollment.
+    private val _userChoiceFlow = MutableSharedFlow<UserChoiceDetails>(extraBufferCapacity = 1)
+    val userChoiceFlow: SharedFlow<UserChoiceDetails> = _userChoiceFlow.asSharedFlow()
 
     val client: BillingClient = BillingClient.newBuilder(context)
         .setListener { result, purchases ->
@@ -28,6 +57,9 @@ class BillingClientWrapper @Inject constructor(
         .enablePendingPurchases(
             PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
         )
+        .enableUserChoiceBilling { userChoiceDetails ->
+            _userChoiceFlow.tryEmit(userChoiceDetails)
+        }
         .build()
 
     private var connected = false
@@ -102,6 +134,24 @@ class BillingClientWrapper @Inject constructor(
             }
         }
     }
+
+    // Awaits whichever way the billing flow launched for [productId]
+    // resolves: a completed Play purchase, or the user picking the
+    // alternative (Cashfree) option on Google's billing-choice screen.
+    // Never resolves if the user just dismisses the flow — callers launch
+    // this inside their own cancellable scope, same as awaitPurchase-style
+    // collectors.
+    suspend fun awaitPurchaseOrUserChoice(productId: String): GPlayPurchaseOutcome =
+        kotlinx.coroutines.flow.merge(
+            purchasesFlow
+                .filter { purchases -> purchases.any { productId in it.products } }
+                .map { purchases ->
+                    GPlayPurchaseOutcome.PlayPurchase(purchases.first { productId in it.products })
+                },
+            userChoiceFlow
+                .filter { details -> details.products.any { it.id == productId } }
+                .map { GPlayPurchaseOutcome.AlternativeBillingChosen(it.externalTransactionToken) },
+        ).first()
 
     fun launchBillingFlow(
         activity: Activity,

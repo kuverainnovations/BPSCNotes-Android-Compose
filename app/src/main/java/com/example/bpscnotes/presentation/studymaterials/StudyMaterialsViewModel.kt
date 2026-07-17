@@ -1,6 +1,7 @@
 package com.example.bpscnotes.presentation.studymaterials
 
 import com.example.bpscnotes.core.network.toUserMessage
+import com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome
 
 import com.example.bpscnotes.data.remote.api.StudyMaterialsApiService
 
@@ -1164,6 +1165,12 @@ class StudyMaterialsViewModel @Inject constructor(
         _state.update { it.copy(pendingPurchase = null) }
     }
 
+    // User choice billing: token from Google's billing-choice screen when
+    // the user picks Cashfree there (release builds). Rides along on the
+    // confirm call so the backend reports the payment to the Play
+    // Developer API. Null for every other purchase path.
+    private var pendingExternalTxToken: String? = null
+
     // Called by the screen's Cashfree onSuccess callback.
     fun confirmMaterialPurchase(cfPaymentId: String) {
         val materialId      = _state.value.pendingPurchaseMaterialId ?: return
@@ -1173,9 +1180,11 @@ class StudyMaterialsViewModel @Inject constructor(
             _state.update { it.copy(isConfirmingPurchase = true) }
             try {
                 val res = api.confirmPurchase(materialId, ConfirmPurchaseRequest(
-                    purchaseOrderId = purchaseOrderId,
-                    cfPaymentId     = cfPaymentId,
+                    purchaseOrderId          = purchaseOrderId,
+                    cfPaymentId              = cfPaymentId,
+                    externalTransactionToken = pendingExternalTxToken,
                 ))
+                pendingExternalTxToken = null
                 tokenStore.addPurchasedId(materialId)
                 _state.update { it.copy(
                     isConfirmingPurchase      = false,
@@ -1201,6 +1210,7 @@ class StudyMaterialsViewModel @Inject constructor(
 
     // Called by the screen's Cashfree onFailure callback.
     fun handleMaterialPaymentFailure(code: Int, message: String) {
+        pendingExternalTxToken = null
         _state.update { it.copy(
             purchaseError             = "Payment failed: $message",
             pendingPurchaseMaterialId = null,
@@ -1242,17 +1252,61 @@ class StudyMaterialsViewModel @Inject constructor(
                     )}
                     return@launch
                 }
-                val purchase = gplayMaterial.awaitPurchase(materialId)
-                val res = api.verifyGplayMaterialPurchase(materialId, VerifyGplayMaterialRequest(purchase.purchaseToken))
-                tokenStore.addPurchasedId(materialId)
-                _state.update { it.copy(
-                    purchasingId     = null,
-                    purchaseSuccess  = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
-                    purchasedIds     = it.purchasedIds + materialId,
-                    selectedMaterial = if (it.selectedMaterial?.id == materialId)
-                        it.selectedMaterial.copy(isPurchased = true) else it.selectedMaterial,
-                )}
-                loadStats()
+                when (val outcome = gplayMaterial.awaitPurchaseOrUserChoice(materialId)) {
+                    is GPlayPurchaseOutcome.PlayPurchase -> {
+                        val res = api.verifyGplayMaterialPurchase(materialId, VerifyGplayMaterialRequest(outcome.purchase.purchaseToken))
+                        tokenStore.addPurchasedId(materialId)
+                        _state.update { it.copy(
+                            purchasingId     = null,
+                            purchaseSuccess  = res.message ?: "🎉 Unlocked! \"$title\" — full PDF now available",
+                            purchasedIds     = it.purchasedIds + materialId,
+                            selectedMaterial = if (it.selectedMaterial?.id == materialId)
+                                it.selectedMaterial.copy(isPurchased = true) else it.selectedMaterial,
+                        )}
+                        loadStats()
+                    }
+
+                    is GPlayPurchaseOutcome.AlternativeBillingChosen -> {
+                        // User picked Cashfree on Google's billing-choice
+                        // screen. Release builds skip initPurchase up front,
+                        // so create the Cashfree order now, then hand off to
+                        // the screen's Cashfree launcher via pendingPurchase —
+                        // exactly the debug-path state shape. No coin
+                        // discount, matching the Play path this replaces.
+                        pendingExternalTxToken = outcome.externalTransactionToken
+                        val res = api.initPurchase(materialId, InitPurchaseRequest(0))
+                        val data = res.data
+                        when {
+                            data?.alreadyPurchased == true -> {
+                                pendingExternalTxToken = null
+                                _state.update { it.copy(
+                                    purchasingId    = null,
+                                    purchaseSuccess = "You already own \"$title\"",
+                                    purchasedIds    = it.purchasedIds + materialId
+                                )}
+                            }
+                            data?.requiresPayment != true -> {
+                                pendingExternalTxToken = null
+                                tokenStore.addPurchasedId(materialId)
+                                _state.update { it.copy(
+                                    purchasingId    = null,
+                                    purchaseSuccess = "🎉 Unlocked! \"$title\" — full PDF now available",
+                                    purchasedIds    = it.purchasedIds + materialId
+                                )}
+                                loadStats()
+                            }
+                            else -> {
+                                _state.update { it.copy(
+                                    purchasingId              = null,
+                                    pendingPurchase           = data,
+                                    pendingPurchaseMaterialId = materialId,
+                                    pendingPurchaseTitle      = title,
+                                    pendingPurchaseOrderId    = data.purchaseOrderId,
+                                )}
+                            }
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(purchasingId = null, purchaseError = e.toUserMessage("Purchase failed")) }
             }

@@ -314,6 +314,9 @@ data class ConfirmPurchaseRequest(
     val purchaseOrderId: String,
     val cfPaymentId:     String,            // from Cashfree SDK
     val paymentMethod:   String? = null,
+    // Set when the user picked Cashfree on Google Play's billing-choice
+    // screen — backend reports the payment to the Play Developer API.
+    val externalTransactionToken: String? = null,
 )
 
 data class VerifyGplayMaterialRequest(val purchaseToken: String)

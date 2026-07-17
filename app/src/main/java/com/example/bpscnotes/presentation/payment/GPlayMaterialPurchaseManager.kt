@@ -48,4 +48,10 @@ class GPlayMaterialPurchaseManager @Inject constructor(
             .first { purchases -> purchases.any { targetProductId in it.products } }
             .first { targetProductId in it.products }
     }
+
+    // User-choice-aware variant of awaitPurchase: also resolves when the
+    // user picks Cashfree on Google's billing-choice screen, handing back
+    // the externalTransactionToken the confirm call must carry.
+    suspend fun awaitPurchaseOrUserChoice(materialId: String): GPlayPurchaseOutcome =
+        billing.awaitPurchaseOrUserChoice(productIdFor(materialId))
 }
