@@ -32,7 +32,8 @@ data class PeerReviewUiState(
     // ── Review form ───────────────────────────────────────────
     val verdict: String?                  = null,   // yes | partly | no
     val rating: Int                       = 0,      // 1..5
-    val improvementArea: String?          = null,
+    /** "Top three weaknesses" — up to 3 areas */
+    val improvementAreas: Set<String>     = emptySet(),
     val suggestion: String                = "",
 
     val isSubmitting: Boolean             = false,
@@ -60,7 +61,7 @@ class PeerReviewViewModel @Inject constructor(
                     isLoading = true, loadError = null, noneAvailable = false,
                     assignment = null,
                     // reset the form for the new answer
-                    verdict = null, rating = 0, improvementArea = null, suggestion = "",
+                    verdict = null, rating = 0, improvementAreas = emptySet(), suggestion = "",
                     submitError = null,
                 )
             }
@@ -78,10 +79,20 @@ class PeerReviewViewModel @Inject constructor(
         }
     }
 
+    companion object { const val MAX_AREAS = 3 }
+
     fun setVerdict(v: String)         { _uiState.update { it.copy(verdict = v) } }
     fun setRating(r: Int)             { _uiState.update { it.copy(rating = r) } }
-    fun setImprovementArea(a: String) {
-        _uiState.update { it.copy(improvementArea = if (it.improvementArea == a) null else a) }
+    /** Toggle an area on/off; at most MAX_AREAS may be selected. */
+    fun toggleImprovementArea(a: String) {
+        _uiState.update {
+            val cur = it.improvementAreas
+            it.copy(improvementAreas = when {
+                a in cur              -> cur - a
+                cur.size >= MAX_AREAS -> cur          // full — ignore
+                else                  -> cur + a
+            })
+        }
     }
     fun setSuggestion(s: String)      { _uiState.update { it.copy(suggestion = s.take(200)) } }
 
@@ -101,7 +112,8 @@ class PeerReviewViewModel @Inject constructor(
                     SubmitPeerReviewRequest(
                         verdict = s.verdict,
                         rating = s.rating,
-                        improvementArea = s.improvementArea,
+                        improvementAreas = s.improvementAreas.toList().ifEmpty { null },
+                        improvementArea = s.improvementAreas.firstOrNull(),
                         suggestion = s.suggestion.trim().ifBlank { null },
                     )
                 )

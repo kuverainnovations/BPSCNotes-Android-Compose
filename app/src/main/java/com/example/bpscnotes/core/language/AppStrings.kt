@@ -226,6 +226,17 @@ data class QuizStrings(
     val awKeepItUp: String = "Keep it up!",
     val awNoInsights: String = "Write your first answer to see your stats here!",
     val awChars: String = "chars",
+    // ── v2 (client notes 16 Jul) ─────────────────────────────────────
+    val awPyq: String = "PYQ",
+    val awModelAnswerTomorrow: String = "The model answer unlocks tomorrow — come back to compare!",
+    val awAreaIntro: String = "Introduction",
+    val awAreaValueAdd: String = "Value Addition",
+    val awUpTo3: String = "(up to 3)",
+    val awTopWeaknesses: String = "Top 3 Weaknesses",
+    val awTopReviewers: String = "Top Reviewers",
+    val awTopWriters: String = "Top Writers",
+    val awAnswersLower: String = "answers",
+    val awGiveToGet: String = "Tip: give reviews to get your own answer reviewed faster 🤝",
 )
 
 data class ContentStrings(
@@ -891,6 +902,10 @@ data class AppStrings(
     val awReviewerLevel get() = _qz.awReviewerLevel; val awLevelBeginner get() = _qz.awLevelBeginner; val awLevelActive get() = _qz.awLevelActive
     val awLevelAdvanced get() = _qz.awLevelAdvanced; val awLevelExpert get() = _qz.awLevelExpert
     val awKeepItUp get() = _qz.awKeepItUp; val awNoInsights get() = _qz.awNoInsights; val awChars get() = _qz.awChars
+    val awPyq get() = _qz.awPyq; val awModelAnswerTomorrow get() = _qz.awModelAnswerTomorrow
+    val awAreaIntro get() = _qz.awAreaIntro; val awAreaValueAdd get() = _qz.awAreaValueAdd; val awUpTo3 get() = _qz.awUpTo3
+    val awTopWeaknesses get() = _qz.awTopWeaknesses; val awTopReviewers get() = _qz.awTopReviewers; val awTopWriters get() = _qz.awTopWriters
+    val awAnswersLower get() = _qz.awAnswersLower; val awGiveToGet get() = _qz.awGiveToGet
     // ── Content extras ────────────────────────────────────────────
     val materialsSave get() = _ct2.materialsSave; val materialsRemoveSaved get() = _ct2.materialsRemoveSaved
     val materialsTapOpen get() = _ct2.materialsTapOpen; val materialsNoPreview get() = _ct2.materialsNoPreview
@@ -1938,6 +1953,16 @@ val HindiStrings: AppStrings = mkAppStrings(
         awKeepItUp="जारी रखें!",
         awNoInsights="अपने आंकड़े देखने के लिए पहला उत्तर लिखें!",
         awChars="अक्षर",
+        awPyq="PYQ",
+        awModelAnswerTomorrow="आदर्श उत्तर कल खुलेगा — तुलना के लिए वापस आएं!",
+        awAreaIntro="भूमिका",
+        awAreaValueAdd="मूल्य संवर्धन",
+        awUpTo3="(अधिकतम 3)",
+        awTopWeaknesses="शीर्ष 3 कमजोरियां",
+        awTopReviewers="शीर्ष समीक्षक",
+        awTopWriters="शीर्ष लेखक",
+        awAnswersLower="उत्तर",
+        awGiveToGet="सुझाव: समीक्षा दें ताकि आपके उत्तर की समीक्षा जल्दी हो 🤝",
     ),
     ct = ContentStrings(
         caTitle="समसामयिकी", caBookmark="बुकमार्क", caBookmarked="बुकमार्क किया",

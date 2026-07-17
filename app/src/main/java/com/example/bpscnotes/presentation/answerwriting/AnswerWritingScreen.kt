@@ -152,7 +152,7 @@ fun AnswerWritingScreen(
 
                 tab == 0 -> QuestionsTab(state.questions, navController)
                 tab == 1 -> MyAnswersTab(state.mySubmissions, navController)
-                else     -> InsightsTab(state.insights, state.reviewStats)
+                else     -> InsightsTab(state.insights, state.reviewStats, state.leaderboard)
             }
         }
     }
@@ -276,6 +276,13 @@ private fun PeerReviewCard(
                 PeerStat("${stats.pendingAvailable}", str.awPendingReviews, Indigo, Modifier.weight(1f))
                 PeerStat("${stats.reviewCredits} ⭐", str.awReviewCredits, Color(0xFF7E57C2), Modifier.weight(1f))
             }
+            if (stats.canReview && stats.reviewsGiven == 0) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    str.awGiveToGet, style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.TextHint, lineHeight = 15.sp, fontSize = 10.sp
+                )
+            }
         }
     }
 }
@@ -314,6 +321,16 @@ private fun TodayQuestionCard(q: AnswerQuestionDto, onClick: () -> Unit) {
                     Text(
                         it, style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(0.9f), fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(0.12f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+                if (q.isPyq) {
+                    Text(
+                        "📜 ${str.awPyq}${q.pyqYear?.let { " $it" } ?: ""}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold, fontSize = 10.sp,
                         modifier = Modifier.clip(RoundedCornerShape(8.dp))
                             .background(Color.White.copy(0.12f))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -401,6 +418,15 @@ private fun QuestionCard(q: AnswerQuestionDto, onClick: () -> Unit) {
                             it, style = MaterialTheme.typography.labelSmall,
                             color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IndigoSoft)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                    if (q.isPyq) {
+                        Text(
+                            "📜 ${str.awPyq}${q.pyqYear?.let { " $it" } ?: ""}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF7E57C2), fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFEDE7F6))
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
@@ -539,6 +565,7 @@ private fun EmptyBlock(emoji: String, title: String, body: String) {
 private fun InsightsTab(
     insights: com.example.bpscnotes.data.remote.api.AnswerInsightsData?,
     reviewStats: com.example.bpscnotes.data.remote.api.ReviewStatsData?,
+    leaderboard: com.example.bpscnotes.data.remote.api.AnswerLeaderboardData? = null,
 ) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
@@ -664,7 +691,127 @@ private fun InsightsTab(
                 }
             }
         }
+
+        // ── Top 3 weaknesses (from peer reviews received) ───────
+        if (insights.topWeaknesses.isNotEmpty()) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                elevation = CardDefaults.cardElevation(1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("🎯", fontSize = 15.sp)
+                        Text(str.awTopWeaknesses, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    }
+                    insights.topWeaknesses.forEachIndexed { i, w ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${i + 1}. ${areaLabel(w.area)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurface, fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "×${w.count}", style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFFEE8E8))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Community leaderboards ──────────────────────────────
+        leaderboard?.takeIf { it.topReviewers.isNotEmpty() }?.let { board ->
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                elevation = CardDefaults.cardElevation(1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("🏅", fontSize = 15.sp)
+                        Text(str.awTopReviewers, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    }
+                    board.topReviewers.take(5).forEachIndexed { i, r ->
+                        LeaderRow(
+                            rank = i + 1, name = r.name, isMe = r.isMe,
+                            trailing = "${r.reviewsGiven} · ⭐${r.reviewCredits}",
+                        )
+                    }
+                }
+            }
+        }
+        leaderboard?.takeIf { it.topWriters.isNotEmpty() }?.let { board ->
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                elevation = CardDefaults.cardElevation(1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("👑", fontSize = 15.sp)
+                        Text(str.awTopWriters, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+                    }
+                    board.topWriters.take(5).forEachIndexed { i, w ->
+                        LeaderRow(
+                            rank = i + 1, name = w.name, isMe = w.isMe,
+                            trailing = "${w.avgRating?.let { "%.1f ⭐".format(it) } ?: "—"} · ${w.answers} ${str.awAnswersLower}",
+                        )
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Localised label for an improvement-area key */
+@Composable
+internal fun areaLabel(key: String): String {
+    val str = LocalStrings.current
+    return when (key) {
+        "introduction"   -> str.awAreaIntro
+        "structure"      -> str.awAreaStructure
+        "content"        -> str.awAreaContent
+        "value_addition" -> str.awAreaValueAdd
+        "analysis"       -> str.awAreaAnalysis
+        "conclusion"     -> str.awAreaConclusion
+        "bihar_angle"    -> str.awAreaBihar
+        "presentation"   -> str.awAreaPresentation
+        else             -> key
+    }
+}
+
+@Composable
+private fun LeaderRow(rank: Int, name: String, isMe: Boolean, trailing: String) {
+    val cs = MaterialTheme.colorScheme
+    val medal = when (rank) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> " $rank." }
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isMe) IndigoSoft.copy(alpha = 0.5f) else Color.Transparent)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+            Text(medal, fontSize = 14.sp)
+            Text(
+                name + if (isMe) " (You)" else "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = cs.onSurface,
+                fontWeight = if (isMe) FontWeight.ExtraBold else FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(trailing, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -693,3 +840,5 @@ private fun InsightTile(t: InsightTileData, modifier: Modifier) {
         }
     }
 }
+
+

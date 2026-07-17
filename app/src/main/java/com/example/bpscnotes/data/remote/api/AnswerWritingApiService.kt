@@ -26,6 +26,8 @@ data class AnswerQuestionDto(
     @SerializedName("scheduled_for")    val scheduledFor: String? = null,
     @SerializedName("created_at")       val createdAt: String? = null,
     @SerializedName("is_today")         val isToday: Boolean = false,
+    @SerializedName("is_pyq")           val isPyq: Boolean = false,
+    @SerializedName("pyq_year")         val pyqYear: Int? = null,
     @SerializedName("is_submitted")     val isSubmitted: Boolean = false,
     /** null | "submitted" | "reviewed" */
     @SerializedName("my_status")        val myStatus: String? = null,
@@ -41,8 +43,12 @@ data class AnswerQuestionDetailDto(
     val marks: Int = 10,
     @SerializedName("word_limit")    val wordLimit: Int = 250,
     val tips: String? = null,
-    /** Only non-null once this user has submitted their own answer */
+    /** Only non-null once submitted AND the next IST day has arrived */
     @SerializedName("model_answer")  val modelAnswer: String? = null,
+    /** true → submitted, model answer exists, but it reveals tomorrow */
+    @SerializedName("model_answer_tomorrow") val modelAnswerTomorrow: Boolean = false,
+    @SerializedName("is_pyq")        val isPyq: Boolean = false,
+    @SerializedName("pyq_year")      val pyqYear: Int? = null,
     @SerializedName("scheduled_for") val scheduledFor: String? = null,
 )
 
@@ -75,7 +81,8 @@ data class PeerReviewDto(
     /** "yes" | "partly" | "no" — did it address the question demand */
     val verdict: String = "yes",
     val rating: Int = 0,
-    @SerializedName("improvement_area") val improvementArea: String? = null,
+    @SerializedName("improvement_area")  val improvementArea: String? = null,
+    @SerializedName("improvement_areas") val improvementAreas: List<String>? = null,
     val suggestion: String? = null,
     @SerializedName("created_at")       val createdAt: String? = null,
 )
@@ -90,7 +97,27 @@ data class AnswerQuestionDetailData(
 
 // ── Insights — GET /answer-writing/insights ───────────────────
 
+data class WeaknessDto(val area: String = "", val count: Int = 0)
+
+data class LeaderboardReviewerDto(
+    val name: String = "",
+    @SerializedName("reviews_given")  val reviewsGiven: Int = 0,
+    @SerializedName("review_credits") val reviewCredits: Int = 0,
+    @SerializedName("is_me")          val isMe: Boolean = false,
+)
+data class LeaderboardWriterDto(
+    val name: String = "",
+    val answers: Int = 0,
+    @SerializedName("avg_rating") val avgRating: Double? = null,
+    @SerializedName("is_me")      val isMe: Boolean = false,
+)
+data class AnswerLeaderboardData(
+    val topReviewers: List<LeaderboardReviewerDto> = emptyList(),
+    val topWriters: List<LeaderboardWriterDto> = emptyList(),
+)
+
 data class AnswerInsightsData(
+    val topWeaknesses: List<WeaknessDto> = emptyList(),
     val answersWritten: Int = 0,
     val answersThisMonth: Int = 0,
     val reviewsGiven: Int = 0,
@@ -130,9 +157,11 @@ data class ReviewAssignmentDto(
 data class NextReviewData(val submission: ReviewAssignmentDto? = null)
 
 data class SubmitPeerReviewRequest(
-    val verdict: String,                 // yes | partly | no
-    val rating: Int,                     // 1..5
-    val improvementArea: String? = null, // content|structure|analysis|bihar_angle|presentation|conclusion
+    val verdict: String,                       // yes | partly | no
+    val rating: Int,                           // 1..5
+    /** Up to 3 of: introduction|structure|content|value_addition|analysis|conclusion */
+    val improvementAreas: List<String>? = null,
+    val improvementArea: String? = null,       // legacy single field
     val suggestion: String? = null,
 )
 data class SubmitPeerReviewData(
@@ -148,6 +177,7 @@ data class SubmitAnswerData(
     val submission: AnswerSubmissionDto? = null,
     val coinsEarned: Int = 0,
     val modelAnswer: String? = null,
+    val modelAnswerTomorrow: Boolean = false,
 )
 
 interface AnswerWritingApiService {
@@ -187,6 +217,9 @@ interface AnswerWritingApiService {
 
     @GET("answer-writing/insights")
     suspend fun getInsights(): ApiResponse<AnswerInsightsData>
+
+    @GET("answer-writing/leaderboard")
+    suspend fun getLeaderboard(): ApiResponse<AnswerLeaderboardData>
 
     @GET("answer-writing/review/stats")
     suspend fun getReviewStats(): ApiResponse<ReviewStatsData>

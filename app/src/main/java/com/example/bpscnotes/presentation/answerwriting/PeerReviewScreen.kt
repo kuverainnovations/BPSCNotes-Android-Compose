@@ -295,17 +295,20 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                     }
                 }
 
-                // Q3 — improvement area chips
+                // Q3 — "top three weaknesses": up to 3 of the 6 areas
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(str.awReviewQ3, style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(str.awReviewQ3, style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(str.awUpTo3, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    }
                     val areas = listOf(
-                        "content" to str.awAreaContent, "structure" to str.awAreaStructure, "analysis" to str.awAreaAnalysis,
-                        "bihar_angle" to str.awAreaBihar, "presentation" to str.awAreaPresentation, "conclusion" to str.awAreaConclusion,
+                        "introduction" to str.awAreaIntro, "structure" to str.awAreaStructure, "content" to str.awAreaContent,
+                        "value_addition" to str.awAreaValueAdd, "analysis" to str.awAreaAnalysis, "conclusion" to str.awAreaConclusion,
                     )
                     areas.chunked(3).forEach { rowAreas ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             rowAreas.forEach { (key, label) ->
-                                AreaChip(label, key, state.improvementArea, Modifier.weight(1f)) { viewModel.setImprovementArea(it) }
+                                AreaChip(label, key in state.improvementAreas, Modifier.weight(1f)) { viewModel.toggleImprovementArea(key) }
                             }
                             repeat(3 - rowAreas.size) { Spacer(Modifier.weight(1f)) }
                         }
@@ -389,14 +392,13 @@ private fun VerdictChip(label: String, key: String, selected: String?, modifier:
 }
 
 @Composable
-private fun AreaChip(label: String, key: String, selected: String?, modifier: Modifier, onSelect: (String) -> Unit) {
-    val isSel = selected == key
+private fun AreaChip(label: String, isSel: Boolean, modifier: Modifier, onToggle: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Box(
         modifier = modifier.clip(RoundedCornerShape(12.dp))
             .background(if (isSel) IndigoSoft else cs.surface)
             .border(1.dp, if (isSel) Indigo else cs.outline.copy(0.5f), RoundedCornerShape(12.dp))
-            .clickable { onSelect(key) }
+            .clickable { onToggle() }
             .padding(vertical = 10.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {

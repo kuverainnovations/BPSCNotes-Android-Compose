@@ -47,6 +47,7 @@ data class AnswerWritingUiState(
 
     // ── Insights tab ──────────────────────────────────────────
     val insights: com.example.bpscnotes.data.remote.api.AnswerInsightsData? = null,
+    val leaderboard: com.example.bpscnotes.data.remote.api.AnswerLeaderboardData? = null,
 
     // ── Detail ────────────────────────────────────────────────
     val question: AnswerQuestionDetailDto?          = null,
@@ -97,10 +98,11 @@ class AnswerWritingViewModel @Inject constructor(
                            catch (_: Exception) { emptyList() }
                 val stats = try { api.getReviewStats().data } catch (_: Exception) { null }
                 val insights = try { api.getInsights().data } catch (_: Exception) { null }
+                val board = try { api.getLeaderboard().data } catch (_: Exception) { null }
                 _uiState.update {
                     it.copy(
                         questions = questions, mySubmissions = mine,
-                        reviewStats = stats, insights = insights, isLoading = false,
+                        reviewStats = stats, insights = insights, leaderboard = board, isLoading = false,
                     )
                 }
             } catch (e: Exception) {
@@ -166,8 +168,11 @@ class AnswerWritingViewModel @Inject constructor(
                     s.copy(
                         isSubmitting    = false,
                         submission      = data.submission,
-                        // model answer unlocks the moment the submit lands
-                        question        = s.question?.copy(modelAnswer = data.modelAnswer ?: s.question.modelAnswer),
+                        // v2: model answer reveals next day — carry the flag for the note
+                        question        = s.question?.copy(
+                            modelAnswer = data.modelAnswer ?: s.question.modelAnswer,
+                            modelAnswerTomorrow = data.modelAnswerTomorrow,
+                        ),
                         justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
                         draftText       = "",
                         // reflect the new status in the list without a reload
@@ -239,7 +244,10 @@ class AnswerWritingViewModel @Inject constructor(
                     s.copy(
                         isSubmitting    = false,
                         submission      = data.submission,
-                        question        = s.question?.copy(modelAnswer = data.modelAnswer ?: s.question.modelAnswer),
+                        question        = s.question?.copy(
+                            modelAnswer = data.modelAnswer ?: s.question.modelAnswer,
+                            modelAnswerTomorrow = data.modelAnswerTomorrow,
+                        ),
                         justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
                         selectedImages  = emptyList(),
                         questions       = s.questions.map {

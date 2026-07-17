@@ -109,10 +109,11 @@ private fun DetailContent(
     val submission = state.submission
     val isWriting = submission == null
 
-    // Elapsed writing timer — only ticks pre-submit
+    // Elapsed writing timer — only ticks pre-submit; tappable pause/resume
     var elapsedSecs by rememberSaveable(questionId) { mutableStateOf(0) }
-    LaunchedEffect(isWriting) {
-        while (isWriting) { delay(1000); elapsedSecs++ }
+    var timerRunning by rememberSaveable(questionId) { mutableStateOf(true) }
+    LaunchedEffect(isWriting, timerRunning) {
+        while (isWriting && timerRunning) { delay(1000); elapsedSecs++ }
     }
 
     var showConfirm by remember { mutableStateOf(false) }
@@ -212,15 +213,19 @@ private fun DetailContent(
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     if (isWriting) {
-                        // Elapsed time pill
+                        // Elapsed time pill — tap to pause/resume ("stop button")
                         Row(
                             modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                                .background(Color.White.copy(0.15f))
+                                .background(if (timerRunning) Color.White.copy(0.15f) else Color(0xFFF57F17).copy(0.35f))
+                                .clickable { timerRunning = !timerRunning }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Rounded.Timer, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                            Icon(
+                                if (timerRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                null, tint = Color.White, modifier = Modifier.size(14.dp)
+                            )
                             Text(
                                 "%d:%02d".format(elapsedSecs / 60, elapsedSecs % 60),
                                 style = MaterialTheme.typography.labelMedium,
@@ -433,6 +438,22 @@ private fun DetailContent(
                 // ── Submitted: status → score/feedback → model answer → my answer ──
                 SubmittedStatusCard(submission!!)
 
+                if (q.modelAnswer.isNullOrBlank() && q.modelAnswerTomorrow) {
+                    // Client rule: model answer reveals the next day
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = IndigoSoft.copy(alpha = 0.5f))
+                    ) {
+                        Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("🔒", fontSize = 16.sp)
+                            Column {
+                                Text(str.awModelAnswer, style = MaterialTheme.typography.labelMedium, color = Indigo, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(3.dp))
+                                Text(str.awModelAnswerTomorrow, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, lineHeight = 18.sp)
+                            }
+                        }
+                    }
+                }
                 if (!q.modelAnswer.isNullOrBlank()) {
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -626,15 +647,9 @@ private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.ap
 private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.PeerReviewDto) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
-    val areaLabel = when (review.improvementArea) {
-        "content"      -> str.awAreaContent
-        "structure"    -> str.awAreaStructure
-        "analysis"     -> str.awAreaAnalysis
-        "bihar_angle"  -> str.awAreaBihar
-        "presentation" -> str.awAreaPresentation
-        "conclusion"   -> str.awAreaConclusion
-        else           -> null
-    }
+    // v2: up to 3 flagged areas; fall back to the legacy single field
+    val areas = review.improvementAreas?.takeIf { it.isNotEmpty() }
+        ?: listOfNotNull(review.improvementArea)
     Column(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .background(cs.surfaceVariant.copy(alpha = 0.4f)).padding(12.dp),
@@ -661,9 +676,9 @@ private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.
                     modifier = Modifier.clip(RoundedCornerShape(6.dp))
                         .background(vColor.copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 3.dp)
                 )
-                areaLabel?.let {
+                areas.forEach { a ->
                     Text(
-                        it, style = MaterialTheme.typography.labelSmall,
+                        areaLabel(a), style = MaterialTheme.typography.labelSmall,
                         color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp))
                             .background(IndigoSoft).padding(horizontal = 8.dp, vertical = 3.dp)
