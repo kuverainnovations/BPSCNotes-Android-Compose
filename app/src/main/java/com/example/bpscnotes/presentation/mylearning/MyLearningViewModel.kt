@@ -329,6 +329,16 @@ class MyLearningViewModel @Inject constructor(
                 }
                 val clientPriceInr = gplay.priceInrOf(details)
                 when (val outcome = outcomeDeferred.await()) {
+                    is GPlayPurchaseOutcome.Cancelled -> {
+                        // User closed the Play sheet (or it failed) — reset
+                        // the spinner; silent on plain cancel.
+                        _uiState.update { it.copy(
+                            isGPlayPurchasing = false,
+                            error = if (outcome.responseCode == com.android.billingclient.api.BillingClient.BillingResponseCode.USER_CANCELED) null
+                                    else "Payment could not be completed. Please try again."
+                        )}
+                    }
+
                     is GPlayPurchaseOutcome.PlayPurchase ->
                         verifyGPlayCoursePurchase(courseId, outcome.purchase.purchaseToken, clientPriceInr)
 

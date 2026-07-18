@@ -1260,6 +1260,16 @@ class StudyMaterialsViewModel @Inject constructor(
                     return@launch
                 }
                 when (val outcome = outcomeDeferred.await()) {
+                    is GPlayPurchaseOutcome.Cancelled -> {
+                        // User closed the Play sheet (or it failed) — reset
+                        // the spinner; silent on plain cancel.
+                        _state.update { it.copy(
+                            purchasingId  = null,
+                            purchaseError = if (outcome.responseCode == com.android.billingclient.api.BillingClient.BillingResponseCode.USER_CANCELED) null
+                                            else "Payment could not be completed. Please try again."
+                        )}
+                    }
+
                     is GPlayPurchaseOutcome.PlayPurchase -> {
                         val res = api.verifyGplayMaterialPurchase(materialId, VerifyGplayMaterialRequest(outcome.purchase.purchaseToken))
                         tokenStore.addPurchasedId(materialId)

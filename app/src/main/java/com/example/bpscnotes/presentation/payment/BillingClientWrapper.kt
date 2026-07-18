@@ -48,6 +48,16 @@ sealed interface GPlayPurchaseOutcome {
      * so the payment gets reported to the Play Developer API.
      */
     data class AlternativeBillingChosen(val externalTransactionToken: String) : GPlayPurchaseOutcome
+
+    /**
+     * The flow ended without a purchase — user cancelled the Play sheet
+     * (or it failed). Callers MUST reset their loading state on this;
+     * before this existed, a cancelled sheet left awaitPurchaseOrUserChoice
+     * suspended forever and buy buttons spun until the screen was killed.
+     * [responseCode] is BillingClient.BillingResponseCode; USER_CANCELED
+     * should stay silent, anything else deserves an error message.
+     */
+    data class Cancelled(val responseCode: Int) : GPlayPurchaseOutcome
 }
 
 @Singleton
@@ -69,10 +79,19 @@ class BillingClientWrapper @Inject constructor(
     private val _userChoiceFlow = MutableSharedFlow<UserChoiceDetails>(extraBufferCapacity = 1)
     val userChoiceFlow: SharedFlow<UserChoiceDetails> = _userChoiceFlow.asSharedFlow()
 
+    // Non-OK results from a launched billing flow (user cancelled the Play
+    // sheet, payment declined, …). Not filtered by product id — only one
+    // billing flow can be active at a time, so any failure belongs to the
+    // flow currently being awaited.
+    private val _flowFailures = MutableSharedFlow<BillingResult>(extraBufferCapacity = 1)
+    val flowFailures: SharedFlow<BillingResult> = _flowFailures.asSharedFlow()
+
     val client: BillingClient = BillingClient.newBuilder(context)
         .setListener { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK && !purchases.isNullOrEmpty()) {
                 _purchasesFlow.tryEmit(purchases)
+            } else if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                _flowFailures.tryEmit(result)
             }
         }
         .enablePendingPurchases(
@@ -172,6 +191,8 @@ class BillingClientWrapper @Inject constructor(
             userChoiceFlow
                 .filter { details -> details.products.any { it.id == productId } }
                 .map { GPlayPurchaseOutcome.AlternativeBillingChosen(it.externalTransactionToken) },
+            flowFailures
+                .map { GPlayPurchaseOutcome.Cancelled(it.responseCode) },
         ).first()
 
     fun launchBillingFlow(
