@@ -238,7 +238,10 @@ private fun NoteEditor(
     var color by remember(note.id) { mutableStateOf(note.color) }
     var confirmDelete by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    // imePadding: the app is edge-to-edge, so adjustResize alone doesn't
+    // shrink the window — without this the keyboard covers the Save row
+    // and taps land on the IME, which reads as "save not working".
+    Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp)) {
         OutlinedTextField(
             value = title,
             onValueChange = { title = it.take(200) },
