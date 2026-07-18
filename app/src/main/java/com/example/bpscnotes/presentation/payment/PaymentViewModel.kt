@@ -123,7 +123,12 @@ class PaymentViewModel @Inject constructor(
                     // Run the standard Cashfree flow: create the order (token
                     // rides along) — Case 3 in createOrder() then surfaces
                     // paymentSessionId, which auto-launches the Cashfree SDK.
-                    createOrder()
+                    // fullPrice: Google's choice screen just displayed the
+                    // Play product's full price, so the Cashfree charge (and
+                    // the amount reported to Play) must match it — no coin or
+                    // coupon discounts on this path, same as the Play path
+                    // this replaces.
+                    createOrder(fullPrice = true)
                 }
             }
         }
@@ -319,8 +324,13 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
-    /** Called when user taps "Pay Now" — creates Cashfree order on backend. */
-    fun createOrder() {
+    /**
+     * Called when user taps "Pay Now" — creates Cashfree order on backend.
+     * [fullPrice] is set by the user-choice-billing path: no coin/coupon
+     * discounts, so the charge matches the price Google's choice screen
+     * displayed.
+     */
+    fun createOrder(fullPrice: Boolean = false) {
         val s    = _state.value
         val plan = s.selectedPlan ?: return
         viewModelScope.launch {
@@ -329,8 +339,8 @@ class PaymentViewModel @Inject constructor(
             try {
                 val res = api.createSubscription(CreateSubscriptionRequest(
                     plan       = plan.id ?: "monthly",
-                    couponCode = if (s.couponApplied) s.couponCode else null,
-                    coinsToUse = s.coinsToUse,
+                    couponCode = if (s.couponApplied && !fullPrice) s.couponCode else null,
+                    coinsToUse = if (fullPrice) 0 else s.coinsToUse,
                     externalTransactionToken = pendingExternalTxToken
                 ))
                 val data = res.data ?: throw Exception("Invalid response from server")
@@ -369,6 +379,10 @@ class PaymentViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                // Order creation failed — the token was never delivered to
+                // the backend, and it must not leak onto a later plain
+                // "Pay Now" order that didn't go through the choice screen.
+                pendingExternalTxToken = null
                 _state.update { it.copy(isCreatingOrder = false, error = parseError(e.message)) }
             }
         }

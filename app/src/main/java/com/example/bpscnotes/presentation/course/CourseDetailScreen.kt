@@ -261,6 +261,9 @@ fun CourseDetailScreen(
     LaunchedEffect(state.purchaseSessionId) {
         val sessionId = state.purchaseSessionId ?: return@LaunchedEffect
         val orderId   = state.purchaseProviderOrderId ?: return@LaunchedEffect
+        // Captured before clearPurchaseRequired() like sessionId/orderId —
+        // reading it off `state` after the clear would race the snapshot.
+        val environment = state.purchasePaymentEnvironment
         showBuyDialog = false
         dialogCoins   = 0
         viewModel.clearPurchaseRequired()
@@ -268,7 +271,7 @@ fun CourseDetailScreen(
             context     = context,
             sessionId   = sessionId,
             orderId     = orderId,
-            environment = state.purchasePaymentEnvironment,
+            environment = environment,
             onSuccess   = { cfPaymentId -> viewModel.confirmCoursePurchase(cfPaymentId) },
             onFailure   = { code, msg  -> viewModel.handleCoursePaymentFailure(code, msg) }
         )

@@ -22,10 +22,12 @@ import com.example.bpscnotes.data.remote.api.GPlayCourseVerifyRequest
 import com.example.bpscnotes.data.remote.api.SubmitReviewRequest
 import com.example.bpscnotes.presentation.payment.GPlayCoursePurchaseManager
 import com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome
+import com.example.bpscnotes.presentation.payment.PendingCashfreeSession
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -88,15 +90,12 @@ class CourseDetailViewModel @Inject constructor(
     // purchaseSessionId immediately auto-launches the Cashfree SDK via the
     // screen's LaunchedEffect. It's only promoted to uiState if the user
     // picks Cashfree on Google's billing-choice screen.
-    private data class PendingCashfreeSession(
-        val sessionId: String,
-        val providerOrderId: String,
-        val environment: String,
-    )
     private var pendingCashfreeSession: PendingCashfreeSession? = null
 
     // Token from UserChoiceDetails — rides along on the Cashfree confirm
     // call so the backend can report the payment to the Play Developer API.
+    // Cleared on payment failure/cancel so a stale token can never be
+    // attached to a later, unrelated payment.
     private var pendingExternalTxToken: String? = null
 
     init {
@@ -227,12 +226,7 @@ class CourseDetailViewModel @Inject constructor(
                             // user picks Cashfree on Google's billing-choice
                             // screen; the Play price still comes from
                             // ProductDetails (see startGPlayCoursePurchase).
-                            val sessionId       = data.optString("paymentSessionId").takeIf { it.isNotBlank() }
-                            val providerOrderId = data.optString("providerOrderId").takeIf { it.isNotBlank() }
-                            val paymentEnvironment = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
-                            pendingCashfreeSession = if (sessionId != null && providerOrderId != null) {
-                                PendingCashfreeSession(sessionId, providerOrderId, paymentEnvironment)
-                            } else null
+                            pendingCashfreeSession = PendingCashfreeSession.fromJson(data)
                             _uiState.update { it.copy(
                                 isEnrolling           = false,
                                 purchaseRequired      = true,
@@ -370,13 +364,21 @@ class CourseDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "This course isn't available on Google Play yet. Please try again shortly.") }
                     return@launch
                 }
+                // Subscribe BEFORE launching the flow: purchasesFlow and
+                // userChoiceFlow have replay=0, so an emission that lands
+                // before a collector attaches is dropped and the await
+                // would hang forever. yield() lets the async collector
+                // attach before the billing callbacks can fire.
+                val outcomeDeferred = async { gplay.awaitPurchaseOrUserChoice(courseId) }
+                kotlinx.coroutines.yield()
                 val result = gplay.launchPurchase(activity, details, obfuscatedAccountId = tokenStore.getUserId() ?: "")
                 if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    outcomeDeferred.cancel()
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "Could not open Google Play checkout (${result.debugMessage})") }
                     return@launch
                 }
                 val clientPriceInr = gplay.priceInrOf(details)
-                when (val outcome = gplay.awaitPurchaseOrUserChoice(courseId)) {
+                when (val outcome = outcomeDeferred.await()) {
                     is GPlayPurchaseOutcome.PlayPurchase ->
                         verifyGPlayCoursePurchase(courseId, outcome.purchase.purchaseToken, clientPriceInr)
 
@@ -450,6 +452,12 @@ class CourseDetailViewModel @Inject constructor(
     }
 
     fun handleCoursePaymentFailure(code: Int, message: String) {
+        // A failed/cancelled Cashfree attempt invalidates the user-choice
+        // token and the promoted session — a retry mints fresh ones via a
+        // new enroll + choice-screen round; stale ones must never ride a
+        // later confirm call.
+        pendingExternalTxToken = null
+        pendingCashfreeSession = null
         if (code == 0) return  // user cancelled — silent
         _uiState.update { it.copy(error = "Payment failed: $message") }
     }

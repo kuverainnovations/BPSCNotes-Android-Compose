@@ -1244,15 +1244,22 @@ class StudyMaterialsViewModel @Inject constructor(
                     return@launch
                 }
                 val userId = tokenStore.getUserId() ?: ""
+                // Subscribe BEFORE launching the flow: the shared billing
+                // flows have replay=0, so an emission landing before the
+                // collector attaches would be dropped and the await would
+                // hang. yield() lets the async collector attach first.
+                val outcomeDeferred = async { gplayMaterial.awaitPurchaseOrUserChoice(materialId) }
+                yield()
                 val result = gplayMaterial.launchPurchase(activity, details, obfuscatedAccountId = userId)
                 if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    outcomeDeferred.cancel()
                     _state.update { it.copy(
                         purchasingId  = null,
                         purchaseError = "Could not open Google Play checkout (${result.debugMessage})"
                     )}
                     return@launch
                 }
-                when (val outcome = gplayMaterial.awaitPurchaseOrUserChoice(materialId)) {
+                when (val outcome = outcomeDeferred.await()) {
                     is GPlayPurchaseOutcome.PlayPurchase -> {
                         val res = api.verifyGplayMaterialPurchase(materialId, VerifyGplayMaterialRequest(outcome.purchase.purchaseToken))
                         tokenStore.addPurchasedId(materialId)
@@ -1277,7 +1284,18 @@ class StudyMaterialsViewModel @Inject constructor(
                         val res = api.initPurchase(materialId, InitPurchaseRequest(0))
                         val data = res.data
                         when {
-                            data?.alreadyPurchased == true -> {
+                            // A null payload is a failed order-create, not a
+                            // free unlock — without this guard the
+                            // requiresPayment != true arm below would unlock
+                            // the paid material for free.
+                            data == null -> {
+                                pendingExternalTxToken = null
+                                _state.update { it.copy(
+                                    purchasingId  = null,
+                                    purchaseError = "Could not start payment. Please try again."
+                                )}
+                            }
+                            data.alreadyPurchased == true -> {
                                 pendingExternalTxToken = null
                                 _state.update { it.copy(
                                     purchasingId    = null,

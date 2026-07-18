@@ -4,8 +4,6 @@ import android.app.Activity
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.Purchase
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,24 +53,13 @@ class GPlayCoursePurchaseManager @Inject constructor(
     fun priceInrOf(productDetails: ProductDetails): Double =
         (productDetails.oneTimePurchaseOfferDetails?.priceAmountMicros ?: 0L) / 1_000_000.0
 
-    // Suspends until Play reports a purchase for this specific course's
-    // product id. Filtered so it only resolves on a matching emission —
-    // billing.purchasesFlow is a shared singleton flow also consumed by
-    // PaymentViewModel for subscriptions, so an unfiltered collector here
-    // would incorrectly react to subscription purchases too. Cancels
-    // cleanly if the calling viewModelScope is cancelled first (e.g. the
-    // user backs out of the screen mid-purchase) — no persistent collector
-    // left running.
-    suspend fun awaitPurchase(courseId: String): Purchase {
-        val targetProductId = productIdFor(courseId)
-        return billing.purchasesFlow
-            .first { purchases -> purchases.any { targetProductId in it.products } }
-            .first { targetProductId in it.products }
-    }
-
-    // User-choice-aware variant of awaitPurchase: also resolves when the
-    // user picks Cashfree on Google's billing-choice screen, handing back
-    // the externalTransactionToken the confirm call must carry.
+    // Suspends until the billing flow for this course resolves: a Play
+    // purchase, or the user picking Cashfree on Google's billing-choice
+    // screen (handing back the externalTransactionToken the confirm call
+    // must carry). Filtered to this course's product id — the underlying
+    // flows are shared singletons also consumed by PaymentViewModel for
+    // subscriptions. Cancels cleanly if the calling viewModelScope is
+    // cancelled first — no persistent collector left running.
     suspend fun awaitPurchaseOrUserChoice(courseId: String): GPlayPurchaseOutcome =
         billing.awaitPurchaseOrUserChoice(productIdFor(courseId))
 }

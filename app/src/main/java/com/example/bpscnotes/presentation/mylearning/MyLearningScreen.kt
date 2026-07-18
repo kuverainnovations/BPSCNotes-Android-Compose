@@ -1797,6 +1797,9 @@ private fun CourseDetailSheet(
     LaunchedEffect(state.purchaseSessionId) {
         val sessionId = state.purchaseSessionId ?: return@LaunchedEffect
         val orderId   = state.purchaseProviderOrderId ?: return@LaunchedEffect
+        // Captured before clearPurchaseRequired() like sessionId/orderId —
+        // reading it off `state` after the clear would race the snapshot.
+        val environment = state.purchasePaymentEnvironment
         if (state.purchaseCourseId != course.id) return@LaunchedEffect
         showBuyDialog = false; dialogCoins = 0
         viewModel.clearPurchaseRequired()
@@ -1804,7 +1807,7 @@ private fun CourseDetailSheet(
             context     = context,
             sessionId   = sessionId,
             orderId     = orderId,
-            environment = state.purchasePaymentEnvironment,
+            environment = environment,
             onSuccess   = { cfPaymentId -> viewModel.confirmCoursePurchase(course.id, cfPaymentId) },
             onFailure   = { code, msg  -> viewModel.handleCoursePaymentFailure(code, msg) }
         )

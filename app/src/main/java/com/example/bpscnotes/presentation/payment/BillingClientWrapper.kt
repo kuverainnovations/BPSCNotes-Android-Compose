@@ -15,6 +15,27 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 
+// Cashfree session minted by a backend 402 / create-order response. Held
+// aside by release-build purchase flows in case the user picks Cashfree on
+// Google's billing-choice screen — shared by CourseDetailViewModel and
+// MyLearningViewModel so the shape and parsing can't drift between them.
+data class PendingCashfreeSession(
+    val sessionId: String,
+    val providerOrderId: String,
+    val environment: String,
+) {
+    companion object {
+        // Both ids are required to launch the SDK; environment defaults to
+        // sandbox, matching the backend's own default.
+        fun fromJson(data: org.json.JSONObject): PendingCashfreeSession? {
+            val sessionId = data.optString("paymentSessionId").takeIf { it.isNotBlank() } ?: return null
+            val orderId   = data.optString("providerOrderId").takeIf { it.isNotBlank() } ?: return null
+            val env       = data.optString("paymentEnvironment").takeIf { it.isNotBlank() } ?: "sandbox"
+            return PendingCashfreeSession(sessionId, orderId, env)
+        }
+    }
+}
+
 // How a launched Play billing flow resolved once the user got past
 // Google's billing-choice screen (user choice billing, India program).
 sealed interface GPlayPurchaseOutcome {

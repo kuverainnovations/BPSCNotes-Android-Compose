@@ -4,8 +4,6 @@ import android.app.Activity
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.Purchase
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,16 +40,9 @@ class GPlayMaterialPurchaseManager @Inject constructor(
     fun priceInrOf(productDetails: ProductDetails): Double =
         (productDetails.oneTimePurchaseOfferDetails?.priceAmountMicros ?: 0L) / 1_000_000.0
 
-    suspend fun awaitPurchase(materialId: String): Purchase {
-        val targetProductId = productIdFor(materialId)
-        return billing.purchasesFlow
-            .first { purchases -> purchases.any { targetProductId in it.products } }
-            .first { targetProductId in it.products }
-    }
-
-    // User-choice-aware variant of awaitPurchase: also resolves when the
-    // user picks Cashfree on Google's billing-choice screen, handing back
-    // the externalTransactionToken the confirm call must carry.
+    // Suspends until the billing flow for this material resolves: a Play
+    // purchase, or the user picking Cashfree on Google's billing-choice
+    // screen. Same contract as GPlayCoursePurchaseManager's counterpart.
     suspend fun awaitPurchaseOrUserChoice(materialId: String): GPlayPurchaseOutcome =
         billing.awaitPurchaseOrUserChoice(productIdFor(materialId))
 }
