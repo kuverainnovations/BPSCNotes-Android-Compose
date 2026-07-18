@@ -70,6 +70,7 @@ fun MpinNumpad(
     onBiometric: (() -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
@@ -91,7 +92,7 @@ fun MpinNumpad(
                             "" -> { /* empty spacer */ }
                             "BIO" -> {
                                 NumpadKey(
-                                    label = "BIO",
+                                    label = str.mpinBioBadge,
                                     isBiometric = true,
                                     enabled = enabled && onBiometric != null,
                                     onClick = {

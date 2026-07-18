@@ -34,6 +34,7 @@ fun MpinLoginScreen(
     viewModel: MpinViewModel = hiltViewModel()
 ) {
     val state   by viewModel.state.collectAsState()
+    val str     = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
     val tokenStore = remember {
         EntryPointAccessors.fromApplication(
@@ -125,7 +126,7 @@ fun MpinLoginScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                "Welcome Back",
+                str.mpinWelcomeBack,
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -142,7 +143,7 @@ fun MpinLoginScreen(
                 }
             }) {
                 Text(
-                    "Not you? Change number",
+                    str.mpinNotYou,
                     color = Color.White.copy(0.5f),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -251,7 +252,7 @@ fun MpinLoginScreen(
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Text(
-                    "Forgot MPIN?",
+                    str.mpinForgot,
                     color = Color.White.copy(0.6f),
                     style = MaterialTheme.typography.bodyMedium
                 )

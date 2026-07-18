@@ -22,6 +22,7 @@ fun BiometricOptInDialog(
     onEnable: () -> Unit,
     onSkip:   () -> Unit
 ) {
+    val str        = com.example.bpscnotes.core.language.LocalStrings.current
     val context    = LocalContext.current
     val tokenStore = EntryPointAccessors.fromApplication(
         context.applicationContext,
@@ -41,12 +42,12 @@ fun BiometricOptInDialog(
                 tint = BpscColors.Primary, modifier = Modifier.size(40.dp))
         },
         title = {
-            Text("Enable Fingerprint Login?", fontWeight = FontWeight.Bold,
+            Text(str.bioEnableTitle, fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center)
         },
         text = {
             Text(
-                "Login faster next time using your fingerprint instead of entering your MPIN.",
+                str.bioEnableBody,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -61,7 +62,7 @@ fun BiometricOptInDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                 shape  = RoundedCornerShape(10.dp)
             ) {
-                Text("Enable Fingerprint")
+                Text(str.bioEnableBtn)
             }
         },
         dismissButton = {
@@ -69,7 +70,7 @@ fun BiometricOptInDialog(
                 tokenStore.setBiometricEnabled(false)
                 onSkip()
             }) {
-                Text("Skip", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(str.skip, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         shape = RoundedCornerShape(16.dp)

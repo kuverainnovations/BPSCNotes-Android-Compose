@@ -1,9 +1,15 @@
 package com.example.bpscnotes.presentation.notebook
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -14,7 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
@@ -23,23 +32,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.NoteBlockDto
 import com.example.bpscnotes.data.remote.api.NoteDto
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 // Subject chips offered in the editor — aligned with the app's standard
-// subject taxonomy (live-classes, quizzes). Notes created from mock-test
-// solutions carry whatever subject the question had, even if not listed.
+// subject taxonomy (live-classes, quizzes).
 private val NoteSubjects = listOf(
     "Polity", "History", "Geography", "Economy", "Science",
     "Environment", "Bihar GK", "Current Affairs",
@@ -73,8 +86,7 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
         state.error?.let { snackbar.showSnackbar(it); viewModel.clearError() }
     }
 
-    // Editor is an in-screen overlay; hardware back closes it first.
-    BackHandler(enabled = state.editingNote != null) { viewModel.closeEditor() }
+    BackHandler(enabled = state.editorOpen) { viewModel.closeEditor() }
 
     Scaffold(
         containerColor = BpscColors.Surface,
@@ -84,11 +96,11 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
                 title = { Text("My Notebook", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (state.editingNote != null) viewModel.closeEditor() else nav.popBackStack()
+                        if (state.editorOpen) viewModel.closeEditor() else nav.popBackStack()
                     }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
                 },
                 actions = {
-                    if (state.editingNote == null) {
+                    if (!state.editorOpen) {
                         var sortMenu by remember { mutableStateOf(false) }
                         IconButton(onClick = { sortMenu = true }) {
                             Icon(Icons.AutoMirrored.Rounded.Sort, "Sort")
@@ -117,7 +129,7 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
             )
         },
         floatingActionButton = {
-            if (state.editingNote == null) {
+            if (!state.editorOpen) {
                 FloatingActionButton(
                     onClick = { viewModel.openNewNote() },
                     containerColor = BpscColors.Primary,
@@ -128,19 +140,15 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                state.editingNote != null -> NoteEditor(
-                    note = state.editingNote!!,
-                    isSaving = state.isSaving,
-                    onSave = { t, c, col, sub -> viewModel.saveNote(t, c, col, sub) },
-                    onDelete = { viewModel.deleteNote(it) },
+                state.editorOpen -> BlockEditor(
+                    state = state,
+                    viewModel = viewModel,
                     onShare = { note ->
                         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(android.content.Intent.EXTRA_TEXT, viewModel.shareText(note))
                         }
-                        nav.context.startActivity(
-                            android.content.Intent.createChooser(intent, "Share note")
-                        )
+                        nav.context.startActivity(android.content.Intent.createChooser(intent, "Share note"))
                     },
                 )
 
@@ -192,19 +200,13 @@ private fun NotesList(
             ),
         )
 
-        // Subject filter chips — only when the user has tagged notes
         if (subjects.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    FilterChip(
-                        selected = subjectFilter == null,
-                        onClick = { onFilter(null) },
-                        label = { Text("All") },
-                    )
+                    FilterChip(selected = subjectFilter == null, onClick = { onFilter(null) }, label = { Text("All") })
                 }
-                items(subjects.size) { i ->
-                    val s = subjects[i]
+                items(subjects) { s ->
                     FilterChip(
                         selected = subjectFilter == s,
                         onClick = { onFilter(if (subjectFilter == s) null else s) },
@@ -230,7 +232,7 @@ private fun NotesList(
                 if (search.isBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Tap + to jot down formulas, dates,\nanswers to revise — anything.",
+                        "Tap + to jot formulas, checklists,\nimages, answers to revise — anything.",
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextSecondary,
                     )
@@ -272,13 +274,19 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
             Icon(
                 Icons.Rounded.PushPin, if (note.isPinned) "Unpin" else "Pin",
                 tint = if (note.isPinned) BpscColors.Accent else BpscColors.TextHint.copy(alpha = 0.5f),
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onTogglePin),
+                modifier = Modifier.size(18.dp).clip(CircleShape).clickable(onClick = onTogglePin),
             )
         }
-        if (note.content.isNotBlank()) {
+
+        // Block-aware preview (falls back to plain content for legacy notes)
+        val blocks = note.blocks
+        if (!blocks.isNullOrEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            blocks.take(6).forEach { b -> NoteCardBlockLine(b) }
+            if (blocks.size > 6) {
+                Text("…", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextHint)
+            }
+        } else if (note.content.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
                 note.content,
@@ -287,6 +295,7 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
                 maxLines = 6, overflow = TextOverflow.Ellipsis,
             )
         }
+
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -311,120 +320,188 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Editor (in-screen overlay)
-// ─────────────────────────────────────────────────────────────
 @Composable
-private fun NoteEditor(
-    note: NoteDto,
-    isSaving: Boolean,
-    onSave: (title: String, content: String, color: String?, subject: String?) -> Unit,
-    onDelete: (NoteDto) -> Unit,
+private fun NoteCardBlockLine(b: NoteBlockDto) {
+    when (b.type) {
+        "image" -> if (!b.url.isNullOrBlank()) {
+            AsyncImage(
+                model = b.url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 110.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .padding(vertical = 2.dp),
+            )
+        }
+        "heading" -> Text(
+            b.text, style = MaterialTheme.typography.labelLarge,
+            color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        "check" -> Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (b.done) "☑ " else "☐ ", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
+            Text(
+                b.text,
+                style = MaterialTheme.typography.bodySmall,
+                color = BpscColors.TextSecondary,
+                textDecoration = if (b.done) TextDecoration.LineThrough else null,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        "bullet", "numbered" -> Text(
+            "• ${b.text}",
+            style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        else -> if (b.text.isNotBlank()) Text(
+            b.text, style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary,
+            maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Block editor
+// ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BlockEditor(
+    state: NotebookUiState,
+    viewModel: NotebookViewModel,
     onShare: (NoteDto) -> Unit,
 ) {
-    var title by remember(note.id) { mutableStateOf(note.title) }
-    var content by remember(note.id) { mutableStateOf(note.content) }
-    var color by remember(note.id) { mutableStateOf(note.color) }
-    var subject by remember(note.id) { mutableStateOf(note.subject) }
     var confirmDelete by remember { mutableStateOf(false) }
-    // Subject chips: the standard set, plus this note's existing subject if
-    // it isn't in the set (e.g. auto-tagged from a mock-test question).
-    val subjectChips = remember(note.id) {
-        (NoteSubjects + listOfNotNull(note.subject?.takeIf { it.isNotBlank() && it !in NoteSubjects })).distinct()
+    var focusedId by remember(state.editingNoteId) { mutableStateOf<String?>(null) }
+    val subjectChips = remember(state.editingNoteId) {
+        (NoteSubjects + listOfNotNull(state.editorSubject?.takeIf { it.isNotBlank() && it !in NoteSubjects })).distinct()
+    }
+    // Where a new block/image is inserted: after the focused block, else end.
+    fun anchorId(): String? = focusedId ?: state.editorBlocks.lastOrNull()?.id
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) viewModel.addImage(anchorId(), uri)
     }
 
-    // imePadding: the app is edge-to-edge, so adjustResize alone doesn't
-    // shrink the window — without this the keyboard covers the Save row
-    // and taps land on the IME, which reads as "save not working".
-    Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp)) {
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it.take(200) },
-            placeholder = { Text("Title", color = BpscColors.TextHint) },
-            textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
-                focusedBorderColor = BpscColors.Primary, unfocusedBorderColor = BpscColors.Divider,
-            ),
-        )
-        Spacer(Modifier.height(10.dp))
-
-        // Color chips
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            NoteColors.forEach { (name, bg) ->
-                Box(
-                    Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(bg)
-                        .then(
-                            if (color == name) Modifier.background(Color.Transparent).padding(0.dp) else Modifier
-                        )
-                        .clickable { color = if (color == name) null else name },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (color == name) Text("✓", color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                }
+    Column(Modifier.fillMaxSize().imePadding()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp),
+        ) {
+            // Title
+            item {
+                OutlinedTextField(
+                    value = state.editorTitle,
+                    onValueChange = viewModel::setEditorTitle,
+                    placeholder = { Text("Title", color = BpscColors.TextHint) },
+                    textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
+                        focusedBorderColor = BpscColors.Primary, unfocusedBorderColor = BpscColors.Divider,
+                    ),
+                )
+                Spacer(Modifier.height(10.dp))
             }
-        }
-        Spacer(Modifier.height(10.dp))
 
-        // Subject chips
-        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(subjectChips.size) { i ->
-                val s = subjectChips[i]
-                FilterChip(
-                    selected = subject == s,
-                    onClick = { subject = if (subject == s) null else s },
-                    label = { Text(s, style = MaterialTheme.typography.labelSmall) },
+            // Color chips
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    NoteColors.forEach { (name, bg) ->
+                        Box(
+                            Modifier.size(30.dp).clip(CircleShape).background(bg)
+                                .clickable { viewModel.setEditorColor(if (state.editorColor == name) null else name) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (state.editorColor == name) Text("✓", color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
+            // Subject chips
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(subjectChips) { s ->
+                        FilterChip(
+                            selected = state.editorSubject == s,
+                            onClick = { viewModel.setEditorSubject(if (state.editorSubject == s) null else s) },
+                            label = { Text(s, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = BpscColors.Divider)
+                Spacer(Modifier.height(4.dp))
+            }
+
+            // Blocks
+            itemsIndexed(state.editorBlocks, key = { _, b -> b.id }) { index, block ->
+                BlockRow(
+                    block = block,
+                    numberLabel = if (block.type == BlockType.Numbered)
+                        "${state.editorBlocks.take(index + 1).count { it.type == BlockType.Numbered }}." else null,
+                    onFocused = { focusedId = block.id },
+                    onText = { viewModel.setBlockText(block.id, it) },
+                    onToggleCheck = { viewModel.toggleCheck(block.id) },
+                    onTypeChange = { viewModel.setBlockType(block.id, it) },
+                    onMoveUp = { viewModel.moveBlock(block.id, up = true) },
+                    onMoveDown = { viewModel.moveBlock(block.id, up = false) },
+                    onDelete = { viewModel.deleteBlock(block.id) },
                 )
             }
         }
-        Spacer(Modifier.height(10.dp))
 
-        OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
-            placeholder = { Text("Write your note…", color = BpscColors.TextHint) },
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
-                focusedBorderColor = BpscColors.Primary, unfocusedBorderColor = BpscColors.Divider,
-            ),
-        )
-        Spacer(Modifier.height(12.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (note.id.isNotBlank()) {
-                OutlinedButton(
-                    onClick = { confirmDelete = true },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
-                ) { Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Delete") }
-                OutlinedButton(
-                    onClick = { onShare(note.copy(title = title, content = content)) },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary),
-                ) { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) }
-            }
-            Button(
-                onClick = { onSave(title, content, color, subject) },
-                enabled = !isSaving && (title.isNotBlank() || content.isNotBlank()),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
-                modifier = Modifier.weight(1f).height(48.dp),
-            ) {
-                if (isSaving) CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                else Text("Save", fontWeight = FontWeight.Bold)
+        // Add-block toolbar
+        Surface(color = Color.White, shadowElevation = 4.dp) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item { AddChip("¶ Text")   { viewModel.addBlock(anchorId(), BlockType.Text) } }
+                    item { AddChip("H Heading") { viewModel.addBlock(anchorId(), BlockType.Heading) } }
+                    item { AddChip("• Bullet")  { viewModel.addBlock(anchorId(), BlockType.Bullet) } }
+                    item { AddChip("1. List")   { viewModel.addBlock(anchorId(), BlockType.Numbered) } }
+                    item { AddChip("☑ Checklist") { viewModel.addBlock(anchorId(), BlockType.Check) } }
+                    item { AddChip("🖼 Image")  { imagePicker.launch("image/*") } }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (state.editingNoteId != null) {
+                        OutlinedButton(
+                            onClick = { confirmDelete = true },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
+                        ) { Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp)) }
+                        OutlinedButton(
+                            onClick = {
+                                onShare(NoteDto(
+                                    title = state.editorTitle,
+                                    blocks = state.editorBlocks.map {
+                                        NoteBlockDto(it.type.name.lowercase(), it.text, it.done, it.url)
+                                    },
+                                ))
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary),
+                        ) { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) }
+                    }
+                    Button(
+                        onClick = { viewModel.saveNote() },
+                        enabled = !state.isSaving,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                        modifier = Modifier.weight(1f).height(48.dp),
+                    ) {
+                        if (state.isSaving) CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        else Text("Save", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(16.dp))
     }
 
     if (confirmDelete) {
@@ -433,11 +510,130 @@ private fun NoteEditor(
             title = { Text("Delete this note?") },
             text = { Text("This can't be undone.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDelete(note) }) {
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteEditingNote() }) {
                     Text("Delete", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun AddChip(label: String, onClick: () -> Unit) {
+    SuggestionChip(
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BlockRow(
+    block: EditableBlock,
+    numberLabel: String?,
+    onFocused: () -> Unit,
+    onText: (String) -> Unit,
+    onToggleCheck: () -> Unit,
+    onTypeChange: (BlockType) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    // Image block: thumbnail + remove; no text field.
+    if (block.type == BlockType.Image) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (block.uploading || block.url.isNullOrBlank()) {
+                Box(
+                    Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(12.dp))
+                        .background(BpscColors.Surface),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator(Modifier.size(22.dp), color = BpscColors.Primary, strokeWidth = 2.dp) }
+            } else {
+                Box(Modifier.weight(1f)) {
+                    AsyncImage(
+                        model = block.url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).clip(RoundedCornerShape(12.dp)),
+                    )
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                            .size(28.dp).clip(CircleShape).background(Color.Black.copy(0.45f)),
+                    ) { Icon(Icons.Rounded.Close, "Remove image", tint = Color.White, modifier = Modifier.size(16.dp)) }
+                }
+            }
+        }
+        return
+    }
+
+    val heading = block.type == BlockType.Heading
+    Row(Modifier.fillMaxWidth().padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Leading marker / control
+        when (block.type) {
+            BlockType.Bullet   -> Text("•  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
+            BlockType.Numbered -> Text("${numberLabel ?: "•"}  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
+            BlockType.Check    -> Checkbox(checked = block.done, onCheckedChange = { onToggleCheck() }, modifier = Modifier.size(36.dp))
+            else -> {}
+        }
+
+        TextField(
+            value = block.text,
+            onValueChange = onText,
+            placeholder = {
+                Text(
+                    when (block.type) {
+                        BlockType.Heading -> "Heading"
+                        BlockType.Bullet, BlockType.Numbered -> "List item"
+                        BlockType.Check -> "To-do"
+                        else -> "Write…"
+                    },
+                    color = BpscColors.TextHint,
+                )
+            },
+            textStyle = if (heading)
+                MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            else MaterialTheme.typography.bodyMedium.copy(
+                textDecoration = if (block.type == BlockType.Check && block.done) TextDecoration.LineThrough else null,
+            ),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.weight(1f)
+                .onFocusChanged { if (it.isFocused) onFocused() },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        )
+
+        // Per-block menu
+        var menu by remember { mutableStateOf(false) }
+        Box {
+            IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Rounded.MoreVert, "Block options", tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                Text("Turn into", style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.TextHint, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                listOf(
+                    BlockType.Text to "Text", BlockType.Heading to "Heading",
+                    BlockType.Bullet to "Bullet", BlockType.Numbered to "Numbered", BlockType.Check to "Checklist",
+                ).forEach { (t, label) ->
+                    DropdownMenuItem(
+                        text = { Text(label, fontWeight = if (block.type == t) FontWeight.Bold else FontWeight.Normal) },
+                        onClick = { onTypeChange(t); menu = false },
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(text = { Text("Move up") }, onClick = { onMoveUp(); menu = false })
+                DropdownMenuItem(text = { Text("Move down") }, onClick = { onMoveDown(); menu = false })
+                DropdownMenuItem(
+                    text = { Text("Delete", color = Color(0xFFD32F2F)) },
+                    onClick = { onDelete(); menu = false },
+                )
+            }
+        }
     }
 }

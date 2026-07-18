@@ -301,7 +301,7 @@ fun LoginScreen(navController: NavHostController) {
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "New to BPSCNotes? Your account is created automatically.",
+            text = str.loginAutoCreate,
             style = MaterialTheme.typography.bodyMedium,
             color = cs.onSurfaceVariant,
             textAlign = TextAlign.Center,

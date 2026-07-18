@@ -27,6 +27,7 @@ fun ResetMpinScreen(
     viewModel: MpinViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
 
     val systemUiController = rememberSystemUiController()
     SideEffect {
@@ -72,10 +73,10 @@ fun ResetMpinScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Reset MPIN", style = MaterialTheme.typography.headlineMedium,
+            Text(str.mpinResetTitle, style = MaterialTheme.typography.headlineMedium,
                 color = Color.White, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text("Set a new 4-digit MPIN",
+            Text(str.mpinResetSubtitle,
                 style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.65f))
 
             Spacer(Modifier.height(40.dp))

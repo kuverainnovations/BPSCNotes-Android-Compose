@@ -27,6 +27,7 @@ fun ChangeMpinScreen(
     viewModel: ChangeMpinViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
 
     val systemUiController = rememberSystemUiController()
     SideEffect {
@@ -94,10 +95,10 @@ fun ChangeMpinScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Change MPIN", style = MaterialTheme.typography.headlineMedium,
+            Text(str.mpinChangeTitle, style = MaterialTheme.typography.headlineMedium,
                 color = Color.White, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text("Update your 4-digit MPIN",
+            Text(str.mpinChangeSubtitle,
                 style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.65f))
 
             Spacer(Modifier.height(32.dp))

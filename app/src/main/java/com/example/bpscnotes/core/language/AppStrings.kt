@@ -604,6 +604,53 @@ data class MiscStrings6(
     val roomJoinPrivate: String,
 )
 
+// ── Upload Material screen — chrome + step 1 ──────────────────────────────────
+data class UploadStrings(
+    val uploadStep1: String, val uploadStep2: String, val uploadStep3: String, val uploadStep4: String,
+    val uploadCancelTitle: String, val uploadCancelMsg: String,
+    val uploadCancelConfirm: String, val uploadCancelDismiss: String,
+    val uploadTopTitle: String, val uploadTopSubtitle: String,
+    val uploadHeroTitle: String, val uploadHeroBody: String, val uploadRevenueShare: String,
+    val uploadWhatCanUpload: String,
+    val uploadTypeNotes: String, val uploadTypeNotesSub: String,
+    val uploadTypePdfs: String, val uploadTypePdfsSub: String,
+    val uploadTypePyqs: String, val uploadTypePyqsSub: String,
+    val uploadTypeBooks: String, val uploadTypeBooksSub: String,
+    val uploadTypeHandwritten: String, val uploadTypeHandwrittenSub: String,
+    val uploadBeforeUpload: String,
+    val uploadGuideOriginal: String, val uploadGuideReviewed: String,
+    val uploadGuideHelp: String, val uploadGuideEarn: String,
+)
+
+// ── Upload Material screen — step 2 form, policy, premium ─────────────────────
+data class UploadStrings2(
+    val uploadPolicyConfirm: String, val uploadPolicyCreator: String, val uploadPolicyCommunity: String,
+    val uploadPolicyCopyright: String, val uploadPolicyTerms: String,
+    val uploadWarning: String,
+    val uploadTapChange: String, val uploadTapSelect: String, val uploadPdfLimit: String,
+    val uploadFieldTitle: String, val uploadTitleHint: String,
+    val uploadFieldSubject: String, val uploadSelectSubject: String,
+    val uploadFieldLanguage: String, val uploadSelectLanguage: String,
+    val uploadFieldAuthor: String,
+    val uploadFieldTags: String, val uploadTagsHint: String, val uploadTagsSupport: String,
+    val uploadFieldMessage: String, val uploadMessageHint: String,
+    val uploadPremiumTitle: String, val uploadPremiumSubtitle: String,
+    val uploadPrice: String, val uploadFreePages: String, val uploadFreePagesNote: String,
+    val uploadUploading: String, val uploadContinueDetails: String, val uploadSubmitReview: String,
+    val uploadNeedPolicy: String, val uploadNeedFile: String,
+    val uploadLargeFile: String,
+)
+
+// ── Auth · MPIN · Biometric ───────────────────────────────────────────────────
+data class AuthMpinStrings(
+    val loginAutoCreate: String,
+    val bioEnableTitle: String, val bioEnableBody: String, val bioEnableBtn: String, val mpinBioBadge: String,
+    val mpinCreateTitle: String, val mpinCreateSubtitle: String,
+    val mpinResetTitle: String, val mpinResetSubtitle: String,
+    val mpinChangeTitle: String, val mpinChangeSubtitle: String,
+    val mpinWelcomeBack: String, val mpinNotYou: String, val mpinForgot: String,
+)
+
 // ── Facade — 12 fields, all call sites keep using str.xxx unchanged ───────────
 data class AppStrings(
     val _c: CommonStrings, val _n: NavAuthStrings, val _pe: ProfileEditStrings,
@@ -613,6 +660,8 @@ data class AppStrings(
     val _m: MiscStrings, val _m3: MiscStrings3, val _m2: MiscStrings2, val _m4: MiscStrings4,
     val _m5: MiscStrings5,
     val _m6: MiscStrings6,
+    val _up: UploadStrings, val _up2: UploadStrings2,
+    val _am: AuthMpinStrings,
 ) {
     val ok get() = _c.ok; val yes get() = _c.yes; val no get() = _c.no
     val cancel get() = _c.cancel; val save get() = _c.save; val close get() = _c.close
@@ -1142,6 +1191,50 @@ data class AppStrings(
     val mlAttachFile                 get() = _m6.mlAttachFile
     val roomPrivate                  get() = _m6.roomPrivate
     val roomJoinPrivate              get() = _m6.roomJoinPrivate
+    // ── Upload Material screen ──────────────────────
+    val uploadStep1 get() = _up.uploadStep1; val uploadStep2 get() = _up.uploadStep2
+    val uploadStep3 get() = _up.uploadStep3; val uploadStep4 get() = _up.uploadStep4
+    val uploadCancelTitle get() = _up.uploadCancelTitle; val uploadCancelMsg get() = _up.uploadCancelMsg
+    val uploadCancelConfirm get() = _up.uploadCancelConfirm; val uploadCancelDismiss get() = _up.uploadCancelDismiss
+    val uploadTopTitle get() = _up.uploadTopTitle; val uploadTopSubtitle get() = _up.uploadTopSubtitle
+    val uploadHeroTitle get() = _up.uploadHeroTitle; val uploadHeroBody get() = _up.uploadHeroBody
+    val uploadRevenueShare get() = _up.uploadRevenueShare; val uploadWhatCanUpload get() = _up.uploadWhatCanUpload
+    val uploadTypeNotes get() = _up.uploadTypeNotes; val uploadTypeNotesSub get() = _up.uploadTypeNotesSub
+    val uploadTypePdfs get() = _up.uploadTypePdfs; val uploadTypePdfsSub get() = _up.uploadTypePdfsSub
+    val uploadTypePyqs get() = _up.uploadTypePyqs; val uploadTypePyqsSub get() = _up.uploadTypePyqsSub
+    val uploadTypeBooks get() = _up.uploadTypeBooks; val uploadTypeBooksSub get() = _up.uploadTypeBooksSub
+    val uploadTypeHandwritten get() = _up.uploadTypeHandwritten; val uploadTypeHandwrittenSub get() = _up.uploadTypeHandwrittenSub
+    val uploadBeforeUpload get() = _up.uploadBeforeUpload
+    val uploadGuideOriginal get() = _up.uploadGuideOriginal; val uploadGuideReviewed get() = _up.uploadGuideReviewed
+    val uploadGuideHelp get() = _up.uploadGuideHelp; val uploadGuideEarn get() = _up.uploadGuideEarn
+    val uploadPolicyConfirm get() = _up2.uploadPolicyConfirm; val uploadPolicyCreator get() = _up2.uploadPolicyCreator
+    val uploadPolicyCommunity get() = _up2.uploadPolicyCommunity; val uploadPolicyCopyright get() = _up2.uploadPolicyCopyright
+    val uploadPolicyTerms get() = _up2.uploadPolicyTerms; val uploadWarning get() = _up2.uploadWarning
+    val uploadTapChange get() = _up2.uploadTapChange; val uploadTapSelect get() = _up2.uploadTapSelect
+    val uploadPdfLimit get() = _up2.uploadPdfLimit
+    val uploadFieldTitle get() = _up2.uploadFieldTitle; val uploadTitleHint get() = _up2.uploadTitleHint
+    val uploadFieldSubject get() = _up2.uploadFieldSubject; val uploadSelectSubject get() = _up2.uploadSelectSubject
+    val uploadFieldLanguage get() = _up2.uploadFieldLanguage; val uploadSelectLanguage get() = _up2.uploadSelectLanguage
+    val uploadFieldAuthor get() = _up2.uploadFieldAuthor
+    val uploadFieldTags get() = _up2.uploadFieldTags; val uploadTagsHint get() = _up2.uploadTagsHint
+    val uploadTagsSupport get() = _up2.uploadTagsSupport
+    val uploadFieldMessage get() = _up2.uploadFieldMessage; val uploadMessageHint get() = _up2.uploadMessageHint
+    val uploadPremiumTitle get() = _up2.uploadPremiumTitle; val uploadPremiumSubtitle get() = _up2.uploadPremiumSubtitle
+    val uploadPrice get() = _up2.uploadPrice; val uploadFreePages get() = _up2.uploadFreePages
+    val uploadFreePagesNote get() = _up2.uploadFreePagesNote
+    val uploadUploading get() = _up2.uploadUploading; val uploadContinueDetails get() = _up2.uploadContinueDetails
+    val uploadSubmitReview get() = _up2.uploadSubmitReview
+    val uploadNeedPolicy get() = _up2.uploadNeedPolicy; val uploadNeedFile get() = _up2.uploadNeedFile
+    val uploadLargeFile get() = _up2.uploadLargeFile
+    // ── Auth · MPIN ──────────────────────
+    val loginAutoCreate get() = _am.loginAutoCreate
+    val bioEnableTitle get() = _am.bioEnableTitle; val bioEnableBody get() = _am.bioEnableBody
+    val bioEnableBtn get() = _am.bioEnableBtn; val mpinBioBadge get() = _am.mpinBioBadge
+    val mpinCreateTitle get() = _am.mpinCreateTitle; val mpinCreateSubtitle get() = _am.mpinCreateSubtitle
+    val mpinResetTitle get() = _am.mpinResetTitle; val mpinResetSubtitle get() = _am.mpinResetSubtitle
+    val mpinChangeTitle get() = _am.mpinChangeTitle; val mpinChangeSubtitle get() = _am.mpinChangeSubtitle
+    val mpinWelcomeBack get() = _am.mpinWelcomeBack; val mpinNotYou get() = _am.mpinNotYou
+    val mpinForgot get() = _am.mpinForgot
 }
 
 // ── Helper to build AppStrings from grouped sub-objects ───────────────────────
@@ -1151,8 +1244,9 @@ private fun mkAppStrings(
     ct: ContentStrings, ct2: ContentStrings2, jr: JobRoomStrings, fp: FocusProfileStrings,
     st: SettingsStrings, st2: SettingsStrings2, pay: PaymentStrings,
     m: MiscStrings, m3: MiscStrings3, m2: MiscStrings2, m4: MiscStrings4, m5: MiscStrings5, m6: MiscStrings6,
+    up: UploadStrings, up2: UploadStrings2, am: AuthMpinStrings,
 ) = AppStrings(_c=c,_n=n,_pe=pe,_db=db,_co=co,_qz=qz,_ct=ct,_ct2=ct2,_jr=jr,_fp=fp,
-    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4,_m5=m5,_m6=m6)
+    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4,_m5=m5,_m6=m6,_up=up,_up2=up2,_am=am)
 
 // ── ENGLISH ───────────────────────────────────────────────────────────────────
 val EnglishStrings: AppStrings = mkAppStrings(
@@ -1703,6 +1797,60 @@ val EnglishStrings: AppStrings = mkAppStrings(
         mlAttachFile="Tap to attach file (PDF / DOC)",
         roomPrivate="Private Room",
         roomJoinPrivate="Join Private Room",
+    ),
+    up = UploadStrings(
+        uploadStep1="Upload", uploadStep2="Details", uploadStep3="Review", uploadStep4="Go Live",
+        uploadCancelTitle="Upload in progress",
+        uploadCancelMsg="Your file is still uploading. Do you want to cancel the upload?",
+        uploadCancelConfirm="Cancel Upload", uploadCancelDismiss="Continue Uploading",
+        uploadTopTitle="Upload Your Material", uploadTopSubtitle="Share. Help. Earn.",
+        uploadHeroTitle="Share Quality Notes. Empower Aspirants.",
+        uploadHeroBody="Upload your original study material and help thousands of BPSC aspirants succeed.",
+        uploadRevenueShare="60% revenue share",
+        uploadWhatCanUpload="What you can upload",
+        uploadTypeNotes="Notes &", uploadTypeNotesSub="Summaries",
+        uploadTypePdfs="PDFs &", uploadTypePdfsSub="Guides",
+        uploadTypePyqs="PYQs &", uploadTypePyqsSub="Papers",
+        uploadTypeBooks="Books &", uploadTypeBooksSub="References",
+        uploadTypeHandwritten="Handwritten", uploadTypeHandwrittenSub="Notes",
+        uploadBeforeUpload="Before you upload",
+        uploadGuideOriginal="Original\ncontent only", uploadGuideReviewed="Quality\nreviewed",
+        uploadGuideHelp="Help 10K+\naspirants", uploadGuideEarn="Earn for\nyour work",
+    ),
+    up2 = UploadStrings2(
+        uploadPolicyConfirm="I confirm this content is original and I agree to the ",
+        uploadPolicyCreator="Creator Policy", uploadPolicyCommunity="Community Guidelines",
+        uploadPolicyCopyright="Copyright Policy", uploadPolicyTerms="Terms of Use",
+        uploadWarning="Do not upload copyrighted books, paid course PDFs, or content you don't own. Violations may result in content removal and account suspension.",
+        uploadTapChange="Tap to change file", uploadTapSelect="Tap to select your PDF",
+        uploadPdfLimit="PDF files up to 50MB",
+        uploadFieldTitle="Title *", uploadTitleHint="Give your material a clear title",
+        uploadFieldSubject="Subject *", uploadSelectSubject="Select a subject",
+        uploadFieldLanguage="Language", uploadSelectLanguage="Select language",
+        uploadFieldAuthor="Author / Creator name",
+        uploadFieldTags="Tags", uploadTagsHint="e.g. BPSC, Polity, Constitution",
+        uploadTagsSupport="Comma separated — helps students find your material",
+        uploadFieldMessage="Message to Reviewer",
+        uploadMessageHint="Tell the reviewer about the content, source, year, exam relevance…",
+        uploadPremiumTitle="Premium Content",
+        uploadPremiumSubtitle="Charge students to access the full material",
+        uploadPrice="₹ Price", uploadFreePages="Free pages",
+        uploadFreePagesNote="Students see %1\$s free pages. Full access unlocks after purchase.",
+        uploadUploading="Uploading…", uploadContinueDetails="Continue to Details",
+        uploadSubmitReview="Submit for Review",
+        uploadNeedPolicy="Accept the policy above to continue",
+        uploadNeedFile="Select a PDF file to enable submission",
+        uploadLargeFile="File is %1\$sMB — large files take longer to upload.",
+    ),
+    am = AuthMpinStrings(
+        loginAutoCreate="New to BPSCNotes? Your account is created automatically.",
+        bioEnableTitle="Enable Fingerprint Login?",
+        bioEnableBody="Login faster next time using your fingerprint instead of entering your MPIN.",
+        bioEnableBtn="Enable Fingerprint", mpinBioBadge="BIO",
+        mpinCreateTitle="Create MPIN", mpinCreateSubtitle="Set a 4-digit MPIN for faster logins",
+        mpinResetTitle="Reset MPIN", mpinResetSubtitle="Set a new 4-digit MPIN",
+        mpinChangeTitle="Change MPIN", mpinChangeSubtitle="Update your 4-digit MPIN",
+        mpinWelcomeBack="Welcome Back", mpinNotYou="Not you? Change number", mpinForgot="Forgot MPIN?",
     ),
 )
 
@@ -2361,5 +2509,59 @@ val HindiStrings: AppStrings = mkAppStrings(
         mlAttachFile="फ़ाइल संलग्न करें (PDF / DOC)",
         roomPrivate="प्राइवेट रूम",
         roomJoinPrivate="प्राइवेट रूम जॉइन करें",
+    ),
+    up = UploadStrings(
+        uploadStep1="अपलोड", uploadStep2="विवरण", uploadStep3="समीक्षा", uploadStep4="लाइव करें",
+        uploadCancelTitle="अपलोड जारी है",
+        uploadCancelMsg="आपकी फ़ाइल अभी भी अपलोड हो रही है। क्या आप अपलोड रद्द करना चाहते हैं?",
+        uploadCancelConfirm="अपलोड रद्द करें", uploadCancelDismiss="अपलोड जारी रखें",
+        uploadTopTitle="अपनी सामग्री अपलोड करें", uploadTopSubtitle="साझा करें। मदद करें। कमाएँ।",
+        uploadHeroTitle="गुणवत्तापूर्ण नोट्स साझा करें। अभ्यर्थियों को सशक्त बनाएँ।",
+        uploadHeroBody="अपनी मौलिक अध्ययन सामग्री अपलोड करें और हज़ारों BPSC अभ्यर्थियों की सफलता में मदद करें।",
+        uploadRevenueShare="60% राजस्व हिस्सा",
+        uploadWhatCanUpload="आप क्या अपलोड कर सकते हैं",
+        uploadTypeNotes="नोट्स और", uploadTypeNotesSub="सारांश",
+        uploadTypePdfs="PDF और", uploadTypePdfsSub="गाइड",
+        uploadTypePyqs="PYQ और", uploadTypePyqsSub="पेपर",
+        uploadTypeBooks="किताबें और", uploadTypeBooksSub="संदर्भ",
+        uploadTypeHandwritten="हस्तलिखित", uploadTypeHandwrittenSub="नोट्स",
+        uploadBeforeUpload="अपलोड करने से पहले",
+        uploadGuideOriginal="केवल मौलिक\nसामग्री", uploadGuideReviewed="गुणवत्ता\nजाँची गई",
+        uploadGuideHelp="10K+ अभ्यर्थियों\nकी मदद करें", uploadGuideEarn="अपने काम के\nलिए कमाएँ",
+    ),
+    up2 = UploadStrings2(
+        uploadPolicyConfirm="मैं पुष्टि करता हूँ कि यह सामग्री मौलिक है और मैं सहमत हूँ ",
+        uploadPolicyCreator="क्रिएटर नीति", uploadPolicyCommunity="सामुदायिक दिशानिर्देश",
+        uploadPolicyCopyright="कॉपीराइट नीति", uploadPolicyTerms="उपयोग की शर्तें",
+        uploadWarning="कॉपीराइट वाली किताबें, सशुल्क कोर्स PDF, या ऐसी सामग्री अपलोड न करें जो आपकी नहीं है। उल्लंघन से सामग्री हटाई जा सकती है और खाता निलंबित हो सकता है।",
+        uploadTapChange="फ़ाइल बदलने के लिए टैप करें", uploadTapSelect="अपना PDF चुनने के लिए टैप करें",
+        uploadPdfLimit="50MB तक की PDF फ़ाइलें",
+        uploadFieldTitle="शीर्षक *", uploadTitleHint="अपनी सामग्री को एक स्पष्ट शीर्षक दें",
+        uploadFieldSubject="विषय *", uploadSelectSubject="एक विषय चुनें",
+        uploadFieldLanguage="भाषा", uploadSelectLanguage="भाषा चुनें",
+        uploadFieldAuthor="लेखक / निर्माता का नाम",
+        uploadFieldTags="टैग", uploadTagsHint="उदा. BPSC, राजनीति, संविधान",
+        uploadTagsSupport="अल्पविराम से अलग करें — छात्रों को आपकी सामग्री खोजने में मदद करता है",
+        uploadFieldMessage="समीक्षक के लिए संदेश",
+        uploadMessageHint="समीक्षक को सामग्री, स्रोत, वर्ष और परीक्षा प्रासंगिकता के बारे में बताएँ…",
+        uploadPremiumTitle="प्रीमियम सामग्री",
+        uploadPremiumSubtitle="पूरी सामग्री तक पहुँच के लिए छात्रों से शुल्क लें",
+        uploadPrice="₹ मूल्य", uploadFreePages="मुफ़्त पृष्ठ",
+        uploadFreePagesNote="छात्र %1\$s मुफ़्त पृष्ठ देखते हैं। खरीद के बाद पूरी पहुँच खुल जाती है।",
+        uploadUploading="अपलोड हो रहा है…", uploadContinueDetails="विवरण पर जारी रखें",
+        uploadSubmitReview="समीक्षा के लिए जमा करें",
+        uploadNeedPolicy="जारी रखने के लिए ऊपर दी गई नीति स्वीकार करें",
+        uploadNeedFile="जमा करने के लिए एक PDF फ़ाइल चुनें",
+        uploadLargeFile="फ़ाइल %1\$sMB की है — बड़ी फ़ाइलें अपलोड होने में अधिक समय लेती हैं।",
+    ),
+    am = AuthMpinStrings(
+        loginAutoCreate="BPSCNotes पर नए हैं? आपका खाता स्वचालित रूप से बन जाता है।",
+        bioEnableTitle="फ़िंगरप्रिंट लॉगिन सक्षम करें?",
+        bioEnableBody="अगली बार MPIN डालने के बजाय अपने फ़िंगरप्रिंट से तेज़ी से लॉगिन करें।",
+        bioEnableBtn="फ़िंगरप्रिंट सक्षम करें", mpinBioBadge="BIO",
+        mpinCreateTitle="MPIN बनाएं", mpinCreateSubtitle="तेज़ लॉगिन के लिए 4-अंकों का MPIN सेट करें",
+        mpinResetTitle="MPIN रीसेट करें", mpinResetSubtitle="नया 4-अंकों का MPIN सेट करें",
+        mpinChangeTitle="MPIN बदलें", mpinChangeSubtitle="अपना 4-अंकों का MPIN अपडेट करें",
+        mpinWelcomeBack="वापसी पर स्वागत है", mpinNotYou="आप नहीं? नंबर बदलें", mpinForgot="MPIN भूल गए?",
     ),
 )
