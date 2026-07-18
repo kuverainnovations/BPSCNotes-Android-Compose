@@ -112,7 +112,10 @@ object NetworkModule {
         // happened to fire a POST (QA issue 5, 04-Jul). Serve those fresh.
         if (request.method == "GET" && response.code == 200) {
             val path = request.url.encodedPath
-            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs/alert-prefs")
+            // /notebook: the list is mutated in place from its own screen
+            // (save/pin/delete → immediate reload) — a 5-min cached copy
+            // means edits don't appear until the cache expires.
+            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs/alert-prefs", "/notebook")
             // Course LIST is admin-curated: a course deleted in the admin panel
             // must disappear promptly (QA 09-Jul issue 1), and no app-side
             // mutation ever evicts this URL. endsWith only — course DETAIL
