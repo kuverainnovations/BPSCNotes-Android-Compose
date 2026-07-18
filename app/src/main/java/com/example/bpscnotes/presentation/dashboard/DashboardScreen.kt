@@ -2483,7 +2483,56 @@ private fun BpscDrawer(
                     Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
                 }
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { onClose(); settingsViewModel.logOut() }, modifier = Modifier
+                // Confirmation dialog before logging out — same dialog the
+                // Settings/Profile page shows; the drawer used to log out
+                // immediately on tap (QA 18-07 issue 2).
+                var showLogoutConfirm by remember { mutableStateOf(false) }
+                if (showLogoutConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showLogoutConfirm = false },
+                        containerColor   = cs.surface,
+                        shape            = RoundedCornerShape(24.dp),
+                        icon = {
+                            Box(
+                                modifier = Modifier.size(52.dp).clip(CircleShape).background(Color(0xFFFCE4EC)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.Logout, null, tint = Color(0xFFC62828), modifier = Modifier.size(24.dp))
+                            }
+                        },
+                        title = {
+                            Text(
+                                "Log out?",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = cs.onSurface
+                            )
+                        },
+                        text = {
+                            Text(
+                                "Are you sure you want to log out? Your progress is saved and will be here when you sign back in.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick  = { showLogoutConfirm = false; onClose(); settingsViewModel.logOut() },
+                                shape    = RoundedCornerShape(12.dp),
+                                colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
+                            ) {
+                                Text(str.drawerLogout, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showLogoutConfirm = false }) {
+                                Text("Cancel", color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    )
+                }
+                OutlinedButton(onClick = { showLogoutConfirm = true }, modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
                     Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)

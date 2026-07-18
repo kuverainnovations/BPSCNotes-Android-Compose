@@ -9,6 +9,7 @@ import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.AlertDialog
@@ -1324,6 +1325,21 @@ private fun TestAnalysisScreen(
     val str = LocalStrings.current
     val resultAnswers = submitResult?.answers ?: emptyList()
 
+    // Solutions review — per-question correct answer + admin-entered
+    // explanation (QA 18-07 issue 4). Data comes from the submit response:
+    // the play payload deliberately hides correctOption/explanation, so
+    // questions are joined with resultAnswers by questionId here.
+    var showSolutions by remember { mutableStateOf(false) }
+    if (showSolutions) {
+        BackHandler { showSolutions = false }
+        SolutionsReviewScreen(
+            questions     = questions,
+            resultAnswers = resultAnswers,
+            onClose       = { showSolutions = false },
+        )
+        return
+    }
+
     // Prefer the authoritative backend counts — `resultAnswers` includes BOTH
     // attempted and skipped questions (skipped ones carry answer="", isCorrect=false),
     // so deriving wrong/skipped purely from isCorrect would wrongly count every
@@ -1486,6 +1502,24 @@ private fun TestAnalysisScreen(
                     }
                 }
 
+                // View Solutions — full per-question review with explanations
+                if (resultAnswers.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick  = { showSolutions = true },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFF8E1),
+                            contentColor   = Color(0xFF5D4037),
+                        )
+                    ) {
+                        Text("📖", fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("View Solutions & Explanations", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 Spacer(Modifier.height(10.dp))
                 HorizontalDivider(color = cs.outline)
                 Spacer(Modifier.height(10.dp))
@@ -1520,6 +1554,158 @@ private fun TestAnalysisScreen(
                     Text("View Leaderboard", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
                 }
             }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOLUTIONS REVIEW — every question with the user's pick, the
+// correct answer, and the admin-entered explanation.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun SolutionsReviewScreen(
+    questions: List<MockQuestion>,
+    resultAnswers: List<com.example.bpscnotes.data.remote.api.QuizAnswerResultDto>,
+    onClose: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val resultMap = remember(resultAnswers) { resultAnswers.associateBy { it.questionId } }
+    // "A".."D" (display order — matches the option order the user saw)
+    fun letterToIndex(letter: String?): Int = when (letter?.trim()?.lowercase()) {
+        "a" -> 0; "b" -> 1; "c" -> 2; "d" -> 3; else -> -1
+    }
+
+    Column(Modifier.fillMaxSize().background(cs.surface)) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.horizontalGradient(listOf(Color(0xFF0A2472), Color(0xFF1565C0))))
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White)
+            }
+            Column {
+                Text("Solutions & Explanations", style = MaterialTheme.typography.titleMedium,
+                    color = Color.White, fontWeight = FontWeight.ExtraBold)
+                Text("${questions.size} questions", style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(0.7f))
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            itemsIndexed(questions) { index, q ->
+                val result       = resultMap[q.id]
+                val userIdx      = letterToIndex(result?.answer)
+                val correctIdx   = letterToIndex(result?.correctAnswer)
+                val skipped      = result?.answer.isNullOrBlank()
+                val isCorrect    = result?.isCorrect == true
+                val explanation  = result?.explanation?.trim().orEmpty()
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(cs.surfaceVariant.copy(alpha = 0.4f))
+                        .padding(14.dp)
+                ) {
+                    // Status row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Q${index + 1}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        if (q.subject.isNotBlank()) {
+                            Text(
+                                q.subject,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.TextSecondary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(cs.surface)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            when { skipped -> "⏭️ Skipped"; isCorrect -> "✅ Correct"; else -> "❌ Wrong" },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = when { skipped -> BpscColors.TextSecondary; isCorrect -> BpscColors.Success; else -> Color(0xFFE74C3C) },
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(q.question, style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurface, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(10.dp))
+
+                    q.options.forEachIndexed { oi, opt ->
+                        val isTheCorrect = oi == correctIdx
+                        val isUserWrong  = oi == userIdx && !isTheCorrect
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    when {
+                                        isTheCorrect -> BpscColors.Success.copy(alpha = 0.14f)
+                                        isUserWrong  -> Color(0xFFE74C3C).copy(alpha = 0.12f)
+                                        else         -> cs.surface
+                                    }
+                                )
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "${('A' + oi)}.",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    isTheCorrect -> BpscColors.Success
+                                    isUserWrong  -> Color(0xFFE74C3C)
+                                    else         -> BpscColors.TextSecondary
+                                },
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(opt, style = MaterialTheme.typography.bodySmall,
+                                color = cs.onSurface, modifier = Modifier.weight(1f))
+                            if (isTheCorrect) Text("✓", color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
+                            if (isUserWrong)  Text("✗", color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+
+                    if (explanation.isNotBlank()) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFFFF8E1))
+                                .padding(10.dp),
+                        ) {
+                            Text("💡", fontSize = 14.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text("Explanation", style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF8D6E63), fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(2.dp))
+                                Text(explanation, style = MaterialTheme.typography.bodySmall, color = Color(0xFF5D4037))
+                            }
+                        }
+                    }
+                }
+            }
+            item { Spacer(Modifier.navigationBarsPadding()) }
         }
     }
 }
