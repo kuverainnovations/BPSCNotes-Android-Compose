@@ -19,6 +19,7 @@ data class NoteDto(
     val title: String = "",
     val content: String = "",
     val color: String? = null,                       // 'yellow' | 'blue' | 'green' | 'pink' | 'purple' | 'orange'
+    val subject: String? = null,                     // 'Polity', 'History', … or null
     @SerializedName("is_pinned")  val isPinned: Boolean = false,
     @SerializedName("created_at") val createdAt: String = "",
     @SerializedName("updated_at") val updatedAt: String = "",
@@ -31,6 +32,7 @@ data class CreateNoteRequest(
     val title: String,
     val content: String,
     val color: String? = null,
+    val subject: String? = null,
 )
 
 // All fields optional — send only what changed. isPinned toggles pin.
@@ -39,6 +41,7 @@ data class UpdateNoteRequest(
     val content: String? = null,
     val color: String? = null,
     val isPinned: Boolean? = null,
+    val subject: String? = null,
 )
 
 interface NotebookApiService {

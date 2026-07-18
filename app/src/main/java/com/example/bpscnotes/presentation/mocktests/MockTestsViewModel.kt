@@ -45,6 +45,10 @@ data class MockTestsUiState(
     // ── Session integrity ──────────────────────────────────────
     val activeSessionId: String?                = null,
     val backgroundSecs: Int                     = 0,
+    // ── Solutions review → Notebook ────────────────────────────
+    // Question ids already saved this session (flips button to "Added ✓")
+    val notebookSavedQuestionIds: Set<String>   = emptySet(),
+    val notebookToast: String?                  = null,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
@@ -84,6 +88,7 @@ data class QuizLeaderboardData(
 class MockTestsViewModel @Inject constructor(
     private val quizzesApi: QuizzesApiService,
     private val statsApi: UserStatsApiService,
+    private val notebookApi: com.example.bpscnotes.data.remote.api.NotebookApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     private val bus: com.example.bpscnotes.core.events.RefreshEventBus,
 ) : ViewModel() {
@@ -234,6 +239,48 @@ class MockTestsViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Solutions review → save one question (with correct answer +
+     * explanation) as a Notebook note, auto-tagged with the question's
+     * subject. Duplicate taps are guarded by notebookSavedQuestionIds.
+     */
+    fun saveSolutionToNotebook(
+        question: String, questionId: String, subject: String,
+        options: List<String>, correctIndex: Int, explanation: String,
+    ) {
+        if (questionId in _uiState.value.notebookSavedQuestionIds) return
+        viewModelScope.launch {
+            try {
+                val correctText = options.getOrNull(correctIndex)?.let { "${('A' + correctIndex)}. $it" } ?: "—"
+                val content = buildString {
+                    appendLine(question.trim())
+                    appendLine()
+                    appendLine("✅ Answer: $correctText")
+                    if (explanation.isNotBlank()) {
+                        appendLine()
+                        appendLine("💡 ${explanation.trim()}")
+                    }
+                }
+                notebookApi.createNote(
+                    com.example.bpscnotes.data.remote.api.CreateNoteRequest(
+                        title   = question.trim().take(80),
+                        content = content,
+                        color   = "yellow",
+                        subject = subject.ifBlank { null },
+                    )
+                )
+                _uiState.update { it.copy(
+                    notebookSavedQuestionIds = it.notebookSavedQuestionIds + questionId,
+                    notebookToast = "Saved to My Notebook 📓",
+                )}
+            } catch (e: Exception) {
+                _uiState.update { it.copy(notebookToast = "Could not save to Notebook. Please try again.") }
+            }
+        }
+    }
+
+    fun clearNotebookToast() = _uiState.update { it.copy(notebookToast = null) }
 
     fun clearQuestions() {
         _uiState.update { it.copy(activeQuestions = emptyList(), questionsError = null, submitResult = null) }

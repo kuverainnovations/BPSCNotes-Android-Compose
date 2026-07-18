@@ -309,12 +309,30 @@ fun MockTestsScreen(
                 else
                     screenState = MockTestState.Lobby
             }
+            // Toast for the Add-to-Notebook action inside the solutions review
+            LaunchedEffect(state.notebookToast) {
+                state.notebookToast?.let {
+                    android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                    viewModel.clearNotebookToast()
+                }
+            }
             TestAnalysisScreen(
                 test              = test,
                 questions         = questions,
                 userAnswers       = userAnswers,
                 score             = finalScore,
                 submitResult      = state.submitResult,
+                savedQuestionIds  = state.notebookSavedQuestionIds,
+                onAddToNotebook   = { q, correctIdx, explanation ->
+                    viewModel.saveSolutionToNotebook(
+                        question     = q.question,
+                        questionId   = q.id,
+                        subject      = q.subject,
+                        options      = q.options,
+                        correctIndex = correctIdx,
+                        explanation  = explanation,
+                    )
+                },
                 onViewLeaderboard = {
                     selectedTest?.let { t -> viewModel.loadLeaderboard(t.id) }
                     screenState = MockTestState.Leaderboard
@@ -1317,6 +1335,8 @@ private fun TestAnalysisScreen(
     userAnswers: Map<String, Int>,
     score: Float,
     submitResult: com.example.bpscnotes.data.remote.api.QuizResultData? = null,
+    savedQuestionIds: Set<String> = emptySet(),
+    onAddToNotebook: (question: MockQuestion, correctIndex: Int, explanation: String) -> Unit = { _, _, _ -> },
     onViewLeaderboard: () -> Unit,
     onRetry: () -> Unit,
     onExit: () -> Unit,
@@ -1333,9 +1353,11 @@ private fun TestAnalysisScreen(
     if (showSolutions) {
         BackHandler { showSolutions = false }
         SolutionsReviewScreen(
-            questions     = questions,
-            resultAnswers = resultAnswers,
-            onClose       = { showSolutions = false },
+            questions        = questions,
+            resultAnswers    = resultAnswers,
+            savedQuestionIds = savedQuestionIds,
+            onAddToNotebook  = onAddToNotebook,
+            onClose          = { showSolutions = false },
         )
         return
     }
@@ -1566,6 +1588,8 @@ private fun TestAnalysisScreen(
 private fun SolutionsReviewScreen(
     questions: List<MockQuestion>,
     resultAnswers: List<com.example.bpscnotes.data.remote.api.QuizAnswerResultDto>,
+    savedQuestionIds: Set<String> = emptySet(),
+    onAddToNotebook: (question: MockQuestion, correctIndex: Int, explanation: String) -> Unit = { _, _, _ -> },
     onClose: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -1702,6 +1726,22 @@ private fun SolutionsReviewScreen(
                                 Text(explanation, style = MaterialTheme.typography.bodySmall, color = Color(0xFF5D4037))
                             }
                         }
+                    }
+
+                    // One-tap revision note: question + answer + explanation
+                    // lands in My Notebook tagged with this subject.
+                    val saved = q.id in savedQuestionIds
+                    TextButton(
+                        onClick  = { onAddToNotebook(q, correctIdx, explanation) },
+                        enabled  = !saved,
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Text(
+                            if (saved) "✓ Added to Notebook" else "📓 Add to Notebook",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (saved) BpscColors.Success else BpscColors.Primary,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 }
             }

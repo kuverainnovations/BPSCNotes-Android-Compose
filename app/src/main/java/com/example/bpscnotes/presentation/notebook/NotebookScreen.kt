@@ -12,10 +12,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +36,14 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.NoteDto
 import java.text.SimpleDateFormat
 import java.util.Locale
+
+// Subject chips offered in the editor — aligned with the app's standard
+// subject taxonomy (live-classes, quizzes). Notes created from mock-test
+// solutions carry whatever subject the question had, even if not listed.
+private val NoteSubjects = listOf(
+    "Polity", "History", "Geography", "Economy", "Science",
+    "Environment", "Bihar GK", "Current Affairs",
+)
 
 // Palette names must match NOTE_COLORS in backend notebook.module.ts
 private val NoteColors = listOf(
@@ -77,6 +87,32 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
                         if (state.editingNote != null) viewModel.closeEditor() else nav.popBackStack()
                     }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
                 },
+                actions = {
+                    if (state.editingNote == null) {
+                        var sortMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { sortMenu = true }) {
+                            Icon(Icons.AutoMirrored.Rounded.Sort, "Sort")
+                        }
+                        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                            listOf(
+                                NoteSort.Recent to "Recently updated",
+                                NoteSort.Oldest to "Oldest first",
+                                NoteSort.TitleAZ to "Title A–Z",
+                            ).forEach { (mode, label) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            label,
+                                            fontWeight = if (state.sort == mode) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (state.sort == mode) BpscColors.Primary else Color.Unspecified,
+                                        )
+                                    },
+                                    onClick = { viewModel.setSort(mode); sortMenu = false },
+                                )
+                            }
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BpscColors.Surface),
             )
         },
@@ -95,15 +131,27 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
                 state.editingNote != null -> NoteEditor(
                     note = state.editingNote!!,
                     isSaving = state.isSaving,
-                    onSave = { t, c, col -> viewModel.saveNote(t, c, col) },
+                    onSave = { t, c, col, sub -> viewModel.saveNote(t, c, col, sub) },
                     onDelete = { viewModel.deleteNote(it) },
+                    onShare = { note ->
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, viewModel.shareText(note))
+                        }
+                        nav.context.startActivity(
+                            android.content.Intent.createChooser(intent, "Share note")
+                        )
+                    },
                 )
 
                 state.isLoading -> AppLoader()
 
                 else -> NotesList(
-                    notes = state.notes,
+                    notes = state.visibleNotes,
                     search = state.search,
+                    subjects = state.subjects,
+                    subjectFilter = state.subjectFilter,
+                    onFilter = viewModel::setSubjectFilter,
                     onSearch = viewModel::onSearchChange,
                     onOpen = viewModel::openNote,
                     onTogglePin = viewModel::togglePin,
@@ -120,6 +168,9 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
 private fun NotesList(
     notes: List<NoteDto>,
     search: String,
+    subjects: List<String>,
+    subjectFilter: String?,
+    onFilter: (String?) -> Unit,
     onSearch: (String) -> Unit,
     onOpen: (NoteDto) -> Unit,
     onTogglePin: (NoteDto) -> Unit,
@@ -140,6 +191,28 @@ private fun NotesList(
                 unfocusedBorderColor = BpscColors.Divider,
             ),
         )
+
+        // Subject filter chips — only when the user has tagged notes
+        if (subjects.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = subjectFilter == null,
+                        onClick = { onFilter(null) },
+                        label = { Text("All") },
+                    )
+                }
+                items(subjects.size) { i ->
+                    val s = subjects[i]
+                    FilterChip(
+                        selected = subjectFilter == s,
+                        onClick = { onFilter(if (subjectFilter == s) null else s) },
+                        label = { Text(s) },
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(12.dp))
 
         if (notes.isEmpty()) {
@@ -215,11 +288,26 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
             )
         }
         Spacer(Modifier.height(8.dp))
-        Text(
-            formatNoteDate(note.updatedAt),
-            style = MaterialTheme.typography.labelSmall,
-            color = BpscColors.TextHint,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                formatNoteDate(note.updatedAt),
+                style = MaterialTheme.typography.labelSmall,
+                color = BpscColors.TextHint,
+                modifier = Modifier.weight(1f),
+            )
+            note.subject?.takeIf { it.isNotBlank() }?.let { subject ->
+                Text(
+                    subject,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BpscColors.Primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.7f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+        }
     }
 }
 
@@ -230,13 +318,20 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
 private fun NoteEditor(
     note: NoteDto,
     isSaving: Boolean,
-    onSave: (title: String, content: String, color: String?) -> Unit,
+    onSave: (title: String, content: String, color: String?, subject: String?) -> Unit,
     onDelete: (NoteDto) -> Unit,
+    onShare: (NoteDto) -> Unit,
 ) {
     var title by remember(note.id) { mutableStateOf(note.title) }
     var content by remember(note.id) { mutableStateOf(note.content) }
     var color by remember(note.id) { mutableStateOf(note.color) }
+    var subject by remember(note.id) { mutableStateOf(note.subject) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // Subject chips: the standard set, plus this note's existing subject if
+    // it isn't in the set (e.g. auto-tagged from a mock-test question).
+    val subjectChips = remember(note.id) {
+        (NoteSubjects + listOfNotNull(note.subject?.takeIf { it.isNotBlank() && it !in NoteSubjects })).distinct()
+    }
 
     // imePadding: the app is edge-to-edge, so adjustResize alone doesn't
     // shrink the window — without this the keyboard covers the Save row
@@ -278,6 +373,19 @@ private fun NoteEditor(
         }
         Spacer(Modifier.height(10.dp))
 
+        // Subject chips
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(subjectChips.size) { i ->
+                val s = subjectChips[i]
+                FilterChip(
+                    selected = subject == s,
+                    onClick = { subject = if (subject == s) null else s },
+                    label = { Text(s, style = MaterialTheme.typography.labelSmall) },
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+
         OutlinedTextField(
             value = content,
             onValueChange = { content = it },
@@ -299,9 +407,14 @@ private fun NoteEditor(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
                 ) { Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Delete") }
+                OutlinedButton(
+                    onClick = { onShare(note.copy(title = title, content = content)) },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary),
+                ) { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) }
             }
             Button(
-                onClick = { onSave(title, content, color) },
+                onClick = { onSave(title, content, color, subject) },
                 enabled = !isSaving && (title.isNotBlank() || content.isNotBlank()),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
