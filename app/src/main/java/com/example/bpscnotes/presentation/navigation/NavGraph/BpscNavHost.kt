@@ -24,6 +24,7 @@ import androidx.navigation.compose.*
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
+import com.example.bpscnotes.presentation.notebook.NotebookScreen
 import com.example.bpscnotes.presentation.answerwriting.AnswerWritingDetailScreen
 import com.example.bpscnotes.presentation.answerwriting.AnswerWritingScreen
 import com.example.bpscnotes.presentation.auth.examsetup.ExamSetupScreen
@@ -380,6 +381,7 @@ fun BpscNavHost(
             }
 
             composable(Screen.ActiveRecall.route)  { ActiveRecallScreen(navController, adManager = adManager) }
+            composable(Screen.Notebook.route)      { NotebookScreen(navController) }
             composable(Screen.MockTests.route)     { MockTestsScreen(navController, adManager = adManager) }
             // ── Answer Writing (Mains practice) ─────────────────────
             composable(Screen.AnswerWriting.route) { AnswerWritingScreen(navController) }

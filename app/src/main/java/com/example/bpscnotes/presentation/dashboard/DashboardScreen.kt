@@ -1625,6 +1625,7 @@ private fun QuickAccessSection(navController: NavHostController, bookmarkCount: 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SmallQuickCard("Job\nAlerts",  Icons.Rounded.Work, Color(0xFFFFF0EA), Color(0xFFE67E22), Modifier.weight(1f)) { navController.navigate(Screen.JobVacancies.route) }
             SmallQuickCard("Downloads",   Icons.Rounded.Download, Color(0xFFEDE7F6), Color(0xFF7E57C2), Modifier.weight(1f)) { navController.navigate(Screen.Downloads.route) }
+            SmallQuickCard("My\nNotebook", Icons.Rounded.EditNote, Color(0xFFE0F7FA), Color(0xFF00838F), Modifier.weight(1f)) { navController.navigate(Screen.Notebook.route) }
         }
         Spacer(Modifier.height(10.dp))
         // Answer Writing — full-width feature banner (Mains practice)

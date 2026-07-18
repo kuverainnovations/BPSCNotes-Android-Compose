@@ -70,6 +70,7 @@ sealed class Screen(val route: String) {
             "topic_quiz/${subject.encodeUrl()}/${topicTitle.encodeUrl()}"
     }
     object ActiveRecall   : Screen("active_recall")
+    object Notebook       : Screen("notebook")
     object MockTests      : Screen("mock_tests")
     // ── Answer Writing (Mains practice) ─────────────────────────
     object AnswerWriting       : Screen("answer_writing")
