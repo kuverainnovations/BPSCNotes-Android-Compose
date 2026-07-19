@@ -651,6 +651,111 @@ data class AuthMpinStrings(
     val mpinWelcomeBack: String, val mpinNotYou: String, val mpinForgot: String,
 )
 
+// ── Screen strings batch 2 (bookmarks, my-learning, profile, payment, crop) ───
+data class ScreenStrings2(
+    val prCredit: String, val optionalParen: String, val bookmarksTitle: String,
+    val bookmarksLoadFail: String, val bookmarksEmpty: String, val bookmarksEmptyHint: String,
+    val bookmarksSubtitle: String, val caShareTagline: String, val tryDifferentFilter: String,
+    val badgeFree: String, val badgePro: String, val badgeProStar: String,
+    val badgeIncluded: String, val proMemberBadge: String, val enrollInCourse: String,
+    val redeemCoins: String, val youPay: String, val enrollSuccess: String,
+    val goToMyCourses: String, val continueBrowsing: String, val viewDetailsCurriculum: String,
+    val subscribeGooglePlay: String, val removePhoto: String, val cropPhoto: String,
+    val usePhoto: String, val cropHint: String,
+)
+
+// ── Screen strings batch 3 (search, quiz list, leaderboard, sessions, settings) ─
+data class ScreenStrings3(
+    val tapToClose: String, val quizListTitle: String, val searchQuizzesHint: String,
+    val leaderboardTitleEmoji: String, val leaderboardSubtitle: String, val noIdleMembers: String,
+    val idle: String, val searchAllHint: String, val searchFailed: String,
+    val searchEmptyTitle: String, val searchEmptySubtitle: String, val mpinChangeSettingsSub: String,
+    val logoutTitle: String, val logoutMsg: String, val biometricLogin: String,
+    val updateNow: String, val studySessionsTitle: String, val studySessionsSubtitle: String,
+    val studySessionsEmpty: String, val studySessionsEmptyHint: String, val coinStoreTitle: String,
+    val yourBalance: String, val storeComingSoon: String,
+)
+
+// ── Screen strings batch 4 (StudyMaterials hub, marketplace, seller wallet) ───
+data class ScreenStrings4(
+    val smUploadBgCancel: String, val smSavedOnly: String, val smTypeLabel: String,
+    val smSortBy: String, val smNewBadge: String, val smReadBadge: String,
+    val smPriceNegotiation: String, val smYourPrice: String, val smAdminOffer: String,
+    val smCounter: String, val smFinalRound: String, val smCounterPrice: String,
+    val smMessageOptional: String, val smSendCounter: String, val smWaitingReview: String,
+    val smSellerWallet: String, val smSellerWalletDesc: String, val smAvailableBalance: String,
+    val totalEarned: String, val smTransactionHistory: String, val smNoTransactions: String,
+    val smRateHint: String, val smChatUploader: String, val smMsgToAdmin: String,
+    val smMsgToAdminHint: String, val smTagsOptional: String, val smTagsHint2: String,
+    val smTagsSupport2: String, val smPriceInr: String, val smPriceEg: String,
+    val smChats: String, val smWallet: String, val smOffline: String,
+)
+
+// ── Screen strings batch 5 (Coin wallet, referrals, withdrawals) ──────────────
+data class ScreenStrings5(
+    val cwCoinPaused: String, val cwCoinPausedDesc: String, val cwAvailableWithdraw: String,
+    val cwWithdraw: String, val cwMinWithdraw: String, val cwWithdrawInfo: String,
+    val cwSellToEarn: String, val cwMyWallets: String, val cwRupeeWallet: String,
+    val cwAdBadge: String, val cwEarnHint: String, val cwInviteEarn: String,
+    val cwReferralCode: String, val cwHowItWorks: String, val cwNoReferrals: String,
+    val cwInviteNow: String, val cwWithdrawEarnings: String, val cwAmount: String,
+    val cwMin100: String, val cwUpiOptional: String, val cwUpiEg: String,
+    val cwWithdrawFeeNote: String, val cwRequestWithdrawal: String,
+)
+
+// ── Screen strings batch 6 (shared badges, mock tests, targets, dashboard) ────
+data class ScreenStrings6(
+    val markingScheme: String, val penalty: String, val finalScore: String,
+    val applyOnline: String, val quizNotAvailable: String, val subTopic: String,
+    val mtSoon: String, val mtNoQuestions: String, val mtTapToView: String,
+    val mtPrev: String, val mtViewSolutions: String, val mtSolutionsTitle: String,
+    val mtUpcoming: String, val dtGotIt: String, val dtSetGoals: String,
+    val dtTargetHistory: String, val dtLast30: String, val dtNoHistory: String,
+    val dtNoHistoryHint: String, val dtNeedMoreTime: String, val dtEditTarget: String,
+    val dashStudyActivityLegend: String, val dashResumeQuiz: String, val dashNewBadge: String,
+    val dashSessions: String, val dashEnded: String, val dashStudyActivity: String,
+    val dashStudyActivitySub: String, val dvm7DayStreak: String, val dvmTop10: String,
+    val dvm100Topics: String, val dvmSpeedStar: String, val dvmPerfectScore: String,
+    val dvm10hStudy: String,
+)
+
+// ── Screen strings batch 7 (job detail/vacancies, live class, CA MCQ) ─────────
+data class ScreenStrings7(
+    val jdSourceDisclaimer: String, val jdSourceText: String, val jdViewSource: String,
+    val jdNotification: String, val jdOverview: String, val jdEligibility: String,
+    val jdLinks: String, val jdOfficialNotification: String, val jdDownloadPdf: String,
+    val jvDisclaimer: String, val jvExperience: String, val jvAdPdf: String,
+    val jvAdPdfHint: String, val jvOfficialPdf: String, val jvOfficialPdfHint: String,
+    val jvBriefDesc: String, val lcLeaveClass: String, val lcLeave: String,
+    val lcStay: String, val lcCantLoad: String, val lcTapForControls: String,
+    val lcReload: String, val lcBrowser: String, val lcCopyLink: String,
+    val caCalculating: String, val caScoring: String, val caNoPenalty: String,
+    val caChecking: String, val caAnswerReview: String, val caTimedOut: String,
+)
+
+data class ScreenStrings8(
+    val obStartPreparing: String, val obWhichExam: String, val obSelectPrimary: String,
+    val obWhenClear: String, val obChooseYear: String, val obHowMuchTime: String,
+    val obRemind: String, val qpShareScore: String, val qpSubjectBreakdown: String,
+    val qpMarksPrefix: String, val mcEscalated: String, val mcSayHello: String,
+    val mcReportSupport: String, val mcReportDesc: String, val mcCategory: String,
+    val mcWhatsIssue: String, val mcDescribe: String, val mcSubmitReport: String,
+    val dqProgressLost: String, val dqListI: String, val dqListII: String,
+    val lbCouldNotLoad: String, val lbYourRanking: String, val lbJoinToSee: String,
+    val lbYou1: String,
+)
+
+data class ScreenStrings9(
+    val rhRoomInfoUnavail: String, val rhPerks: String, val rhRoomInsights: String,
+    val rhRoomChampions: String, val rhCompleted: String, val ctSubTopicHint: String,
+    val ctAdd: String, val ciChats: String, val ciNoConversations: String,
+    val ciNoConvHint: String, val ciEscalated: String, val mpComingSoon: String,
+    val mpComingSoonDesc: String, val arLoadingAd: String, val arAllFlashcards: String,
+    val arMastered: String, val arNeedsWork: String, val arBySubject: String,
+    val rrJoin: String, val rrPomodoroTips: String, val otpWhatsApp: String,
+    val qrExplanation: String, val ivPinchZoom: String, val awdQ: String,
+)
+
 // ── Facade — 12 fields, all call sites keep using str.xxx unchanged ───────────
 data class AppStrings(
     val _c: CommonStrings, val _n: NavAuthStrings, val _pe: ProfileEditStrings,
@@ -662,6 +767,10 @@ data class AppStrings(
     val _m6: MiscStrings6,
     val _up: UploadStrings, val _up2: UploadStrings2,
     val _am: AuthMpinStrings,
+    val _s2: ScreenStrings2, val _s3: ScreenStrings3,
+    val _s4: ScreenStrings4, val _s5: ScreenStrings5,
+    val _s6: ScreenStrings6, val _s7: ScreenStrings7,
+    val _s8: ScreenStrings8, val _s9: ScreenStrings9,
 ) {
     val ok get() = _c.ok; val yes get() = _c.yes; val no get() = _c.no
     val cancel get() = _c.cancel; val save get() = _c.save; val close get() = _c.close
@@ -1235,6 +1344,123 @@ data class AppStrings(
     val mpinChangeTitle get() = _am.mpinChangeTitle; val mpinChangeSubtitle get() = _am.mpinChangeSubtitle
     val mpinWelcomeBack get() = _am.mpinWelcomeBack; val mpinNotYou get() = _am.mpinNotYou
     val mpinForgot get() = _am.mpinForgot
+    // ── Screen strings 2 ──────────────────────
+    val prCredit get() = _s2.prCredit; val optionalParen get() = _s2.optionalParen
+    val bookmarksTitle get() = _s2.bookmarksTitle; val bookmarksLoadFail get() = _s2.bookmarksLoadFail
+    val bookmarksEmpty get() = _s2.bookmarksEmpty; val bookmarksEmptyHint get() = _s2.bookmarksEmptyHint
+    val bookmarksSubtitle get() = _s2.bookmarksSubtitle; val caShareTagline get() = _s2.caShareTagline
+    val tryDifferentFilter get() = _s2.tryDifferentFilter; val badgeFree get() = _s2.badgeFree
+    val badgePro get() = _s2.badgePro; val badgeProStar get() = _s2.badgeProStar
+    val badgeIncluded get() = _s2.badgeIncluded; val proMemberBadge get() = _s2.proMemberBadge
+    val enrollInCourse get() = _s2.enrollInCourse; val redeemCoins get() = _s2.redeemCoins
+    val youPay get() = _s2.youPay; val enrollSuccess get() = _s2.enrollSuccess
+    val goToMyCourses get() = _s2.goToMyCourses; val continueBrowsing get() = _s2.continueBrowsing
+    val viewDetailsCurriculum get() = _s2.viewDetailsCurriculum; val subscribeGooglePlay get() = _s2.subscribeGooglePlay
+    val removePhoto get() = _s2.removePhoto; val cropPhoto get() = _s2.cropPhoto
+    val usePhoto get() = _s2.usePhoto; val cropHint get() = _s2.cropHint
+    // ── Screen strings 3 ──────────────────────
+    val tapToClose get() = _s3.tapToClose; val quizListTitle get() = _s3.quizListTitle
+    val searchQuizzesHint get() = _s3.searchQuizzesHint; val leaderboardTitleEmoji get() = _s3.leaderboardTitleEmoji
+    val leaderboardSubtitle get() = _s3.leaderboardSubtitle; val noIdleMembers get() = _s3.noIdleMembers
+    val idle get() = _s3.idle; val searchAllHint get() = _s3.searchAllHint
+    val searchFailed get() = _s3.searchFailed; val searchEmptyTitle get() = _s3.searchEmptyTitle
+    val searchEmptySubtitle get() = _s3.searchEmptySubtitle; val mpinChangeSettingsSub get() = _s3.mpinChangeSettingsSub
+    val logoutTitle get() = _s3.logoutTitle; val logoutMsg get() = _s3.logoutMsg
+    val biometricLogin get() = _s3.biometricLogin; val updateNow get() = _s3.updateNow
+    val studySessionsTitle get() = _s3.studySessionsTitle; val studySessionsSubtitle get() = _s3.studySessionsSubtitle
+    val studySessionsEmpty get() = _s3.studySessionsEmpty; val studySessionsEmptyHint get() = _s3.studySessionsEmptyHint
+    val coinStoreTitle get() = _s3.coinStoreTitle; val yourBalance get() = _s3.yourBalance
+    val storeComingSoon get() = _s3.storeComingSoon
+    // ── Screen strings 4 ──────────────────────
+    val smUploadBgCancel get() = _s4.smUploadBgCancel; val smSavedOnly get() = _s4.smSavedOnly
+    val smTypeLabel get() = _s4.smTypeLabel; val smSortBy get() = _s4.smSortBy
+    val smNewBadge get() = _s4.smNewBadge; val smReadBadge get() = _s4.smReadBadge
+    val smPriceNegotiation get() = _s4.smPriceNegotiation; val smYourPrice get() = _s4.smYourPrice
+    val smAdminOffer get() = _s4.smAdminOffer; val smCounter get() = _s4.smCounter
+    val smFinalRound get() = _s4.smFinalRound; val smCounterPrice get() = _s4.smCounterPrice
+    val smMessageOptional get() = _s4.smMessageOptional; val smSendCounter get() = _s4.smSendCounter
+    val smWaitingReview get() = _s4.smWaitingReview; val smSellerWallet get() = _s4.smSellerWallet
+    val smSellerWalletDesc get() = _s4.smSellerWalletDesc; val smAvailableBalance get() = _s4.smAvailableBalance
+    val totalEarned get() = _s4.totalEarned; val smTransactionHistory get() = _s4.smTransactionHistory
+    val smNoTransactions get() = _s4.smNoTransactions; val smRateHint get() = _s4.smRateHint
+    val smChatUploader get() = _s4.smChatUploader; val smMsgToAdmin get() = _s4.smMsgToAdmin
+    val smMsgToAdminHint get() = _s4.smMsgToAdminHint; val smTagsOptional get() = _s4.smTagsOptional
+    val smTagsHint2 get() = _s4.smTagsHint2; val smTagsSupport2 get() = _s4.smTagsSupport2
+    val smPriceInr get() = _s4.smPriceInr; val smPriceEg get() = _s4.smPriceEg
+    val smChats get() = _s4.smChats; val smWallet get() = _s4.smWallet
+    val smOffline get() = _s4.smOffline
+    // ── Screen strings 5 ──────────────────────
+    val cwCoinPaused get() = _s5.cwCoinPaused; val cwCoinPausedDesc get() = _s5.cwCoinPausedDesc
+    val cwAvailableWithdraw get() = _s5.cwAvailableWithdraw; val cwWithdraw get() = _s5.cwWithdraw
+    val cwMinWithdraw get() = _s5.cwMinWithdraw; val cwWithdrawInfo get() = _s5.cwWithdrawInfo
+    val cwSellToEarn get() = _s5.cwSellToEarn; val cwMyWallets get() = _s5.cwMyWallets
+    val cwRupeeWallet get() = _s5.cwRupeeWallet; val cwAdBadge get() = _s5.cwAdBadge
+    val cwEarnHint get() = _s5.cwEarnHint; val cwInviteEarn get() = _s5.cwInviteEarn
+    val cwReferralCode get() = _s5.cwReferralCode; val cwHowItWorks get() = _s5.cwHowItWorks
+    val cwNoReferrals get() = _s5.cwNoReferrals; val cwInviteNow get() = _s5.cwInviteNow
+    val cwWithdrawEarnings get() = _s5.cwWithdrawEarnings; val cwAmount get() = _s5.cwAmount
+    val cwMin100 get() = _s5.cwMin100; val cwUpiOptional get() = _s5.cwUpiOptional
+    val cwUpiEg get() = _s5.cwUpiEg; val cwWithdrawFeeNote get() = _s5.cwWithdrawFeeNote
+    val cwRequestWithdrawal get() = _s5.cwRequestWithdrawal
+    // ── Screen strings 6 ──────────────────────
+    val markingScheme get() = _s6.markingScheme; val penalty get() = _s6.penalty
+    val finalScore get() = _s6.finalScore; val applyOnline get() = _s6.applyOnline
+    val quizNotAvailable get() = _s6.quizNotAvailable; val subTopic get() = _s6.subTopic
+    val mtSoon get() = _s6.mtSoon; val mtNoQuestions get() = _s6.mtNoQuestions
+    val mtTapToView get() = _s6.mtTapToView; val mtPrev get() = _s6.mtPrev
+    val mtViewSolutions get() = _s6.mtViewSolutions; val mtSolutionsTitle get() = _s6.mtSolutionsTitle
+    val mtUpcoming get() = _s6.mtUpcoming; val dtGotIt get() = _s6.dtGotIt
+    val dtSetGoals get() = _s6.dtSetGoals; val dtTargetHistory get() = _s6.dtTargetHistory
+    val dtLast30 get() = _s6.dtLast30; val dtNoHistory get() = _s6.dtNoHistory
+    val dtNoHistoryHint get() = _s6.dtNoHistoryHint; val dtNeedMoreTime get() = _s6.dtNeedMoreTime
+    val dtEditTarget get() = _s6.dtEditTarget; val dashStudyActivityLegend get() = _s6.dashStudyActivityLegend
+    val dashResumeQuiz get() = _s6.dashResumeQuiz; val dashNewBadge get() = _s6.dashNewBadge
+    val dashSessions get() = _s6.dashSessions; val dashEnded get() = _s6.dashEnded
+    val dashStudyActivity get() = _s6.dashStudyActivity; val dashStudyActivitySub get() = _s6.dashStudyActivitySub
+    val dvm7DayStreak get() = _s6.dvm7DayStreak; val dvmTop10 get() = _s6.dvmTop10
+    val dvm100Topics get() = _s6.dvm100Topics; val dvmSpeedStar get() = _s6.dvmSpeedStar
+    val dvmPerfectScore get() = _s6.dvmPerfectScore; val dvm10hStudy get() = _s6.dvm10hStudy
+    // ── Screen strings 7 ──────────────────────
+    val jdSourceDisclaimer get() = _s7.jdSourceDisclaimer; val jdSourceText get() = _s7.jdSourceText
+    val jdViewSource get() = _s7.jdViewSource; val jdNotification get() = _s7.jdNotification
+    val jdOverview get() = _s7.jdOverview; val jdEligibility get() = _s7.jdEligibility
+    val jdLinks get() = _s7.jdLinks; val jdOfficialNotification get() = _s7.jdOfficialNotification
+    val jdDownloadPdf get() = _s7.jdDownloadPdf; val jvDisclaimer get() = _s7.jvDisclaimer
+    val jvExperience get() = _s7.jvExperience; val jvAdPdf get() = _s7.jvAdPdf
+    val jvAdPdfHint get() = _s7.jvAdPdfHint; val jvOfficialPdf get() = _s7.jvOfficialPdf
+    val jvOfficialPdfHint get() = _s7.jvOfficialPdfHint; val jvBriefDesc get() = _s7.jvBriefDesc
+    val lcLeaveClass get() = _s7.lcLeaveClass; val lcLeave get() = _s7.lcLeave
+    val lcStay get() = _s7.lcStay; val lcCantLoad get() = _s7.lcCantLoad
+    val lcTapForControls get() = _s7.lcTapForControls; val lcReload get() = _s7.lcReload
+    val lcBrowser get() = _s7.lcBrowser; val lcCopyLink get() = _s7.lcCopyLink
+    val caCalculating get() = _s7.caCalculating; val caScoring get() = _s7.caScoring
+    val caNoPenalty get() = _s7.caNoPenalty; val caChecking get() = _s7.caChecking
+    val caAnswerReview get() = _s7.caAnswerReview; val caTimedOut get() = _s7.caTimedOut
+    val obStartPreparing get() = _s8.obStartPreparing; val obWhichExam get() = _s8.obWhichExam
+    val obSelectPrimary get() = _s8.obSelectPrimary; val obWhenClear get() = _s8.obWhenClear
+    val obChooseYear get() = _s8.obChooseYear; val obHowMuchTime get() = _s8.obHowMuchTime
+    val obRemind get() = _s8.obRemind; val qpShareScore get() = _s8.qpShareScore
+    val qpSubjectBreakdown get() = _s8.qpSubjectBreakdown; val qpMarksPrefix get() = _s8.qpMarksPrefix
+    val mcEscalated get() = _s8.mcEscalated; val mcSayHello get() = _s8.mcSayHello
+    val mcReportSupport get() = _s8.mcReportSupport; val mcReportDesc get() = _s8.mcReportDesc
+    val mcCategory get() = _s8.mcCategory; val mcWhatsIssue get() = _s8.mcWhatsIssue
+    val mcDescribe get() = _s8.mcDescribe; val mcSubmitReport get() = _s8.mcSubmitReport
+    val dqProgressLost get() = _s8.dqProgressLost; val dqListI get() = _s8.dqListI
+    val dqListII get() = _s8.dqListII; val lbCouldNotLoad get() = _s8.lbCouldNotLoad
+    val lbYourRanking get() = _s8.lbYourRanking; val lbJoinToSee get() = _s8.lbJoinToSee
+    val lbYou1 get() = _s8.lbYou1
+    val rhRoomInfoUnavail get() = _s9.rhRoomInfoUnavail; val rhPerks get() = _s9.rhPerks
+    val rhRoomInsights get() = _s9.rhRoomInsights; val rhRoomChampions get() = _s9.rhRoomChampions
+    val rhCompleted get() = _s9.rhCompleted; val ctSubTopicHint get() = _s9.ctSubTopicHint
+    val ctAdd get() = _s9.ctAdd; val ciChats get() = _s9.ciChats
+    val ciNoConversations get() = _s9.ciNoConversations; val ciNoConvHint get() = _s9.ciNoConvHint
+    val ciEscalated get() = _s9.ciEscalated; val mpComingSoon get() = _s9.mpComingSoon
+    val mpComingSoonDesc get() = _s9.mpComingSoonDesc; val arLoadingAd get() = _s9.arLoadingAd
+    val arAllFlashcards get() = _s9.arAllFlashcards; val arMastered get() = _s9.arMastered
+    val arNeedsWork get() = _s9.arNeedsWork; val arBySubject get() = _s9.arBySubject
+    val rrJoin get() = _s9.rrJoin; val rrPomodoroTips get() = _s9.rrPomodoroTips
+    val otpWhatsApp get() = _s9.otpWhatsApp; val qrExplanation get() = _s9.qrExplanation
+    val ivPinchZoom get() = _s9.ivPinchZoom; val awdQ get() = _s9.awdQ
 }
 
 // ── Helper to build AppStrings from grouped sub-objects ───────────────────────
@@ -1245,8 +1471,10 @@ private fun mkAppStrings(
     st: SettingsStrings, st2: SettingsStrings2, pay: PaymentStrings,
     m: MiscStrings, m3: MiscStrings3, m2: MiscStrings2, m4: MiscStrings4, m5: MiscStrings5, m6: MiscStrings6,
     up: UploadStrings, up2: UploadStrings2, am: AuthMpinStrings,
+    s2: ScreenStrings2, s3: ScreenStrings3, s4: ScreenStrings4, s5: ScreenStrings5,
+    s6: ScreenStrings6, s7: ScreenStrings7, s8: ScreenStrings8, s9: ScreenStrings9,
 ) = AppStrings(_c=c,_n=n,_pe=pe,_db=db,_co=co,_qz=qz,_ct=ct,_ct2=ct2,_jr=jr,_fp=fp,
-    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4,_m5=m5,_m6=m6,_up=up,_up2=up2,_am=am)
+    _st=st,_st2=st2,_pay=pay,_m=m,_m3=m3,_m2=m2,_m4=m4,_m5=m5,_m6=m6,_up=up,_up2=up2,_am=am,_s2=s2,_s3=s3,_s4=s4,_s5=s5,_s6=s6,_s7=s7,_s8=s8,_s9=s9)
 
 // ── ENGLISH ───────────────────────────────────────────────────────────────────
 val EnglishStrings: AppStrings = mkAppStrings(
@@ -1851,6 +2079,240 @@ val EnglishStrings: AppStrings = mkAppStrings(
         mpinResetTitle="Reset MPIN", mpinResetSubtitle="Set a new 4-digit MPIN",
         mpinChangeTitle="Change MPIN", mpinChangeSubtitle="Update your 4-digit MPIN",
         mpinWelcomeBack="Welcome Back", mpinNotYou="Not you? Change number", mpinForgot="Forgot MPIN?",
+    ),
+    s2 = ScreenStrings2(
+        prCredit="+1 Credit",
+        optionalParen="(Optional)",
+        bookmarksTitle="My Bookmarks",
+        bookmarksLoadFail="Failed to load bookmarks",
+        bookmarksEmpty="No bookmarks yet",
+        bookmarksEmptyHint="Bookmark questions during quiz review to revisit them here.",
+        bookmarksSubtitle="Saved questions for revision",
+        caShareTagline="📚 BPSCNotes App — Stay ahead in BPSC preparation",
+        tryDifferentFilter="Try a different subject filter",
+        badgeFree="FREE",
+        badgePro="PRO",
+        badgeProStar="⭐ PRO",
+        badgeIncluded="✅ INCLUDED",
+        proMemberBadge="You're a Pro member! 🎉",
+        enrollInCourse="Enroll in Course",
+        redeemCoins="Redeem Coins",
+        youPay="You pay",
+        enrollSuccess="Successfully Enrolled! 🎉",
+        goToMyCourses="Go to My Courses",
+        continueBrowsing="Continue Browsing",
+        viewDetailsCurriculum="View Details & Curriculum",
+        subscribeGooglePlay="Subscribe via Google Play →",
+        removePhoto="Remove photo",
+        cropPhoto="Crop Photo",
+        usePhoto="Use Photo",
+        cropHint="Drag inside to move  •  Drag corners to resize",
+    ),
+    s3 = ScreenStrings3(
+        tapToClose="Tap anywhere to close",
+        quizListTitle="Daily & Topic Quizzes",
+        searchQuizzesHint="Search quizzes…",
+        leaderboardTitleEmoji="🏆 Leaderboard",
+        leaderboardSubtitle="See how you rank against all users",
+        noIdleMembers="No idle members",
+        idle="Idle",
+        searchAllHint="Search quizzes, articles, courses…",
+        searchFailed="Search failed. Try again.",
+        searchEmptyTitle="Search BPSC content",
+        searchEmptySubtitle="Find quizzes, current affairs, and courses",
+        mpinChangeSettingsSub="Update your 4-digit login MPIN",
+        logoutTitle="Log out?",
+        logoutMsg="Are you sure you want to log out? Your progress is saved and will be here when you sign back in.",
+        biometricLogin="Biometric Login",
+        updateNow="Update Now",
+        studySessionsTitle="Study Sessions",
+        studySessionsSubtitle="Your recent room study history",
+        studySessionsEmpty="No study sessions yet",
+        studySessionsEmptyHint="Join a study room to start tracking your sessions",
+        coinStoreTitle="Coin Store",
+        yourBalance="Your Balance",
+        storeComingSoon="Store coming soon!",
+    ),
+    s4 = ScreenStrings4(
+        smUploadBgCancel="Your file is still uploading in the background. Cancel the upload?",
+        smSavedOnly="Saved only",
+        smTypeLabel="Type",
+        smSortBy="Sort by",
+        smNewBadge="New",
+        smReadBadge="Read",
+        smPriceNegotiation="💬 Price Negotiation",
+        smYourPrice="Your price",
+        smAdminOffer="Admin's offer",
+        smCounter="Counter",
+        smFinalRound="This is the final round — you can only Accept or wait for our team's final decision.",
+        smCounterPrice="Your counter price (₹)",
+        smMessageOptional="Message (optional)",
+        smSendCounter="Send Counter-Offer",
+        smWaitingReview="Waiting for our team to review your response.",
+        smSellerWallet="💰 Seller Wallet",
+        smSellerWalletDesc="Real-money earnings from your marketplace sales — separate from your coins.",
+        smAvailableBalance="Available Balance",
+        totalEarned="Total earned",
+        smTransactionHistory="Transaction History",
+        smNoTransactions="No transactions yet — sell a material to earn your first payout!",
+        smRateHint="Open the material once to rate it",
+        smChatUploader="Chat with uploader",
+        smMsgToAdmin="Message to Admin (optional)",
+        smMsgToAdminHint="Tell the reviewer what this material is about, source, year, etc.",
+        smTagsOptional="Tags (optional)",
+        smTagsHint2="e.g. BPSC, Polity, Indian Constitution",
+        smTagsSupport2="Comma separated — helps others find your material",
+        smPriceInr="₹ Price (INR)",
+        smPriceEg="e.g. 49",
+        smChats="Chats",
+        smWallet="Wallet",
+        smOffline="Offline",
+    ),
+    s5 = ScreenStrings5(
+        cwCoinPaused="Coin Rewards Paused",
+        cwCoinPausedDesc="Earning and spending coins is temporarily turned off. Your existing balance is safe and will be usable again once it's back on.",
+        cwAvailableWithdraw="Available to Withdraw",
+        cwWithdraw="Withdraw",
+        cwMinWithdraw="Minimum withdrawal is ₹100. Keep selling to unlock!",
+        cwWithdrawInfo="Withdrawals are processed to your UPI ID within 2–3 business days. Platform takes a 15% fee on each sale.",
+        cwSellToEarn="Sell study materials to earn real money",
+        cwMyWallets="My Wallets",
+        cwRupeeWallet="₹ Wallet",
+        cwAdBadge="AD",
+        cwEarnHint="Complete check-in, quizzes or study\nsessions to start earning coins!",
+        cwInviteEarn="Invite Friends, Earn Coins",
+        cwReferralCode="Your Referral Code",
+        cwHowItWorks="How It Works",
+        cwNoReferrals="No referrals yet",
+        cwInviteNow="Invite Now",
+        cwWithdrawEarnings="Withdraw Earnings",
+        cwAmount="Amount (₹)",
+        cwMin100="Min ₹100",
+        cwUpiOptional="UPI ID (optional)",
+        cwUpiEg="e.g. name@upi",
+        cwWithdrawFeeNote="Processed within 2–3 business days. 15% platform fee already deducted from earnings.",
+        cwRequestWithdrawal="Request Withdrawal",
+    ),
+    s6 = ScreenStrings6(
+        markingScheme="Marking Scheme",
+        penalty="Penalty",
+        finalScore="Final",
+        applyOnline="Apply Online",
+        quizNotAvailable="Quiz Not Available Yet",
+        subTopic="Sub-topic",
+        mtSoon="🕐 Soon",
+        mtNoQuestions="No Questions",
+        mtTapToView="Tap to view",
+        mtPrev="Prev",
+        mtViewSolutions="View Solutions & Explanations",
+        mtSolutionsTitle="Solutions & Explanations",
+        mtUpcoming=" · Upcoming",
+        dtGotIt="Got it",
+        dtSetGoals="Set your daily study goals and earn coins when you complete them!",
+        dtTargetHistory="Target History",
+        dtLast30="Last 30 days",
+        dtNoHistory="No history yet",
+        dtNoHistoryHint="Complete some targets to see your progress here",
+        dtNeedMoreTime="Need more time? Add a target",
+        dtEditTarget="Edit Target",
+        dashStudyActivityLegend="📖 Study activity: quizzes + CA reading + study rooms (min)",
+        dashResumeQuiz="▶ Resume Quiz",
+        dashNewBadge="NEW",
+        dashSessions="Sessions",
+        dashEnded="Ended",
+        dashStudyActivity="Study Activity",
+        dashStudyActivitySub="Last 28 days · tap a bar for details",
+        dvm7DayStreak="7 Day\nStreak",
+        dvmTop10="Top 10\nRank",
+        dvm100Topics="100\nTopics",
+        dvmSpeedStar="Speed\nStar",
+        dvmPerfectScore="Perfect\nScore",
+        dvm10hStudy="10h Study",
+    ),
+    s7 = ScreenStrings7(
+        jdSourceDisclaimer="ℹ️ Source & Disclaimer",
+        jdSourceText="This job information is sourced from the official government notification. ",
+        jdViewSource="🔗 View official source",
+        jdNotification="Notification",
+        jdOverview="Overview",
+        jdEligibility="Eligibility",
+        jdLinks="Links",
+        jdOfficialNotification="Official Notification",
+        jdDownloadPdf="Download Notification PDF",
+        jvDisclaimer="ℹ️ Job details are sourced from official government websites (bpsc.bihar.gov.in, bssc.bihar.gov.in, etc.). ",
+        jvExperience="Experience Required",
+        jvAdPdf="Advertisement PDF",
+        jvAdPdfHint="Tap to view or download the official advertisement",
+        jvOfficialPdf="Official Notification PDF",
+        jvOfficialPdfHint="Tap to download / view PDF",
+        jvBriefDesc="Brief Description",
+        lcLeaveClass="Leave Class?",
+        lcLeave="Leave",
+        lcStay="Stay",
+        lcCantLoad="Couldn't load class",
+        lcTapForControls="Tap anywhere for controls",
+        lcReload="Reload",
+        lcBrowser="Browser",
+        lcCopyLink="Copy Link",
+        caCalculating="Calculating results…",
+        caScoring="Your quiz is being scored…",
+        caNoPenalty="0 marks — no penalty",
+        caChecking="Checking answer...",
+        caAnswerReview="Answer Review",
+        caTimedOut="Timed out without an answer — counted as wrong, same as an incorrect attempt.",
+    ),
+    s8 = ScreenStrings8(
+        obStartPreparing="Start Preparing! 🚀",
+        obWhichExam="Which exam are you\npreparing for?",
+        obSelectPrimary="Select your primary exam target",
+        obWhenClear="When do you aim to\nclear the exam?",
+        obChooseYear="Choose your target year (optional)",
+        obHowMuchTime="How much time can\nyou study daily?",
+        obRemind="We'll remind you to stay on track",
+        qpShareScore="Share Score",
+        qpSubjectBreakdown="Subject Breakdown",
+        qpMarksPrefix="📊 Marks: ",
+        mcEscalated="🚩 Escalated",
+        mcSayHello="Say hello! Ask questions about this material.",
+        mcReportSupport="🚩 Report to Support",
+        mcReportDesc="If you're facing a refund issue, content dispute, or seller misconduct, our support team will review this conversation.",
+        mcCategory="Category",
+        mcWhatsIssue="What's the issue?",
+        mcDescribe="Describe what happened…",
+        mcSubmitReport="Submit Report",
+        dqProgressLost="Your progress will be lost. Are you sure you want to exit?",
+        dqListI="List-I",
+        dqListII="List-II",
+        lbCouldNotLoad="Could not load",
+        lbYourRanking="Your Ranking",
+        lbJoinToSee="Join this room to see your ranking",
+        lbYou1="🎉 You're #1 in this room!",
+    ),
+    s9 = ScreenStrings9(
+        rhRoomInfoUnavail="Room info unavailable",
+        rhPerks="Perks",
+        rhRoomInsights="Room Insights",
+        rhRoomChampions="Room Champions",
+        rhCompleted="✓ Completed",
+        ctSubTopicHint="e.g. Fundamental Rights, Chapter 3",
+        ctAdd="Add",
+        ciChats="💬 Chats",
+        ciNoConversations="No conversations yet",
+        ciNoConvHint="Chats with buyers and sellers about study materials will show up here.",
+        ciEscalated="🚩 Escalated to support",
+        mpComingSoon="Marketplace Coming Soon",
+        mpComingSoonDesc="Buy and sell study materials created by fellow BPSC aspirants.\nLaunching soon!",
+        arLoadingAd="Loading ad...",
+        arAllFlashcards="All Flashcards",
+        arMastered="Mastered",
+        arNeedsWork="Needs Work",
+        arBySubject="📖 By Subject",
+        rrJoin="Join",
+        rrPomodoroTips="📖 Pomodoro Tips",
+        otpWhatsApp="Check your WhatsApp for the 6-digit code",
+        qrExplanation="💡 Explanation",
+        ivPinchZoom="Pinch to zoom",
+        awdQ="Q.",
     ),
 )
 
@@ -2563,5 +3025,162 @@ val HindiStrings: AppStrings = mkAppStrings(
         mpinResetTitle="MPIN रीसेट करें", mpinResetSubtitle="नया 4-अंकों का MPIN सेट करें",
         mpinChangeTitle="MPIN बदलें", mpinChangeSubtitle="अपना 4-अंकों का MPIN अपडेट करें",
         mpinWelcomeBack="वापसी पर स्वागत है", mpinNotYou="आप नहीं? नंबर बदलें", mpinForgot="MPIN भूल गए?",
+    ),
+    s2 = ScreenStrings2(
+        prCredit="", optionalParen="", bookmarksTitle="", bookmarksLoadFail="",
+        bookmarksEmpty="", bookmarksEmptyHint="", bookmarksSubtitle="", caShareTagline="",
+        tryDifferentFilter="", badgeFree="", badgePro="", badgeProStar="",
+        badgeIncluded="", proMemberBadge="", enrollInCourse="", redeemCoins="",
+        youPay="", enrollSuccess="", goToMyCourses="", continueBrowsing="",
+        viewDetailsCurriculum="", subscribeGooglePlay="", removePhoto="", cropPhoto="",
+        usePhoto="", cropHint="",
+    ),
+    s3 = ScreenStrings3(
+        tapToClose="", quizListTitle="", searchQuizzesHint="", leaderboardTitleEmoji="",
+        leaderboardSubtitle="", noIdleMembers="", idle="", searchAllHint="",
+        searchFailed="", searchEmptyTitle="", searchEmptySubtitle="", mpinChangeSettingsSub="",
+        logoutTitle="", logoutMsg="", biometricLogin="", updateNow="",
+        studySessionsTitle="", studySessionsSubtitle="", studySessionsEmpty="", studySessionsEmptyHint="",
+        coinStoreTitle="", yourBalance="", storeComingSoon="",
+    ),
+    s4 = ScreenStrings4(
+        smUploadBgCancel="", smSavedOnly="", smTypeLabel="", smSortBy="",
+        smNewBadge="", smReadBadge="", smPriceNegotiation="", smYourPrice="",
+        smAdminOffer="", smCounter="", smFinalRound="", smCounterPrice="",
+        smMessageOptional="", smSendCounter="", smWaitingReview="", smSellerWallet="",
+        smSellerWalletDesc="", smAvailableBalance="", totalEarned="", smTransactionHistory="",
+        smNoTransactions="", smRateHint="", smChatUploader="", smMsgToAdmin="",
+        smMsgToAdminHint="", smTagsOptional="", smTagsHint2="", smTagsSupport2="",
+        smPriceInr="", smPriceEg="", smChats="", smWallet="", smOffline="",
+    ),
+    s5 = ScreenStrings5(
+        cwCoinPaused="", cwCoinPausedDesc="", cwAvailableWithdraw="", cwWithdraw="",
+        cwMinWithdraw="", cwWithdrawInfo="", cwSellToEarn="", cwMyWallets="",
+        cwRupeeWallet="", cwAdBadge="", cwEarnHint="", cwInviteEarn="",
+        cwReferralCode="", cwHowItWorks="", cwNoReferrals="", cwInviteNow="",
+        cwWithdrawEarnings="", cwAmount="", cwMin100="", cwUpiOptional="",
+        cwUpiEg="", cwWithdrawFeeNote="", cwRequestWithdrawal="",
+    ),
+    s6 = ScreenStrings6(
+        markingScheme="",
+        penalty="",
+        finalScore="",
+        applyOnline="",
+        quizNotAvailable="",
+        subTopic="",
+        mtSoon="",
+        mtNoQuestions="",
+        mtTapToView="",
+        mtPrev="",
+        mtViewSolutions="",
+        mtSolutionsTitle="",
+        mtUpcoming="",
+        dtGotIt="",
+        dtSetGoals="",
+        dtTargetHistory="",
+        dtLast30="",
+        dtNoHistory="",
+        dtNoHistoryHint="",
+        dtNeedMoreTime="",
+        dtEditTarget="",
+        dashStudyActivityLegend="",
+        dashResumeQuiz="",
+        dashNewBadge="",
+        dashSessions="",
+        dashEnded="",
+        dashStudyActivity="",
+        dashStudyActivitySub="",
+        dvm7DayStreak="",
+        dvmTop10="",
+        dvm100Topics="",
+        dvmSpeedStar="",
+        dvmPerfectScore="",
+        dvm10hStudy="",
+    ),
+
+    s7 = ScreenStrings7(
+        jdSourceDisclaimer="",
+        jdSourceText="",
+        jdViewSource="",
+        jdNotification="",
+        jdOverview="",
+        jdEligibility="",
+        jdLinks="",
+        jdOfficialNotification="",
+        jdDownloadPdf="",
+        jvDisclaimer="",
+        jvExperience="",
+        jvAdPdf="",
+        jvAdPdfHint="",
+        jvOfficialPdf="",
+        jvOfficialPdfHint="",
+        jvBriefDesc="",
+        lcLeaveClass="",
+        lcLeave="",
+        lcStay="",
+        lcCantLoad="",
+        lcTapForControls="",
+        lcReload="",
+        lcBrowser="",
+        lcCopyLink="",
+        caCalculating="",
+        caScoring="",
+        caNoPenalty="",
+        caChecking="",
+        caAnswerReview="",
+        caTimedOut="",
+    ),
+    s8 = ScreenStrings8(
+        obStartPreparing="",
+        obWhichExam="",
+        obSelectPrimary="",
+        obWhenClear="",
+        obChooseYear="",
+        obHowMuchTime="",
+        obRemind="",
+        qpShareScore="",
+        qpSubjectBreakdown="",
+        qpMarksPrefix="",
+        mcEscalated="",
+        mcSayHello="",
+        mcReportSupport="",
+        mcReportDesc="",
+        mcCategory="",
+        mcWhatsIssue="",
+        mcDescribe="",
+        mcSubmitReport="",
+        dqProgressLost="",
+        dqListI="",
+        dqListII="",
+        lbCouldNotLoad="",
+        lbYourRanking="",
+        lbJoinToSee="",
+        lbYou1="",
+    ),
+    s9 = ScreenStrings9(
+        rhRoomInfoUnavail="",
+        rhPerks="",
+        rhRoomInsights="",
+        rhRoomChampions="",
+        rhCompleted="",
+        ctSubTopicHint="",
+        ctAdd="",
+        ciChats="",
+        ciNoConversations="",
+        ciNoConvHint="",
+        ciEscalated="",
+        mpComingSoon="",
+        mpComingSoonDesc="",
+        arLoadingAd="",
+        arAllFlashcards="",
+        arMastered="",
+        arNeedsWork="",
+        arBySubject="",
+        rrJoin="",
+        rrPomodoroTips="",
+        otpWhatsApp="",
+        qrExplanation="",
+        ivPinchZoom="",
+        awdQ="",
     ),
 )

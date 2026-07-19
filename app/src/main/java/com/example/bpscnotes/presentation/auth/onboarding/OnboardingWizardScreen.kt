@@ -112,17 +112,18 @@ private fun WizardHeader(step: WizardStep, onBack: () -> Unit) {
 
 @Composable
 private fun ExamSelectionStep(state: OnboardingWizardUiState, vm: OnboardingWizardViewModel) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Which exam are you\npreparing for?",
+            text = str.obWhichExam,
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = BpscColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 24.dp)
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "Select your primary exam target",
+            text = str.obSelectPrimary,
             style = MaterialTheme.typography.bodyMedium,
             color = BpscColors.TextSecondary,
             modifier = Modifier.padding(horizontal = 24.dp)
@@ -161,7 +162,7 @@ private fun ExamSelectionStep(state: OnboardingWizardUiState, vm: OnboardingWiza
             shape    = RoundedCornerShape(16.dp),
             colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
         ) {
-            Text("Continue", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(str.langSelectContinue, color = Color.White, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Rounded.ArrowForward, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
@@ -202,6 +203,7 @@ private fun ExamCard(name: String, emoji: String, selected: Boolean, onClick: ()
 
 @Composable
 private fun TargetYearStep(state: OnboardingWizardUiState, vm: OnboardingWizardViewModel) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
     val years = (currentYear..(currentYear + 4)).toList()
 
@@ -212,13 +214,13 @@ private fun TargetYearStep(state: OnboardingWizardUiState, vm: OnboardingWizardV
     ) {
         Spacer(Modifier.height(8.dp))
         Text(
-            text  = "When do you aim to\nclear the exam?",
+            text  = str.obWhenClear,
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = BpscColors.TextPrimary
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text  = "Choose your target year (optional)",
+            text  = str.obChooseYear,
             style = MaterialTheme.typography.bodyMedium,
             color = BpscColors.TextSecondary
         )
@@ -269,7 +271,7 @@ private fun TargetYearStep(state: OnboardingWizardUiState, vm: OnboardingWizardV
                 modifier  = Modifier.weight(1f).height(54.dp),
                 shape     = RoundedCornerShape(16.dp)
             ) {
-                Text("Skip", color = BpscColors.TextSecondary)
+                Text(str.skip, color = BpscColors.TextSecondary)
             }
             Button(
                 onClick   = { vm.nextFromTargetYear() },
@@ -277,7 +279,7 @@ private fun TargetYearStep(state: OnboardingWizardUiState, vm: OnboardingWizardV
                 shape     = RoundedCornerShape(16.dp),
                 colors    = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
             ) {
-                Text("Continue", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(str.langSelectContinue, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -285,6 +287,7 @@ private fun TargetYearStep(state: OnboardingWizardUiState, vm: OnboardingWizardV
 
 @Composable
 private fun DailyGoalStep(state: OnboardingWizardUiState, vm: OnboardingWizardViewModel) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val options = listOf(
         30  to "30 min/day\nLight prep",
         60  to "1 hr/day\nModerate prep",
@@ -299,13 +302,13 @@ private fun DailyGoalStep(state: OnboardingWizardUiState, vm: OnboardingWizardVi
     ) {
         Spacer(Modifier.height(8.dp))
         Text(
-            text  = "How much time can\nyou study daily?",
+            text  = str.obHowMuchTime,
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = BpscColors.TextPrimary
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text  = "We'll remind you to stay on track",
+            text  = str.obRemind,
             style = MaterialTheme.typography.bodyMedium,
             color = BpscColors.TextSecondary
         )
@@ -360,7 +363,7 @@ private fun DailyGoalStep(state: OnboardingWizardUiState, vm: OnboardingWizardVi
             if (state.isSaving) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
             } else {
-                Text("Start Preparing! 🚀", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(str.obStartPreparing, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
         }
     }

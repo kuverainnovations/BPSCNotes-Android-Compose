@@ -39,6 +39,7 @@ import com.example.bpscnotes.presentation.navigation.Routes.Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatInboxScreen(navController: NavHostController) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val viewModel: ChatInboxViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
@@ -51,7 +52,7 @@ fun ChatInboxScreen(navController: NavHostController) {
         snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
-                title = { Text("💬 Chats", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold) },
+                title = { Text(str.ciChats, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
@@ -66,8 +67,8 @@ fun ChatInboxScreen(navController: NavHostController) {
                 state.threads.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("💬", fontSize = 48.sp)
-                        Text("No conversations yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Chats with buyers and sellers about study materials will show up here.",
+                        Text(str.ciNoConversations, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.ciNoConvHint,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -91,6 +92,7 @@ fun ChatInboxScreen(navController: NavHostController) {
 
 @Composable
 private fun ChatThreadRow(thread: ChatThreadDto, onClick: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val hasUnread = thread.unreadCount > 0
 
@@ -151,7 +153,7 @@ private fun ChatThreadRow(thread: ChatThreadDto, onClick: () -> Unit) {
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (thread.status == "escalated") {
-                    Text("🚩 Escalated to support", style = MaterialTheme.typography.labelSmall,
+                    Text(str.ciEscalated, style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
                 }
             }

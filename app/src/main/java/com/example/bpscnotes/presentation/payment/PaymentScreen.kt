@@ -115,7 +115,7 @@ fun SubscriptionPaymentScreen(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             androidx.compose.material3.Text(
-                                "⭐ PRO",
+                                str.badgeProStar,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = Color(0xFFFFD700),
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
@@ -250,7 +250,7 @@ fun SubscriptionPaymentScreen(
                                 else                   -> str.paymentConfirming
                             }, style = MaterialTheme.typography.titleMedium)
                         } else if (state.useGPlay) {
-                            Text("Subscribe via Google Play →",
+                            Text(str.subscribeGooglePlay,
                                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                         } else {
                             Text("Pay ${fmtRs(state.finalAmount)} →",
@@ -418,7 +418,7 @@ private fun PriceBreakdown(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("🪙", fontSize = 16.sp)
-                            Text("Redeem coins", style = MaterialTheme.typography.bodyMedium,
+                            Text(str.redeemCoins, style = MaterialTheme.typography.bodyMedium,
                                 color = Color(0xFF5D4037), fontWeight = FontWeight.SemiBold)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

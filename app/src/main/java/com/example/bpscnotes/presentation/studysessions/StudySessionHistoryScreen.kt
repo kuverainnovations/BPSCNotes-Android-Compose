@@ -35,6 +35,7 @@ fun StudySessionHistoryScreen(
     vm: StudySessionHistoryViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FA))) {
 
@@ -62,8 +63,8 @@ fun StudySessionHistoryScreen(
                     ) { Icon(Icons.Rounded.Refresh, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("Study Sessions", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                Text("Your recent room study history", fontSize = 13.sp, color = Color.White.copy(0.75f))
+                Text(str.studySessionsTitle, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Text(str.studySessionsSubtitle, fontSize = 13.sp, color = Color.White.copy(0.75f))
                 Spacer(Modifier.height(12.dp))
 
                 // Summary chips
@@ -188,23 +189,25 @@ private fun SessionCard(session: StudySessionHistoryDto) {
 
 @Composable
 private fun EmptyState() {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("📚", fontSize = 52.sp)
-            Text("No study sessions yet", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF555566))
-            Text("Join a study room to start tracking your sessions", fontSize = 13.sp, color = Color(0xFF888899), textAlign = TextAlign.Center)
+            Text(str.studySessionsEmpty, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF555566))
+            Text(str.studySessionsEmptyHint, fontSize = 13.sp, color = Color(0xFF888899), textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("😕", fontSize = 48.sp)
             Text(message, textAlign = TextAlign.Center, color = Color(0xFF888899))
             Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
         }
     }

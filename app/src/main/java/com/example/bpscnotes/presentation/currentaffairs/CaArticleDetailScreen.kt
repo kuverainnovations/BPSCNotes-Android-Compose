@@ -405,7 +405,7 @@ fun CaArticleDetailScreen(
                                                 }
                                                 if (tags.isNotBlank()) appendLine(tags)
                                                 appendLine()
-                                                append("📚 BPSCNotes App — Stay ahead in BPSC preparation")
+                                                append(str.caShareTagline)
                                             }
                                             val intent = Intent(Intent.ACTION_SEND).apply {
                                                 type = "text/plain"
@@ -489,7 +489,7 @@ fun CaArticleDetailScreen(
                                         disabledContainerColor = Color.White.copy(alpha = 0.3f),
                                         disabledContentColor = Color.White.copy(alpha = 0.7f)
                                     )
-                                ) { Text("Start MCQ", style = MaterialTheme.typography.titleSmall) }
+                                ) { Text(str.caGateContinueMcq, style = MaterialTheme.typography.titleSmall) }
                             }
                         }
                     }

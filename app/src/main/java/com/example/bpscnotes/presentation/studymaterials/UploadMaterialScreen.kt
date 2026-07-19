@@ -88,6 +88,7 @@ fun UploadMaterialScreen(
     navController: NavHostController,
     viewModel: StudyMaterialsViewModel = hiltViewModel()
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val state   by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -120,7 +121,7 @@ fun UploadMaterialScreen(
         } catch (_: Exception) { 0L }
 
         fileSizeWarning = if (sizeBytes > 20 * 1024 * 1024)
-            "File is ${sizeBytes / (1024 * 1024)}MB — large files take longer to upload."
+            str.uploadLargeFile.format(sizeBytes / (1024 * 1024))
         else null
 
         fileUri = uri
@@ -154,16 +155,16 @@ fun UploadMaterialScreen(
     if (state.showUploadCancelDialog) {
         AlertDialog(
             onDismissRequest  = viewModel::dismissCancelDialog,
-            title  = { Text("Upload in progress", fontWeight = FontWeight.Bold) },
-            text   = { Text("Your file is still uploading. Do you want to cancel the upload?") },
+            title  = { Text(str.uploadCancelTitle, fontWeight = FontWeight.Bold) },
+            text   = { Text(str.uploadCancelMsg) },
             confirmButton = {
                 TextButton(onClick = viewModel::confirmCancelUpload) {
-                    Text("Cancel Upload", color = Color(0xFFE53935))
+                    Text(str.uploadCancelConfirm, color = Color(0xFFE53935))
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::dismissCancelDialog) {
-                    Text("Continue Uploading", color = BpscColors.Primary)
+                    Text(str.uploadCancelDismiss, color = BpscColors.Primary)
                 }
             }
         )
@@ -275,6 +276,7 @@ fun UploadMaterialScreen(
 
 @Composable
 private fun UploadTopBar(onBack: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -315,13 +317,13 @@ private fun UploadTopBar(onBack: () -> Unit) {
                 }
                 Column {
                     Text(
-                        "Upload Your Material",
+                        str.uploadTopTitle,
                         style      = MaterialTheme.typography.titleMedium,
                         color      = Color.White,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        "Share. Help. Earn.",
+                        str.uploadTopSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.75f)
                     )
@@ -366,6 +368,7 @@ private fun UploadTopBar(onBack: () -> Unit) {
 
 @Composable
 private fun UploadStepIndicator(currentStep: Int) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -376,7 +379,7 @@ private fun UploadStepIndicator(currentStep: Int) {
             modifier          = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            STEP_LABELS.forEachIndexed { index, label ->
+            listOf(str.uploadStep1, str.uploadStep2, str.uploadStep3, str.uploadStep4).forEachIndexed { index, label ->
                 val stepNum  = index + 1
                 val isActive = stepNum == currentStep
                 val isDone   = stepNum < currentStep
@@ -417,7 +420,7 @@ private fun UploadStepIndicator(currentStep: Int) {
                 }
 
                 // Connector line between steps — Column wrapper ensures vertical centering with the 34dp circle
-                if (index < STEP_LABELS.size - 1) {
+                if (index < 3) {
                     Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
                         Spacer(Modifier.height(16.dp))
                         HorizontalDivider(
@@ -457,6 +460,7 @@ private fun UploadStep1Content(
 
 @Composable
 private fun HeroBannerCard() {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Card(
         modifier  = Modifier.fillMaxWidth().padding(top = 8.dp),
         shape     = RoundedCornerShape(18.dp),
@@ -487,14 +491,14 @@ private fun HeroBannerCard() {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    "Share Quality Notes. Empower Aspirants.",
+                    str.uploadHeroTitle,
                     style      = MaterialTheme.typography.titleMedium,
                     color      = Color(0xFF1A1D2E),
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 22.sp
                 )
                 Text(
-                    "Upload your original study material and help thousands of BPSC aspirants succeed.",
+                    str.uploadHeroBody,
                     style      = MaterialTheme.typography.bodySmall,
                     color      = Color(0xFF6B7280),
                     lineHeight = 16.sp
@@ -506,7 +510,7 @@ private fun HeroBannerCard() {
                     ) {
                         Text("💰", fontSize = 11.sp)
                         Text(
-                            "60% revenue share",
+                            str.uploadRevenueShare,
                             style      = MaterialTheme.typography.labelSmall,
                             color      = Color(0xFF2E7D32),
                             fontWeight = FontWeight.SemiBold
@@ -520,23 +524,31 @@ private fun HeroBannerCard() {
 
 @Composable
 private fun WhatYouCanUploadSection(selectedIdx: Int, onSelect: (Int) -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            "What you can upload",
+            str.uploadWhatCanUpload,
             style      = MaterialTheme.typography.titleSmall,
             color      = Color(0xFF1A1D2E),
             fontWeight = FontWeight.ExtraBold
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val typeLabels = listOf(
+                str.uploadTypeNotes to str.uploadTypeNotesSub,
+                str.uploadTypePdfs to str.uploadTypePdfsSub,
+                str.uploadTypePyqs to str.uploadTypePyqsSub,
+                str.uploadTypeBooks to str.uploadTypeBooksSub,
+                str.uploadTypeHandwritten to str.uploadTypeHandwrittenSub,
+            )
             items(UPLOAD_TYPES.size) { idx ->
-                UploadTypeCard(UPLOAD_TYPES[idx], idx == selectedIdx) { onSelect(idx) }
+                UploadTypeCard(UPLOAD_TYPES[idx], typeLabels[idx].first, typeLabels[idx].second, idx == selectedIdx) { onSelect(idx) }
             }
         }
     }
 }
 
 @Composable
-private fun UploadTypeCard(opt: UploadTypeOption, isSelected: Boolean, onClick: () -> Unit) {
+private fun UploadTypeCard(opt: UploadTypeOption, label: String, sublabel: String, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         modifier            = Modifier
             .width(82.dp)
@@ -554,7 +566,7 @@ private fun UploadTypeCard(opt: UploadTypeOption, isSelected: Boolean, onClick: 
     ) {
         Text(opt.emoji, fontSize = 24.sp)
         Text(
-            opt.label,
+            label,
             style      = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
             color      = if (isSelected) BpscPalette.Blue700 else Color(0xFF1A1D2E),
             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
@@ -562,7 +574,7 @@ private fun UploadTypeCard(opt: UploadTypeOption, isSelected: Boolean, onClick: 
             lineHeight = 13.sp
         )
         Text(
-            opt.sublabel,
+            sublabel,
             style     = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
             color     = if (isSelected) BpscPalette.Blue500 else Color(0xFF6B7280),
             textAlign = TextAlign.Center,
@@ -573,18 +585,19 @@ private fun UploadTypeCard(opt: UploadTypeOption, isSelected: Boolean, onClick: 
 
 @Composable
 private fun BeforeUploadSection() {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     data class Guideline(val icon: ImageVector, val label: String, val color: Color)
 
     val guidelines = listOf(
-        Guideline(Icons.Rounded.Verified,             "Original\ncontent only",  Color(0xFF2E7D32)),
-        Guideline(Icons.Rounded.Security,             "Quality\nreviewed",        Color(0xFF6A1B9A)),
-        Guideline(Icons.Rounded.People,               "Help 10K+\naspirants",     Color(0xFF1565C0)),
-        Guideline(Icons.Rounded.AccountBalanceWallet, "Earn for\nyour work",      Color(0xFFF57F17)),
+        Guideline(Icons.Rounded.Verified,             str.uploadGuideOriginal,  Color(0xFF2E7D32)),
+        Guideline(Icons.Rounded.Security,             str.uploadGuideReviewed,        Color(0xFF6A1B9A)),
+        Guideline(Icons.Rounded.People,               str.uploadGuideHelp,     Color(0xFF1565C0)),
+        Guideline(Icons.Rounded.AccountBalanceWallet, str.uploadGuideEarn,      Color(0xFFF57F17)),
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            "Before you upload",
+            str.uploadBeforeUpload,
             style      = MaterialTheme.typography.titleSmall,
             color      = Color(0xFF1A1D2E),
             fontWeight = FontWeight.ExtraBold
@@ -623,6 +636,7 @@ private fun BeforeUploadSection() {
 
 @Composable
 private fun PolicyAndWarningSection(policyAccepted: Boolean, onPolicyChange: (Boolean) -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
     // Each policy name below is a real tappable link (Chrome Custom Tab,
     // same pattern as SettingsScreen's privacy/terms rows). Tapping a link
@@ -666,21 +680,21 @@ private fun PolicyAndWarningSection(policyAccepted: Boolean, onPolicyChange: (Bo
             )
             Text(
                 buildAnnotatedString {
-                    append("I confirm this content is original and I agree to the ")
+                    append(str.uploadPolicyConfirm)
                     withLink(policyLink("https://bpscnotes.in/creator-policy/")) {
-                        append("Creator Policy")
+                        append(str.uploadPolicyCreator)
                     }
                     append(", ")
                     withLink(policyLink("https://bpscnotes.in/community-guidelines/")) {
-                        append("Community Guidelines")
+                        append(str.uploadPolicyCommunity)
                     }
                     append(", ")
                     withLink(policyLink("https://bpscnotes.in/copyright-policy/")) {
-                        append("Copyright Policy")
+                        append(str.uploadPolicyCopyright)
                     }
                     append(" and ")
                     withLink(policyLink("https://bpscnotes.in/terms-of-service/")) {
-                        append("Terms of Use")
+                        append(str.uploadPolicyTerms)
                     }
                     append(".")
                 },
@@ -707,8 +721,7 @@ private fun PolicyAndWarningSection(policyAccepted: Boolean, onPolicyChange: (Bo
                 modifier = Modifier.size(15.dp).padding(top = 1.dp)
             )
             Text(
-                "Do not upload copyrighted books, paid course PDFs, or content you don't own. " +
-                        "Violations may result in content removal and account suspension.",
+                str.uploadWarning,
                 style      = MaterialTheme.typography.bodySmall,
                 color      = Color(0xFF7B4F00),
                 lineHeight = 16.sp
@@ -735,6 +748,7 @@ private fun UploadStep2Content(
     uploadProgress:  Float,
     uploadError:     String?
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(
         modifier            = Modifier
             .fillMaxWidth()
@@ -777,7 +791,7 @@ private fun UploadStep2Content(
                         maxLines   = 2
                     )
                     Text(
-                        "Tap to change file",
+                        str.uploadTapChange,
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextSecondary
                     )
@@ -796,13 +810,13 @@ private fun UploadStep2Content(
                         )
                     }
                     Text(
-                        "Tap to select your PDF",
+                        str.uploadTapSelect,
                         style      = MaterialTheme.typography.bodyMedium,
                         color      = Color(0xFF1A1D2E),
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "PDF files up to 50MB",
+                        str.uploadPdfLimit,
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextSecondary
                     )
@@ -850,8 +864,8 @@ private fun UploadStep2Content(
         OutlinedTextField(
             value         = state.uploadTitle,
             onValueChange = { onFormChange(it, null, null, null, null, null, null, null, null, null) },
-            label         = { Text("Title *") },
-            placeholder   = { Text("Give your material a clear title") },
+            label         = { Text(str.uploadFieldTitle) },
+            placeholder   = { Text(str.uploadTitleHint) },
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(12.dp),
             singleLine    = true,
@@ -867,24 +881,24 @@ private fun UploadStep2Content(
 
         BpscDropdown(
             value       = state.uploadSubject,
-            label       = "Subject *",
+            label       = str.uploadFieldSubject,
             options     = subjectOptions,
             onSelect    = { onFormChange(null, null, it, null, null, null, null, null, null, null) },
-            placeholder = "Select a subject"
+            placeholder = str.uploadSelectSubject
         )
 
         BpscDropdown(
             value       = state.uploadLanguage,
-            label       = "Language",
+            label       = str.uploadFieldLanguage,
             options     = listOf("English", "Hindi", "Hindi + English"),
             onSelect    = { onFormChange(null, null, null, null, null, null, null, null, null, it) },
-            placeholder = "Select language"
+            placeholder = str.uploadSelectLanguage
         )
 
         OutlinedTextField(
             value         = state.uploadAuthor,
             onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null, null) },
-            label         = { Text("Author / Creator name") },
+            label         = { Text(str.uploadFieldAuthor) },
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(12.dp),
             singleLine    = true,
@@ -894,20 +908,20 @@ private fun UploadStep2Content(
         OutlinedTextField(
             value          = state.uploadTags,
             onValueChange  = { onFormChange(null, null, null, null, it, null, null, null, null, null) },
-            label          = { Text("Tags") },
-            placeholder    = { Text("e.g. BPSC, Polity, Constitution") },
+            label          = { Text(str.uploadFieldTags) },
+            placeholder    = { Text(str.uploadTagsHint) },
             modifier       = Modifier.fillMaxWidth(),
             shape          = RoundedCornerShape(12.dp),
             singleLine     = true,
-            supportingText = { Text("Comma separated — helps students find your material") },
+            supportingText = { Text(str.uploadTagsSupport) },
             enabled        = !isUploading
         )
 
         OutlinedTextField(
             value         = state.uploadDescription,
             onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null, null) },
-            label         = { Text("Message to Reviewer") },
-            placeholder   = { Text("Tell the reviewer about the content, source, year, exam relevance…") },
+            label         = { Text(str.uploadFieldMessage) },
+            placeholder   = { Text(str.uploadMessageHint) },
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(12.dp),
             minLines      = 3,
@@ -923,6 +937,7 @@ private fun UploadStep2Content(
 
 @Composable
 private fun UploadProgressCard(progress: Float) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(12.dp),
@@ -948,7 +963,7 @@ private fun UploadProgressCard(progress: Float) {
                         color       = BpscPalette.Blue500
                     )
                     Text(
-                        "Uploading…",
+                        str.uploadUploading,
                         style      = MaterialTheme.typography.bodyMedium,
                         color      = BpscPalette.Blue500,
                         fontWeight = FontWeight.SemiBold
@@ -980,6 +995,7 @@ private fun PremiumCard(
     onFormChange: (String?, String?, String?, String?, String?, MaterialType?, Boolean?, String?, String?, String?) -> Unit,
     isUploading:  Boolean
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape    = RoundedCornerShape(14.dp),
@@ -1007,13 +1023,13 @@ private fun PremiumCard(
                     ) {
                         Text("💰", fontSize = 16.sp)
                         Text(
-                            "Premium Content",
+                            str.uploadPremiumTitle,
                             style      = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
                     Text(
-                        "Charge students to access the full material",
+                        str.uploadPremiumSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = BpscColors.TextSecondary
                     )
@@ -1050,7 +1066,7 @@ private fun PremiumCard(
                         OutlinedTextField(
                             value           = state.uploadPrice,
                             onValueChange   = { onFormChange(null, null, null, null, null, null, null, null, it.filter(Char::isDigit), null) },
-                            label           = { Text("₹ Price") },
+                            label           = { Text(str.uploadPrice) },
                             modifier        = Modifier.weight(1f),
                             shape           = RoundedCornerShape(12.dp),
                             singleLine      = true,
@@ -1060,7 +1076,7 @@ private fun PremiumCard(
                         OutlinedTextField(
                             value           = state.uploadFreePages,
                             onValueChange   = { onFormChange(null, null, null, null, null, null, null, it.filter(Char::isDigit), null, null) },
-                            label           = { Text("Free pages") },
+                            label           = { Text(str.uploadFreePages) },
                             modifier        = Modifier.weight(1f),
                             shape           = RoundedCornerShape(12.dp),
                             singleLine      = true,
@@ -1079,7 +1095,7 @@ private fun PremiumCard(
                     ) {
                         Text("💡", fontSize = 12.sp)
                         Text(
-                            "Students see ${state.uploadFreePages.ifEmpty { "3" }} free pages. Full access unlocks after purchase.",
+                            str.uploadFreePagesNote.format(state.uploadFreePages.ifEmpty { "3" }),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF7B4F00)
                         )
@@ -1107,6 +1123,7 @@ private fun UploadBottomBar(
     onContinue:     () -> Unit,
     onSubmit:       () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val canContinue = policyAccepted
 
     val premiumPriceValid =
@@ -1152,15 +1169,15 @@ private fun UploadBottomBar(
                             color       = Color.White
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Uploading…", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
+                        Text(str.uploadUploading, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
                     }
                     currentStep == 1 -> {
-                        Text("Continue to Details", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
+                        Text(str.uploadContinueDetails, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.width(6.dp))
                         Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
                     }
                     else             -> {
-                        Text("Submit for Review", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
+                        Text(str.uploadSubmitReview, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.width(6.dp))
                         Icon(Icons.Rounded.Send, null, modifier = Modifier.size(16.dp))
                     }
@@ -1169,14 +1186,14 @@ private fun UploadBottomBar(
 
             when {
                 currentStep == 1 && !policyAccepted -> Text(
-                    "Accept the policy above to continue",
+                    str.uploadNeedPolicy,
                     style     = MaterialTheme.typography.labelSmall,
                     color     = BpscColors.TextSecondary,
                     modifier  = Modifier.fillMaxWidth().padding(top = 6.dp),
                     textAlign = TextAlign.Center
                 )
                 currentStep == 2 && fileUri == null -> Text(
-                    "Select a PDF file to enable submission",
+                    str.uploadNeedFile,
                     style     = MaterialTheme.typography.labelSmall,
                     color     = BpscColors.TextSecondary,
                     modifier  = Modifier.fillMaxWidth().padding(top = 6.dp),

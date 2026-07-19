@@ -162,7 +162,7 @@ fun OtpScreen(
 
         // WhatsApp delivery hint
         Text(
-            "Check your WhatsApp for the 6-digit code",
+            str.otpWhatsApp,
             style      = MaterialTheme.typography.labelMedium,
             color      = BpscColors.Primary.copy(alpha = 0.7f),
             textAlign  = TextAlign.Center,

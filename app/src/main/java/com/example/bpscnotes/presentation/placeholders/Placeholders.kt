@@ -533,7 +533,7 @@ fun SubscriptionScreen(
                         Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))
                             .background(Color.White.copy(0.2f))
                             .padding(horizontal = 10.dp, vertical = 5.dp)) {
-                            Text("⭐ PRO", style = MaterialTheme.typography.labelSmall,
+                            Text(str.badgeProStar, style = MaterialTheme.typography.labelSmall,
                                 color = Color.White, fontWeight = FontWeight.ExtraBold)
                         }
                     }
@@ -554,7 +554,7 @@ fun SubscriptionScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Icon(Icons.Rounded.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(28.dp))
                                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("You're a Pro member! 🎉",
+                                    Text(str.proMemberBadge,
                                         style = MaterialTheme.typography.titleMedium,
                                         color = Color.White, fontWeight = FontWeight.ExtraBold)
                                     Text(
@@ -733,6 +733,7 @@ private fun SubPill(text: String) {
 @Composable
 private fun PremiumMaterialCard(material: StudyMaterialDto, isPremiumUser: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = cs.surface),
@@ -746,12 +747,12 @@ private fun PremiumMaterialCard(material: StudyMaterialDto, isPremiumUser: Boole
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (isPremiumUser) {
-                        Text("✅ INCLUDED", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
+                        Text(str.badgeIncluded, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
                             fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFFE8FDF4)).padding(horizontal = 5.dp, vertical = 2.dp))
                     } else {
-                        Text("⭐ PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
+                        Text(str.badgeProStar, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
                             fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFFFFF8E1)).padding(horizontal = 5.dp, vertical = 2.dp))

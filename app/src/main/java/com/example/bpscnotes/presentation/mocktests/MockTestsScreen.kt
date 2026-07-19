@@ -693,10 +693,10 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(typeColor.second).padding(horizontal = 6.dp, vertical = 2.dp))
                         // Free/Paid
                         if (test.isPaid) {
-                            Text("PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                            Text(str.badgePro, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp))
                         } else {
-                            Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                            Text(str.badgeFree, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                         // Negative marking — only shown when the admin actually enabled it for this test
@@ -743,10 +743,10 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                 }
                 // Status chip — replaces the Start button
                 when {
-                    test.isScheduledFuture -> Text("🕐 Soon", style = MaterialTheme.typography.labelSmall,
+                    test.isScheduledFuture -> Text(str.mtSoon, style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.TextHint, fontWeight = FontWeight.Bold, fontSize = 10.sp,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(cs.background).padding(horizontal = 8.dp, vertical = 4.dp))
-                    hasNoQuestions -> Text("No Questions", style = MaterialTheme.typography.labelSmall,
+                    hasNoQuestions -> Text(str.mtNoQuestions, style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold, fontSize = 10.sp,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFEE8E8)).padding(horizontal = 8.dp, vertical = 4.dp))
                     test.isAttempted -> Row(
@@ -770,7 +770,7 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                             .background(BpscColors.PrimaryLight)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text("Tap to view", style = MaterialTheme.typography.labelSmall,
+                        Text(str.mtTapToView, style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Primary, modifier = Modifier.size(12.dp))
                     }
@@ -869,7 +869,7 @@ private fun TestInstructionsScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Marking Scheme", style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(str.markingScheme, style = MaterialTheme.typography.titleLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
                         HorizontalDivider(color = cs.outline)
                         MarkingSchemeRow("Total Marks", formatMarks(test.totalQuestions * test.marksPerCorrect.toDouble()))
                         MarkingSchemeRow("Correct Answer", "+${formatMarks(test.marksPerCorrect.toDouble())} Marks", valueColor = BpscColors.Success)
@@ -1014,7 +1014,7 @@ private fun ActiveTestScreen(
     // Quit confirmation dialog
     if (showQuitDialog) {
         com.example.bpscnotes.core.ui.AppQuitDialog(
-            title     = "Quit Mock Test?",
+            title     = str.mockQuitTitle,
             body      = "Your answers will be lost. Are you sure you want to quit?",
             quitLabel = str.quizQuit,
             keepLabel = str.quizKeepGoing,
@@ -1193,7 +1193,7 @@ private fun ActiveTestScreen(
                     ) {
                         Icon(Icons.Rounded.ArrowBack, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Prev", style = MaterialTheme.typography.titleMedium)
+                        Text(str.mtPrev, style = MaterialTheme.typography.titleMedium)
                     }
                     Button(
                         onClick  = { if (currentIndex < questions.size - 1) currentIndex++ else showSubmitDialog = true },
@@ -1507,19 +1507,19 @@ private fun TestAnalysisScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("+${formatMarks(submitResult.marksObtained)}",
                                 style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                            Text("Earned", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.walletEarned, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                         Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("-${formatMarks(submitResult.negativeMarks)}",
                                 style = MaterialTheme.typography.labelMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
-                            Text("Penalty", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.penalty, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                         Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${formatMarks(submitResult.finalScore)}/${formatMarks(submitResult.totalMarks)}",
                                 style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                            Text("Final", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.finalScore, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
                 }
@@ -1538,7 +1538,7 @@ private fun TestAnalysisScreen(
                     ) {
                         Text("📖", fontSize = 16.sp)
                         Spacer(Modifier.width(8.dp))
-                        Text("View Solutions & Explanations", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Text(str.mtViewSolutions, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -1573,7 +1573,7 @@ private fun TestAnalysisScreen(
                 Spacer(Modifier.height(6.dp))
                 // View leaderboard text link
                 TextButton(onClick = onViewLeaderboard, modifier = Modifier.fillMaxWidth()) {
-                    Text("View Leaderboard", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
+                    Text(str.quizViewLeaderboard, style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
                 }
             }
         }
@@ -1592,6 +1592,7 @@ private fun SolutionsReviewScreen(
     onAddToNotebook: (question: MockQuestion, correctIndex: Int, explanation: String) -> Unit = { _, _, _ -> },
     onClose: () -> Unit,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val resultMap = remember(resultAnswers) { resultAnswers.associateBy { it.questionId } }
     // "A".."D" (display order — matches the option order the user saw)
@@ -1613,7 +1614,7 @@ private fun SolutionsReviewScreen(
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White)
             }
             Column {
-                Text("Solutions & Explanations", style = MaterialTheme.typography.titleMedium,
+                Text(str.mtSolutionsTitle, style = MaterialTheme.typography.titleMedium,
                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                 Text("${questions.size} questions", style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(0.7f))
@@ -1720,7 +1721,7 @@ private fun SolutionsReviewScreen(
                             Text("💡", fontSize = 14.sp)
                             Spacer(Modifier.width(8.dp))
                             Column {
-                                Text("Explanation", style = MaterialTheme.typography.labelSmall,
+                                Text(str.quizHint, style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF8D6E63), fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(2.dp))
                                 Text(explanation, style = MaterialTheme.typography.bodySmall, color = Color(0xFF5D4037))

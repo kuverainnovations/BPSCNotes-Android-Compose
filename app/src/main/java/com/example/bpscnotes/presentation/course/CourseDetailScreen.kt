@@ -99,7 +99,7 @@ fun CourseDetailScreen(
             containerColor   = Color.White,
             title = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Enroll in Course", fontWeight = FontWeight.ExtraBold,
+                    Text(str.enrollInCourse, fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.titleLarge)
                     Text(course?.title ?: "", style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurfaceVariant, maxLines = 2)
@@ -109,7 +109,7 @@ fun CourseDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Price row
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("Course price", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.coursePrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(fmtRs(price), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
@@ -130,7 +130,7 @@ fun CourseDetailScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("🪙", fontSize = 18.sp)
                                     Column {
-                                        Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                        Text(str.redeemCoins, style = MaterialTheme.typography.titleSmall,
                                             color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
                                         Text("You have $userCoins 🪙 available",
                                             style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
@@ -166,7 +166,7 @@ fun CourseDetailScreen(
                     }
                     HorizontalDivider(color = cs.outline)
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.youPay, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Column(horizontalAlignment = Alignment.End) {
                             Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
                                 color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
@@ -187,7 +187,7 @@ fun CourseDetailScreen(
                     if (state.isEnrolling) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Processing…", style = MaterialTheme.typography.titleMedium)
+                        Text(str.courseProcessing, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -198,7 +198,7 @@ fun CourseDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showBuyDialog = false; dialogCoins = 0 }) {
-                    Text("Cancel", color = cs.onSurfaceVariant)
+                    Text(str.cancel, color = cs.onSurfaceVariant)
                 }
             }
         )
@@ -227,7 +227,7 @@ fun CourseDetailScreen(
                 }
             },
             title = {
-                Text("Successfully Enrolled! 🎉",
+                Text(str.enrollSuccess,
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center)
@@ -247,11 +247,11 @@ fun CourseDetailScreen(
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) { Text("Go to My Courses", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                ) { Text(str.goToMyCourses, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showEnrollSuccessDialog = false }) {
-                    Text("Continue Browsing", color = BpscColors.TextSecondary)
+                    Text(str.continueBrowsing, color = BpscColors.TextSecondary)
                 }
             }
         )

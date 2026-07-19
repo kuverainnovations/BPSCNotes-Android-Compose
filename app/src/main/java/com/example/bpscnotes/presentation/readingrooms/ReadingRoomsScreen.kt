@@ -466,7 +466,7 @@ private fun RoomLobbyScreen(
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
-                                        "Join",
+                                        str.rrJoin,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
@@ -1664,7 +1664,7 @@ private fun LeaderboardTab(room: StudyRoom) {
                                 fontWeight = FontWeight.SemiBold
                             )
                             if (isMe) Text(
-                                "You",
+                                str.focusYou,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.Primary,
                                 fontWeight = FontWeight.Bold,
@@ -1863,7 +1863,7 @@ private fun PomodoroTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "📖 Pomodoro Tips",
+                    str.rrPomodoroTips,
                     style = MaterialTheme.typography.titleMedium,
                     color = cs.onSurface,
                     fontWeight = FontWeight.Bold

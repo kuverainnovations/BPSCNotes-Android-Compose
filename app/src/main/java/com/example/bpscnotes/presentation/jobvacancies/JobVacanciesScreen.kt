@@ -340,7 +340,7 @@ fun JobVacanciesScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
-                                    "ℹ️ Job details are sourced from official government websites (bpsc.bihar.gov.in, bssc.bihar.gov.in, etc.). " +
+                                    str.jvDisclaimer +
                                     "BPSCNotes is not a government app. Verify on the official site before applying.",
                                     fontSize = 11.sp, color = Color(0xFF6D4C41), lineHeight = 16.sp,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -565,7 +565,7 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.WorkHistory, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
                         Column {
-                            Text("Experience Required", style = MaterialTheme.typography.labelSmall,
+                            Text(str.jvExperience, style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.TextHint, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             Text(exp, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
@@ -580,7 +580,7 @@ private fun JobDetailSheet(
                     }
                 }
                 if (!job.briefDescription.isNullOrBlank()) {
-                    SectionCard(title = "Brief Description") {
+                    SectionCard(title = str.jvBriefDesc) {
                         Text(job.briefDescription.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, lineHeight = 24.sp)
                     }
                 }
@@ -598,9 +598,9 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(22.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Advertisement PDF", style = MaterialTheme.typography.titleMedium,
+                            Text(str.jvAdPdf, style = MaterialTheme.typography.titleMedium,
                                 color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold)
-                            Text("Tap to view or download the official advertisement",
+                            Text(str.jvAdPdfHint,
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.Download, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(20.dp))
@@ -620,9 +620,9 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.PictureAsPdf, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Official Notification PDF", style = MaterialTheme.typography.titleMedium,
+                            Text(str.jvOfficialPdf, style = MaterialTheme.typography.titleMedium,
                                 color = Color(0xFFE74C3C), fontWeight = FontWeight.SemiBold)
-                            Text("Tap to download / view PDF", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                            Text(str.jvOfficialPdfHint, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.Download, null, tint = Color(0xFFE74C3C), modifier = Modifier.size(18.dp))
                     }
@@ -641,7 +641,7 @@ private fun JobDetailSheet(
                     ) {
                         Icon(Icons.Rounded.OpenInNew, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Apply Online", style = MaterialTheme.typography.titleMedium,
+                            Text(str.applyOnline, style = MaterialTheme.typography.titleMedium,
                                 color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                             Text(job.officialLink.orEmpty(), style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -795,7 +795,7 @@ private fun JobAlertSheet(
             }
             Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Done", style = MaterialTheme.typography.titleMedium)
+                Text(str.done, style = MaterialTheme.typography.titleMedium)
             }
         }
     }

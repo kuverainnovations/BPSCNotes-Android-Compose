@@ -69,6 +69,7 @@ fun GlobalLeaderboardScreen(
 
 @Composable
 private fun GlobalLeaderboardHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(
         Modifier.fillMaxWidth().background(
             Brush.linearGradient(
@@ -95,8 +96,8 @@ private fun GlobalLeaderboardHeader(onBack: () -> Unit, onRefresh: () -> Unit) {
                 ) { Icon(Icons.Rounded.Refresh, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
             }
             Spacer(Modifier.height(8.dp))
-            Text("🏆 Leaderboard", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            Text("See how you rank against all users", fontSize = 13.sp, color = Color.White.copy(0.75f))
+            Text(str.leaderboardTitleEmoji, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text(str.leaderboardSubtitle, fontSize = 13.sp, color = Color.White.copy(0.75f))
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -259,6 +260,7 @@ private fun PodiumColumn(entry: GlobalLeaderboardEntryDto, place: Int, height: D
 // ── Standard rank row ───────────────────────────────────────────
 @Composable
 private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe: Boolean) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Row(
         Modifier
             .fillMaxWidth()
@@ -317,7 +319,7 @@ private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe:
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (isMe) {
-                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
+                    Text(str.focusYou, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.1f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
             }
@@ -339,6 +341,7 @@ private fun LeaderboardRow(entry: GlobalLeaderboardEntryDto, type: String, isMe:
 // ── Pinned current-user row at bottom (LOW-08) ─────────────────
 @Composable
 private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(
         Modifier.fillMaxWidth()
             .background(BpscColors.Primary.copy(0.1f))
@@ -364,7 +367,7 @@ private fun MyRankStickyRow(entry: GlobalLeaderboardEntryDto, type: String) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(entry.name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
+                    Text(str.focusYou, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary,
                         modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(BpscColors.Primary.copy(0.15f)).padding(horizontal = 5.dp, vertical = 1.dp))
                 }
                 val stickyMins = entry.totalStudyMinutes ?: 0
@@ -400,12 +403,13 @@ private fun entryValue(e: GlobalLeaderboardEntryDto, type: String): String = whe
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("😕", fontSize = 48.sp)
             Text(message, textAlign = TextAlign.Center, color = Color(0xFF888899))
             Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
-                Text("Retry")
+                Text(str.retry)
             }
         }
     }

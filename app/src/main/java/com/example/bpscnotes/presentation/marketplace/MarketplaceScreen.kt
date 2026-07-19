@@ -126,14 +126,14 @@ fun MarketplaceScreen(
                     ) {
                         Text("🛍️", style = MaterialTheme.typography.displayMedium)
                         Text(
-                            "Marketplace Coming Soon",
+                            str.mpComingSoon,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                             color = cs.onSurface,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
-                            "Buy and sell study materials created by fellow BPSC aspirants.\nLaunching soon!",
+                            str.mpComingSoonDesc,
                             style = MaterialTheme.typography.bodyMedium,
                             color = cs.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center

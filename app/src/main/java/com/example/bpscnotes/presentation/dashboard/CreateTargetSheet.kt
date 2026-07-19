@@ -122,7 +122,7 @@ fun CreateTargetSheet(
             // ── Subject dropdown ──────────────────────────────────
             BpscDropdown(
                 value    = selectedSubject,
-                label    = "Subject",
+                label    = str.mockSubjectWise,
                 options  = predefinedSubjects,
                 onSelect = { selectedSubject = it }
             )
@@ -138,8 +138,8 @@ fun CreateTargetSheet(
                 modifier      = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
-                label         = { Text("Sub-topic") },
-                placeholder   = { Text("e.g. Fundamental Rights, Chapter 3", color = BpscColors.TextHint) },
+                label         = { Text(str.subTopic) },
+                placeholder   = { Text(str.ctSubTopicHint, color = BpscColors.TextHint) },
                 singleLine    = true,
                 shape         = RoundedCornerShape(14.dp),
                 trailingIcon  = {
@@ -179,7 +179,7 @@ fun CreateTargetSheet(
                 ) {
                     Icon(Icons.Rounded.Add, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Add", style = MaterialTheme.typography.labelLarge)
+                    Text(str.ctAdd, style = MaterialTheme.typography.labelLarge)
                 }
             }
 

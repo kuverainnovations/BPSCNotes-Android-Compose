@@ -1250,7 +1250,7 @@ private fun WeeklyConsistencyCard(
                         Text(if (streak > 0) "$streak streak" else "0 streak", style = MaterialTheme.typography.labelSmall, color = BpscColors.Accent, fontWeight = FontWeight.ExtraBold)
                     }
                     TextButton(onClick = onSeeAll, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-                        Text("See All", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                        Text(str.seeAll, style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                         Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Primary, modifier = Modifier.size(14.dp))
                     }
                 }
@@ -1430,7 +1430,7 @@ private fun WeeklyConsistencyCard(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         Text(
-                            "📖 Study activity: quizzes + CA reading + study rooms (min)",
+                            str.dashStudyActivityLegend,
                             style    = MaterialTheme.typography.labelSmall,
                             color    = BpscColors.TextHint,
                             fontSize = 9.sp,
@@ -1450,11 +1450,12 @@ private fun ContinueLearningSection(
     inProgressSession: com.example.bpscnotes.data.remote.api.InProgressSessionDto,
     navController: NavHostController
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val progress = if (inProgressSession.totalQuestions > 0)
         inProgressSession.answeredCount.toFloat() / inProgressSession.totalQuestions
     else 0f
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-       // SectionHeader(title = "Continue Learning")
+       // SectionHeader(title = str.dashboardContinueLearning)
         Spacer(Modifier.height(4.dp))
         Card(
             modifier  = Modifier.fillMaxWidth(),
@@ -1482,7 +1483,7 @@ private fun ContinueLearningSection(
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        "▶ Resume Quiz",
+                        str.dashResumeQuiz,
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFE65100),
                         fontWeight = FontWeight.Bold
@@ -1522,8 +1523,9 @@ private fun ContinueLearningSection(
     recentAttempt: com.example.bpscnotes.data.remote.api.RecentQuizAttemptDto,
     navController: NavHostController
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        SectionHeader(title = "Continue Learning")
+        SectionHeader(title = str.dashboardContinueLearning)
         Spacer(Modifier.height(10.dp))
         Card(
             modifier  = Modifier.fillMaxWidth(),
@@ -1675,7 +1677,7 @@ private fun AnswerWritingBanner(onClick: () -> Unit) {
                         color = Color.White, fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        "NEW",
+                        str.dashNewBadge,
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF1A237E), fontWeight = FontWeight.ExtraBold, fontSize = 9.sp,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp))
@@ -1820,7 +1822,7 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                             .background(BpscColors.CoinGold)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("PRO", style = MaterialTheme.typography.labelSmall,
+                        Text(str.badgePro, style = MaterialTheme.typography.labelSmall,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
                     }
                 }
@@ -1924,7 +1926,7 @@ private fun MyScheduleSection(
                     }
                 }
                 /*TextButton(onClick = { navController.navigate(com.example.bpscnotes.presentation.navigation.Routes.Screen.StudySessionHistory.route) }) {
-                    Text("Sessions", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
+                    Text(str.dashSessions, style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary)
                 }*/
             }
         }
@@ -2062,11 +2064,11 @@ private fun MyScheduleSection(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Box(Modifier.size(6.dp).clip(CircleShape).background(cs.surface))
-                                Text("LIVE", style = MaterialTheme.typography.labelSmall,
+                                Text(str.roomsLive, style = MaterialTheme.typography.labelSmall,
                                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                             }
                             isEnded -> Text(
-                                "Ended",
+                                str.dashEnded,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.TextHint,
                                 modifier = Modifier
@@ -2502,7 +2504,7 @@ private fun BpscDrawer(
                         },
                         title = {
                             Text(
-                                "Log out?",
+                                str.logoutTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = cs.onSurface
@@ -2510,7 +2512,7 @@ private fun BpscDrawer(
                         },
                         text = {
                             Text(
-                                "Are you sure you want to log out? Your progress is saved and will be here when you sign back in.",
+                                str.logoutMsg,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -2527,7 +2529,7 @@ private fun BpscDrawer(
                         },
                         dismissButton = {
                             TextButton(onClick = { showLogoutConfirm = false }) {
-                                Text("Cancel", color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                                Text(str.cancel, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     )
@@ -2624,6 +2626,7 @@ private fun ActivityDetailFullScreen(
     lessonMins: Map<String, Int>,
     onBack:     () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs  = MaterialTheme.colorScheme
     val dfmt = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
     val cal  = remember { java.util.Calendar.getInstance() }
@@ -2670,9 +2673,9 @@ private fun ActivityDetailFullScreen(
                         Icon(Icons.Rounded.ArrowBack, "Back", tint = Color.White)
                     }
                     Column(horizontalAlignment = Alignment.Start) {
-                        Text("Study Activity", style = MaterialTheme.typography.titleMedium,
+                        Text(str.dashStudyActivity, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold, color = Color.White)
-                        Text("Last 28 days · tap a bar for details",
+                        Text(str.dashStudyActivitySub,
                             style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                     }
                     Box(Modifier.size(48.dp))

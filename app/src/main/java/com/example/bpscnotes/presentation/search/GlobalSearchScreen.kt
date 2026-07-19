@@ -37,6 +37,7 @@ fun GlobalSearchScreen(
     viewModel: GlobalSearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val focusRequester = remember { FocusRequester() }
 
@@ -77,7 +78,7 @@ fun GlobalSearchScreen(
                             cursorBrush   = SolidColor(Color.White),
                             decorationBox = { inner ->
                                 if (state.query.isEmpty()) {
-                                    Text("Search quizzes, articles, courses…", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
+                                    Text(str.searchAllHint, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
                                 }
                                 inner()
                             }
@@ -99,7 +100,7 @@ fun GlobalSearchScreen(
             state.query.isBlank() -> SearchEmptyHint()
             state.isLoading       -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = BpscColors.Primary) }
             state.error != null   -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Search failed. Try again.", color = BpscColors.TextSecondary)
+                Text(str.searchFailed, color = BpscColors.TextSecondary)
             }
             results == null || (results.quizzes.isEmpty() && results.articles.isEmpty() && results.courses.isEmpty()) -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -148,11 +149,12 @@ fun GlobalSearchScreen(
 
 @Composable
 private fun SearchEmptyHint() {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("🔍", fontSize = 40.sp)
-            Text("Search BPSC content", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-            Text("Find quizzes, current affairs, and courses", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+            Text(str.searchEmptyTitle, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+            Text(str.searchEmptySubtitle, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
         }
     }
 }

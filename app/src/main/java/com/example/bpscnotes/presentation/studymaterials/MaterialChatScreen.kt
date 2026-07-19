@@ -52,6 +52,7 @@ fun MaterialChatScreen(
     navController: NavHostController,
     chatId: String,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val viewModel: MaterialChatViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
@@ -108,7 +109,7 @@ fun MaterialChatScreen(
                                 .background(Color(0xFFFFF3E0))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("🚩 Escalated", style = MaterialTheme.typography.labelSmall,
+                            Text(str.mcEscalated, style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
                         }
                     }
@@ -132,7 +133,7 @@ fun MaterialChatScreen(
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("💬", fontSize = 40.sp)
-                        Text("Say hello! Ask questions about this material.",
+                        Text(str.mcSayHello,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -251,6 +252,7 @@ private fun EscalateSheet(
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -262,14 +264,14 @@ private fun EscalateSheet(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("🚩 Report to Support", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Text(str.mcReportSupport, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
             Text(
-                "If you're facing a refund issue, content dispute, or seller misconduct, our support team will review this conversation.",
+                str.mcReportDesc,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Text("Category", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(str.mcCategory, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             ESCALATION_CATEGORIES.forEach { (key, label) ->
                 Row(
                     modifier = Modifier.fillMaxWidth()
@@ -285,12 +287,12 @@ private fun EscalateSheet(
                 }
             }
 
-            Text("What's the issue?", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(str.mcWhatsIssue, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             OutlinedTextField(
                 value = reason,
                 onValueChange = { if (it.length <= 1000) onReasonChange(it) },
                 modifier = Modifier.fillMaxWidth().height(120.dp),
-                placeholder = { Text("Describe what happened…") },
+                placeholder = { Text(str.mcDescribe) },
                 shape = RoundedCornerShape(12.dp),
             )
 
@@ -304,7 +306,7 @@ private fun EscalateSheet(
                 if (isSubmitting) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Text("Submit Report", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(str.mcSubmitReport, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }

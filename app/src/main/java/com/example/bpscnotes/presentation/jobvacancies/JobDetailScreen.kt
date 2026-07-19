@@ -148,6 +148,7 @@ private fun JobDetailTopBar(
 
 @Composable
 private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: android.content.Context) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -162,7 +163,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
         }
 
         // Overview card
-        InfoCard(title = "Overview") {
+        InfoCard(title = str.jdOverview) {
             InfoRow(Icons.Rounded.Business, "Organization", job.department ?: "—")
             InfoRow(Icons.Rounded.Category, "Category",     job.category  ?: "—")
             InfoRow(Icons.Rounded.People,   "Total Posts",  job.totalPosts?.toString() ?: "—")
@@ -172,7 +173,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
         }
 
         // Eligibility card
-        InfoCard(title = "Eligibility") {
+        InfoCard(title = str.jdEligibility) {
             if (!job.qualification.isNullOrBlank())
                 InfoRow(Icons.Rounded.School, "Qualification", job.qualification)
             if (!job.ageLimit.isNullOrBlank())
@@ -182,7 +183,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
         }
 
         // Important dates card
-        InfoCard(title = "Important Dates") {
+        InfoCard(title = str.jobsImportantDates) {
             if (!job.notificationDate.isNullOrBlank())
                 InfoRow(Icons.Rounded.NotificationsActive, "Notification Date", formatDate(job.notificationDate))
             if (!job.applyStartDate.isNullOrBlank())
@@ -200,7 +201,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("About This Job", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1A1A2E))
+                    Text(str.jobsAboutJob, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1A1A2E))
                     Spacer(Modifier.height(8.dp))
                     Text(job.description, fontSize = 13.sp, color = Color(0xFF444466), lineHeight = 20.sp)
                 }
@@ -210,11 +211,11 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
         // Links card
         val hasLinks = !job.officialLink.isNullOrBlank() || !job.notificationUrl.isNullOrBlank() || !job.pdfUrl.isNullOrBlank()
         if (hasLinks) {
-            InfoCard(title = "Links") {
+            InfoCard(title = str.jdLinks) {
                 if (!job.notificationUrl.isNullOrBlank()) {
                     LinkRow(
                         icon  = Icons.Rounded.OpenInBrowser,
-                        label = "Official Notification",
+                        label = str.jdOfficialNotification,
                         color = Color(0xFF1565C0),
                         onClick = { openUrl(context, job.notificationUrl) },
                     )
@@ -222,7 +223,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                 if (!job.officialLink.isNullOrBlank()) {
                     LinkRow(
                         icon  = Icons.Rounded.Language,
-                        label = "Apply Online",
+                        label = str.applyOnline,
                         color = Color(0xFF2ECC71),
                         onClick = { openUrl(context, job.officialLink) },
                     )
@@ -230,7 +231,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                 if (!job.pdfUrl.isNullOrBlank()) {
                     LinkRow(
                         icon  = Icons.Rounded.PictureAsPdf,
-                        label = "Download Notification PDF",
+                        label = str.jdDownloadPdf,
                         color = Color(0xFFE74C3C),
                         onClick = { openUrl(context, job.pdfUrl) },
                     )
@@ -246,10 +247,10 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp)) {
-                Text("ℹ️ Source & Disclaimer", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF795548))
+                Text(str.jdSourceDisclaimer, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF795548))
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "This job information is sourced from the official government notification. " +
+                    str.jdSourceText +
                     "BPSCNotes is not a government app and is not affiliated with any government entity. " +
                     "Please verify all details (dates, eligibility, fees) on the official website before applying.",
                     fontSize = 12.sp, color = Color(0xFF6D4C41), lineHeight = 18.sp,
@@ -260,7 +261,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                 if (sourceUrl != null) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "🔗 View official source",
+                        str.jdViewSource,
                         fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1565C0),
                         modifier = Modifier.clickable { openUrl(context, sourceUrl) },
                     )
@@ -274,6 +275,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
 
 @Composable
 private fun JobDetailBottomBar(job: JobVacancyDto, context: android.content.Context) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val hasApplyUrl = !job.officialLink.isNullOrBlank()
     val hasNotifUrl = !job.notificationUrl.isNullOrBlank()
     if (!hasApplyUrl && !hasNotifUrl) return
@@ -298,7 +300,7 @@ private fun JobDetailBottomBar(job: JobVacancyDto, context: android.content.Cont
                 ) {
                     Icon(Icons.Rounded.OpenInBrowser, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Notification", fontSize = 13.sp)
+                    Text(str.jdNotification, fontSize = 13.sp)
                 }
             }
             if (hasApplyUrl) {
@@ -310,7 +312,7 @@ private fun JobDetailBottomBar(job: JobVacancyDto, context: android.content.Cont
                 ) {
                     Icon(Icons.Rounded.ExitToApp, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Apply Now", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(str.jobsApplyNow, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

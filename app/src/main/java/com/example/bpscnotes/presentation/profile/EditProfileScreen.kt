@@ -237,7 +237,7 @@ fun EditProfileScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Text(
-                            "Remove photo",
+                            str.removePhoto,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.SemiBold
@@ -380,6 +380,7 @@ private fun ImageCropDialog(
     onCropped: (Uri) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
 
     val bitmap = remember(imageUri) {
@@ -421,9 +422,9 @@ private fun ImageCropDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color.White)
+                        Text(str.cancel, color = Color.White)
                     }
-                    Text("Crop Photo", color = Color.White, fontWeight = FontWeight.Bold,
+                    Text(str.cropPhoto, color = Color.White, fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium)
                     TextButton(onClick = {
                         if (viewW > 0 && boxSize > 0) {
@@ -451,7 +452,7 @@ private fun ImageCropDialog(
                             onCropped(Uri.fromFile(file))
                         }
                     }) {
-                        Text("Use Photo", color = Color(0xFF64B5F6), fontWeight = FontWeight.Bold)
+                        Text(str.usePhoto, color = Color(0xFF64B5F6), fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -585,7 +586,7 @@ private fun ImageCropDialog(
                 }
 
                 Text(
-                    "Drag inside to move  •  Drag corners to resize",
+                    str.cropHint,
                     color = Color.White.copy(0.55f),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(10.dp)

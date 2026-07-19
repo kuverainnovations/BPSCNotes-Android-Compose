@@ -115,10 +115,10 @@ fun CoinWalletScreen(
                     modifier = Modifier.padding(32.dp)
                 ) {
                     Text("⏸️", fontSize = 48.sp)
-                    Text("Coin Rewards Paused", style = MaterialTheme.typography.titleLarge,
+                    Text(str.cwCoinPaused, style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold, color = cs.onSurface)
                     Text(
-                        "Earning and spending coins is temporarily turned off. Your existing balance is safe and will be usable again once it's back on.",
+                        str.cwCoinPausedDesc,
                         style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -342,12 +342,12 @@ fun CoinWalletScreen(
                                             .padding(20.dp)
                                     ) {
                                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            Text("Available to Withdraw", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
+                                            Text(str.cwAvailableWithdraw, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
                                             Text("₹${wallet?.balance ?: 0}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
                                             HorizontalDivider(color = Color.White.copy(0.25f))
                                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    Text("Total earned", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                                                    Text(str.totalEarned, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                                                     Text("₹${wallet?.totalEarned ?: 0}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color.White)
                                                 }
                                                 Button(
@@ -363,11 +363,11 @@ fun CoinWalletScreen(
                                                 ) {
                                                     Icon(Icons.Rounded.AccountBalanceWallet, null, modifier = Modifier.size(16.dp))
                                                     Spacer(Modifier.width(4.dp))
-                                                    Text("Withdraw", fontWeight = FontWeight.Bold)
+                                                    Text(str.cwWithdraw, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                             if ((wallet?.balance ?: 0) < 100) {
-                                                Text("Minimum withdrawal is ₹100. Keep selling to unlock!", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                                                Text(str.cwMinWithdraw, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                                             }
                                         }
                                     }
@@ -379,7 +379,7 @@ fun CoinWalletScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text("ℹ️", fontSize = 14.sp)
-                                        Text("Withdrawals are processed to your UPI ID within 2–3 business days. Platform takes a 15% fee on each sale.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF166534))
+                                        Text(str.cwWithdrawInfo, style = MaterialTheme.typography.bodySmall, color = Color(0xFF166534))
                                     }
                                 }
                             }
@@ -392,8 +392,8 @@ fun CoinWalletScreen(
                                 Box(Modifier.fillMaxWidth().padding(vertical = 32.dp), Alignment.Center) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("💰", fontSize = 40.sp)
-                                        Text("No transactions yet", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
-                                        Text("Sell study materials to earn real money", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
+                                        Text(str.walletNoTransactions, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                                        Text(str.cwSellToEarn, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextSecondary)
                                     }
                                 }
                             }
@@ -520,6 +520,7 @@ private fun CoinHeroHeader(
     onBack:       () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val animCoins by animateFloatAsState(targetValue = coins.toFloat(), animationSpec = tween(1200), label = "coinAnim")
 
     Box(
@@ -550,7 +551,7 @@ private fun CoinHeroHeader(
                 ) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-                Text("My Wallets", style = MaterialTheme.typography.titleMedium,
+                Text(str.cwMyWallets, style = MaterialTheme.typography.titleMedium,
                     color = Color.White, fontWeight = FontWeight.ExtraBold)
                 Spacer(Modifier.size(36.dp)) // balance the back button
             }
@@ -572,7 +573,7 @@ private fun CoinHeroHeader(
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("🪙", fontSize = 16.sp)
-                            Text("Coins", style = MaterialTheme.typography.labelLarge,
+                            Text(str.coins, style = MaterialTheme.typography.labelLarge,
                                 color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold)
                         }
                         Text(
@@ -599,7 +600,7 @@ private fun CoinHeroHeader(
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.Rounded.AccountBalanceWallet, null, tint = Color.White.copy(0.9f), modifier = Modifier.size(16.dp))
-                            Text("₹ Wallet", style = MaterialTheme.typography.labelLarge,
+                            Text(str.cwRupeeWallet, style = MaterialTheme.typography.labelLarge,
                                 color = Color.White.copy(0.9f), fontWeight = FontWeight.SemiBold)
                         }
                         if (isLoadingWallet) {
@@ -898,7 +899,7 @@ private fun EarnTaskRow(
                     )
                     if (task.isAd) {
                         Text(
-                            "AD",
+                            str.cwAdBadge,
                             style    = MaterialTheme.typography.labelSmall,
                             color    = Color(0xFF1565C0),
                             fontSize = 8.sp,
@@ -1060,7 +1061,7 @@ private fun EmptyHistoryState() {
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Complete check-in, quizzes or study\nsessions to start earning coins!",
+            str.cwEarnHint,
             style     = MaterialTheme.typography.bodyMedium,
             color     = BpscColors.TextSecondary,
             textAlign = TextAlign.Center
@@ -1146,6 +1147,7 @@ private fun ReferralHeader(
     isLoading:    Boolean,
     onShare:      () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
     val cs = MaterialTheme.colorScheme
     var codeCopied by remember { mutableStateOf(false) }
@@ -1163,7 +1165,7 @@ private fun ReferralHeader(
                     Text("🎁", fontSize = 22.sp)
                 }
                 Column {
-                    Text("Invite Friends, Earn Coins", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
+                    Text(str.cwInviteEarn, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
                     Text("Up to $totalPerFriend coins per friend", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary)
                 }
             }
@@ -1183,7 +1185,7 @@ private fun ReferralHeader(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Your Referral Code", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    Text(str.cwReferralCode, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     Text(code, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = BpscColors.Primary, letterSpacing = 2.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1210,7 +1212,7 @@ private fun ReferralHeader(
             ) {
                 Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Invite a Friend", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(str.walletInviteFriend, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1227,6 +1229,7 @@ private fun ReferralStatChip(emoji: String, value: String, label: String) {
 
 @Composable
 private fun MilestoneExplainer(signup: Int, engagement: Int, active: Int, joined: Int) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val milestones = listOf(
         Triple("✍️", "Friend Signs Up", "$signup 🪙"),
         Triple("📚", "Friend Enrolls / Uploads", "$engagement 🪙"),
@@ -1239,7 +1242,7 @@ private fun MilestoneExplainer(signup: Int, engagement: Int, active: Int, joined
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("How It Works", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
+            Text(str.cwHowItWorks, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
             milestones.forEachIndexed { i, (emoji, label, coins) ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(32.dp).clip(CircleShape).background(BpscColors.PrimaryLight), contentAlignment = Alignment.Center) {
@@ -1265,6 +1268,7 @@ private fun MilestoneExplainer(signup: Int, engagement: Int, active: Int, joined
 
 @Composable
 private fun RefereeCard(referee: com.example.bpscnotes.data.remote.api.RefereeDto) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val m  = referee.milestones
     val completedCount = listOf(m.signup.earned, m.engagement.earned, m.active.earned).count { it }
@@ -1301,7 +1305,7 @@ private fun RefereeCard(referee: com.example.bpscnotes.data.remote.api.RefereeDt
             // Progress bar
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Progress", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                    Text(str.coursesProgress, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     Text("$completedCount / 3 milestones", style = MaterialTheme.typography.labelSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                 }
                 val animProgress by androidx.compose.animation.core.animateFloatAsState(progress, androidx.compose.animation.core.tween(800), label = "ref_prog")
@@ -1346,17 +1350,18 @@ private fun RowScope.MilestoneChip(label: String, earned: Boolean, coins: Int) {
 @Composable
 private fun ReferralEmptyState(totalPerFriend: Int, onShare: () -> Unit) {
     val cs = MaterialTheme.colorScheme
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("👋", fontSize = 48.sp)
-            Text("No referrals yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+            Text(str.cwNoReferrals, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
             Text("Share your code and earn up to $totalPerFriend coins for every friend who joins and stays active!",
                 style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(Modifier.height(4.dp))
             Button(onClick = onShare, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)) {
                 Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Invite Now", fontWeight = FontWeight.Bold)
+                Text(str.cwInviteNow, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1372,6 +1377,7 @@ private fun WithdrawDialog(
     onConfirm: (amount: Int, upiId: String?) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     var amountText by remember { mutableStateOf("") }
     var upiId      by remember { mutableStateOf("") }
     var error      by remember { mutableStateOf<String?>(null) }
@@ -1387,7 +1393,7 @@ private fun WithdrawDialog(
         },
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Withdraw Earnings", fontWeight = FontWeight.ExtraBold,
+                Text(str.cwWithdrawEarnings, fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleLarge)
                 Text("Available: ₹$currentBalance",
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
@@ -1399,8 +1405,8 @@ private fun WithdrawDialog(
                 OutlinedTextField(
                     value         = amountText,
                     onValueChange = { amountText = it.filter { c -> c.isDigit() }; error = null },
-                    label         = { Text("Amount (₹)") },
-                    placeholder   = { Text("Min ₹100") },
+                    label         = { Text(str.cwAmount) },
+                    placeholder   = { Text(str.cwMin100) },
                     prefix        = { Text("₹") },
                     modifier      = Modifier.fillMaxWidth(),
                     shape         = RoundedCornerShape(12.dp),
@@ -1413,8 +1419,8 @@ private fun WithdrawDialog(
                 OutlinedTextField(
                     value         = upiId,
                     onValueChange = { upiId = it; error = null },
-                    label         = { Text("UPI ID (optional)") },
-                    placeholder   = { Text("e.g. name@upi") },
+                    label         = { Text(str.cwUpiOptional) },
+                    placeholder   = { Text(str.cwUpiEg) },
                     modifier      = Modifier.fillMaxWidth(),
                     shape         = RoundedCornerShape(12.dp),
                     singleLine    = true
@@ -1429,7 +1435,7 @@ private fun WithdrawDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("ℹ️", fontSize = 12.sp)
-                    Text("Processed within 2–3 business days. 15% platform fee already deducted from earnings.",
+                    Text(str.cwWithdrawFeeNote,
                         style = MaterialTheme.typography.labelSmall, color = Color(0xFF166534))
                 }
             }
@@ -1454,13 +1460,13 @@ private fun WithdrawDialog(
                 } else {
                     Icon(Icons.Rounded.AccountBalanceWallet, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Request Withdrawal", fontWeight = FontWeight.Bold)
+                    Text(str.cwRequestWithdrawal, fontWeight = FontWeight.Bold)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isWithdrawing) {
-                Text("Cancel", color = cs.onSurfaceVariant)
+                Text(str.cancel, color = cs.onSurfaceVariant)
             }
         }
     )

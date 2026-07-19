@@ -48,6 +48,7 @@ fun ImageViewerScreen(
     navController: NavHostController,
     adManager:     AdManager? = null
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context  = LocalContext.current
     val activity = context as? Activity
 
@@ -146,7 +147,7 @@ fun ImageViewerScreen(
         // Zoom hint
         if (scale <= 1f && imageReady) {
             Text(
-                "Pinch to zoom",
+                str.ivPinchZoom,
                 style    = MaterialTheme.typography.labelSmall,
                 color    = Color.White.copy(0.5f),
                 modifier = Modifier

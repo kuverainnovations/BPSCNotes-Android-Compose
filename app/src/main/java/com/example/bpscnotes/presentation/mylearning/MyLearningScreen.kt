@@ -589,7 +589,7 @@ private fun StoreTab(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            "Saved",
+                            str.jobsSaved,
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (showSavedOnly) Color.White else BpscColors.TextSecondary,
                             fontWeight = if (showSavedOnly) FontWeight.Bold else FontWeight.Normal
@@ -990,7 +990,7 @@ private fun EnrolledCoursesContent(
                         Text(str.courseNoCoursesYet, style = MaterialTheme.typography.titleMedium,
                             color = cs.onSurface, fontWeight = FontWeight.Bold,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        Text("Try a different subject filter",
+                        Text(str.tryDifferentFilter,
                             style = MaterialTheme.typography.bodyMedium,
                             color = cs.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -1075,7 +1075,7 @@ private fun LibraryDetailSheet(
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                         if (!item.isPremium) Text(
-                            "FREE",
+                            str.badgeFree,
                             style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Success,
                             fontWeight = FontWeight.Bold,
@@ -1085,7 +1085,7 @@ private fun LibraryDetailSheet(
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                         else Text(
-                            "PRO",
+                            str.badgePro,
                             style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.CoinGold,
                             fontWeight = FontWeight.Bold,
@@ -1128,7 +1128,7 @@ private fun LibraryDetailSheet(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "About",
+                    str.settingsAbout,
                     style = MaterialTheme.typography.titleMedium,
                     color = cs.onSurface,
                     fontWeight = FontWeight.Bold
@@ -1173,7 +1173,7 @@ private fun LibraryDetailSheet(
                     ) {
                         Text(item.type.emoji, fontSize = 44.sp)
                         Text(
-                            "Preview",
+                            str.materialPreview,
                             style = MaterialTheme.typography.titleMedium,
                             color = cs.onSurfaceVariant
                         )
@@ -1475,7 +1475,7 @@ private fun StoreCourseCard(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (!course.isPaid) Text(
-                            "FREE",
+                            str.badgeFree,
                             style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Success,
                             fontSize = 9.sp,
@@ -1602,7 +1602,7 @@ private fun StoreCourseCard(
                         softWrap = false
                     )
                 } else Text(
-                    "FREE",
+                    str.badgeFree,
                     style = MaterialTheme.typography.titleMedium,
                     color = BpscColors.Success,
                     fontWeight = FontWeight.ExtraBold
@@ -1682,7 +1682,7 @@ private fun CourseDetailSheet(
             containerColor   = Color.White,
             title = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Enroll in Course", fontWeight = FontWeight.ExtraBold,
+                    Text(str.enrollInCourse, fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.titleLarge)
                     Text(course.title, style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurfaceVariant, maxLines = 2)
@@ -1691,7 +1691,7 @@ private fun CourseDetailSheet(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("Course price", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.coursePrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(fmtRs(price), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                     }
@@ -1711,7 +1711,7 @@ private fun CourseDetailSheet(
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("🪙", fontSize = 18.sp)
                                     Column {
-                                        Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                        Text(str.redeemCoins, style = MaterialTheme.typography.titleSmall,
                                             color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
                                         Text("You have $userCoins 🪙 available",
                                             style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
@@ -1747,7 +1747,7 @@ private fun CourseDetailSheet(
                     }
                     HorizontalDivider(color = cs.outline)
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.youPay, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Column(horizontalAlignment = Alignment.End) {
                             Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
                                 color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
@@ -1768,7 +1768,7 @@ private fun CourseDetailSheet(
                     if (state.isEnrolling) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Processing…", style = MaterialTheme.typography.titleMedium)
+                        Text(str.courseProcessing, style = MaterialTheme.typography.titleMedium)
                     } else {
                         Icon(Icons.Rounded.ShoppingCart, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -1779,7 +1779,7 @@ private fun CourseDetailSheet(
             },
             dismissButton = {
                 TextButton(onClick = { showBuyDialog = false; dialogCoins = 0 }) {
-                    Text("Cancel", color = cs.onSurfaceVariant)
+                    Text(str.cancel, color = cs.onSurfaceVariant)
                 }
             }
         )
@@ -1840,7 +1840,7 @@ private fun CourseDetailSheet(
                 }
             },
             title = {
-                Text("Successfully Enrolled! 🎉",
+                Text(str.enrollSuccess,
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center)
@@ -1861,11 +1861,11 @@ private fun CourseDetailSheet(
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape    = RoundedCornerShape(14.dp),
                     colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
-                ) { Text("Go to My Courses", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                ) { Text(str.goToMyCourses, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showEnrollSuccessDialog = false; onDismiss() }) {
-                    Text("Continue Browsing", color = BpscColors.TextSecondary)
+                    Text(str.continueBrowsing, color = BpscColors.TextSecondary)
                 }
             }
         )
@@ -2108,7 +2108,7 @@ private fun CourseDetailSheet(
                 ) {
                     Icon(Icons.Rounded.PlayLesson, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("View Details & Curriculum", style = MaterialTheme.typography.titleSmall)
+                    Text(str.viewDetailsCurriculum, style = MaterialTheme.typography.titleSmall)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
@@ -2434,7 +2434,7 @@ private fun CourseDetailSheet(
                             .padding(horizontal = 2.dp, vertical = 1.dp)
                     ) {
                         Text(
-                            "PRO",
+                            com.example.bpscnotes.core.language.LocalStrings.current.badgePro,
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                             fontSize = 6.sp,

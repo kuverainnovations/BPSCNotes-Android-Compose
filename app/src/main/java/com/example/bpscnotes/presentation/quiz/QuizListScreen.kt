@@ -104,7 +104,7 @@ fun QuizListScreen(
                             }
                             Column {
                                 Text(str.quizTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                                Text("Daily & Topic Quizzes", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
+                                Text(str.quizListTitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(0.7f))
                             }
                         }
                         // Real user coins
@@ -146,7 +146,7 @@ fun QuizListScreen(
                             singleLine = true,
                             decorationBox = { inner ->
                                 if (state.searchQuery.isEmpty()) {
-                                    Text("Search quizzes…", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
+                                    Text(str.searchQuizzesHint, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.5f))
                                 }
                                 inner()
                             },

@@ -74,7 +74,7 @@ fun DailyQuizScreen(
             if (isScheduled) {
                 com.example.bpscnotes.core.ui.AppInfoScreen(
                     emoji       = "🗓️",
-                    title       = "Quiz Not Available Yet",
+                    title       = str.quizNotAvailable,
                     message     = "This quiz is scheduled for a future date. Please check back later.",
                     actionLabel = str.back,
                     onAction    = { viewModel.clearErrors() }
@@ -361,16 +361,16 @@ internal fun QuizSessionScreen(
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text("Quit Quiz?", fontWeight = FontWeight.Bold) },
-            text  = { Text("Your progress will be lost. Are you sure you want to exit?") },
+            title = { Text(str.quizQuitTitle, fontWeight = FontWeight.Bold) },
+            text  = { Text(str.dqProgressLost) },
             confirmButton = {
                 TextButton(onClick = { showExitDialog = false; onExit() }) {
-                    Text("Quit", color = Color(0xFFE74C3C))
+                    Text(str.quizQuit, color = Color(0xFFE74C3C))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("Continue", color = BpscColors.Primary)
+                    Text(str.langSelectContinue, color = BpscColors.Primary)
                 }
             }
         )
@@ -890,6 +890,7 @@ fun MatchTableWidget(
     matchData: com.example.bpscnotes.data.remote.api.MatchData,
     modifier: Modifier = Modifier
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val list1 = matchData.list1
     val list2 = matchData.list2
     val rows = maxOf(list1.size, list2.size)
@@ -904,14 +905,14 @@ fun MatchTableWidget(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Text(
-                "List-I", modifier = Modifier.weight(1f),
+                str.dqListI, modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
             )
             Box(Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.3f)))
             Spacer(Modifier.width(12.dp))
             Text(
-                "List-II", modifier = Modifier.weight(1f),
+                str.dqListII, modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
             )

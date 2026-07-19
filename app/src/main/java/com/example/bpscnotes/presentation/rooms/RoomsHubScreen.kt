@@ -676,6 +676,7 @@ internal fun coinsPerHrLabel(multiplier: Double): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -684,7 +685,7 @@ private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (tier == null) {
-                Text("Room info unavailable", style = MaterialTheme.typography.bodyMedium)
+                Text(str.rhRoomInfoUnavail, style = MaterialTheme.typography.bodyMedium)
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(tier.iconEmoji ?: "🏆", fontSize = 28.sp)
@@ -699,7 +700,7 @@ private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (tier.perks.isNotEmpty()) {
-                    Text("Perks", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                    Text(str.rhPerks, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     tier.perks.forEach { perk ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("✓", color = BpscColors.Success, fontWeight = FontWeight.Bold)
@@ -722,6 +723,7 @@ private fun RoomInfoSheet(tier: RoomTierDto?, onDismiss: () -> Unit) {
 
 @Composable
 private fun RoomInsightsCard(stats: RoomStatsResponseData?, modifier: Modifier = Modifier) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     if (stats == null) return
     val cs = MaterialTheme.colorScheme
     Card(
@@ -731,7 +733,7 @@ private fun RoomInsightsCard(stats: RoomStatsResponseData?, modifier: Modifier =
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Room Insights", style = MaterialTheme.typography.labelLarge,
+            Text(str.rhRoomInsights, style = MaterialTheme.typography.labelLarge,
                 color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 StatPillLight("👥", "${stats.totalMembers}", "Members")
@@ -760,6 +762,7 @@ private fun RoomInsightsCard(stats: RoomStatsResponseData?, modifier: Modifier =
 // Most Improved, shown prominently per the spec ("Show these prominently").
 @Composable
 fun RoomChampionsCard(champions: RoomChampionsResponseData?, modifier: Modifier = Modifier) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     if (champions == null) return
     val cs = MaterialTheme.colorScheme
     val entries = listOfNotNull(
@@ -776,7 +779,7 @@ fun RoomChampionsCard(champions: RoomChampionsResponseData?, modifier: Modifier 
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Room Champions", style = MaterialTheme.typography.labelLarge,
+            Text(str.rhRoomChampions, style = MaterialTheme.typography.labelLarge,
                 color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
             entries.forEach { (emoji, label, champion) ->
                 Row(
@@ -904,7 +907,7 @@ private fun RoomCard(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.White.copy(0.07f))
                             .padding(horizontal = 7.dp, vertical = 2.dp)) {
-                            Text("✓ Completed", style = MaterialTheme.typography.labelSmall,
+                            Text(str.rhCompleted, style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(0.35f), fontSize = 9.sp)
                         }
                     }

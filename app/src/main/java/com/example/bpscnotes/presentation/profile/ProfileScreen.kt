@@ -169,8 +169,8 @@ fun ProfileScreen(
                             Icon(Icons.Rounded.Bookmark, null, tint = com.example.bpscnotes.core.ui.t.BpscColors.Primary, modifier = Modifier.size(18.dp))
                         }
                         Column(Modifier.weight(1f)) {
-                            Text("My Bookmarks", style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                            Text("Saved questions for revision", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                            Text(str.bookmarksTitle, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                            Text(str.bookmarksSubtitle, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         }
                         Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
@@ -331,7 +331,7 @@ private fun ProfileHeader(
                         }
                         // Tap to dismiss hint
                         Text(
-                            "Tap anywhere to close",
+                            str.tapToClose,
                             color = Color.White.copy(0.5f),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)
@@ -690,14 +690,14 @@ private fun StudyHeatmapCard(studyDays: List<Int>, isDark: Boolean) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Less", style = MaterialTheme.typography.labelSmall,
+                    Text(str.profileLess, style = MaterialTheme.typography.labelSmall,
                         color = cs.onSurfaceVariant, fontSize = 9.sp)
                     Spacer(Modifier.width(3.dp))
                     listOf(Color(0xFFF0F4FF), Color(0xFF90CAF9), Color(0xFF1565C0), Color(0xFF0D47A1)).forEach { col ->
                         Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(col))
                         Spacer(Modifier.width(2.dp))
                     }
-                    Text("More", style = MaterialTheme.typography.labelSmall,
+                    Text(str.profileMore, style = MaterialTheme.typography.labelSmall,
                         color = cs.onSurfaceVariant, fontSize = 9.sp)
                 }
             }

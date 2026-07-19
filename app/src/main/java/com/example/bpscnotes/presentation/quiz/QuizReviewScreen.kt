@@ -255,7 +255,7 @@ internal fun QuizReviewScreen(
                             HorizontalDivider(color = BpscColors.Divider)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
-                                    "💡 Explanation",
+                                    str.qrExplanation,
                                     style      = MaterialTheme.typography.labelSmall,
                                     color      = BpscColors.Primary,
                                     fontWeight = FontWeight.SemiBold

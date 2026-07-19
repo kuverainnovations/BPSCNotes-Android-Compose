@@ -176,7 +176,7 @@ fun StudyRoomPipOverlay(
                                     .background(Color(0xFF4CAF50).copy(pulseAlpha))
                             )
                             Text(
-                                "LIVE",
+                                str.roomsLive,
                                 style      = MaterialTheme.typography.labelSmall,
                                 color      = Color(0xFF4CAF50),
                                 fontWeight = FontWeight.ExtraBold,

@@ -624,7 +624,7 @@ private fun ActiveRoomScreen(
                 MemberTabChip(
                     selected = selectedMemberTab == "inactive",
                     dotColor = Color.White.copy(0.35f),
-                    label    = "Idle",
+                    label    = str.idle,
                     count    = inactiveMembers.size,
                     onClick  = { selectedMemberTab = "inactive" }
                 )
@@ -643,7 +643,7 @@ private fun ActiveRoomScreen(
                             Text(str.focusOthersJoin, style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(0.3f))
                         } else {
-                            Text("No idle members", style = MaterialTheme.typography.bodyMedium,
+                            Text(str.noIdleMembers, style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(0.5f))
                         }
                     }
@@ -1139,7 +1139,7 @@ private fun SessionSummaryScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${summary?.activeMinutes ?: 0}m",
                         style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                    Text("this session", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
+                    Text(str.focusThisSession, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f))
                 }
             }
             Spacer(Modifier.height(20.dp))

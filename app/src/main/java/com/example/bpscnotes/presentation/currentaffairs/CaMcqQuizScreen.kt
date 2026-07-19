@@ -314,6 +314,7 @@ private fun McqAdBreakScreen(
     adManager: AdManager?,
     onAdBreakComplete: () -> Unit,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val AD_SECS = 15
     var secondsLeft by remember { mutableIntStateOf(AD_SECS) }
 
@@ -344,7 +345,7 @@ private fun McqAdBreakScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Calculating results…",
+                        str.caCalculating,
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFFAAAAAA)
                     )
@@ -413,7 +414,7 @@ private fun McqAdBreakScreen(
                     .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
                 Text(
-                    "Your quiz is being scored…",
+                    str.caScoring,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF666666)
                 )
@@ -449,7 +450,7 @@ private fun QuizScreen(
 
     if (showQuit) {
         AppQuitDialog(
-            title     = "Quit MCQ Quiz?",
+            title     = str.mcqQuitTitle,
             body      = "${answers.size}/${mcqs.size} questions answered. Progress will be lost.",
             quitLabel = str.quizQuit,
             keepLabel = str.quizKeepGoing,
@@ -610,7 +611,7 @@ private fun QuizScreen(
                                 else -> BpscColors.TextPrimary
                             })
                         if (isNotAttemptOption && markingConfig.negativeMarkingEnabled) {
-                            Text("0 marks — no penalty",
+                            Text(str.caNoPenalty,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFFE65100).copy(alpha = 0.8f))
                         }
@@ -654,7 +655,7 @@ private fun QuizScreen(
                     Text("📖", fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "Explanation",
+                            str.quizHint,
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF2E7D32),
                             fontWeight = FontWeight.Bold
@@ -674,7 +675,7 @@ private fun QuizScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = BpscColors.Primary)
-                    Text("Checking answer...", style = MaterialTheme.typography.bodySmall, color = BpscColors.Primary)
+                    Text(str.caChecking, style = MaterialTheme.typography.bodySmall, color = BpscColors.Primary)
                 }
             }
         }
@@ -866,19 +867,19 @@ private fun ResultScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("+${com.example.bpscnotes.presentation.quiz.formatMarks(marksObtained)}",
                                 style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                            Text("Earned", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.walletEarned, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                         Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("-${com.example.bpscnotes.presentation.quiz.formatMarks(negativeMarks)}",
                                 style = MaterialTheme.typography.labelMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
-                            Text("Penalty", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.penalty, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                         Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${com.example.bpscnotes.presentation.quiz.formatMarks(finalScore)}/${com.example.bpscnotes.presentation.quiz.formatMarks(totalMarks)}",
                                 style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                            Text("Final", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                            Text(str.finalScore, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                         }
                     }
                 }
@@ -940,6 +941,7 @@ private fun ReviewScreen(
     serverAnswers: Map<String, CaMcqAnswerDto>,
     onBack:        () -> Unit,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs  = MaterialTheme.colorScheme
     BackHandler { onBack() }
     Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
@@ -953,7 +955,7 @@ private fun ReviewScreen(
                     Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 Column {
-                    Text("Answer Review", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.caAnswerReview, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${summary.results.size} questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }
@@ -1041,7 +1043,7 @@ private fun ReviewScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("ℹ️", fontSize = 13.sp)
                                 Text(
-                                    "Timed out without an answer — counted as wrong, same as an incorrect attempt.",
+                                    str.caTimedOut,
                                     style = MaterialTheme.typography.bodySmall, color = BpscColors.TextSecondary, lineHeight = 18.sp
                                 )
                             }

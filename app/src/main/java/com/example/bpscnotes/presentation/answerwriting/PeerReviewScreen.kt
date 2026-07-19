@@ -108,7 +108,7 @@ fun PeerReviewScreen(
                     ) {
                         Text("⭐", fontSize = 12.sp)
                         Text(
-                            "+1 Credit", style = MaterialTheme.typography.labelMedium,
+                            str.prCredit, style = MaterialTheme.typography.labelMedium,
                             color = Color(0xFFFFD54F), fontWeight = FontWeight.ExtraBold,
                             maxLines = 1, softWrap = false
                         )
@@ -319,7 +319,7 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(str.awReviewQ4, style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text("(Optional)", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                        Text(str.optionalParen, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                     }
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))

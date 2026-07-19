@@ -108,7 +108,7 @@ fun LeaderboardScreen(
                     ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
 
                     Column(Modifier.weight(1f)) {
-                        Text("🏆 Leaderboard", style = MaterialTheme.typography.titleLarge,
+                        Text(str.leaderboardTitleEmoji, style = MaterialTheme.typography.titleLarge,
                             color = Color.White, fontWeight = FontWeight.ExtraBold)
                         Box(
                             Modifier.clip(RoundedCornerShape(20.dp))
@@ -143,7 +143,7 @@ fun LeaderboardScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("😕", fontSize = 48.sp)
-                            Text("Could not load", style = MaterialTheme.typography.titleMedium,
+                            Text(str.lbCouldNotLoad, style = MaterialTheme.typography.titleMedium,
                                 color = cs.onSurface, fontWeight = FontWeight.Bold)
                             Text(state.membersError ?: "", style = MaterialTheme.typography.bodySmall,
                                 color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -151,7 +151,7 @@ fun LeaderboardScreen(
                                 onClick = { refresh() },
                                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                                 shape = RoundedCornerShape(12.dp)
-                            ) { Text("Retry") }
+                            ) { Text(str.retry) }
                         }
                     }
                 }
@@ -220,6 +220,7 @@ fun LeaderboardScreen(
 // ── Personal ranking card (redesign section 4) ─────────────────
 @Composable
 private fun PersonalRankCard(myRank: MyRankResponseData?) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     Card(
         modifier  = Modifier.fillMaxWidth(),
@@ -234,7 +235,7 @@ private fun PersonalRankCard(myRank: MyRankResponseData?) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Your Ranking", style = MaterialTheme.typography.labelLarge,
+                Text(str.lbYourRanking, style = MaterialTheme.typography.labelLarge,
                     color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                 val rankText = myRank?.rankPosition?.let { rankLabel(it) } ?: "—"
                 Box(modifier = Modifier
@@ -246,7 +247,7 @@ private fun PersonalRankCard(myRank: MyRankResponseData?) {
                 }
             }
             if (myRank == null) {
-                Text("Join this room to see your ranking", style = MaterialTheme.typography.bodySmall,
+                Text(str.lbJoinToSee, style = MaterialTheme.typography.bodySmall,
                     color = cs.onSurfaceVariant)
             } else {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -264,7 +265,7 @@ private fun PersonalRankCard(myRank: MyRankResponseData?) {
                         fontWeight = FontWeight.SemiBold
                     )
                 } else if (myRank.rankPosition == 1) {
-                    Text("🎉 You're #1 in this room!", style = MaterialTheme.typography.labelMedium,
+                    Text(str.lbYou1, style = MaterialTheme.typography.labelMedium,
                         color = BpscColors.CoinGold, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -333,6 +334,7 @@ private fun LeaderboardTabs(
 //    today/week/month time, current+longest streak, last active, badges
 @Composable
 private fun MemberLeaderboardRow(member: TierMemberDto, isMe: Boolean) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     Row(
         Modifier
@@ -408,7 +410,7 @@ private fun MemberLeaderboardRow(member: TierMemberDto, isMe: Boolean) {
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                if (isMe) Text("YOU",
+                if (isMe) Text(str.focusYou,
                     style = MaterialTheme.typography.labelSmall,
                     color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold,
                     fontSize = 9.sp,

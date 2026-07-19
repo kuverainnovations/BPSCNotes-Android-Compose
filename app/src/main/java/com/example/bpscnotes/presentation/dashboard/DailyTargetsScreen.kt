@@ -132,7 +132,7 @@ fun DailyTargetsScreen(
                     onClick = { alertMessage = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
                 ) {
-                    Text("Got it", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(str.dtGotIt, color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -312,7 +312,7 @@ fun DailyTargetsScreen(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                             Text(
-                                "Set your daily study goals and earn coins when you complete them!",
+                                str.dtSetGoals,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -394,6 +394,7 @@ private fun DailyTargetHistorySheet(
     history:   List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto>,
     onDismiss: () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs   = MaterialTheme.colorScheme
     val dfmt = remember { java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()) }
 
@@ -424,9 +425,9 @@ private fun DailyTargetHistorySheet(
                         Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                     Column {
-                        Text("Target History", style = MaterialTheme.typography.titleLarge,
+                        Text(str.dtTargetHistory, style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold, color = Color.White)
-                        Text("Last 30 days", style = MaterialTheme.typography.bodySmall,
+                        Text(str.dtLast30, style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(0.7f))
                     }
                 }
@@ -444,8 +445,8 @@ private fun DailyTargetHistorySheet(
                 Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("📊", fontSize = 40.sp)
-                        Text("No history yet", style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
-                        Text("Complete some targets to see your progress here", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                        Text(str.dtNoHistory, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold)
+                        Text(str.dtNoHistoryHint, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     }
                 }
             } else {
@@ -737,9 +738,9 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                     }
                     Spacer(Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp)); Text("Skip", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint) }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Rounded.KeyboardArrowLeft, null, tint = BpscColors.TextHint, modifier = Modifier.size(16.dp)); Text(str.skip, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint) }
                         Text(str.targetSwipeNavigate, style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("Done", style = MaterialTheme.typography.bodyMedium, color = BpscColors.Success); Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp)) }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text(str.done, style = MaterialTheme.typography.bodyMedium, color = BpscColors.Success); Icon(Icons.Rounded.KeyboardArrowRight, null, tint = BpscColors.Success, modifier = Modifier.size(16.dp)) }
                     }
                 }
             }
@@ -763,7 +764,7 @@ private fun CardsTabContent(items: List<TargetItem>, onToggleComplete: (String) 
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Rounded.Add, null, tint = BpscColors.Primary, modifier = Modifier.size(18.dp))
-                    Text("Need more time? Add a target", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+                    Text(str.dtNeedMoreTime, style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -864,6 +865,7 @@ private fun EditTargetSheet(
     onDismiss: () -> Unit,
     onSave: (title: String, subject: String) -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
 
     val subjects = listOf(
@@ -899,13 +901,13 @@ private fun EditTargetSheet(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Edit Target", style = MaterialTheme.typography.titleLarge,
+            Text(str.dtEditTarget, style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, color = cs.onSurface)
 
             // Subject dropdown — pick subject first, then enter sub-topic
             BpscDropdown(
                 value    = selectedSubject,
-                label    = "Subject",
+                label    = str.mockSubjectWise,
                 options  = subjects,
                 onSelect = { selectedSubject = it }
             )
@@ -914,7 +916,7 @@ private fun EditTargetSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Sub-topic") },
+                label = { Text(str.subTopic) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 maxLines = 3
@@ -925,7 +927,7 @@ private fun EditTargetSheet(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
-                ) { Text("Cancel") }
+                ) { Text(str.cancel) }
 
                 Button(
                     onClick = {
@@ -937,7 +939,7 @@ private fun EditTargetSheet(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = com.example.bpscnotes.core.ui.t.BpscColors.Primary)
-                ) { Text("Save", fontWeight = FontWeight.Bold) }
+                ) { Text(str.save, fontWeight = FontWeight.Bold) }
             }
             Spacer(Modifier.height(8.dp))
         }

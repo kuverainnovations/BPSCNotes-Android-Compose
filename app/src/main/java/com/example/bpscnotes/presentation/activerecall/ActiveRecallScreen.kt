@@ -186,6 +186,7 @@ fun FlashcardAdBreakScreen(
     totalCards: Int = 0,
     onAdBreakComplete: () -> Unit,
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     var currentAdIndex by remember { mutableIntStateOf(0) }   // 0 or 1
     var secondsLeft    by remember { mutableIntStateOf(AD_DURATION_SECS) }
     var adLoaded       by remember { mutableStateOf(false) }
@@ -335,7 +336,7 @@ fun FlashcardAdBreakScreen(
                             strokeWidth = 3.dp,
                         )
                         Text(
-                            "Loading ad...",
+                            str.arLoadingAd,
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF888888),
                         )
@@ -609,7 +610,7 @@ private fun FlashcardSessionScreen(
                     ) {
                         Icon(Icons.Rounded.SkipNext, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Skip", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(str.skip, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                     Button(
                         onClick = { isFlipped = true },
@@ -783,7 +784,7 @@ private fun FlashcardLobbyScreen(
                                     contentAlignment = Alignment.Center
                                 ) { Text("📚", fontSize = 28.sp) }
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("All Flashcards", style = MaterialTheme.typography.titleLarge,
+                                    Text(str.arAllFlashcards, style = MaterialTheme.typography.titleLarge,
                                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                                     Text("$totalCards cards across all subjects",
                                         style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
@@ -801,28 +802,28 @@ private fun FlashcardLobbyScreen(
                                     Text("✅", fontSize = 18.sp)
                                     Text("$masteredCount2", style = MaterialTheme.typography.titleMedium,
                                         color = Color(0xFF2ECC71), fontWeight = FontWeight.ExtraBold)
-                                    Text("Mastered", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    Text(str.arMastered, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
                                 Box(Modifier.width(1.dp).height(40.dp).background(cs.outline))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text("🔄", fontSize = 18.sp)
                                     Text("$weakCount2", style = MaterialTheme.typography.titleMedium,
                                         color = Color(0xFFE74C3C), fontWeight = FontWeight.ExtraBold)
-                                    Text("Needs Work", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    Text(str.arNeedsWork, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
                                 Box(Modifier.width(1.dp).height(40.dp).background(cs.outline))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text("📊", fontSize = 18.sp)
                                     Text("${(progress2 * 100).toInt()}%", style = MaterialTheme.typography.titleMedium,
                                         color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                                    Text("Progress", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                                    Text(str.coursesProgress, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                                 }
                             }
 
                             // Progress bar
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                                    Text("Overall Mastery", style = MaterialTheme.typography.labelMedium,
+                                    Text(str.recallOverallMastery, style = MaterialTheme.typography.labelMedium,
                                         color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                                     Text("${(progress2 * 100).toInt()}%", style = MaterialTheme.typography.labelMedium,
                                         color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
@@ -856,7 +857,7 @@ private fun FlashcardLobbyScreen(
                 if (distinctSubjects.isNotEmpty()) {
                     item {
                         Text(
-                            "📖 By Subject",
+                            str.arBySubject,
                             style = MaterialTheme.typography.titleMedium,
                             color = cs.onSurface,
                             fontWeight = FontWeight.ExtraBold,

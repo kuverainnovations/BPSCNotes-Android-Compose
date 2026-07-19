@@ -562,16 +562,16 @@ fun StudyMaterialsScreen(
     if (state.showUploadCancelDialog) {
         AlertDialog(
             onDismissRequest = viewModel::dismissCancelDialog,
-            title = { Text("Upload in progress", fontWeight = FontWeight.Bold) },
-            text  = { Text("Your file is still uploading in the background. Cancel the upload?") },
+            title = { Text(str.uploadCancelTitle, fontWeight = FontWeight.Bold) },
+            text  = { Text(str.smUploadBgCancel) },
             confirmButton = {
                 TextButton(onClick = viewModel::confirmCancelUpload) {
-                    Text("Cancel Upload", color = Color(0xFFE74C3C))
+                    Text(str.uploadCancelConfirm, color = Color(0xFFE74C3C))
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::dismissCancelDialog) {
-                    Text("Continue Uploading", color = BpscColors.Primary)
+                    Text(str.uploadCancelDismiss, color = BpscColors.Primary)
                 }
             }
         )
@@ -790,7 +790,7 @@ private fun FilterDialog(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("🔖", fontSize = 15.sp)
-                            Text("Saved only", style = MaterialTheme.typography.bodyMedium,
+                            Text(str.smSavedOnly, style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold, color = BpscColors.TextPrimary)
                         }
                         Text(
@@ -803,7 +803,7 @@ private fun FilterDialog(
 
                     // Type
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Type", style = MaterialTheme.typography.labelLarge,
+                        Text(str.smTypeLabel, style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             TypeChip(label = str.filterAll, emoji = "📋", selected = draftType == null) { draftType = null }
@@ -863,7 +863,7 @@ private fun FilterDialog(
 
                     // Sort
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Sort by", style = MaterialTheme.typography.labelLarge,
+                        Text(str.smSortBy, style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold, color = BpscColors.TextSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf("downloads" to str.materialsPopular, "newest" to str.materialsNewest).forEach { (key, label) ->
@@ -894,7 +894,7 @@ private fun FilterDialog(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                 ) {
-                    Text("Apply", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(str.paymentApply, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1229,7 +1229,7 @@ private fun LibraryItemCard(
                     if (item.isPremium) Box(modifier = Modifier.align(Alignment.TopEnd).padding(3.dp)
                         .clip(RoundedCornerShape(4.dp)).background(BpscColors.CoinGold)
                         .padding(horizontal = 3.dp, vertical = 1.dp)) {
-                        Text("PRO", style = MaterialTheme.typography.labelSmall,
+                        Text(str.badgePro, style = MaterialTheme.typography.labelSmall,
                             color = Color.White, fontSize = 6.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
@@ -1293,7 +1293,7 @@ private fun LibraryItemCard(
                     Text(fmtRs(item.price), style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF856404), fontWeight = FontWeight.Bold)
                 } else {
-                    Text("Free", style = MaterialTheme.typography.labelSmall,
+                    Text(str.free, style = MaterialTheme.typography.labelSmall,
                         color = BpscColors.Success, fontWeight = FontWeight.Bold)
                 }
                 // Social proof: "12 students bought this" — only for paid materials with sales
@@ -1319,7 +1319,7 @@ private fun LibraryItemCard(
                         Text("${"%.1f".format(item.rating)}", style = MaterialTheme.typography.labelSmall,
                             color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold)
                     } else {
-                        Text("New", style = MaterialTheme.typography.labelSmall,
+                        Text(str.smNewBadge, style = MaterialTheme.typography.labelSmall,
                             color = BpscColors.Primary, fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
@@ -1338,7 +1338,7 @@ private fun LibraryItemCard(
                     contentPadding = PaddingValues(horizontal = 8.dp)) {
                     Icon(Icons.Rounded.Visibility, null, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Read", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text(str.smReadBadge, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
                 // FIX: Unlock (premium) calls onPurchase, Download (free) calls onDownload
                 // FIX: Check BOTH the API field (is_purchased from backend)
@@ -1510,6 +1510,7 @@ private fun NegotiationSheet(
     onCounter: (price: Double, message: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var counterPriceText by remember { mutableStateOf("") }
@@ -1528,7 +1529,7 @@ private fun NegotiationSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                "💬 Price Negotiation",
+                str.smPriceNegotiation,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = cs.onSurface
@@ -1555,11 +1556,11 @@ private fun NegotiationSheet(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("Your price", style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
+                        Text(str.smYourPrice, style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
                         Text("₹${history.originalPrice}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
                     }
                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("Admin's offer", style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
+                        Text(str.smAdminOffer, style = MaterialTheme.typography.labelMedium, color = Color(0xFF6366F1))
                         Text("₹${history.currentOfferPrice}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3730A3))
                     }
                     Text(
@@ -1571,7 +1572,7 @@ private fun NegotiationSheet(
 
                 // Offer history
                 if (history.history.isNotEmpty()) {
-                    Text("History", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                    Text(str.walletHistory, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1626,12 +1627,12 @@ private fun NegotiationSheet(
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Counter")
+                                Text(str.smCounter)
                             }
                         }
                         if (history.isFinalRound) {
                             Text(
-                                "This is the final round — you can only Accept or wait for our team's final decision.",
+                                str.smFinalRound,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = BpscColors.TextHint
                             )
@@ -1642,7 +1643,7 @@ private fun NegotiationSheet(
                             OutlinedTextField(
                                 value = counterPriceText,
                                 onValueChange = { counterPriceText = it.filter { c -> c.isDigit() } },
-                                label = { Text("Your counter price (₹)") },
+                                label = { Text(str.smCounterPrice) },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth()
@@ -1650,7 +1651,7 @@ private fun NegotiationSheet(
                             OutlinedTextField(
                                 value = counterMessage,
                                 onValueChange = { counterMessage = it },
-                                label = { Text("Message (optional)") },
+                                label = { Text(str.smMessageOptional) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 2, maxLines = 3
                             )
@@ -1660,7 +1661,7 @@ private fun NegotiationSheet(
                                     enabled = !isResponding,
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     shape = RoundedCornerShape(12.dp)
-                                ) { Text("Cancel") }
+                                ) { Text(str.cancel) }
                                 Button(
                                     onClick = {
                                         val price = counterPriceText.toDoubleOrNull() ?: return@Button
@@ -1672,14 +1673,14 @@ private fun NegotiationSheet(
                                     colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
                                 ) {
                                     if (isResponding) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                    else Text("Send Counter-Offer", fontWeight = FontWeight.Bold)
+                                    else Text(str.smSendCounter, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
                 } else {
                     Text(
-                        "Waiting for our team to review your response.",
+                        str.smWaitingReview,
                         style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurfaceVariant
                     )
@@ -1703,6 +1704,7 @@ private fun WalletSheet(
     onDismiss: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -1718,13 +1720,13 @@ private fun WalletSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "💰 Seller Wallet",
+                str.smSellerWallet,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = cs.onSurface
             )
             Text(
-                "Real-money earnings from your marketplace sales — separate from your coins.",
+                str.smSellerWalletDesc,
                 style = MaterialTheme.typography.bodyMedium,
                 color = cs.onSurfaceVariant
             )
@@ -1742,22 +1744,22 @@ private fun WalletSheet(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Available Balance", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
+                    Text(str.smAvailableBalance, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.8f))
                     Text("₹${wallet.balance}", style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.ExtraBold, color = Color.White)
                     HorizontalDivider(color = Color.White.copy(0.2f))
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                        Text("Total earned", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(0.7f))
+                        Text(str.totalEarned, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(0.7f))
                         Text("₹${wallet.totalEarned}", style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
 
-                Text("Transaction History", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
+                Text(str.smTransactionHistory, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = cs.onSurface)
 
                 if (wallet.transactions.isEmpty()) {
                     Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
-                        Text("No transactions yet — sell a material to earn your first payout!",
+                        Text(str.smNoTransactions,
                             style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant,
                             textAlign = TextAlign.Center)
                     }
@@ -1906,7 +1908,7 @@ private fun MaterialDetailSheet(
                     ) {
                         Text("⭐", fontSize = 14.sp)
                         Text(
-                            "Open the material once to rate it",
+                            str.smRateHint,
                             style = MaterialTheme.typography.bodyMedium,
                             color = cs.onSurfaceVariant
                         )
@@ -2055,7 +2057,7 @@ private fun MaterialDetailSheet(
                     ) {
                         Icon(Icons.Rounded.ChatBubbleOutline, null, modifier = Modifier.size(16.dp), tint = BpscColors.Primary)
                         Spacer(Modifier.width(8.dp))
-                        Text("Chat with uploader", style = MaterialTheme.typography.titleMedium,
+                        Text(str.smChatUploader, style = MaterialTheme.typography.titleMedium,
                             color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -2197,16 +2199,16 @@ private fun UploadSheet(
                 label       = "${str.materialsFilterSubject} *",
                 options     = backendSubjects,
                 onSelect    = { onFormChange(null, null, it, null, null, null, null, null, null, null) },
-                placeholder = "Select a subject"
+                placeholder = str.uploadSelectSubject
             )
 
             // Language dropdown — admin can filter/display this per material
             BpscDropdown(
                 value       = language,
-                label       = "Language",
+                label       = str.drawerLanguage,
                 options     = listOf("English", "Hindi", "Hindi + English"),
                 onSelect    = { onFormChange(null, null, null, null, null, null, null, null, null, it) },
-                placeholder = "Select language"
+                placeholder = str.uploadSelectLanguage
             )
 
             OutlinedTextField(value = author, onValueChange = { onFormChange(null, null, null, it, null, null, null, null, null, null) },
@@ -2252,16 +2254,16 @@ private fun UploadSheet(
             )
 
             OutlinedTextField(value = description, onValueChange = { onFormChange(null, it, null, null, null, null, null, null, null, null) },
-                label = { Text("Message to Admin (optional)") },
-                placeholder = { Text("Tell the reviewer what this material is about, source, year, etc.") },
+                label = { Text(str.smMsgToAdmin) },
+                placeholder = { Text(str.smMsgToAdminHint) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), minLines = 3, maxLines = 4)
 
             OutlinedTextField(value = tagsInput, onValueChange = { onFormChange(null, null, null, null, it, null, null, null, null, null) },
-                label = { Text("Tags (optional)") }, modifier = Modifier.fillMaxWidth(),
+                label = { Text(str.smTagsOptional) }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp), singleLine = true,
-                placeholder = { Text("e.g. BPSC, Polity, Indian Constitution") },
-                supportingText = { Text("Comma separated — helps others find your material") })
+                placeholder = { Text(str.smTagsHint2) },
+                supportingText = { Text(str.smTagsSupport2) })
 
             // ── Marketplace / Premium Settings ─────────────────
             // Free pages concept only applies to PDF-type content (VIDEO disabled — Phase 2)
@@ -2290,8 +2292,8 @@ private fun UploadSheet(
                                 OutlinedTextField(
                                     value = price,
                                     onValueChange = { onFormChange(null, null, null, null, null, null, null, null, it.filter { c -> c.isDigit() }, null) },
-                                    label = { Text("₹ Price (INR)") },
-                                    placeholder = { Text("e.g. 49") },
+                                    label = { Text(str.smPriceInr) },
+                                    placeholder = { Text(str.smPriceEg) },
                                     modifier = if (isPdfType) Modifier.weight(1f) else Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp), singleLine = true,
                                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -2368,7 +2370,7 @@ private fun UploadSheet(
                         Text("${(uploadProgress * 100).toInt()}% uploaded…",
                             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                         TextButton(onClick = onCancel) {
-                            Text("Cancel", color = Color(0xFFE74C3C),
+                            Text(str.cancel, color = Color(0xFFE74C3C),
                                 style = MaterialTheme.typography.labelLarge)
                         }
                     }
@@ -2473,7 +2475,7 @@ private fun TypeBadge(type: MaterialType) {
 @Composable private fun FreeBadge() {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
+    Text(str.badgeFree, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontSize = 9.sp,
         fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
         modifier = Modifier.clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -2481,14 +2483,14 @@ private fun TypeBadge(type: MaterialType) {
 @Composable private fun FreeBadgeWhite() {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Text("FREE", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
+    Text(str.badgeFree, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFE8FDF4)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 @Composable private fun ProBadge() {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    Text("PRO", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
+    Text(str.badgePro, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
         fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFFFF8E1)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
@@ -2657,7 +2659,7 @@ fun MyUploadsTab(
                                     .padding(horizontal = 12.dp, vertical = 7.dp)
                             ) {
                                 Text("💬", fontSize = 13.sp)
-                                Text("Chats", style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
+                                Text(str.smChats, style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
                             }
                         }
                         Row(
@@ -2669,7 +2671,7 @@ fun MyUploadsTab(
                                 .padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
                             Text("💰", fontSize = 13.sp)
-                            Text("Wallet", style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(str.smWallet, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2927,7 +2929,7 @@ fun DownloadsTab(
                                         Icon(Icons.Rounded.WifiOff, null,
                                             tint = Color(0xFF2E7D32),
                                             modifier = Modifier.size(10.dp))
-                                        Text("Offline", style = MaterialTheme.typography.labelSmall,
+                                        Text(str.smOffline, style = MaterialTheme.typography.labelSmall,
                                             color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontSize = 9.sp)
                                     }
                                 }
@@ -3062,7 +3064,7 @@ fun PurchaseConfirmDialog(
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("🪙", fontSize = 18.sp)
                                 Column {
-                                    Text("Redeem Coins", style = MaterialTheme.typography.titleSmall,
+                                    Text(str.redeemCoins, style = MaterialTheme.typography.titleSmall,
                                         color = Color(0xFF92400E), fontWeight = FontWeight.Bold)
                                     Text("You have $userCoins 🪙 available",
                                         style = MaterialTheme.typography.labelSmall, color = Color(0xFFB45309))
@@ -3118,7 +3120,7 @@ fun PurchaseConfirmDialog(
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Text("You pay", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(str.youPay, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Column(horizontalAlignment = Alignment.End) {
                         Text(fmtRs(amountDue), style = MaterialTheme.typography.titleLarge,
                             color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)

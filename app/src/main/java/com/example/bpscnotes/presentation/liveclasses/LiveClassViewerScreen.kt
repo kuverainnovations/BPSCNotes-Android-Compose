@@ -64,6 +64,7 @@ fun LiveClassViewerScreen(
     instructor:     String,
     durationMins:   Int
 ) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -123,7 +124,7 @@ fun LiveClassViewerScreen(
             title = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("🚪", fontSize = 24.sp)
-                    Text("Leave Class?", fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
+                    Text(str.lcLeaveClass, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A2E))
                 }
             },
             text = {
@@ -138,13 +139,13 @@ fun LiveClassViewerScreen(
                     onClick = { showExitDialog = false; navController.popBackStackSafe() },
                     colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
                     shape   = RoundedCornerShape(10.dp)
-                ) { Text("Leave", fontWeight = FontWeight.Bold) }
+                ) { Text(str.lcLeave, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = { showExitDialog = false },
                     shape   = RoundedCornerShape(10.dp)
-                ) { Text("Stay", fontWeight = FontWeight.Bold) }
+                ) { Text(str.lcStay, fontWeight = FontWeight.Bold) }
             }
         )
     }
@@ -233,7 +234,7 @@ fun LiveClassViewerScreen(
                     modifier = Modifier.padding(32.dp)
                 ) {
                     Text("⚠️", fontSize = 48.sp)
-                    Text("Couldn't load class", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(str.lcCantLoad, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Text(loadError!!, color = Color.White.copy(0.6f), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(8.dp))
                     // Open in browser as fallback
@@ -246,14 +247,14 @@ fun LiveClassViewerScreen(
                     ) {
                         Icon(Icons.Rounded.OpenInBrowser, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Open in Browser", fontWeight = FontWeight.Bold)
+                        Text(str.lessonOpenBrowser, fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
                         onClick = { navController.popBackStackSafe() },
                         shape   = RoundedCornerShape(12.dp),
                         border  = BorderStroke(1.dp, Color.White.copy(0.3f)),
                         colors  = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                    ) { Text("Go Back") }
+                    ) { Text(str.goBack) }
                 }
             }
         }
@@ -316,7 +317,7 @@ fun LiveClassViewerScreen(
                         val pulse by rememberInfiniteTransition(label = "pulse")
                             .animateFloat(1f, 0.3f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "dot")
                         Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White.copy(pulse)))
-                        Text("LIVE", color = Color.White, fontWeight = FontWeight.ExtraBold,
+                        Text(str.roomsLive, color = Color.White, fontWeight = FontWeight.ExtraBold,
                             style = MaterialTheme.typography.labelSmall, fontSize = 10.sp)
                         Text(
                             formatElapsed(elapsedSecs),
@@ -349,7 +350,7 @@ fun LiveClassViewerScreen(
                     // Reload button
                     ControlButton(
                         icon  = Icons.Rounded.Refresh,
-                        label = "Reload",
+                        label = str.lcReload,
                         tint  = Color.White,
                         bg    = Color.White.copy(0.15f),
                         onClick = { webViewRef?.reload() }
@@ -358,7 +359,7 @@ fun LiveClassViewerScreen(
                     // Open in browser (fallback)
                     ControlButton(
                         icon  = Icons.Rounded.OpenInBrowser,
-                        label = "Browser",
+                        label = str.lcBrowser,
                         tint  = Color.White,
                         bg    = Color.White.copy(0.15f),
                         onClick = {
@@ -369,7 +370,7 @@ fun LiveClassViewerScreen(
                     // Leave class button — prominent red
                     ControlButton(
                         icon    = Icons.Rounded.CallEnd,
-                        label   = "Leave",
+                        label   = str.lcLeave,
                         tint    = Color.White,
                         bg      = Color(0xFFE74C3C),
                         size    = 56.dp,
@@ -379,7 +380,7 @@ fun LiveClassViewerScreen(
                     // Copy link
                     ControlButton(
                         icon  = Icons.Rounded.ContentCopy,
-                        label = "Copy Link",
+                        label = str.lcCopyLink,
                         tint  = Color.White,
                         bg    = Color.White.copy(0.15f),
                         onClick = {
@@ -391,7 +392,7 @@ fun LiveClassViewerScreen(
                     // Share link
                     ControlButton(
                         icon  = Icons.Rounded.Share,
-                        label = "Share",
+                        label = str.courseCertShare,
                         tint  = Color.White,
                         bg    = Color.White.copy(0.15f),
                         onClick = {
@@ -420,7 +421,7 @@ fun LiveClassViewerScreen(
                     .background(Color.Black.copy(0.5f))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text("Tap anywhere for controls", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text(str.lcTapForControls, color = Color.White, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

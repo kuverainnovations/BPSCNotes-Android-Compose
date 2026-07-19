@@ -31,6 +31,7 @@ fun BookmarkedQuestionsScreen(
     viewModel: BookmarksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
 
     Column(Modifier.fillMaxSize().background(BpscColors.Surface)) {
         Box(
@@ -48,7 +49,7 @@ fun BookmarkedQuestionsScreen(
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
                 Column {
-                    Text("My Bookmarks", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    Text(str.bookmarksTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     Text("${state.questions.size} saved questions", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }
@@ -61,8 +62,8 @@ fun BookmarkedQuestionsScreen(
             state.error != null && state.questions.isEmpty() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Failed to load bookmarks", color = BpscColors.TextSecondary)
-                        Button(onClick = { viewModel.loadBookmarks(refresh = true) }) { Text("Retry") }
+                        Text(str.bookmarksLoadFail, color = BpscColors.TextSecondary)
+                        Button(onClick = { viewModel.loadBookmarks(refresh = true) }) { Text(str.retry) }
                     }
                 }
             }
@@ -70,9 +71,9 @@ fun BookmarkedQuestionsScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("🔖", fontSize = 48.sp)
-                        Text("No bookmarks yet", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.bookmarksEmpty, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Text(
-                            "Bookmark questions during quiz review to revisit them here.",
+                            str.bookmarksEmptyHint,
                             style = MaterialTheme.typography.bodyMedium,
                             color = BpscColors.TextSecondary
                         )

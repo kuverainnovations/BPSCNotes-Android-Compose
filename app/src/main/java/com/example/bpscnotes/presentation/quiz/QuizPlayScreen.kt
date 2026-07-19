@@ -109,7 +109,7 @@ fun QuizPlayScreen(
             if (isScheduled) {
                 com.example.bpscnotes.core.ui.AppInfoScreen(
                     emoji       = "🗓️",
-                    title       = "Quiz Not Available Yet",
+                    title       = str.quizNotAvailable,
                     message     = "This quiz is scheduled for a future date. Please check back later.",
                     actionLabel = str.goBack,
                     onAction    = { viewModel.exitSession(); navController.popBackStackSafe() }
@@ -927,7 +927,7 @@ private fun QuizResultScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val marksText = buildString {
-                                append("📊 Marks: ")
+                                append(str.qpMarksPrefix)
                                 append("%.2f".format(result.finalScore.takeIf { it != 0.0 } ?: result.marksObtained))
                                 append(" / ")
                                 append("%.2f".format(result.totalMarks))
@@ -1019,19 +1019,19 @@ private fun QuizResultScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("+${formatMarks(result.marksObtained)}", style = MaterialTheme.typography.labelMedium,
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold)
-                                Text("Earned", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                                Text(str.walletEarned, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                             }
                             Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("-${formatMarks(result.negativeMarks)}", style = MaterialTheme.typography.labelMedium,
                                     color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
-                                Text("Penalty", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                                Text(str.penalty, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                             }
                             Box(Modifier.width(1.dp).height(28.dp).background(cs.outline))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("${formatMarks(result.finalScore)}/${formatMarks(result.totalMarks)}",
                                     style = MaterialTheme.typography.labelMedium, color = BpscColors.Primary, fontWeight = FontWeight.Bold)
-                                Text("Final", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                                Text(str.finalScore, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
                             }
                         }
                     }
@@ -1094,7 +1094,7 @@ private fun QuizResultScreen(
                     ) {
                         Icon(Icons.Rounded.Share, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Share Score", style = MaterialTheme.typography.labelMedium)
+                        Text(str.qpShareScore, style = MaterialTheme.typography.labelMedium)
                     }
                 }
 
@@ -1105,7 +1105,7 @@ private fun QuizResultScreen(
                             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("Subject Breakdown", style = MaterialTheme.typography.titleMedium,
+                            Text(str.qpSubjectBreakdown, style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold, color = cs.onSurface)
                             HorizontalDivider(color = cs.outline)
                             result.subjectBreakdown.forEach { sub ->

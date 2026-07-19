@@ -52,6 +52,7 @@ private fun openPlayStore(context: Context, storeUrl: String) {
  */
 @Composable
 fun UpdateGateDialog(config: AppConfigData) {
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
     val context = LocalContext.current
     val currentVersion = BuildConfig.VERSION_NAME
 
@@ -93,12 +94,12 @@ fun UpdateGateDialog(config: AppConfigData) {
                 onClick = { openPlayStore(context, config.androidStoreUrl) },
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
                 shape = RoundedCornerShape(10.dp)
-            ) { Text("Update Now") }
+            ) { Text(str.updateNow) }
         },
         dismissButton = if (mustUpdate) null else {
             @Composable {
                 TextButton(onClick = { softNudgeDismissed = true }) {
-                    Text("Later", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(str.roomsLater, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },

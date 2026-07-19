@@ -245,7 +245,7 @@ private fun QuizIntroContent(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Marking Scheme", style = MaterialTheme.typography.titleLarge,
+                        Text(str.markingScheme, style = MaterialTheme.typography.titleLarge,
                             color = cs.onSurface, fontWeight = FontWeight.Bold)
                         HorizontalDivider(color = cs.outline)
                         MarkingSchemeRow("Total Questions", "${quiz.totalQuestions}")

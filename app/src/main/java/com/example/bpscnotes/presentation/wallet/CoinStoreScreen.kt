@@ -31,6 +31,7 @@ fun CoinStoreScreen(
     viewModel: CoinStoreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val str = com.example.bpscnotes.core.language.LocalStrings.current
 
     // Show success/error snackbar
     val snackbarHostState = remember { SnackbarHostState() }
@@ -65,7 +66,7 @@ fun CoinStoreScreen(
                                 .clickable { navController.popBackStack() },
                             contentAlignment = Alignment.Center
                         ) { Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
-                        Text("Coin Store", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Text(str.coinStoreTitle, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
                     }
                     Row(
                         Modifier
@@ -78,7 +79,7 @@ fun CoinStoreScreen(
                     ) {
                         Text("🪙", fontSize = 22.sp)
                         Column {
-                            Text("Your Balance", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
+                            Text(str.yourBalance, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.7f))
                             Text("${state.balance} coins", style = MaterialTheme.typography.titleMedium, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
                         }
                     }
@@ -90,7 +91,7 @@ fun CoinStoreScreen(
                 state.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("🏪", fontSize = 48.sp)
-                        Text("Store coming soon!", style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(str.storeComingSoon, style = MaterialTheme.typography.titleMedium, color = BpscColors.TextPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
                 else -> {

@@ -176,9 +176,9 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("Change MPIN", style = MaterialTheme.typography.titleSmall,
+                                Text(str.mpinChangeTitle, style = MaterialTheme.typography.titleSmall,
                                     color = cs.onSurface)
-                                Text("Update your 4-digit login MPIN",
+                                Text(str.mpinChangeSettingsSub,
                                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                             }
                             Icon(Icons.Rounded.ChevronRight, null, tint = cs.onSurfaceVariant,
@@ -198,7 +198,7 @@ fun SettingsScreen(
                                 icon     = Icons.Rounded.Fingerprint,
                                 iconBg   = Color(0xFFE3F2FD),
                                 iconTint = Color(0xFF1565C0),
-                                title    = "Biometric Login",
+                                title    = str.biometricLogin,
                                 subtitle = "Use fingerprint or face to login",
                                 checked  = settingsState.biometricEnabled,
                                 onChange = { settingsViewModel.setBiometricEnabled(it) }
@@ -461,7 +461,7 @@ fun SettingsScreen(
                         },
                         title = {
                             Text(
-                                "Log out?",
+                                str.logoutTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = cs.onSurface
@@ -469,7 +469,7 @@ fun SettingsScreen(
                         },
                         text = {
                             Text(
-                                "Are you sure you want to log out? Your progress is saved and will be here when you sign back in.",
+                                str.logoutMsg,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -486,7 +486,7 @@ fun SettingsScreen(
                         },
                         dismissButton = {
                             TextButton(onClick = { showLogoutConfirm = false }) {
-                                Text("Cancel", color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                                Text(str.cancel, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     )
