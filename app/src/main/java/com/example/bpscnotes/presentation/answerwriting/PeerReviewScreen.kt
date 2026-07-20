@@ -227,9 +227,14 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 }
                 Spacer(Modifier.height(12.dp))
 
-                // Handwritten photos or typed text
+                // PDF, handwritten photos, or typed text
+                var pdfToView by remember(assignment.id) { mutableStateOf<String?>(null) }
+                pdfToView?.let { AnswerPdfDialog(url = it, onDismiss = { pdfToView = null }) }
                 val images = assignment.answerImages.orEmpty()
-                if (images.isNotEmpty()) {
+                val pdf = assignment.answerPdf
+                if (!pdf.isNullOrBlank()) {
+                    OpenAnswerPdfButton(onClick = { pdfToView = pdf }, modifier = Modifier.fillMaxWidth())
+                } else if (images.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         images.forEach { url ->
                             AsyncImage(

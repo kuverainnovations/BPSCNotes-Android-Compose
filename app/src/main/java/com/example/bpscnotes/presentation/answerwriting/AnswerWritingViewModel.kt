@@ -59,6 +59,9 @@ data class AnswerWritingUiState(
 
     // ── Handwritten answer photos (pre-submit) ────────────────
     val selectedImages: List<Uri>                   = emptyList(),
+    /** PDF answer mode — the picked PDF, and its display name */
+    val selectedPdf: Uri?                           = null,
+    val selectedPdfName: String?                    = null,
 
     // ── Writing / submit ──────────────────────────────────────
     // The draft lives in the VM so rotation/recomposition never eats
@@ -207,6 +210,59 @@ class AnswerWritingViewModel @Inject constructor(
 
     fun removeImage(uri: Uri) {
         _uiState.update { it.copy(selectedImages = it.selectedImages - uri) }
+    }
+
+    fun selectPdf(uri: Uri, name: String?) {
+        _uiState.update { it.copy(selectedPdf = uri, selectedPdfName = name ?: "answer.pdf") }
+    }
+
+    fun clearPdf() {
+        _uiState.update { it.copy(selectedPdf = null, selectedPdfName = null) }
+    }
+
+    fun submitPdf(questionId: String, timeTakenSecs: Int, context: Context) {
+        val uri = _uiState.value.selectedPdf
+        if (uri == null || _uiState.value.isSubmitting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true, submitError = null) }
+            try {
+                val part = withContext(Dispatchers.IO) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        ?: throw Exception("Could not read the PDF")
+                    MultipartBody.Part.createFormData(
+                        "pdf", _uiState.value.selectedPdfName ?: "answer.pdf",
+                        bytes.toRequestBody("application/pdf".toMediaTypeOrNull())
+                    )
+                }
+                val resp = api.submitPdfAnswer(
+                    questionId, part,
+                    timeTakenSecs.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                )
+                val data = resp.data ?: throw Exception("Submit failed")
+                _uiState.update { s ->
+                    s.copy(
+                        isSubmitting    = false,
+                        submission      = data.submission,
+                        question        = s.question?.copy(
+                            modelAnswer = data.modelAnswer ?: s.question.modelAnswer,
+                            modelAnswerTomorrow = data.modelAnswerTomorrow,
+                        ),
+                        justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
+                        selectedPdf     = null,
+                        selectedPdfName = null,
+                        questions       = s.questions.map {
+                            if (it.id == questionId) it.copy(isSubmitted = true, myStatus = "submitted") else it
+                        },
+                    )
+                }
+                if (data.coinsEarned > 0) bus.emit(RefreshEvent.CoinsChanged)
+            } catch (e: Exception) {
+                Log.e("AnswerWritingVM", "submitPdf: ${e.message}", e)
+                _uiState.update {
+                    it.copy(isSubmitting = false, submitError = e.toUserMessage("Upload failed — please try again"))
+                }
+            }
+        }
     }
 
     /**

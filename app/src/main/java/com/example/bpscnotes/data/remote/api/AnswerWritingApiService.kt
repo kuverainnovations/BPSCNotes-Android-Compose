@@ -59,6 +59,8 @@ data class AnswerSubmissionDto(
     @SerializedName("answer_text")     val answerText: String? = null,
     /** Handwritten answers — photo URLs of the notebook pages */
     @SerializedName("answer_images")   val answerImages: List<String>? = null,
+    /** PDF answers — hosted URL of the uploaded PDF */
+    @SerializedName("answer_pdf")      val answerPdf: String? = null,
     @SerializedName("word_count")      val wordCount: Int = 0,
     @SerializedName("time_taken_secs") val timeTakenSecs: Int? = null,
     /** "submitted" | "peer_reviewed" | "reviewed" (mentor-graded) */
@@ -147,6 +149,7 @@ data class ReviewAssignmentDto(
     val id: String = "",
     @SerializedName("answer_text")   val answerText: String? = null,
     @SerializedName("answer_images") val answerImages: List<String>? = null,
+    @SerializedName("answer_pdf")    val answerPdf: String? = null,
     @SerializedName("word_count")    val wordCount: Int = 0,
     @SerializedName("question_id")   val questionId: String = "",
     @SerializedName("question_text") val questionText: String = "",
@@ -210,6 +213,15 @@ interface AnswerWritingApiService {
     suspend fun submitPhotoAnswer(
         @Path("id") id: String,
         @Part images: List<okhttp3.MultipartBody.Part>,
+        @Part("timeTakenSecs") timeTakenSecs: okhttp3.RequestBody,
+    ): ApiResponse<SubmitAnswerData>
+
+    /** PDF answer — a single uploaded PDF of the answer */
+    @Multipart
+    @POST("answer-writing/{id}/submit-pdf")
+    suspend fun submitPdfAnswer(
+        @Path("id") id: String,
+        @Part pdf: okhttp3.MultipartBody.Part,
         @Part("timeTakenSecs") timeTakenSecs: okhttp3.RequestBody,
     ): ApiResponse<SubmitAnswerData>
 

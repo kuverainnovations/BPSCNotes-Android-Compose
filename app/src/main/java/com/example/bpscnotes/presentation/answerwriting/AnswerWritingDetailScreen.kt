@@ -109,6 +109,10 @@ private fun DetailContent(
     val submission = state.submission
     val isWriting = submission == null
 
+    // Non-null → show the answer-PDF viewer for this url
+    var pdfToView by remember { mutableStateOf<String?>(null) }
+    pdfToView?.let { AnswerPdfDialog(url = it, onDismiss = { pdfToView = null }) }
+
     // Elapsed writing timer — only ticks pre-submit; tappable pause/resume
     var elapsedSecs by rememberSaveable(questionId) { mutableStateOf(0) }
     var timerRunning by rememberSaveable(questionId) { mutableStateOf(true) }
@@ -117,12 +121,32 @@ private fun DetailContent(
     }
 
     var showConfirm by remember { mutableStateOf(false) }
-    // Answer mode: type in the app, or photograph a handwritten answer
-    var photoMode by rememberSaveable(questionId) { mutableStateOf(false) }
+    // Answer mode: 0 = type in-app, 1 = photograph the notebook, 2 = PDF
+    var answerMode by rememberSaveable(questionId) { mutableStateOf(0) }
+    val isType   = answerMode == 0
+    val isPhotos = answerMode == 1
+    val isPdf    = answerMode == 2
     val context = LocalContext.current
     val words = state.draftText.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size
     val overLimit = words > q.wordLimit
-    val canSend = if (photoMode) state.selectedImages.isNotEmpty() else words > 0
+    val canSend = when {
+        isPhotos -> state.selectedImages.isNotEmpty()
+        isPdf    -> state.selectedPdf != null
+        else     -> words > 0
+    }
+
+    // ── PDF picker ────────────────────────────────────────────────
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val name = runCatching {
+                context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                    val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+                }
+            }.getOrNull()
+            viewModel.selectPdf(uri, name)
+        }
+    }
 
     // ── Photo pickers ────────────────────────────────────────────
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
@@ -148,16 +172,19 @@ private fun DetailContent(
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { if (!state.isSubmitting) showConfirm = false },
-            icon = { Text(if (photoMode) "📷" else "✍️", fontSize = 30.sp) },
+            icon = { Text(when { isPhotos -> "📷"; isPdf -> "📄"; else -> "✍️" }, fontSize = 30.sp) },
             title = { Text(str.awConfirmTitle, fontWeight = FontWeight.ExtraBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(str.awConfirmBody, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp)
                     Text(
-                        if (photoMode) "${state.selectedImages.size} ${str.awPhotos}"
-                        else "$words / ${q.wordLimit} ${str.awWords}" + if (overLimit) " · ${str.awOverLimit}" else "",
+                        when {
+                            isPhotos -> "${state.selectedImages.size} ${str.awPhotos}"
+                            isPdf    -> state.selectedPdfName ?: "answer.pdf"
+                            else     -> "$words / ${q.wordLimit} ${str.awWords}" + if (overLimit) " · ${str.awOverLimit}" else ""
+                        },
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (!photoMode && overLimit) cs.error else BpscColors.Success,
+                        color = if (isType && overLimit) cs.error else BpscColors.Success,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -165,8 +192,11 @@ private fun DetailContent(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (photoMode) viewModel.submitPhotos(questionId, elapsedSecs, context)
-                        else viewModel.submit(questionId, elapsedSecs)
+                        when {
+                            isPhotos -> viewModel.submitPhotos(questionId, elapsedSecs, context)
+                            isPdf    -> viewModel.submitPdf(questionId, elapsedSecs, context)
+                            else     -> viewModel.submit(questionId, elapsedSecs)
+                        }
                     },
                     enabled = !state.isSubmitting,
                     shape = RoundedCornerShape(12.dp),
@@ -299,24 +329,71 @@ private fun DetailContent(
                         .background(IndigoSoft.copy(alpha = 0.6f)).padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf(false to str.awTypeMode, true to str.awPhotoMode).forEach { (mode, label) ->
+                    listOf(0 to str.awTypeMode, 1 to str.awPhotoMode, 2 to "PDF").forEach { (mode, label) ->
                         Box(
                             modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
-                                .background(if (photoMode == mode) Color.White else Color.Transparent)
-                                .clickable { photoMode = mode }
+                                .background(if (answerMode == mode) Color.White else Color.Transparent)
+                                .clickable { answerMode = mode }
                                 .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 label, style = MaterialTheme.typography.labelLarge,
-                                color = if (photoMode == mode) Indigo else BpscColors.TextHint,
+                                color = if (answerMode == mode) Indigo else BpscColors.TextHint,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
 
-                if (photoMode) {
+                if (isPdf) {
+                    // ── PDF pad — upload a single PDF of the answer ──
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                "Upload a single PDF of your answer (max 25 MB).",
+                                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, lineHeight = 18.sp
+                            )
+                            if (state.selectedPdf != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                        .background(IndigoSoft.copy(alpha = 0.5f)).padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text("📄", fontSize = 22.sp)
+                                    Text(
+                                        state.selectedPdfName ?: "answer.pdf",
+                                        style = MaterialTheme.typography.bodyMedium, color = cs.onSurface,
+                                        fontWeight = FontWeight.SemiBold, maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Box(
+                                        modifier = Modifier.size(24.dp).clip(CircleShape)
+                                            .background(Color.Black.copy(0.55f))
+                                            .clickable { viewModel.clearPdf() },
+                                        contentAlignment = Alignment.Center
+                                    ) { Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { pdfLauncher.launch("application/pdf") },
+                                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Icon(Icons.Rounded.PictureAsPdf, null, modifier = Modifier.size(18.dp), tint = Indigo)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Choose PDF", color = Indigo, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                } else if (isPhotos) {
                     // ── Photo pad — handwritten answer photos ──────
                     Card(
                         shape = RoundedCornerShape(16.dp),
@@ -493,21 +570,24 @@ private fun DetailContent(
                         }
                         Spacer(Modifier.height(8.dp))
                         val myImages = submission.answerImages.orEmpty()
-                        if (myImages.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                myImages.forEach { url ->
-                                    AsyncImage(
-                                        model = url,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.FillWidth,
-                                        modifier = Modifier.fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
-                                    )
+                        val myPdf = submission.answerPdf
+                        when {
+                            !myPdf.isNullOrBlank() ->
+                                OpenAnswerPdfButton(onClick = { pdfToView = myPdf }, modifier = Modifier.fillMaxWidth())
+                            myImages.isNotEmpty() ->
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    myImages.forEach { url ->
+                                        AsyncImage(
+                                            model = url,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.FillWidth,
+                                            modifier = Modifier.fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                        )
+                                    }
                                 }
-                            }
-                        } else {
-                            Text(
+                            else -> Text(
                                 submission.answerText ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurfaceVariant, lineHeight = 22.sp
