@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -324,13 +325,16 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
 private fun NoteCardBlockLine(b: NoteBlockDto) {
     when (b.type) {
         "image" -> if (!b.url.isNullOrBlank()) {
+            // Card preview: cap the height so one tall image can't dominate
+            // the card, but Fit (not Crop) so the whole image is still visible.
             AsyncImage(
                 model = b.url,
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.CenterStart,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 110.dp)
+                    .heightIn(max = 120.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .padding(vertical = 2.dp),
             )
@@ -551,11 +555,17 @@ private fun BlockRow(
                 ) { CircularProgressIndicator(Modifier.size(22.dp), color = BpscColors.Primary, strokeWidth = 2.dp) }
             } else {
                 Box(Modifier.weight(1f)) {
+                    // FillWidth + no fixed height: the whole image shows,
+                    // scaled to the note width at its natural aspect ratio
+                    // (Crop was chopping tall diagrams / handwritten photos).
+                    // Same pattern as the peer-review answer photos.
                     AsyncImage(
                         model = block.url,
                         contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp).clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, BpscColors.Divider, RoundedCornerShape(12.dp)),
                     )
                     IconButton(
                         onClick = onDelete,
