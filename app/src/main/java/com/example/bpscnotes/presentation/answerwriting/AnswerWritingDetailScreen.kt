@@ -650,48 +650,62 @@ private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.
     // v2: up to 3 flagged areas; fall back to the legacy single field
     val areas = review.improvementAreas?.takeIf { it.isNotEmpty() }
         ?: listOfNotNull(review.improvementArea)
+    val (vLabel, vColor) = when (review.verdict) {
+        "yes"    -> str.yes to BpscColors.Success
+        "partly" -> str.awPartly to Color(0xFFB45309)
+        else     -> str.no to Color(0xFFE74C3C)
+    }
+    // Show the review the same way the reviewer filled it — each of the four
+    // questions with its answer (QA 20-07: "show review questions also").
     Column(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .background(cs.surfaceVariant.copy(alpha = 0.4f)).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Q1 — did it address the demand?
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(str.awReviewQ1, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             Text(
-                "⭐".repeat(review.rating.coerceIn(0, 5)),
+                vLabel, style = MaterialTheme.typography.labelSmall,
+                color = vColor, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                    .background(vColor.copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+        // Q2 — rating
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(str.awReviewQ2, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+            Text(
+                "⭐".repeat(review.rating.coerceIn(0, 5)) + "☆".repeat((5 - review.rating).coerceIn(0, 5)),
                 style = MaterialTheme.typography.labelLarge
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                val (vLabel, vColor) = when (review.verdict) {
-                    "yes"    -> str.yes to BpscColors.Success
-                    "partly" -> str.awPartly to Color(0xFFB45309)
-                    else     -> str.no to Color(0xFFE74C3C)
-                }
-                Text(
-                    vLabel, style = MaterialTheme.typography.labelSmall,
-                    color = vColor, fontWeight = FontWeight.Bold, fontSize = 10.sp,
-                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                        .background(vColor.copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-                areas.forEach { a ->
-                    Text(
-                        areaLabel(a), style = MaterialTheme.typography.labelSmall,
-                        color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
-                        modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                            .background(IndigoSoft).padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
+        }
+        // Q3 — improvement areas (only if the reviewer flagged any)
+        if (areas.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(str.awReviewQ3, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    areas.forEach { a ->
+                        Text(
+                            areaLabel(a), style = MaterialTheme.typography.labelSmall,
+                            color = Indigo, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                .background(IndigoSoft).padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
         }
+        // Q4 — suggestion (only if the reviewer wrote one)
         if (!review.suggestion.isNullOrBlank()) {
-            Text(
-                "“${review.suggestion}”",
-                style = MaterialTheme.typography.bodySmall,
-                color = cs.onSurfaceVariant, lineHeight = 18.sp
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(str.awReviewQ4, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "“${review.suggestion}”",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cs.onSurface, lineHeight = 18.sp
+                )
+            }
         }
     }
 }

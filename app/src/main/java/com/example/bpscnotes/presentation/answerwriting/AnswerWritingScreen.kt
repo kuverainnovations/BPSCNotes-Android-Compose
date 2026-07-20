@@ -595,9 +595,12 @@ private fun InsightsTab(
                 insights.avgRating?.let { if (it >= 4.0) str.awKeepItUp else null }, Color(0xFFF59E0B)),
             InsightTileData("🔥", "${insights.writingStreak}", "${str.awWritingStreak} (${str.awDays})",
                 if (insights.writingStreak > 0) str.awKeepItUp else null, Color(0xFFFF5722)),
+            // Avg Mains Score = mentor/expert review score — placeholder for
+            // the upcoming paid (subscription) answer review; shows "—" until
+            // an expert review exists.
             InsightTileData("🏅", insights.avgMentorScore?.let { "%.1f".format(it) } ?: "—", str.awMentorScore, null, Color(0xFF7E57C2)),
             InsightTileData("🪙", "${insights.reviewCredits}", str.awReviewCredits, null, Color(0xFFB45309)),
-            InsightTileData("✍️", "${insights.totalWords}", str.awTotalWords, null, Color(0xFF00897B)),
+            // "Words" tile removed (QA 20-07 — not needed).
         )
         tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

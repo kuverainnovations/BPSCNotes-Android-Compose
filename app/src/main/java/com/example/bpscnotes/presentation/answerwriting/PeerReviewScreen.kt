@@ -243,11 +243,15 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                         }
                     }
                 } else {
-                    Text(
-                        assignment.answerText ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = cs.onSurfaceVariant, lineHeight = 22.sp
-                    )
+                    // Selectable so reviewers can long-press to copy quotes
+                    // from the answer into their suggestion.
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(
+                            assignment.answerText ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant, lineHeight = 22.sp
+                        )
+                    }
                 }
             }
         }

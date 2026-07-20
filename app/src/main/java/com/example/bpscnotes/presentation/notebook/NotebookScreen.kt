@@ -87,6 +87,46 @@ fun NotebookScreen(nav: NavController, viewModel: NotebookViewModel = hiltViewMo
         state.error?.let { snackbar.showSnackbar(it); viewModel.clearError() }
     }
 
+    // First-launch intro — explains what the Notebook is for (saving intros,
+    // conclusions, key data to reuse in Mains answers). Shown once, tracked
+    // in a tiny SharedPreferences flag (QA 20-07).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showIntro by remember {
+        mutableStateOf(
+            !context.getSharedPreferences("notebook_prefs", android.content.Context.MODE_PRIVATE)
+                .getBoolean("intro_shown", false)
+        )
+    }
+    if (showIntro) {
+        AlertDialog(
+            onDismissRequest = {
+                context.getSharedPreferences("notebook_prefs", android.content.Context.MODE_PRIVATE)
+                    .edit().putBoolean("intro_shown", true).apply()
+                showIntro = false
+            },
+            icon = { Text("📓", fontSize = 34.sp) },
+            title = { Text("Your study notebook", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Text(
+                    "Save your introductions, conclusions, and key data (facts, figures, quotes) " +
+                    "here — then reuse them in future Mains answers. Add headings, bullet lists, " +
+                    "checklists and images to keep everything organised.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        context.getSharedPreferences("notebook_prefs", android.content.Context.MODE_PRIVATE)
+                            .edit().putBoolean("intro_shown", true).apply()
+                        showIntro = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary),
+                ) { Text("Got it", fontWeight = FontWeight.Bold) }
+            },
+        )
+    }
+
     BackHandler(enabled = state.editorOpen) { viewModel.closeEditor() }
 
     Scaffold(
