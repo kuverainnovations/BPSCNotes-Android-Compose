@@ -231,8 +231,7 @@ fun SettingsScreen(
                                 onChange = { /* not yet implemented */ }
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
-                            // Language picker — hidden per request
-                            // LanguagePickerRow()
+                            LanguagePickerRow()
                         }
                     }
 

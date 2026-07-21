@@ -2374,7 +2374,7 @@ private fun BpscDrawer(
                         }
                         Spacer(Modifier.height(6.dp))
                         // Language switch button in drawer header
-                        // LanguageSwitchButton() — hidden per request
+                        LanguageSwitchButton()
                     }
                 }
             }
