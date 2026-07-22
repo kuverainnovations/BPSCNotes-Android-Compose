@@ -63,6 +63,9 @@ data class NotebookUiState(
     val editorSubject: String? = null,
     val editorBlocks: List<EditableBlock> = emptyList(),
     val isSaving: Boolean = false,
+    // Block that should grab focus next (e.g. the new list item created by
+    // pressing Enter). Cleared once the field has requested focus.
+    val pendingFocusId: String? = null,
 ) {
     val subjects: List<String>
         get() = notes.mapNotNull { it.subject?.takeIf { s -> s.isNotBlank() } }.distinct().sorted()
@@ -160,6 +163,40 @@ class NotebookViewModel @Inject constructor(
 
     fun setBlockType(id: String, type: BlockType) =
         updateBlocks { list -> list.map { if (it.id == id) it.copy(type = type) else it } }
+
+    /**
+     * Enter pressed inside a list block (bullet / numbered / checklist).
+     * Splits at the newline and continues the list with a new item of the same
+     * type (QA 21-07 Issue 11). Pressing Enter on an empty item ends the list
+     * by turning that item back into a plain text block.
+     */
+    fun onListBlockEnter(id: String, newText: String) {
+        val before = newText.substringBefore('\n')
+        val after  = newText.substringAfter('\n', "")
+        _state.update { s ->
+            val list = s.editorBlocks
+            val idx  = list.indexOfFirst { it.id == id }
+            if (idx < 0) return@update s
+            val cur = list[idx]
+            if (before.isBlank() && after.isBlank()) {
+                // Empty list item + Enter → exit the list.
+                s.copy(editorBlocks = list.toMutableList().apply {
+                    set(idx, cur.copy(type = BlockType.Text, text = ""))
+                })
+            } else {
+                val newBlock = EditableBlock(type = cur.type, text = after)
+                s.copy(
+                    editorBlocks = list.toMutableList().apply {
+                        set(idx, cur.copy(text = before))
+                        add(idx + 1, newBlock)
+                    },
+                    pendingFocusId = newBlock.id,
+                )
+            }
+        }
+    }
+
+    fun clearPendingFocus() = _state.update { it.copy(pendingFocusId = null) }
 
     /** Add a new empty block right after [afterId] (or at the end). */
     fun addBlock(afterId: String?, type: BlockType = BlockType.Text) {

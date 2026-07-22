@@ -33,6 +33,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -492,6 +494,9 @@ private fun BlockEditor(
                         "${state.editorBlocks.take(index + 1).count { it.type == BlockType.Numbered }}." else null,
                     onFocused = { focusedId = block.id },
                     onText = { viewModel.setBlockText(block.id, it) },
+                    onEnter = { viewModel.onListBlockEnter(block.id, it) },
+                    requestFocus = state.pendingFocusId == block.id,
+                    onFocusHandled = { viewModel.clearPendingFocus() },
                     onToggleCheck = { viewModel.toggleCheck(block.id) },
                     onTypeChange = { viewModel.setBlockType(block.id, it) },
                     onMoveUp = { viewModel.moveBlock(block.id, up = true) },
@@ -578,6 +583,9 @@ private fun BlockRow(
     numberLabel: String?,
     onFocused: () -> Unit,
     onText: (String) -> Unit,
+    onEnter: (String) -> Unit = {},
+    requestFocus: Boolean = false,
+    onFocusHandled: () -> Unit = {},
     onToggleCheck: () -> Unit,
     onTypeChange: (BlockType) -> Unit,
     onMoveUp: () -> Unit,
@@ -619,6 +627,15 @@ private fun BlockRow(
     }
 
     val heading = block.type == BlockType.Heading
+    val isList = block.type == BlockType.Bullet || block.type == BlockType.Numbered || block.type == BlockType.Check
+    // Focus the newly-created list item after Enter so the user keeps typing.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(requestFocus) {
+        if (requestFocus) {
+            runCatching { focusRequester.requestFocus() }
+            onFocusHandled()
+        }
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
         // Leading marker / control
         when (block.type) {
@@ -630,7 +647,11 @@ private fun BlockRow(
 
         TextField(
             value = block.text,
-            onValueChange = onText,
+            // In a list block, a newline means Enter → continue the list with a
+            // new item instead of adding a line break inside the current one.
+            onValueChange = { newText ->
+                if (isList && newText.contains('\n')) onEnter(newText) else onText(newText)
+            },
             placeholder = {
                 Text(
                     when (block.type) {
@@ -649,6 +670,7 @@ private fun BlockRow(
             ),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier.weight(1f)
+                .focusRequester(focusRequester)
                 .onFocusChanged { if (it.isFocused) onFocused() },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
