@@ -399,12 +399,25 @@ private fun QuestionCard(q: AnswerQuestionDto, onClick: () -> Unit) {
         "submitted"                 -> Color(0xFFFFF8E1) to Color(0xFFB45309)
         else                        -> IndigoSoft to Indigo
     }
+    // Tint the whole card once the question has been answered, so answered
+    // questions are clearly distinct from un-attempted ones at a glance.
+    val cardBg = when (q.myStatus) {
+        "reviewed", "peer_reviewed" -> Color(0xFFF3FBF6)   // faint green — reviewed
+        "submitted"                 -> Color(0xFFFFFBF0)   // faint amber — under review
+        else                        -> cs.surface
+    }
+    val cardBorder = when (q.myStatus) {
+        "reviewed", "peer_reviewed" -> BpscColors.Success.copy(alpha = 0.35f)
+        "submitted"                 -> Color(0xFFB45309).copy(alpha = 0.30f)
+        else                        -> null
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(2.dp),
+        border = cardBorder?.let { BorderStroke(1.dp, it) }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
