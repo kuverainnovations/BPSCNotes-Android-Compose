@@ -253,8 +253,15 @@ class MockTestsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val correctText = options.getOrNull(correctIndex)?.let { "${('A' + correctIndex)}. $it" } ?: "—"
+                // The question is the note title, so it isn't repeated in the
+                // body. The body keeps every option (so "All of the above" /
+                // "Both A & B" stay meaningful on later revision), marks the
+                // correct one, then the answer line and explanation.
                 val content = buildString {
-                    appendLine(question.trim())
+                    options.forEachIndexed { i, opt ->
+                        val marker = if (i == correctIndex) "  ✅" else ""
+                        appendLine("${('A' + i)}. $opt$marker")
+                    }
                     appendLine()
                     appendLine("✅ Answer: $correctText")
                     if (explanation.isNotBlank()) {
@@ -264,10 +271,15 @@ class MockTestsViewModel @Inject constructor(
                 }
                 notebookApi.createNote(
                     com.example.bpscnotes.data.remote.api.CreateNoteRequest(
-                        title   = question.trim().take(80),
-                        content = content,
-                        color   = "yellow",
-                        subject = subject.ifBlank { null },
+                        // Full question (DB column is VARCHAR(200)); the card
+                        // truncates for display but the editor shows it in full.
+                        title     = question.trim().take(200),
+                        content   = content,
+                        color     = "yellow",
+                        subject   = subject.ifBlank { null },
+                        // Dedup key — backend won't create a duplicate for the
+                        // same question even across sessions (Issue 10).
+                        sourceRef = questionId.ifBlank { null },
                     )
                 )
                 _uiState.update { it.copy(

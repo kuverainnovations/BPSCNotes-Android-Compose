@@ -1536,7 +1536,15 @@ private fun ContinueLearningSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { navController.navigate(Screen.QuizList.route) }
+                    // Route to the matching hub: a mock-test attempt must open the
+                    // Mock Tests screen, not the generic Quiz list. (Deep-linking to
+                    // the exact test needs the backend to include the quiz id here.)
+                    .clickable {
+                        when (recentAttempt.type) {
+                            "mock" -> navController.navigate(Screen.MockTests.route)
+                            else   -> navController.navigate(Screen.QuizList.route)
+                        }
+                    }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)

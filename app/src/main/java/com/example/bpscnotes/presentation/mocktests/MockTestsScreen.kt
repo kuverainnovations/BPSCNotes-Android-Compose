@@ -324,10 +324,17 @@ fun MockTestsScreen(
                 submitResult      = state.submitResult,
                 savedQuestionIds  = state.notebookSavedQuestionIds,
                 onAddToNotebook   = { q, correctIdx, explanation ->
+                    // Prefer the question's own subject; when it's missing or the
+                    // generic "General" default, fall back to the mock test's
+                    // admin-selected subject so the note isn't dumped in General.
+                    val noteSubject = q.subject
+                        .takeIf { it.isNotBlank() && !it.equals("General", ignoreCase = true) }
+                        ?: test.subject?.takeIf { it.isNotBlank() }
+                        ?: q.subject
                     viewModel.saveSolutionToNotebook(
                         question     = q.question,
                         questionId   = q.id,
-                        subject      = q.subject,
+                        subject      = noteSubject,
                         options      = q.options,
                         correctIndex = correctIdx,
                         explanation  = explanation,
@@ -824,6 +831,20 @@ private fun TestInstructionsScreen(
                         }
                     }
                     Text(test.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                    // Subject pill — surfaced here (like the daily quizzes do)
+                    // so the admin-selected subject is visible before the test.
+                    test.subject?.takeIf { it.isNotBlank() }?.let { subj ->
+                        Text(
+                            subj,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(0.18f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                     Text(test.subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.7f))
                 }
             }

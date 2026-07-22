@@ -92,9 +92,12 @@ class NotebookViewModel @Inject constructor(
 
     init { load() }
 
-    fun load() {
+    // showLoader=false keeps the notes list (and the search field) on screen
+    // while refreshing, so a search-triggered reload never disposes the
+    // TextField — otherwise the keyboard closes on every keystroke.
+    fun load(showLoader: Boolean = true) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            if (showLoader) _state.update { it.copy(isLoading = true, error = null) }
             try {
                 val notes = api.getNotes(_state.value.search.ifBlank { null }).data?.notes ?: emptyList()
                 _state.update { it.copy(isLoading = false, notes = notes) }
@@ -107,7 +110,7 @@ class NotebookViewModel @Inject constructor(
     fun onSearchChange(value: String) {
         _state.update { it.copy(search = value) }
         searchJob?.cancel()
-        searchJob = viewModelScope.launch { delay(400); load() }
+        searchJob = viewModelScope.launch { delay(400); load(showLoader = false) }
     }
 
     fun setSubjectFilter(subject: String?) = _state.update { it.copy(subjectFilter = subject) }

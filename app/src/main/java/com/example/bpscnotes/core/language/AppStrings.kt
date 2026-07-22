@@ -171,6 +171,7 @@ data class QuizStrings(
     val awTakePhoto: String = "Camera",
     val awFromGallery: String = "Gallery",
     val awPhotos: String = "photos",
+    val awMaxPhotosReached: String = "You can upload a maximum of 5 photos.",
     // ── Peer review ──────────────────────────────────────────────────
     val awPeerReview: String = "Peer Review",
     val awPeerReviewSub: String = "Review answers written by other aspirants and earn review credits.",
@@ -1041,6 +1042,7 @@ data class AppStrings(
     val awPendingNote get() = _qz.awPendingNote; val awDashSubtitle get() = _qz.awDashSubtitle
     val awTypeMode get() = _qz.awTypeMode; val awPhotoMode get() = _qz.awPhotoMode; val awPhotoHint get() = _qz.awPhotoHint
     val awTakePhoto get() = _qz.awTakePhoto; val awFromGallery get() = _qz.awFromGallery; val awPhotos get() = _qz.awPhotos
+    val awMaxPhotosReached get() = _qz.awMaxPhotosReached
     val awPeerReview get() = _qz.awPeerReview; val awPeerReviewSub get() = _qz.awPeerReviewSub; val awReviewNow get() = _qz.awReviewNow
     val awReviewsGiven get() = _qz.awReviewsGiven; val awPendingReviews get() = _qz.awPendingReviews; val awReviewCredits get() = _qz.awReviewCredits
     val awReviewLockedNoSub get() = _qz.awReviewLockedNoSub; val awReviewLockedNotReviewed get() = _qz.awReviewLockedNotReviewed
@@ -2510,6 +2512,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         awTakePhoto="कैमरा",
         awFromGallery="गैलरी",
         awPhotos="फोटो",
+        awMaxPhotosReached="आप अधिकतम 5 फोटो अपलोड कर सकते हैं।",
         awPeerReview="सहपाठी समीक्षा",
         awPeerReviewSub="अन्य अभ्यर्थियों के उत्तरों की समीक्षा करें और रिव्यू क्रेडिट कमाएं।",
         awReviewNow="अभी समीक्षा करें",

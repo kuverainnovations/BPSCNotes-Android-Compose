@@ -526,7 +526,11 @@ private fun RoomsHeroHeader(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
@@ -549,12 +553,14 @@ private fun RoomsHeroHeader(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(BpscColors.CoinGold.copy(0.2f))
                         .padding(horizontal = 10.dp, vertical = 5.dp)) {
                         Text("🪙 ${coinsPerHrLabel(myTier.coinMultiplier)} coins/hr",
-                            style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.ExtraBold)
+                            style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold,
+                            fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                     }
                 }
             }

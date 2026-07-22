@@ -1474,6 +1474,19 @@ private fun StoreCourseCard(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        // Subject badge — shown on the card (not only in detail)
+                        // so the course's subject is visible while browsing.
+                        if (course.subject.isNotBlank()) Text(
+                            course.subject,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accent,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(bg)
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
                         if (!course.isPaid) Text(
                             str.badgeFree,
                             style = MaterialTheme.typography.labelSmall,

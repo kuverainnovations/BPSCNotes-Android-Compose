@@ -48,6 +48,9 @@ data class CreateNoteRequest(
     val color: String? = null,
     val subject: String? = null,
     val blocks: List<NoteBlockDto>? = null,
+    // Stable id of the source question (mock test / quiz) so the backend can
+    // dedup — re-adding the same question won't create a duplicate note.
+    val sourceRef: String? = null,
 )
 
 // All fields optional — send only what changed. isPinned toggles pin.

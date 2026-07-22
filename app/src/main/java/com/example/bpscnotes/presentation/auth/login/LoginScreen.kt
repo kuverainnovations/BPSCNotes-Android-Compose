@@ -51,11 +51,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -235,9 +239,14 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Terms checkbox
+            // Terms checkbox — the whole line flows as one paragraph so the
+            // "Terms & Privacy Policy" link wraps and aligns with the text.
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val termsLinkStyle = TextLinkStyles(
+                style = SpanStyle(color = BpscColors.Primary, fontWeight = FontWeight.SemiBold)
+            )
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 modifier = Modifier.clickable { agreed = !agreed }
             ) {
                 Checkbox(
@@ -247,20 +256,20 @@ fun LoginScreen(navController: NavHostController) {
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    str.loginIAgree,
+                    buildAnnotatedString {
+                        append(str.loginIAgree)
+                        withLink(
+                            LinkAnnotation.Url("https://bpscnotes.in/privacy-policy/", termsLinkStyle) { link ->
+                                CustomTabsIntent.Builder().build()
+                                    .launchUrl(context, android.net.Uri.parse((link as LinkAnnotation.Url).url))
+                            }
+                        ) { append(str.loginTermsPrivacy) }
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant
-                )
-                val context = androidx.compose.ui.platform.LocalContext.current
-                Text(
-                    str.loginTermsPrivacy,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = BpscColors.Primary,
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable {
-                        CustomTabsIntent.Builder().build()
-                            .launchUrl(context, android.net.Uri.parse("https://bpscnotes.in/privacy-policy/"))
-                    }
+                    color = cs.onSurfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .align(Alignment.CenterVertically)
                 )
             }
 

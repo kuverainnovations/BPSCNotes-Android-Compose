@@ -150,7 +150,11 @@ private fun DetailContent(
 
     // ── Photo pickers ────────────────────────────────────────────
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        uris.take(AnswerWritingViewModel.MAX_PHOTOS - state.selectedImages.size).forEach { viewModel.addImage(it) }
+        val remaining = AnswerWritingViewModel.MAX_PHOTOS - state.selectedImages.size
+        uris.take(remaining).forEach { viewModel.addImage(it) }
+        if (uris.size > remaining) {
+            android.widget.Toast.makeText(context, str.awMaxPhotosReached, android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
