@@ -1,7 +1,10 @@
 package com.example.bpscnotes.presentation.answerwriting
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +59,12 @@ fun PeerReviewScreen(
         state.submitError?.let { snackbarHostState.showSnackbar(it); viewModel.clearToasts() }
     }
 
+    // While reviewing a chosen answer, Back returns to the pool list first.
+    fun onBack() {
+        if (state.assignment != null) viewModel.backToList() else navController.popBackStackSafe()
+    }
+    BackHandler(enabled = state.assignment != null) { viewModel.backToList() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
 
@@ -80,7 +89,7 @@ fun PeerReviewScreen(
                         Box(
                             modifier = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.White.copy(0.15f))
-                                .clickable { navController.popBackStackSafe() },
+                                .clickable { onBack() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Rounded.ArrowBack, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -121,14 +130,14 @@ fun PeerReviewScreen(
                 state.isLoading -> AppLoader()
                 state.loadError != null -> AppErrorState(
                     message = state.loadError!!,
-                    onRetry = { viewModel.loadNext() },
+                    onRetry = { viewModel.loadPool() },
                     secondaryAction = {
                         OutlinedButton(onClick = { navController.popBackStackSafe() }) { Text(str.goBack) }
                     }
                 )
                 state.noneAvailable -> DoneState(state.reviewsDoneThisSession) { navController.popBackStackSafe() }
                 state.assignment != null -> ReviewBody(state.assignment!!, viewModel)
-                else -> AppLoader()
+                else -> ReviewPoolList(state.pool) { viewModel.selectAssignment(it) }
             }
         }
 
@@ -419,6 +428,71 @@ private fun AreaChip(label: String, isSel: Boolean, modifier: Modifier, onToggle
                 fontWeight = if (isSel) FontWeight.ExtraBold else FontWeight.SemiBold,
                 maxLines = 1, textAlign = TextAlign.Center, fontSize = 11.sp
             )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pool list — pick which anonymous answer to review.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun ReviewPoolList(pool: List<ReviewAssignmentDto>, onSelect: (ReviewAssignmentDto) -> Unit) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                "${pool.size} ${if (pool.size == 1) "answer" else "answers"} to review — pick one",
+                style = MaterialTheme.typography.titleSmall,
+                color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
+            )
+        }
+        items(pool, key = { it.id }) { a ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onSelect(a) },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                elevation = CardDefaults.cardElevation(2.dp),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        a.subject?.takeIf { it.isNotBlank() }?.let {
+                            Text(
+                                it, style = MaterialTheme.typography.labelSmall,
+                                color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IndigoSoft)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                            )
+                        } ?: Spacer(Modifier.size(1.dp))
+                        Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
+                    }
+                    Text(
+                        a.questionText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurface, fontWeight = FontWeight.SemiBold,
+                        lineHeight = 20.sp, maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("🏆 ${a.marks} ${str.awMarks}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                        Text("📄 ${a.wordLimit} ${str.awWords}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                        val kind = when {
+                            !a.answerPdf.isNullOrBlank()    -> "PDF"
+                            !a.answerImages.isNullOrEmpty() -> "Photos"
+                            else                            -> "${a.wordCount} words"
+                        }
+                        Text("✍️ $kind", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                    }
+                }
+            }
         }
     }
 }

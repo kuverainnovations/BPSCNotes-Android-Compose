@@ -23,6 +23,9 @@ import javax.inject.Inject
 // ─────────────────────────────────────────────────────────────
 
 data class PeerReviewUiState(
+    /** The pool of answers the user can choose to review */
+    val pool: List<ReviewAssignmentDto>   = emptyList(),
+    /** The answer currently open for review (null = show the pool list) */
     val assignment: ReviewAssignmentDto?  = null,
     val isLoading: Boolean                = true,
     /** Pool is empty (or reviewing is locked) — show the done state */
@@ -52,31 +55,48 @@ class PeerReviewViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PeerReviewUiState())
     val uiState: StateFlow<PeerReviewUiState> = _uiState.asStateFlow()
 
-    init { loadNext() }
+    init { loadPool() }
 
-    fun loadNext() {
+    /** Load the pool of answers the user can pick from and show the list. */
+    fun loadPool() {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    isLoading = true, loadError = null, noneAvailable = false,
-                    assignment = null,
-                    // reset the form for the new answer
+                    isLoading = true, loadError = null, noneAvailable = false, assignment = null,
+                    // reset the form
                     verdict = null, rating = 0, improvementAreas = emptySet(), suggestion = "",
                     submitError = null,
                 )
             }
             try {
-                val next = api.getNextToReview().data?.submission
+                val list = api.getReviewList().data?.submissions.orEmpty()
                 _uiState.update {
-                    it.copy(isLoading = false, assignment = next, noneAvailable = next == null)
+                    it.copy(isLoading = false, pool = list, noneAvailable = list.isEmpty())
                 }
             } catch (e: Exception) {
-                Log.e("PeerReviewVM", "loadNext: ${e.message}", e)
+                Log.e("PeerReviewVM", "loadPool: ${e.message}", e)
                 _uiState.update {
-                    it.copy(isLoading = false, loadError = e.toUserMessage("Could not load an answer to review"))
+                    it.copy(isLoading = false, loadError = e.toUserMessage("Could not load answers to review"))
                 }
             }
         }
+    }
+
+    /** Open a chosen answer for review; the pool list stays underneath. */
+    fun selectAssignment(a: ReviewAssignmentDto) {
+        _uiState.update {
+            it.copy(
+                assignment = a,
+                // fresh form for the chosen answer
+                verdict = null, rating = 0, improvementAreas = emptySet(), suggestion = "",
+                submitError = null,
+            )
+        }
+    }
+
+    /** Back out of the review form to the pool list without submitting. */
+    fun backToList() {
+        _uiState.update { it.copy(assignment = null, submitError = null) }
     }
 
     companion object { const val MAX_AREAS = 3 }
@@ -126,7 +146,8 @@ class PeerReviewViewModel @Inject constructor(
                     )
                 }
                 if ((resp.data?.coinsEarned ?: 0) > 0) bus.emit(RefreshEvent.CoinsChanged)
-                loadNext()
+                // Back to the pool list, refreshed (the reviewed answer drops out).
+                loadPool()
             } catch (e: Exception) {
                 Log.e("PeerReviewVM", "submit: ${e.message}", e)
                 _uiState.update {

@@ -158,6 +158,7 @@ data class ReviewAssignmentDto(
     @SerializedName("word_limit")    val wordLimit: Int = 250,
 )
 data class NextReviewData(val submission: ReviewAssignmentDto? = null)
+data class ReviewListData(val submissions: List<ReviewAssignmentDto> = emptyList())
 
 data class SubmitPeerReviewRequest(
     val verdict: String,                       // yes | partly | no
@@ -238,6 +239,9 @@ interface AnswerWritingApiService {
 
     @GET("answer-writing/review/next")
     suspend fun getNextToReview(): ApiResponse<NextReviewData>
+
+    @GET("answer-writing/review/list")
+    suspend fun getReviewList(): ApiResponse<ReviewListData>
 
     @POST("answer-writing/review/{submissionId}")
     suspend fun submitPeerReview(
