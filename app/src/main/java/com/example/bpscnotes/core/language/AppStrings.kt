@@ -225,6 +225,17 @@ data class QuizStrings(
     val awAnswerPdfTitle: String = "Answer PDF",
     val awPhotosLabel: String = "Photos",
     val awWordsLower: String = "words",
+    // ── Review usefulness votes + reviewer reputation ───────────────
+    val awWasUseful: String = "Was this review useful?",
+    val awHelpfulReviews: String = "Helpful Reviews",
+    val awReviewerRating: String = "Reviewer Rating",
+    val awCoinsEarned: String = "Coins Earned",
+    val awReviewerRank: String = "Ranking",
+    val awTopStrength: String = "Top Strength",
+    val awNeedsImprovement: String = "Needs Improvement",
+    val awLowRepTitle: String = "Reviews rated unhelpful",
+    val awLowRepBody: String = "Your recent reviews were marked unhelpful, so they no longer earn coins. More specific, structured feedback earns them back.",
+    val awOf: String = "of",
     val awAreaContent: String = "Content",
     val awAreaStructure: String = "Structure",
     val awAreaAnalysis: String = "Analysis",
@@ -1091,6 +1102,11 @@ data class AppStrings(
     val awPdfMode get() = _qz.awPdfMode; val awPdfHint get() = _qz.awPdfHint; val awChoosePdf get() = _qz.awChoosePdf
     val awOpenPdfAnswer get() = _qz.awOpenPdfAnswer; val awAnswerPdfTitle get() = _qz.awAnswerPdfTitle
     val awPhotosLabel get() = _qz.awPhotosLabel; val awWordsLower get() = _qz.awWordsLower
+    val awWasUseful get() = _qz.awWasUseful; val awHelpfulReviews get() = _qz.awHelpfulReviews
+    val awReviewerRating get() = _qz.awReviewerRating; val awCoinsEarned get() = _qz.awCoinsEarned
+    val awReviewerRank get() = _qz.awReviewerRank; val awTopStrength get() = _qz.awTopStrength
+    val awNeedsImprovement get() = _qz.awNeedsImprovement
+    val awLowRepTitle get() = _qz.awLowRepTitle; val awLowRepBody get() = _qz.awLowRepBody; val awOf get() = _qz.awOf
     val awAreaContent get() = _qz.awAreaContent; val awAreaStructure get() = _qz.awAreaStructure; val awAreaAnalysis get() = _qz.awAreaAnalysis
     val awAreaBihar get() = _qz.awAreaBihar; val awAreaPresentation get() = _qz.awAreaPresentation; val awAreaConclusion get() = _qz.awAreaConclusion
     val awInsightsTab get() = _qz.awInsightsTab; val awInsightsTitle get() = _qz.awInsightsTitle; val awInsightsSub get() = _qz.awInsightsSub
@@ -2602,6 +2618,16 @@ val HindiStrings: AppStrings = mkAppStrings(
         awAnswerPdfTitle="उत्तर पीडीएफ",
         awPhotosLabel="फोटो",
         awWordsLower="शब्द",
+        awWasUseful="क्या यह समीक्षा उपयोगी थी?",
+        awHelpfulReviews="उपयोगी समीक्षाएं",
+        awReviewerRating="समीक्षक रेटिंग",
+        awCoinsEarned="अर्जित सिक्के",
+        awReviewerRank="रैंकिंग",
+        awTopStrength="प्रमुख ताकत",
+        awNeedsImprovement="सुधार की आवश्यकता",
+        awLowRepTitle="समीक्षाएं अनुपयोगी मानी गईं",
+        awLowRepBody="आपकी हाल की समीक्षाएं अनुपयोगी मानी गईं, इसलिए अब उनसे सिक्के नहीं मिलते। अधिक विशिष्ट और संरचित फीडबैक देने पर वे फिर से मिलेंगे।",
+        awOf="में से",
         awAreaContent="विषय-वस्तु",
         awAreaStructure="संरचना",
         awAreaAnalysis="विश्लेषण",

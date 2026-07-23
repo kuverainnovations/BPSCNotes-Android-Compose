@@ -15,6 +15,7 @@ import com.example.bpscnotes.data.remote.api.AnswerWritingApiService
 import com.example.bpscnotes.data.remote.api.PeerReviewDto
 import com.example.bpscnotes.data.remote.api.ReviewStatsData
 import com.example.bpscnotes.data.remote.api.SubmitAnswerRequest
+import com.example.bpscnotes.data.remote.api.VoteReviewRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -212,6 +213,36 @@ class AnswerWritingViewModel @Inject constructor(
 
     fun clearSubmitError()  { _uiState.update { it.copy(submitError = null) } }
     fun clearCoinsToast()   { _uiState.update { it.copy(justEarnedCoins = null) } }
+
+    /**
+     * "Was this review useful?" — only the answer's author can answer it, and
+     * the row updates optimistically because the vote is trivially reversible:
+     * tapping again just changes it.
+     */
+    fun voteOnReview(reviewId: String, helpful: Boolean) {
+        val before = _uiState.value.peerReviews
+        _uiState.update { s ->
+            s.copy(peerReviews = s.peerReviews.map { pr ->
+                if (pr.id != reviewId) pr else {
+                    // undo the previous vote before applying the new one
+                    val h = pr.helpfulVotes - (if (pr.myVote == true) 1 else 0) + (if (helpful) 1 else 0)
+                    val u = pr.unhelpfulVotes - (if (pr.myVote == false) 1 else 0) + (if (!helpful) 1 else 0)
+                    pr.copy(helpfulVotes = h.coerceAtLeast(0), unhelpfulVotes = u.coerceAtLeast(0), myVote = helpful)
+                }
+            })
+        }
+        viewModelScope.launch {
+            try {
+                api.voteOnReview(reviewId, VoteReviewRequest(helpful))
+            } catch (e: Exception) {
+                Log.e("AnswerWritingVM", "voteOnReview: ${e.message}", e)
+                // put the row back the way the server still sees it
+                _uiState.update {
+                    it.copy(peerReviews = before, submitError = e.toUserMessage("Could not save your rating"))
+                }
+            }
+        }
+    }
 
     // ── Handwritten answer photos ──────────────────────────────
 

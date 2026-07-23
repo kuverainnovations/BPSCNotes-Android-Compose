@@ -80,6 +80,7 @@ data class AnswerSubmissionDto(
 
 /** One anonymous peer review received on my submission */
 data class PeerReviewDto(
+    val id: String = "",
     /** "yes" | "partly" | "no" — did it address the question demand */
     val verdict: String = "yes",
     val rating: Int = 0,
@@ -87,7 +88,20 @@ data class PeerReviewDto(
     @SerializedName("improvement_areas") val improvementAreas: List<String>? = null,
     val suggestion: String? = null,
     @SerializedName("created_at")       val createdAt: String? = null,
+    // ── "Was this review useful?" — only the answer's author votes ──
+    @SerializedName("helpful_votes")    val helpfulVotes: Int = 0,
+    @SerializedName("unhelpful_votes")  val unhelpfulVotes: Int = 0,
+    /** null = not voted yet, true = helpful, false = not helpful */
+    @SerializedName("my_vote")          val myVote: Boolean? = null,
 )
+
+data class ReviewVoteData(
+    val helpfulVotes: Int = 0,
+    val unhelpfulVotes: Int = 0,
+    val myVote: Boolean = false,
+)
+
+data class VoteReviewRequest(val helpful: Boolean)
 
 data class AnswerQuestionsData(val questions: List<AnswerQuestionDto> = emptyList())
 data class MyAnswerSubmissionsData(val submissions: List<AnswerSubmissionDto> = emptyList())
@@ -112,9 +126,11 @@ data class WeaknessDto(val area: String = "", val count: Int = 0)
 
 data class LeaderboardReviewerDto(
     val name: String = "",
-    @SerializedName("reviews_given")  val reviewsGiven: Int = 0,
-    @SerializedName("review_credits") val reviewCredits: Int = 0,
-    @SerializedName("is_me")          val isMe: Boolean = false,
+    @SerializedName("reviews_given")   val reviewsGiven: Int = 0,
+    @SerializedName("review_credits")  val reviewCredits: Int = 0,
+    @SerializedName("helpful_reviews") val helpfulReviews: Int = 0,
+    @SerializedName("reviewer_rating") val reviewerRating: Double? = null,
+    @SerializedName("is_me")           val isMe: Boolean = false,
 )
 data class LeaderboardWriterDto(
     val name: String = "",
@@ -140,6 +156,18 @@ data class AnswerInsightsData(
     val totalWords: Int = 0,
     val writingStreak: Int = 0,
     val monthlyGoal: Int = 10,
+    // ── Reviewer reputation ───────────────────────────────────
+    /** My reviews the author judged useful */
+    val helpfulReviews: Int = 0,
+    /** My reviews that got any vote — the denominator behind the rating */
+    val votedReviews: Int = 0,
+    /** 1..5, null until one of my reviews has been voted on */
+    val reviewerRating: Double? = null,
+    /** Consistently unhelpful — reviews still count, but earn no coins */
+    val lowReputation: Boolean = false,
+    val coinsFromReviews: Int = 0,
+    /** My position among all reviewers by volume, null if I've given none */
+    val reviewerRank: Int? = null,
 )
 
 // ── Peer review — GET /answer-writing/review/* ────────────────
@@ -216,6 +244,9 @@ data class SubmitPeerReviewRequest(
 data class SubmitPeerReviewData(
     val reviewCredits: Int = 0,
     val coinsEarned: Int = 0,
+    /** true → no coins this time; the message explains why */
+    val lowReputation: Boolean = false,
+    val reviewerRating: Double? = null,
     /** true → this review just unlocked the feedback on my own answer here */
     val unlockedMyReviews: Boolean = false,
     /** How many reviews are waiting on my answer to this question */
@@ -305,4 +336,11 @@ interface AnswerWritingApiService {
         @Path("submissionId") submissionId: String,
         @Body body: SubmitPeerReviewRequest,
     ): ApiResponse<SubmitPeerReviewData>
+
+    /** "Was this review useful?" — the answer's author rates a review they received */
+    @POST("answer-writing/review/vote/{reviewId}")
+    suspend fun voteOnReview(
+        @Path("reviewId") reviewId: String,
+        @Body body: VoteReviewRequest,
+    ): ApiResponse<ReviewVoteData>
 }

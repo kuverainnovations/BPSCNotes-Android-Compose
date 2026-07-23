@@ -665,7 +665,11 @@ private fun DetailContent(
                                 Text("🤝", fontSize = 15.sp)
                                 Text(str.awPeerReviewsReceived, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
                             }
-                            state.peerReviews.forEach { pr -> PeerReviewReceivedRow(pr) }
+                            state.peerReviews.forEach { pr ->
+                                PeerReviewReceivedRow(pr) { helpful ->
+                                    viewModel.voteOnReview(pr.id, helpful)
+                                }
+                            }
                         }
                     }
                 }
@@ -784,7 +788,10 @@ private fun SubmittedStatusCard(
 // One anonymous peer review received on my answer.
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.PeerReviewDto) {
+private fun PeerReviewReceivedRow(
+    review: com.example.bpscnotes.data.remote.api.PeerReviewDto,
+    onVote: (Boolean) -> Unit,
+) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
     // v2: up to 3 flagged areas; fall back to the legacy single field
@@ -846,6 +853,64 @@ private fun PeerReviewReceivedRow(review: com.example.bpscnotes.data.remote.api.
                     color = cs.onSurface, lineHeight = 18.sp
                 )
             }
+        }
+
+        // ── "Was this review useful?" ─────────────────────────
+        // Only the author of the answer sees this, and it is what builds
+        // the reviewer's reputation — so it sits on every review received,
+        // not just the ones worth praising.
+        HorizontalDivider(color = cs.outline.copy(0.25f))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                str.awWasUseful, style = MaterialTheme.typography.labelSmall,
+                color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                VoteChip(
+                    emoji = "👍",
+                    count = review.helpfulVotes,
+                    selected = review.myVote == true,
+                    tint = BpscColors.Success,
+                ) { onVote(true) }
+                VoteChip(
+                    emoji = "👎",
+                    count = review.unhelpfulVotes,
+                    selected = review.myVote == false,
+                    tint = Color(0xFFE74C3C),
+                ) { onVote(false) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoteChip(emoji: String, count: Int, selected: Boolean, tint: Color, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) tint.copy(alpha = 0.12f) else cs.surfaceVariant.copy(alpha = 0.5f))
+            .border(
+                1.dp,
+                if (selected) tint.copy(alpha = 0.6f) else Color.Transparent,
+                RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Text(emoji, fontSize = 13.sp)
+        if (count > 0) {
+            Text(
+                "$count", style = MaterialTheme.typography.labelSmall,
+                color = if (selected) tint else BpscColors.TextHint,
+                fontWeight = FontWeight.Bold, fontSize = 11.sp
+            )
         }
     }
 }

@@ -63,6 +63,8 @@ data class PeerReviewUiState(
     /** Set after each successful review — drives the credit snackbar */
     val justSubmittedMessage: String?      = null,
     val reviewsDoneThisSession: Int        = 0,
+    /** Reviewer's reviews are being voted unhelpful — reviewing earns no coins */
+    val lowReputation: Boolean             = false,
     /** Set when a review just unlocked my own feedback — drives the dialog */
     val unlockedQuestionId: String?        = null,
     val unlockedReviewCount: Int           = 0,
@@ -230,6 +232,7 @@ class PeerReviewViewModel @Inject constructor(
                         unlockedQuestionId = if (data?.unlockedMyReviews == true)
                             data.questionId.ifBlank { s.question?.id ?: "" } else null,
                         unlockedReviewCount = data?.myReviewCount ?: 0,
+                        lowReputation = data?.lowReputation ?: false,
                     )
                 }
                 if ((data?.coinsEarned ?: 0) > 0) bus.emit(RefreshEvent.CoinsChanged)

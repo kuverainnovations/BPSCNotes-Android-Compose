@@ -613,6 +613,15 @@ private fun InsightsTab(
             // an expert review exists.
             InsightTileData("🏅", insights.avgMentorScore?.let { "%.1f".format(it) } ?: "—", str.awMentorScore, null, Color(0xFF7E57C2)),
             InsightTileData("🪙", "${insights.reviewCredits}", str.awReviewCredits, null, Color(0xFFB45309)),
+            // ── Reviewer reputation ─────────────────────────────
+            // Helpful count and rating are both driven by the answer
+            // authors' "was this review useful?" votes.
+            InsightTileData("👍", "${insights.helpfulReviews}", str.awHelpfulReviews,
+                if (insights.votedReviews > 0) "${str.awOf} ${insights.votedReviews}" else null, BpscColors.Success),
+            InsightTileData("🎖️", insights.reviewerRating?.let { "%.1f★".format(it) } ?: "—", str.awReviewerRating,
+                insights.reviewerRating?.let { if (it >= 4.0) str.awKeepItUp else null }, Color(0xFF00897B)),
+            InsightTileData("🪙", "${insights.coinsFromReviews}", str.awCoinsEarned, null, Color(0xFFF59E0B)),
+            InsightTileData("🏆", insights.reviewerRank?.let { "#$it" } ?: "—", str.awReviewerRank, null, Color(0xFF3949AB)),
             // "Words" tile removed (QA 20-07 — not needed).
         )
         tiles.chunked(2).forEach { row ->
@@ -758,7 +767,8 @@ private fun InsightsTab(
                     board.topReviewers.take(5).forEachIndexed { i, r ->
                         LeaderRow(
                             rank = i + 1, name = r.name, isMe = r.isMe,
-                            trailing = "${r.reviewsGiven} · ⭐${r.reviewCredits}",
+                            // rating (from usefulness votes) leads; volume behind it
+                            trailing = "${r.reviewerRating?.let { "%.1f★ · ".format(it) } ?: ""}${r.reviewsGiven}",
                         )
                     }
                 }
