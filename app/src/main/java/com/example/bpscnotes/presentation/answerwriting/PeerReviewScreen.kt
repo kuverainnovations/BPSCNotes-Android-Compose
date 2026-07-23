@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,8 @@ import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.data.remote.api.ReviewAssignmentDto
+import com.example.bpscnotes.data.remote.api.ReviewQuestionDto
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
 // ─────────────────────────────────────────────────────────────
@@ -46,6 +49,7 @@ private val IndigoSoft   = Color(0xFFE8EAF6)
 @Composable
 fun PeerReviewScreen(
     navController: NavHostController,
+    questionId: String? = null,
     viewModel: PeerReviewViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -54,16 +58,43 @@ fun PeerReviewScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("peer_review") }
+    // Deep link from the locked card on the answer detail screen — open the
+    // answers for that question directly, since those are the ones that
+    // unlock the student's own feedback.
+    LaunchedEffect(questionId) {
+        if (!questionId.isNullOrBlank()) viewModel.openQuestion(questionId)
+    }
     LaunchedEffect(state.justSubmittedMessage, state.submitError) {
         state.justSubmittedMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearToasts() }
         state.submitError?.let { snackbarHostState.showSnackbar(it); viewModel.clearToasts() }
     }
 
-    // While reviewing a chosen answer, Back returns to the pool list first.
-    fun onBack() {
-        if (state.assignment != null) viewModel.backToList() else navController.popBackStackSafe()
+    // Back steps down the stack: form → answers → questions → leave.
+    fun onBack() { if (!viewModel.back()) navController.popBackStackSafe() }
+    BackHandler(enabled = state.step != PeerReviewStep.QUESTIONS) { viewModel.back() }
+
+    // A review just unlocked this student's own feedback — offer to open it.
+    state.unlockedQuestionId?.let { unlockedQ ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearUnlockPrompt() },
+            icon  = { Text("🔓", fontSize = 30.sp) },
+            title = { Text(str.awUnlockedTitle, fontWeight = FontWeight.ExtraBold) },
+            text  = { Text(str.awUnlockedBody, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearUnlockPrompt()
+                        navController.navigate(Screen.AnswerWritingDetail.createRoute(unlockedQ))
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Indigo)
+                ) { Text(str.awViewNow, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.clearUnlockPrompt() }) { Text(str.awKeepReviewing) }
+            }
+        )
     }
-    BackHandler(enabled = state.assignment != null) { viewModel.backToList() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().background(cs.background)) {
@@ -101,7 +132,12 @@ fun PeerReviewScreen(
                                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
-                                str.awHelpFellow, style = MaterialTheme.typography.bodySmall,
+                                // On the question list, the header carries the
+                                // total pending count (client screen 1).
+                                if (state.step == PeerReviewStep.QUESTIONS && state.totalPending > 0)
+                                    "${str.awPendingReviewsTitle} (${state.totalPending})"
+                                else str.awHelpFellow,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(0.7f),
                                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
@@ -130,14 +166,20 @@ fun PeerReviewScreen(
                 state.isLoading -> AppLoader()
                 state.loadError != null -> AppErrorState(
                     message = state.loadError!!,
-                    onRetry = { viewModel.loadPool() },
+                    onRetry = { viewModel.loadQuestions() },
                     secondaryAction = {
                         OutlinedButton(onClick = { navController.popBackStackSafe() }) { Text(str.goBack) }
                     }
                 )
-                state.noneAvailable -> DoneState(state.reviewsDoneThisSession) { navController.popBackStackSafe() }
-                state.assignment != null -> ReviewBody(state.assignment!!, viewModel)
-                else -> ReviewPoolList(state.pool) { viewModel.selectAssignment(it) }
+                state.step == PeerReviewStep.FORM && state.assignment != null ->
+                    ReviewBody(state.assignment!!, viewModel)
+                state.step == PeerReviewStep.ANSWERS ->
+                    ReviewPoolList(state.pool, state.question, state.unlocksMyReviews) {
+                        viewModel.selectAssignment(it)
+                    }
+                state.noneAvailable ->
+                    DoneState(state.reviewsDoneThisSession) { navController.popBackStackSafe() }
+                else -> ReviewQuestionList(state.questions) { viewModel.selectQuestion(it) }
             }
         }
 
@@ -433,10 +475,16 @@ private fun AreaChip(label: String, isSel: Boolean, modifier: Modifier, onToggle
 }
 
 // ─────────────────────────────────────────────────────────────
-// Pool list — pick which anonymous answer to review.
+// Screen 1 — questions I attempted that have answers waiting for
+// my review, neediest first. Questions where a single review would
+// unlock my own feedback are flagged, since that is the strongest
+// reason to start there.
 // ─────────────────────────────────────────────────────────────
 @Composable
-private fun ReviewPoolList(pool: List<ReviewAssignmentDto>, onSelect: (ReviewAssignmentDto) -> Unit) {
+private fun ReviewQuestionList(
+    questions: List<ReviewQuestionDto>,
+    onSelect: (ReviewQuestionDto) -> Unit,
+) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
     LazyColumn(
@@ -446,17 +494,21 @@ private fun ReviewPoolList(pool: List<ReviewAssignmentDto>, onSelect: (ReviewAss
     ) {
         item {
             Text(
-                "${pool.size} ${if (pool.size == 1) "answer" else "answers"} to review — pick one",
+                str.awPickQuestion,
                 style = MaterialTheme.typography.titleSmall,
                 color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
             )
         }
-        items(pool, key = { it.id }) { a ->
+        items(questions, key = { it.id }) { q ->
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { onSelect(a) },
+                modifier = Modifier.fillMaxWidth().clickable { onSelect(q) },
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (q.unlocksMyReviews) Color(0xFFFFFBF0) else cs.surface
+                ),
                 elevation = CardDefaults.cardElevation(2.dp),
+                border = if (q.unlocksMyReviews)
+                    BorderStroke(1.dp, Color(0xFFB45309).copy(alpha = 0.35f)) else null,
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
@@ -464,36 +516,190 @@ private fun ReviewPoolList(pool: List<ReviewAssignmentDto>, onSelect: (ReviewAss
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        a.subject?.takeIf { it.isNotBlank() }?.let {
-                            Text(
-                                it, style = MaterialTheme.typography.labelSmall,
-                                color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IndigoSoft)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                            )
-                        } ?: Spacer(Modifier.size(1.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            q.subject?.takeIf { it.isNotBlank() }?.let {
+                                Text(
+                                    it, style = MaterialTheme.typography.labelSmall,
+                                    color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IndigoSoft)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                                )
+                            }
+                            if (q.unlocksMyReviews) {
+                                Text(
+                                    "🔓 ${str.awUnlocksYours}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFFB45309), fontWeight = FontWeight.ExtraBold, fontSize = 10.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFFF8E1))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                                )
+                            }
+                        }
                         Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
                     }
                     Text(
-                        a.questionText,
+                        q.questionText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurface, fontWeight = FontWeight.SemiBold,
                         lineHeight = 20.sp, maxLines = 3,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("🏆 ${a.marks} ${str.awMarks}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
-                        Text("📄 ${a.wordLimit} ${str.awWords}", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
-                        val kind = when {
-                            !a.answerPdf.isNullOrBlank()    -> "PDF"
-                            !a.answerImages.isNullOrEmpty() -> "Photos"
-                            else                            -> "${a.wordCount} words"
+                        Text(
+                            "📄 ${q.pendingCount} ${str.awAnswersToReview}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Indigo, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        )
+                        if (q.myReviewsHere > 0) {
+                            Text(
+                                "✓ ${q.myReviewsHere}", style = MaterialTheme.typography.labelSmall,
+                                color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                            )
                         }
-                        Text("✍️ $kind", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
                     }
                 }
             }
         }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Screen 2 — the anonymous answers under one question. Cards only:
+// the answer itself opens on the next screen, so scanning is fast.
+//
+// Note there is no average rating on these cards by design — showing
+// one anchors the reviewer to the existing score before they've read
+// the answer. The review count is shown instead: it points reviewers
+// at the answers that still need help.
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun ReviewPoolList(
+    pool: List<ReviewAssignmentDto>,
+    question: ReviewQuestionDto?,
+    unlocksMyReviews: Boolean,
+    onSelect: (ReviewAssignmentDto) -> Unit,
+) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        question?.let { q ->
+            item(key = "question") {
+                Column(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        .background(IndigoSoft.copy(alpha = 0.55f)).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        "${q.marks} ${str.awMarks} · ${q.wordLimit} ${str.awWords}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Indigo, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                    )
+                    Text(
+                        q.questionText,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = cs.onSurface, fontWeight = FontWeight.ExtraBold, lineHeight = 21.sp,
+                    )
+                }
+            }
+        }
+        if (unlocksMyReviews) {
+            item(key = "unlock_banner") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFFFF8E1)).padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("🔓", fontSize = 18.sp)
+                    Text(
+                        str.awUnlockBanner,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF7A5B00), lineHeight = 18.sp,
+                    )
+                }
+            }
+        }
+        if (pool.isEmpty()) {
+            item {
+                Text(
+                    str.awNoAnswersHere,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            item {
+                Text(
+                    str.awPickAnswer,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        itemsIndexed(pool, key = { _, a -> a.id }) { i, a ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onSelect(a) },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cs.surface),
+                elevation = CardDefaults.cardElevation(2.dp),
+            ) {
+                Row(
+                    Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier.size(42.dp).clip(CircleShape).background(IndigoSoft),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(if (a.isSeed) "📘" else "👤", fontSize = 18.sp) }
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                // Samples are labelled, never passed off as a peer's work
+                                if (a.isSeed) str.awSampleAnswer else "${str.awStudentAnswer} #${i + 1}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cs.onSurface, fontWeight = FontWeight.Bold,
+                            )
+                            if (!a.isSeed) {
+                                Text(
+                                    str.awAnonymous, style = MaterialTheme.typography.labelSmall,
+                                    color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            val kind = when {
+                                !a.answerPdf.isNullOrBlank()    -> str.awPdfMode
+                                !a.answerImages.isNullOrEmpty() -> str.awPhotosLabel
+                                else                            -> "${a.wordCount} ${str.awWordsLower}"
+                            }
+                            Text("✍️ $kind", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
+                            // Review count, not average rating — see the note above
+                            Text(
+                                "🤝 ${a.peerReviewCount} ${str.awReviewsLower}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (a.peerReviewCount == 0) Color(0xFFB45309) else BpscColors.TextHint,
+                                fontWeight = if (a.peerReviewCount == 0) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 10.sp,
+                            )
+                        }
+                    }
+                    Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 

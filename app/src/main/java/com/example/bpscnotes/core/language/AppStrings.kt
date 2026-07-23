@@ -198,6 +198,33 @@ data class QuizStrings(
     val awNoMoreReviewsBody: String = "No answers waiting for your review right now — check back later.",
     val awPeerReviewsReceived: String = "Peer Reviews on Your Answer",
     val awUnderPeerReview: String = "Your answer has been submitted and is being reviewed by peers.",
+    // ── Reciprocity gate + question-first peer review ────────────────
+    val awPendingReviewsTitle: String = "Pending Reviews",
+    val awPickQuestion: String = "Pick a question to review answers under it.",
+    val awPickAnswer: String = "Pick an answer to review",
+    val awAnswersToReview: String = "answers to review",
+    val awUnlocksYours: String = "Unlocks yours",
+    val awNoAnswersHere: String = "No answers waiting under this question right now.",
+    val awSampleAnswer: String = "Sample answer",
+    val awReviewsLower: String = "reviews",
+    val awLockedTitle: String = "Your reviews are locked",
+    val awLockedOne: String = "1 review is waiting on your answer.",
+    val awLockedMany: String = "reviews are waiting on your answer.",
+    val awLockedBody: String = "Review one answer to this question and they unlock — that is how everyone here gets feedback.",
+    val awUnlockCta: String = "Review an answer to unlock",
+    val awUnlockedTitle: String = "Unlocked! 🔓",
+    val awUnlockedBody: String = "The reviews on your answer to this question are now visible.",
+    val awViewNow: String = "View now",
+    val awKeepReviewing: String = "Keep reviewing",
+    val awUnlockBanner: String = "Reviewing here unlocks the reviews waiting on your own answer.",
+    // ── Submit modes ────────────────────────────────────────────────
+    val awPdfMode: String = "PDF",
+    val awPdfHint: String = "Upload a single PDF of your answer (max 25 MB).",
+    val awChoosePdf: String = "Choose PDF",
+    val awOpenPdfAnswer: String = "Open PDF answer",
+    val awAnswerPdfTitle: String = "Answer PDF",
+    val awPhotosLabel: String = "Photos",
+    val awWordsLower: String = "words",
     val awAreaContent: String = "Content",
     val awAreaStructure: String = "Structure",
     val awAreaAnalysis: String = "Analysis",
@@ -1052,6 +1079,18 @@ data class AppStrings(
     val awPartly get() = _qz.awPartly; val awSuggestionHint get() = _qz.awSuggestionHint; val awSubmitReview get() = _qz.awSubmitReview
     val awNoMoreReviews get() = _qz.awNoMoreReviews; val awNoMoreReviewsBody get() = _qz.awNoMoreReviewsBody
     val awPeerReviewsReceived get() = _qz.awPeerReviewsReceived; val awUnderPeerReview get() = _qz.awUnderPeerReview
+    val awPendingReviewsTitle get() = _qz.awPendingReviewsTitle; val awPickQuestion get() = _qz.awPickQuestion
+    val awPickAnswer get() = _qz.awPickAnswer; val awAnswersToReview get() = _qz.awAnswersToReview
+    val awUnlocksYours get() = _qz.awUnlocksYours; val awNoAnswersHere get() = _qz.awNoAnswersHere
+    val awSampleAnswer get() = _qz.awSampleAnswer; val awReviewsLower get() = _qz.awReviewsLower
+    val awLockedTitle get() = _qz.awLockedTitle; val awLockedOne get() = _qz.awLockedOne
+    val awLockedMany get() = _qz.awLockedMany; val awLockedBody get() = _qz.awLockedBody
+    val awUnlockCta get() = _qz.awUnlockCta; val awUnlockedTitle get() = _qz.awUnlockedTitle
+    val awUnlockedBody get() = _qz.awUnlockedBody; val awViewNow get() = _qz.awViewNow
+    val awKeepReviewing get() = _qz.awKeepReviewing; val awUnlockBanner get() = _qz.awUnlockBanner
+    val awPdfMode get() = _qz.awPdfMode; val awPdfHint get() = _qz.awPdfHint; val awChoosePdf get() = _qz.awChoosePdf
+    val awOpenPdfAnswer get() = _qz.awOpenPdfAnswer; val awAnswerPdfTitle get() = _qz.awAnswerPdfTitle
+    val awPhotosLabel get() = _qz.awPhotosLabel; val awWordsLower get() = _qz.awWordsLower
     val awAreaContent get() = _qz.awAreaContent; val awAreaStructure get() = _qz.awAreaStructure; val awAreaAnalysis get() = _qz.awAreaAnalysis
     val awAreaBihar get() = _qz.awAreaBihar; val awAreaPresentation get() = _qz.awAreaPresentation; val awAreaConclusion get() = _qz.awAreaConclusion
     val awInsightsTab get() = _qz.awInsightsTab; val awInsightsTitle get() = _qz.awInsightsTitle; val awInsightsSub get() = _qz.awInsightsSub
@@ -2538,6 +2577,31 @@ val HindiStrings: AppStrings = mkAppStrings(
         awNoMoreReviewsBody="अभी समीक्षा के लिए कोई उत्तर नहीं है — बाद में देखें।",
         awPeerReviewsReceived="आपके उत्तर पर सहपाठी समीक्षाएं",
         awUnderPeerReview="आपका उत्तर जमा हो गया है और सहपाठियों द्वारा समीक्षा हो रही है।",
+        awPendingReviewsTitle="लंबित समीक्षाएं",
+        awPickQuestion="किसी प्रश्न को चुनें और उसके उत्तरों की समीक्षा करें।",
+        awPickAnswer="समीक्षा के लिए एक उत्तर चुनें",
+        awAnswersToReview="उत्तर समीक्षा हेतु",
+        awUnlocksYours="आपकी समीक्षाएं खुलेंगी",
+        awNoAnswersHere="इस प्रश्न पर अभी समीक्षा के लिए कोई उत्तर नहीं है।",
+        awSampleAnswer="नमूना उत्तर",
+        awReviewsLower="समीक्षाएं",
+        awLockedTitle="आपकी समीक्षाएं लॉक हैं",
+        awLockedOne="आपके उत्तर पर 1 समीक्षा प्रतीक्षारत है।",
+        awLockedMany="समीक्षाएं आपके उत्तर पर प्रतीक्षारत हैं।",
+        awLockedBody="इस प्रश्न पर एक उत्तर की समीक्षा करें और ये खुल जाएंगी — यहां सभी को इसी तरह फीडबैक मिलता है।",
+        awUnlockCta="अनलॉक करने के लिए एक उत्तर की समीक्षा करें",
+        awUnlockedTitle="अनलॉक हो गया! 🔓",
+        awUnlockedBody="इस प्रश्न पर आपके उत्तर की समीक्षाएं अब दिख रही हैं।",
+        awViewNow="अभी देखें",
+        awKeepReviewing="समीक्षा जारी रखें",
+        awUnlockBanner="यहां समीक्षा करने से आपके अपने उत्तर पर प्रतीक्षारत समीक्षाएं खुल जाएंगी।",
+        awPdfMode="पीडीएफ",
+        awPdfHint="अपने उत्तर की एक पीडीएफ अपलोड करें (अधिकतम 25 MB)।",
+        awChoosePdf="पीडीएफ चुनें",
+        awOpenPdfAnswer="पीडीएफ उत्तर खोलें",
+        awAnswerPdfTitle="उत्तर पीडीएफ",
+        awPhotosLabel="फोटो",
+        awWordsLower="शब्द",
         awAreaContent="विषय-वस्तु",
         awAreaStructure="संरचना",
         awAreaAnalysis="विश्लेषण",

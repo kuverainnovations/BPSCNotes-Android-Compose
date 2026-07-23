@@ -77,7 +77,16 @@ sealed class Screen(val route: String) {
     object AnswerWritingDetail : Screen("answer_writing_detail/{questionId}") {
         fun createRoute(id: String) = "answer_writing_detail/$id"
     }
-    object PeerReview          : Screen("answer_writing_peer_review")
+    /**
+     * Peer review. Opens on the question list; pass a questionId to land
+     * straight on that question's answers (the "review one answer to unlock
+     * your own reviews" path from the answer detail screen).
+     */
+    object PeerReview          : Screen("answer_writing_peer_review?questionId={questionId}") {
+        fun createRoute(questionId: String? = null) =
+            if (questionId.isNullOrBlank()) "answer_writing_peer_review"
+            else "answer_writing_peer_review?questionId=$questionId"
+    }
     object JobVacancies   : Screen("job_vacancies")
     object JobDetail      : Screen("job_detail/{jobId}") {
         fun createRoute(id: String) = "job_detail/$id"

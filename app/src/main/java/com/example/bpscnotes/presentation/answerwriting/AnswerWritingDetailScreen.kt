@@ -34,6 +34,7 @@ import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
 import java.io.File
@@ -333,7 +334,7 @@ private fun DetailContent(
                         .background(IndigoSoft.copy(alpha = 0.6f)).padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf(0 to str.awTypeMode, 1 to str.awPhotoMode, 2 to "PDF").forEach { (mode, label) ->
+                    listOf(0 to str.awTypeMode, 1 to str.awPhotoMode, 2 to str.awPdfMode).forEach { (mode, label) ->
                         Box(
                             modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
                                 .background(if (answerMode == mode) Color.White else Color.Transparent)
@@ -359,7 +360,7 @@ private fun DetailContent(
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(
-                                "Upload a single PDF of your answer (max 25 MB).",
+                                str.awPdfHint,
                                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, lineHeight = 18.sp
                             )
                             if (state.selectedPdf != null) {
@@ -392,7 +393,7 @@ private fun DetailContent(
                                 ) {
                                     Icon(Icons.Rounded.PictureAsPdf, null, modifier = Modifier.size(18.dp), tint = Indigo)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Choose PDF", color = Indigo, fontWeight = FontWeight.Bold)
+                                    Text(str.awChoosePdf, color = Indigo, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -517,7 +518,9 @@ private fun DetailContent(
                 }   // end type/photo mode branch
             } else {
                 // ── Submitted: status → score/feedback → model answer → my answer ──
-                SubmittedStatusCard(submission!!)
+                // marks come from the question: the submission row carries no
+                // marks column, so reading it there scored everything out of 10.
+                SubmittedStatusCard(submission!!, q.marks)
 
                 if (q.modelAnswer.isNullOrBlank() && q.modelAnswerTomorrow) {
                     // Client rule: model answer reveals the next day
@@ -600,6 +603,56 @@ private fun DetailContent(
                     }
                 }
 
+                // ── Peer reviews received: locked until reciprocated ──
+                // Client rule: the reviews on your answer unlock once you
+                // have reviewed someone else's answer to this same question.
+                // The count is shown while locked — it is the reason to go.
+                if (state.peerReviewsLocked) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("🔒", fontSize = 22.sp)
+                                Column {
+                                    Text(
+                                        str.awLockedTitle, style = MaterialTheme.typography.titleSmall,
+                                        color = Color(0xFFB45309), fontWeight = FontWeight.ExtraBold
+                                    )
+                                    if (state.peerReviewCount > 0) {
+                                        Text(
+                                            if (state.peerReviewCount == 1) str.awLockedOne
+                                            else "${state.peerReviewCount} ${str.awLockedMany}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF7A5B00), fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                str.awLockedBody, style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF7A5B00), lineHeight = 18.sp
+                            )
+                            Button(
+                                onClick = {
+                                    navController.navigate(Screen.PeerReview.createRoute(questionId))
+                                },
+                                modifier = Modifier.fillMaxWidth().height(46.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Indigo),
+                                // Nothing to review here yet — seeding missed,
+                                // or every answer is already reviewed by me
+                                enabled = state.reviewableCount > 0
+                            ) {
+                                Icon(Icons.Rounded.Groups, null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(str.awUnlockCta, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 // ── Peer reviews received (anonymous) ──────────
                 if (state.peerReviews.isNotEmpty()) {
                     Card(
@@ -652,7 +705,10 @@ private fun HeaderChip(label: String) {
 }
 
 @Composable
-private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.api.AnswerSubmissionDto) {
+private fun SubmittedStatusCard(
+    submission: com.example.bpscnotes.data.remote.api.AnswerSubmissionDto,
+    marks: Int,
+) {
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
     val reviewed = submission.status == "reviewed"
@@ -673,7 +729,7 @@ private fun SubmittedStatusCard(submission: com.example.bpscnotes.data.remote.ap
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("${submission.score.toInt()}", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Text("/${submission.marks}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.85f), fontSize = 9.sp)
+                            Text("/$marks", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.85f), fontSize = 9.sp)
                         }
                     }
                     Column {

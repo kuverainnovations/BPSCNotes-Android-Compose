@@ -95,6 +95,15 @@ data class AnswerQuestionDetailData(
     val question: AnswerQuestionDetailDto = AnswerQuestionDetailDto(),
     val submission: AnswerSubmissionDto? = null,
     val peerReviews: List<PeerReviewDto> = emptyList(),
+    /**
+     * Reciprocity (client rule): the reviews on my answer stay hidden until
+     * I have reviewed someone else's answer to this same question. The count
+     * is still sent while locked — it is the reason to go and review.
+     */
+    val peerReviewsLocked: Boolean = false,
+    val peerReviewCount: Int = 0,
+    /** How many answers on this question I could review right now */
+    val reviewableCount: Int = 0,
 )
 
 // ── Insights — GET /answer-writing/insights ───────────────────
@@ -151,6 +160,15 @@ data class ReviewAssignmentDto(
     @SerializedName("answer_images") val answerImages: List<String>? = null,
     @SerializedName("answer_pdf")    val answerPdf: String? = null,
     @SerializedName("word_count")    val wordCount: Int = 0,
+    /**
+     * Reviews this answer already has. Note the API deliberately does NOT
+     * send its average rating — a visible score anchors the reviewer before
+     * they've formed their own view. The count is safe: it shows which
+     * answers still need help.
+     */
+    @SerializedName("peer_review_count") val peerReviewCount: Int = 0,
+    /** House-authored sample answer, shown labelled rather than as a peer's */
+    @SerializedName("is_seed")       val isSeed: Boolean = false,
     @SerializedName("question_id")   val questionId: String = "",
     @SerializedName("question_text") val questionText: String = "",
     val subject: String? = null,
@@ -158,7 +176,34 @@ data class ReviewAssignmentDto(
     @SerializedName("word_limit")    val wordLimit: Int = 250,
 )
 data class NextReviewData(val submission: ReviewAssignmentDto? = null)
-data class ReviewListData(val submissions: List<ReviewAssignmentDto> = emptyList())
+data class ReviewListData(
+    val submissions: List<ReviewAssignmentDto> = emptyList(),
+    /** true → reviewing here unlocks the reviews waiting on my own answer */
+    val unlocksMyReviews: Boolean = false,
+)
+
+/** Peer review screen 1 — a question I attempted, with answers awaiting review */
+data class ReviewQuestionDto(
+    val id: String = "",
+    @SerializedName("question_text")       val questionText: String = "",
+    val subject: String? = null,
+    val marks: Int = 10,
+    @SerializedName("word_limit")          val wordLimit: Int = 250,
+    @SerializedName("is_pyq")              val isPyq: Boolean = false,
+    @SerializedName("pyq_year")            val pyqYear: Int? = null,
+    /** Answers under this question I can review right now */
+    @SerializedName("pending_count")       val pendingCount: Int = 0,
+    /** Reviews I have already given on this question */
+    @SerializedName("my_reviews_here")     val myReviewsHere: Int = 0,
+    /** Reviews waiting on MY answer to this question */
+    @SerializedName("my_reviews_received") val myReviewsReceived: Int = 0,
+    /** true → I have reviews waiting here that one review of mine would unlock */
+    @SerializedName("unlocks_my_reviews")  val unlocksMyReviews: Boolean = false,
+)
+data class ReviewQuestionsData(
+    val questions: List<ReviewQuestionDto> = emptyList(),
+    val totalPending: Int = 0,
+)
 
 data class SubmitPeerReviewRequest(
     val verdict: String,                       // yes | partly | no
@@ -171,6 +216,11 @@ data class SubmitPeerReviewRequest(
 data class SubmitPeerReviewData(
     val reviewCredits: Int = 0,
     val coinsEarned: Int = 0,
+    /** true → this review just unlocked the feedback on my own answer here */
+    val unlockedMyReviews: Boolean = false,
+    /** How many reviews are waiting on my answer to this question */
+    val myReviewCount: Int = 0,
+    val questionId: String = "",
 )
 
 data class SubmitAnswerRequest(
@@ -240,8 +290,15 @@ interface AnswerWritingApiService {
     @GET("answer-writing/review/next")
     suspend fun getNextToReview(): ApiResponse<NextReviewData>
 
+    /** Peer review screen 1 — questions with answers awaiting my review */
+    @GET("answer-writing/review/questions")
+    suspend fun getReviewQuestions(): ApiResponse<ReviewQuestionsData>
+
+    /** Peer review screen 2 — answers to review, scoped to one question */
     @GET("answer-writing/review/list")
-    suspend fun getReviewList(): ApiResponse<ReviewListData>
+    suspend fun getReviewList(
+        @Query("questionId") questionId: String? = null,
+    ): ApiResponse<ReviewListData>
 
     @POST("answer-writing/review/{submissionId}")
     suspend fun submitPeerReview(

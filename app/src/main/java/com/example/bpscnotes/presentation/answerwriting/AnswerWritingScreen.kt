@@ -242,7 +242,7 @@ private fun PeerReviewCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .border(1.5.dp, BpscColors.Success, RoundedCornerShape(12.dp))
-                            .clickable { navController.navigate(Screen.PeerReview.route) }
+                            .clickable { navController.navigate(Screen.PeerReview.createRoute()) }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(3.dp)

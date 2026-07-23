@@ -392,8 +392,16 @@ fun BpscNavHost(
                 val questionId = backStackEntry.arguments?.getString("questionId") ?: return@composable
                 AnswerWritingDetailScreen(navController = navController, questionId = questionId)
             }
-            composable(Screen.PeerReview.route) {
-                com.example.bpscnotes.presentation.answerwriting.PeerReviewScreen(navController)
+            composable(
+                route = Screen.PeerReview.route,
+                arguments = listOf(navArgument("questionId") {
+                    type = NavType.StringType; nullable = true; defaultValue = null
+                })
+            ) { backStackEntry ->
+                com.example.bpscnotes.presentation.answerwriting.PeerReviewScreen(
+                    navController = navController,
+                    questionId    = backStackEntry.arguments?.getString("questionId"),
+                )
             }
             composable(Screen.JobVacancies.route)  { JobVacanciesScreen(navController, adManager = adManager) }
             composable(

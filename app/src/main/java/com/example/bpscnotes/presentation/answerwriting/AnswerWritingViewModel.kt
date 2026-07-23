@@ -54,6 +54,15 @@ data class AnswerWritingUiState(
     val submission: AnswerSubmissionDto?            = null,
     /** Anonymous reviews received on MY submission */
     val peerReviews: List<PeerReviewDto>            = emptyList(),
+    /**
+     * Reciprocity: reviews on my answer stay hidden until I review someone
+     * else's answer to this question. peerReviewCount is still known while
+     * locked (the carrot); reviewableCount says whether there is anything
+     * here for me to review yet.
+     */
+    val peerReviewsLocked: Boolean                  = false,
+    val peerReviewCount: Int                        = 0,
+    val reviewableCount: Int                        = 0,
     val isLoadingDetail: Boolean                    = false,
     val detailError: String?                        = null,
 
@@ -129,8 +138,12 @@ class AnswerWritingViewModel @Inject constructor(
                 it.copy(
                     isLoadingDetail = true, detailError = null,
                     question = null, submission = null, peerReviews = emptyList(),
+                    peerReviewsLocked = false, peerReviewCount = 0, reviewableCount = 0,
                     draftText = if (keepDraft) it.draftText else "",
                     selectedImages = if (keepDraft) it.selectedImages else emptyList(),
+                    // a PDF picked for another question must not ride along
+                    selectedPdf = if (keepDraft) it.selectedPdf else null,
+                    selectedPdfName = if (keepDraft) it.selectedPdfName else null,
                     submitError = null, justEarnedCoins = null,
                 )
             }
@@ -140,6 +153,9 @@ class AnswerWritingViewModel @Inject constructor(
                     it.copy(
                         question = data.question, submission = data.submission,
                         peerReviews = data.peerReviews, isLoadingDetail = false,
+                        peerReviewsLocked = data.peerReviewsLocked,
+                        peerReviewCount = data.peerReviewCount,
+                        reviewableCount = data.reviewableCount,
                     )
                 }
             } catch (e: Exception) {

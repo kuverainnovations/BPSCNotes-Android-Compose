@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.pdf.downloadPdf
 import com.example.bpscnotes.core.pdf.renderPdfPages
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AnswerPdfDialog(url: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val str = LocalStrings.current
     var pages by remember(url) { mutableStateOf<List<Bitmap>>(emptyList()) }
     var loading by remember(url) { mutableStateOf(true) }
     var error by remember(url) { mutableStateOf<String?>(null) }
@@ -60,7 +62,7 @@ fun AnswerPdfDialog(url: String, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Answer PDF", color = Color.White, fontWeight = FontWeight.Bold,
+                    str.awAnswerPdfTitle, color = Color.White, fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, "Close", tint = Color.White) }
@@ -92,8 +94,9 @@ fun AnswerPdfDialog(url: String, onDismiss: () -> Unit) {
 // Compact "Open PDF" button shown wherever an answer has a PDF.
 @Composable
 fun OpenAnswerPdfButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val str = LocalStrings.current
     OutlinedButton(onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.medium) {
         Text("📄  ", style = MaterialTheme.typography.bodyMedium)
-        Text("Open PDF answer", fontWeight = FontWeight.Bold)
+        Text(str.awOpenPdfAnswer, fontWeight = FontWeight.Bold)
     }
 }
