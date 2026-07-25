@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -37,6 +38,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -636,48 +638,54 @@ private fun BlockRow(
             onFocusHandled()
         }
     }
-    Row(Modifier.fillMaxWidth().padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         // Leading marker / control
         when (block.type) {
             BlockType.Bullet   -> Text("•  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
             BlockType.Numbered -> Text("${numberLabel ?: "•"}  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
-            BlockType.Check    -> Checkbox(checked = block.done, onCheckedChange = { onToggleCheck() }, modifier = Modifier.size(36.dp))
+            BlockType.Check    -> Checkbox(checked = block.done, onCheckedChange = { onToggleCheck() }, modifier = Modifier.size(28.dp))
             else -> {}
         }
 
-        TextField(
+        // BasicTextField, not Material TextField: the latter reserves a 56dp
+        // minimum height + heavy internal padding on every block, which is
+        // what left big empty gaps between one-line list items. This hugs the
+        // text, so a numbered/bullet list reads like a real list.
+        val textStyle = (if (heading)
+            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        else MaterialTheme.typography.bodyMedium).copy(
+            color = BpscColors.TextPrimary,
+            textDecoration = if (block.type == BlockType.Check && block.done) TextDecoration.LineThrough else null,
+        )
+        BasicTextField(
             value = block.text,
             // In a list block, a newline means Enter → continue the list with a
             // new item instead of adding a line break inside the current one.
             onValueChange = { newText ->
                 if (isList && newText.contains('\n')) onEnter(newText) else onText(newText)
             },
-            placeholder = {
-                Text(
-                    when (block.type) {
-                        BlockType.Heading -> "Heading"
-                        BlockType.Bullet, BlockType.Numbered -> "List item"
-                        BlockType.Check -> "To-do"
-                        else -> "Write…"
-                    },
-                    color = BpscColors.TextHint,
-                )
-            },
-            textStyle = if (heading)
-                MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-            else MaterialTheme.typography.bodyMedium.copy(
-                textDecoration = if (block.type == BlockType.Check && block.done) TextDecoration.LineThrough else null,
-            ),
+            textStyle = textStyle,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            cursorBrush = SolidColor(BpscColors.Primary),
             modifier = Modifier.weight(1f)
                 .focusRequester(focusRequester)
                 .onFocusChanged { if (it.isFocused) onFocused() },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            ),
+            decorationBox = { inner ->
+                Box(Modifier.padding(vertical = 6.dp)) {
+                    if (block.text.isEmpty()) {
+                        Text(
+                            when (block.type) {
+                                BlockType.Heading -> "Heading"
+                                BlockType.Bullet, BlockType.Numbered -> "List item"
+                                BlockType.Check -> "To-do"
+                                else -> "Write…"
+                            },
+                            style = textStyle.copy(color = BpscColors.TextHint),
+                        )
+                    }
+                    inner()
+                }
+            },
         )
 
         // Per-block menu
