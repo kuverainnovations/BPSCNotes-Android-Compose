@@ -47,6 +47,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -54,7 +55,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -652,10 +652,17 @@ private fun BlockRow(
     }
 
     val focusRequester = remember { FocusRequester() }
-    // Pull the row above the keyboard when it takes focus, so a new line on a
-    // full page isn't hidden behind the keyboard.
+    // Keep the focused row above the keyboard. Re-running whenever the IME
+    // height changes matters: on focus alone the keyboard hasn't finished
+    // opening, so the row would be pulled up against the old (taller) viewport
+    // and then the keyboard slides over it. Reacting to imeBottom pulls it up
+    // again once the keyboard is actually there — so a new line never hides.
     val bringIntoView = remember { BringIntoViewRequester() }
-    val scope = rememberCoroutineScope()
+    var focused by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(focused, imeBottom) {
+        if (focused) runCatching { bringIntoView.bringIntoView() }
+    }
     LaunchedEffect(requestFocus) {
         if (requestFocus) {
             val t = block.text
@@ -712,10 +719,8 @@ private fun BlockRow(
             modifier = Modifier.weight(1f)
                 .focusRequester(focusRequester)
                 .onFocusChanged {
-                    if (it.isFocused) {
-                        onFocused()
-                        scope.launch { runCatching { bringIntoView.bringIntoView() } }
-                    }
+                    focused = it.isFocused
+                    if (it.isFocused) onFocused()
                 }
                 // Backspace at the very start doesn't change the text (nothing
                 // before the caret), so onValueChange never sees it — catch it
