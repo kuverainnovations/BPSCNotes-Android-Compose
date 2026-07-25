@@ -28,7 +28,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
@@ -42,9 +41,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -498,16 +504,18 @@ private fun BlockEditor(
                     block = block,
                     numberLabel = if (block.type == BlockType.Numbered)
                         "${state.editorBlocks.take(index + 1).count { it.type == BlockType.Numbered }}." else null,
-                    onFocused = { focusedId = block.id },
-                    onText = { viewModel.setBlockText(block.id, it) },
-                    onEnter = { viewModel.onListBlockEnter(block.id, it) },
                     requestFocus = state.pendingFocusId == block.id,
+                    focusCaret = if (state.pendingFocusId == block.id) state.pendingFocusCaret else null,
+                    onFocused = { focusedId = block.id },
                     onFocusHandled = { viewModel.clearPendingFocus() },
+                    onText = { viewModel.setBlockText(block.id, it) },
+                    // Enter and Backspace are handled as real key presses, not
+                    // by sniffing the text for '\n' — that double-fired and
+                    // spawned extra bullets.
+                    onEnter = { before, after -> viewModel.onEnterAt(block.id, before, after) },
+                    onBackspaceAtStart = { viewModel.onBackspaceAtStart(block.id) },
                     onToggleCheck = { viewModel.toggleCheck(block.id) },
-                    onTypeChange = { viewModel.setBlockType(block.id, it) },
-                    onMoveUp = { viewModel.moveBlock(block.id, up = true) },
-                    onMoveDown = { viewModel.moveBlock(block.id, up = false) },
-                    onDelete = { viewModel.deleteBlock(block.id) },
+                    onDeleteImage = { viewModel.deleteBlock(block.id) },
                 )
             }
         }
@@ -516,11 +524,14 @@ private fun BlockEditor(
         Surface(color = Color.White, shadowElevation = 4.dp) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { AddChip("¶ Text")   { viewModel.addBlock(anchorId(), BlockType.Text) } }
-                    item { AddChip("H Heading") { viewModel.addBlock(anchorId(), BlockType.Heading) } }
-                    item { AddChip("• Bullet")  { viewModel.addBlock(anchorId(), BlockType.Bullet) } }
-                    item { AddChip("1. List")   { viewModel.addBlock(anchorId(), BlockType.Numbered) } }
-                    item { AddChip("☑ Checklist") { viewModel.addBlock(anchorId(), BlockType.Check) } }
+                    // Tapping a type on an empty line converts that line; on a
+                    // line with text it starts a new block below. So a single
+                    // tap never leaves you with two empty bullets.
+                    item { AddChip("¶ Text")   { viewModel.toolbarBlock(anchorId(), BlockType.Text) } }
+                    item { AddChip("H Heading") { viewModel.toolbarBlock(anchorId(), BlockType.Heading) } }
+                    item { AddChip("• Bullet")  { viewModel.toolbarBlock(anchorId(), BlockType.Bullet) } }
+                    item { AddChip("1. List")   { viewModel.toolbarBlock(anchorId(), BlockType.Numbered) } }
+                    item { AddChip("☑ Checklist") { viewModel.toolbarBlock(anchorId(), BlockType.Check) } }
                     item { AddChip("🖼 Image")  { imagePicker.launch("image/*") } }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -582,23 +593,22 @@ private fun AddChip(label: String, onClick: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BlockRow(
     block: EditableBlock,
     numberLabel: String?,
+    requestFocus: Boolean,
+    focusCaret: Int?,
     onFocused: () -> Unit,
+    onFocusHandled: () -> Unit,
     onText: (String) -> Unit,
-    onEnter: (String) -> Unit = {},
-    requestFocus: Boolean = false,
-    onFocusHandled: () -> Unit = {},
+    onEnter: (String, String) -> Unit,  // text before / after the split point
+    onBackspaceAtStart: () -> Unit,     // Backspace at offset 0
     onToggleCheck: () -> Unit,
-    onTypeChange: (BlockType) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onDelete: () -> Unit,
+    onDeleteImage: () -> Unit,
 ) {
-    // Image block: thumbnail + remove; no text field.
+    // Image block: thumbnail + remove; no text field, no row menu.
     if (block.type == BlockType.Image) {
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (block.uploading || block.url.isNullOrBlank()) {
@@ -609,10 +619,6 @@ private fun BlockRow(
                 ) { CircularProgressIndicator(Modifier.size(22.dp), color = BpscColors.Primary, strokeWidth = 2.dp) }
             } else {
                 Box(Modifier.weight(1f)) {
-                    // FillWidth + no fixed height: the whole image shows,
-                    // scaled to the note width at its natural aspect ratio
-                    // (Crop was chopping tall diagrams / handwritten photos).
-                    // Same pattern as the peer-review answer photos.
                     AsyncImage(
                         model = block.url,
                         contentDescription = null,
@@ -622,7 +628,7 @@ private fun BlockRow(
                             .border(1.dp, BpscColors.Divider, RoundedCornerShape(12.dp)),
                     )
                     IconButton(
-                        onClick = onDelete,
+                        onClick = onDeleteImage,
                         modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
                             .size(28.dp).clip(CircleShape).background(Color.Black.copy(0.45f)),
                     ) { Icon(Icons.Rounded.Close, "Remove image", tint = Color.White, modifier = Modifier.size(16.dp)) }
@@ -633,35 +639,50 @@ private fun BlockRow(
     }
 
     val heading = block.type == BlockType.Heading
-    val isList = block.type == BlockType.Bullet || block.type == BlockType.Numbered || block.type == BlockType.Check
-    // Focus the newly-created list item after Enter so the user keeps typing.
+
+    // Local editing value carries the caret position, which we need to split on
+    // Enter and to detect Backspace at the very start of a block.
+    var tfv by remember(block.id) {
+        mutableStateOf(TextFieldValue(block.text, TextRange(block.text.length)))
+    }
+    // Reflect external text changes (Enter split trims this block to "before",
+    // a merge grows the previous block) without clobbering the caret mid-typing.
+    LaunchedEffect(block.text) {
+        if (block.text != tfv.text) tfv = TextFieldValue(block.text, TextRange(block.text.length))
+    }
+
     val focusRequester = remember { FocusRequester() }
-    // Pull the row above the keyboard whenever it takes focus — a new line
-    // pressed on a full page would otherwise appear hidden behind the keyboard.
+    // Pull the row above the keyboard when it takes focus, so a new line on a
+    // full page isn't hidden behind the keyboard.
     val bringIntoView = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(requestFocus) {
         if (requestFocus) {
+            val t = block.text
+            val caret = (focusCaret ?: t.length).coerceIn(0, t.length)
+            tfv = TextFieldValue(t, TextRange(caret))
             runCatching { focusRequester.requestFocus() }
             onFocusHandled()
         }
     }
+
+    // No per-row menu any more: Enter makes the next block, Backspace at the
+    // start removes the marker then merges up, and the toolbar changes type.
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 2.dp).bringIntoViewRequester(bringIntoView),
-        verticalAlignment = Alignment.CenterVertically,
+        Modifier.fillMaxWidth().padding(vertical = 1.dp).bringIntoViewRequester(bringIntoView),
+        verticalAlignment = Alignment.Top,
     ) {
-        // Leading marker / control
+        // Leading marker / control, top-aligned so it sits on the first line.
         when (block.type) {
-            BlockType.Bullet   -> Text("•  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
-            BlockType.Numbered -> Text("${numberLabel ?: "•"}  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
-            BlockType.Check    -> Checkbox(checked = block.done, onCheckedChange = { onToggleCheck() }, modifier = Modifier.size(28.dp))
+            BlockType.Bullet   -> Text("•  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp))
+            BlockType.Numbered -> Text("${numberLabel ?: "•"}  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp))
+            BlockType.Check    -> Checkbox(checked = block.done, onCheckedChange = { onToggleCheck() },
+                modifier = Modifier.size(30.dp))
             else -> {}
         }
 
-        // BasicTextField, not Material TextField: the latter reserves a 56dp
-        // minimum height + heavy internal padding on every block, which is
-        // what left big empty gaps between one-line list items. This hugs the
-        // text, so a numbered/bullet list reads like a real list.
         val textStyle = (if (heading)
             MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
         else MaterialTheme.typography.bodyMedium).copy(
@@ -669,11 +690,21 @@ private fun BlockRow(
             textDecoration = if (block.type == BlockType.Check && block.done) TextDecoration.LineThrough else null,
         )
         BasicTextField(
-            value = block.text,
-            // In a list block, a newline means Enter → continue the list with a
-            // new item instead of adding a line break inside the current one.
-            onValueChange = { newText ->
-                if (isList && newText.contains('\n')) onEnter(newText) else onText(newText)
+            value = tfv,
+            onValueChange = { v ->
+                // Enter arrives as a committed newline on Android soft keyboards
+                // (not as a key event), so detect it here: split at the newline
+                // and DON'T push it into the block. This is the single Enter
+                // path — one edit, one new block, so no more double bullets.
+                val nl = v.text.indexOf('\n')
+                if (nl >= 0) {
+                    // Split around the newline; use the field's own text so an
+                    // autocorrect-on-Enter can't desync us from the block.
+                    onEnter(v.text.substring(0, nl), v.text.substring(nl + 1))
+                } else {
+                    tfv = v
+                    if (v.text != block.text) onText(v.text)
+                }
             },
             textStyle = textStyle,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -685,16 +716,25 @@ private fun BlockRow(
                         onFocused()
                         scope.launch { runCatching { bringIntoView.bringIntoView() } }
                     }
+                }
+                // Backspace at the very start doesn't change the text (nothing
+                // before the caret), so onValueChange never sees it — catch it
+                // as a key event to drop the marker / merge with the block above.
+                .onPreviewKeyEvent { e ->
+                    if (e.type == KeyEventType.KeyDown &&
+                        e.key == Key.Backspace &&
+                        tfv.selection.collapsed && tfv.selection.start == 0
+                    ) { onBackspaceAtStart(); true } else false
                 },
             decorationBox = { inner ->
                 Box(Modifier.padding(vertical = 4.dp)) {
-                    if (block.text.isEmpty()) {
+                    if (tfv.text.isEmpty()) {
                         Text(
                             when (block.type) {
                                 BlockType.Heading -> "Heading"
                                 BlockType.Bullet, BlockType.Numbered -> "List item"
                                 BlockType.Check -> "To-do"
-                                else -> "Write…"
+                                else -> "Write something…"
                             },
                             style = textStyle.copy(color = BpscColors.TextHint),
                         )
@@ -703,33 +743,5 @@ private fun BlockRow(
                 }
             },
         )
-
-        // Per-block menu
-        var menu by remember { mutableStateOf(false) }
-        Box {
-            IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Rounded.MoreVert, "Block options", tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
-            }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                Text("Turn into", style = MaterialTheme.typography.labelSmall,
-                    color = BpscColors.TextHint, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
-                listOf(
-                    BlockType.Text to "Text", BlockType.Heading to "Heading",
-                    BlockType.Bullet to "Bullet", BlockType.Numbered to "Numbered", BlockType.Check to "Checklist",
-                ).forEach { (t, label) ->
-                    DropdownMenuItem(
-                        text = { Text(label, fontWeight = if (block.type == t) FontWeight.Bold else FontWeight.Normal) },
-                        onClick = { onTypeChange(t); menu = false },
-                    )
-                }
-                HorizontalDivider()
-                DropdownMenuItem(text = { Text("Move up") }, onClick = { onMoveUp(); menu = false })
-                DropdownMenuItem(text = { Text("Move down") }, onClick = { onMoveDown(); menu = false })
-                DropdownMenuItem(
-                    text = { Text("Delete", color = Color(0xFFD32F2F)) },
-                    onClick = { onDelete(); menu = false },
-                )
-            }
-        }
     }
 }

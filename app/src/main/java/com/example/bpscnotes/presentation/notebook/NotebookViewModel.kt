@@ -64,8 +64,11 @@ data class NotebookUiState(
     val editorBlocks: List<EditableBlock> = emptyList(),
     val isSaving: Boolean = false,
     // Block that should grab focus next (e.g. the new list item created by
-    // pressing Enter). Cleared once the field has requested focus.
+    // pressing Enter, or the previous block after a Backspace merge). Cleared
+    // once the field has requested focus. pendingFocusCaret is where to place
+    // the cursor in that block (null = end of its text).
     val pendingFocusId: String? = null,
+    val pendingFocusCaret: Int? = null,
 ) {
     val subjects: List<String>
         get() = notes.mapNotNull { it.subject?.takeIf { s -> s.isNotBlank() } }.distinct().sorted()
@@ -165,63 +168,108 @@ class NotebookViewModel @Inject constructor(
         updateBlocks { list -> list.map { if (it.id == id) it.copy(type = type) else it } }
 
     /**
-     * Enter pressed inside a list block (bullet / numbered / checklist).
-     * Splits at the newline and continues the list with a new item of the same
-     * type (QA 21-07 Issue 11). Pressing Enter on an empty item ends the list
-     * by turning that item back into a plain text block.
+     * Enter split a block into [before] (kept here) and [after] (a new block
+     * below).
+     *  · Empty list item → exit the list (becomes a plain text block).
+     *  · Otherwise → the new block continues a list as the same kind; a heading
+     *    is followed by plain text; text stays text.
+     * The new (or converted) block takes focus with the caret at its start.
      */
-    fun onListBlockEnter(id: String, newText: String) {
-        val before = newText.substringBefore('\n')
-        val after  = newText.substringAfter('\n', "")
+    fun onEnterAt(id: String, before: String, after: String) {
+        _state.update { s ->
+            val list = s.editorBlocks
+            val idx  = list.indexOfFirst { it.id == id }
+            if (idx < 0) return@update s
+            val cur  = list[idx]
+
+            val isList = cur.type == BlockType.Bullet || cur.type == BlockType.Numbered || cur.type == BlockType.Check
+            if (isList && before.isBlank() && after.isBlank()) {
+                return@update s.copy(
+                    editorBlocks = list.toMutableList().apply {
+                        set(idx, cur.copy(type = BlockType.Text, done = false, text = ""))
+                    },
+                    pendingFocusId = cur.id, pendingFocusCaret = 0,
+                )
+            }
+            val newType = if (isList) cur.type else BlockType.Text
+            val newBlock = EditableBlock(type = newType, text = after)
+            s.copy(
+                editorBlocks = list.toMutableList().apply {
+                    set(idx, cur.copy(text = before))
+                    add(idx + 1, newBlock)
+                },
+                pendingFocusId = newBlock.id, pendingFocusCaret = 0,
+            )
+        }
+    }
+
+    /**
+     * Backspace pressed at the very start of a block.
+     *  · A list/heading item first drops its formatting → plain text (so the
+     *    marker is what a leading Backspace removes, matching every notes app).
+     *  · A plain-text block at the start merges into the block above, with the
+     *    cursor left at the join. The first block, or a block under an image,
+     *    is left alone (nothing to merge into).
+     */
+    fun onBackspaceAtStart(id: String) {
         _state.update { s ->
             val list = s.editorBlocks
             val idx  = list.indexOfFirst { it.id == id }
             if (idx < 0) return@update s
             val cur = list[idx]
-            if (before.isBlank() && after.isBlank()) {
-                // Empty list item + Enter → exit the list.
-                s.copy(editorBlocks = list.toMutableList().apply {
-                    set(idx, cur.copy(type = BlockType.Text, text = ""))
-                })
-            } else {
-                val newBlock = EditableBlock(type = cur.type, text = after)
-                s.copy(
-                    editorBlocks = list.toMutableList().apply {
-                        set(idx, cur.copy(text = before))
-                        add(idx + 1, newBlock)
-                    },
-                    pendingFocusId = newBlock.id,
+
+            if (cur.type != BlockType.Text && cur.type != BlockType.Image) {
+                // Drop the bullet/number/checkbox/heading, keep the text.
+                return@update s.copy(
+                    editorBlocks = list.toMutableList().apply { set(idx, cur.copy(type = BlockType.Text, done = false)) },
+                    pendingFocusId = cur.id, pendingFocusCaret = 0,
                 )
             }
+            if (cur.type == BlockType.Image || idx == 0) return@update s
+
+            val prev = list[idx - 1]
+            if (prev.type == BlockType.Image) {
+                // Can't merge into an image; just drop this block if it's empty.
+                return@update if (cur.text.isEmpty())
+                    s.copy(editorBlocks = list.toMutableList().apply { removeAt(idx) })
+                else s
+            }
+            val caret  = prev.text.length
+            val merged = prev.copy(text = prev.text + cur.text)
+            s.copy(
+                editorBlocks = list.toMutableList().apply { set(idx - 1, merged); removeAt(idx) },
+                pendingFocusId = merged.id, pendingFocusCaret = caret,
+            )
         }
     }
 
-    fun clearPendingFocus() = _state.update { it.copy(pendingFocusId = null) }
+    fun clearPendingFocus() = _state.update { it.copy(pendingFocusId = null, pendingFocusCaret = null) }
 
-    /** Add a new empty block right after [afterId] (or at the end), and move
-     *  the cursor into it — tapping "Bullet"/"1. List" should drop you into the
-     *  new item, not leave the caret where it was. */
-    fun addBlock(afterId: String?, type: BlockType = BlockType.Text) {
-        val fresh = EditableBlock(type = type)
+    /**
+     * A type chip on the toolbar. If the focused line is empty it converts that
+     * line to [type]; if it has text it starts a new block of [type] below. So
+     * tapping "Bullet" once never leaves two empty bullets behind.
+     */
+    fun toolbarBlock(anchorId: String?, type: BlockType) {
         _state.update { s ->
-            val list = s.editorBlocks
-            val idx = list.indexOfFirst { it.id == afterId }
-            val next = if (idx < 0) list + fresh
-                       else list.toMutableList().apply { add(idx + 1, fresh) }
-            s.copy(editorBlocks = next, pendingFocusId = fresh.id)
+            val list   = s.editorBlocks
+            val idx    = list.indexOfFirst { it.id == anchorId }
+            val anchor = list.getOrNull(idx)
+            if (anchor != null && anchor.type != BlockType.Image && anchor.text.isBlank()) {
+                return@update s.copy(
+                    editorBlocks = list.toMutableList().apply { set(idx, anchor.copy(type = type, done = false)) },
+                    pendingFocusId = anchor.id, pendingFocusCaret = 0,
+                )
+            }
+            val fresh = EditableBlock(type = type)
+            val next  = if (idx < 0) list + fresh else list.toMutableList().apply { add(idx + 1, fresh) }
+            s.copy(editorBlocks = next, pendingFocusId = fresh.id, pendingFocusCaret = 0)
         }
     }
 
     fun deleteBlock(id: String) = updateBlocks { list ->
         val filtered = list.filterNot { it.id == id }
         filtered.ifEmpty { listOf(EditableBlock(type = BlockType.Text)) }  // never fully empty
-    }
-
-    fun moveBlock(id: String, up: Boolean) = updateBlocks { list ->
-        val idx = list.indexOfFirst { it.id == id }
-        val target = if (up) idx - 1 else idx + 1
-        if (idx < 0 || target < 0 || target >= list.size) list
-        else list.toMutableList().apply { add(target, removeAt(idx)) }
     }
 
     /** Pick → upload → insert an image block after [afterId]. */
