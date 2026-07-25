@@ -7,8 +7,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -578,7 +582,7 @@ private fun AddChip(label: String, onClick: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun BlockRow(
     block: EditableBlock,
@@ -632,13 +636,20 @@ private fun BlockRow(
     val isList = block.type == BlockType.Bullet || block.type == BlockType.Numbered || block.type == BlockType.Check
     // Focus the newly-created list item after Enter so the user keeps typing.
     val focusRequester = remember { FocusRequester() }
+    // Pull the row above the keyboard whenever it takes focus — a new line
+    // pressed on a full page would otherwise appear hidden behind the keyboard.
+    val bringIntoView = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(requestFocus) {
         if (requestFocus) {
             runCatching { focusRequester.requestFocus() }
             onFocusHandled()
         }
     }
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 2.dp).bringIntoViewRequester(bringIntoView),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         // Leading marker / control
         when (block.type) {
             BlockType.Bullet   -> Text("•  ", color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold)
@@ -669,9 +680,14 @@ private fun BlockRow(
             cursorBrush = SolidColor(BpscColors.Primary),
             modifier = Modifier.weight(1f)
                 .focusRequester(focusRequester)
-                .onFocusChanged { if (it.isFocused) onFocused() },
+                .onFocusChanged {
+                    if (it.isFocused) {
+                        onFocused()
+                        scope.launch { runCatching { bringIntoView.bringIntoView() } }
+                    }
+                },
             decorationBox = { inner ->
-                Box(Modifier.padding(vertical = 6.dp)) {
+                Box(Modifier.padding(vertical = 4.dp)) {
                     if (block.text.isEmpty()) {
                         Text(
                             when (block.type) {

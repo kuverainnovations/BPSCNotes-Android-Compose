@@ -198,12 +198,17 @@ class NotebookViewModel @Inject constructor(
 
     fun clearPendingFocus() = _state.update { it.copy(pendingFocusId = null) }
 
-    /** Add a new empty block right after [afterId] (or at the end). */
+    /** Add a new empty block right after [afterId] (or at the end), and move
+     *  the cursor into it — tapping "Bullet"/"1. List" should drop you into the
+     *  new item, not leave the caret where it was. */
     fun addBlock(afterId: String?, type: BlockType = BlockType.Text) {
         val fresh = EditableBlock(type = type)
-        updateBlocks { list ->
+        _state.update { s ->
+            val list = s.editorBlocks
             val idx = list.indexOfFirst { it.id == afterId }
-            if (idx < 0) list + fresh else list.toMutableList().apply { add(idx + 1, fresh) }
+            val next = if (idx < 0) list + fresh
+                       else list.toMutableList().apply { add(idx + 1, fresh) }
+            s.copy(editorBlocks = next, pendingFocusId = fresh.id)
         }
     }
 
