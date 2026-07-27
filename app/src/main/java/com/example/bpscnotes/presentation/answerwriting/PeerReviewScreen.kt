@@ -752,21 +752,15 @@ private fun ReviewPoolList(
                                 if (a.isSeed) str.awSampleAnswer else "${str.awStudentAnswer} #${i + 1}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cs.onSurface, fontWeight = FontWeight.Bold,
+                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             )
                             if (!a.isSeed) {
                                 Text(
                                     str.awAnonymous, style = MaterialTheme.typography.labelSmall,
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                    maxLines = 1, softWrap = false,
                                     modifier = Modifier.clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp),
-                                )
-                            }
-                            if (a.reviewedByMe) {
-                                Text(
-                                    "✓ ${str.awReviewedByYou}", style = MaterialTheme.typography.labelSmall,
-                                    color = Indigo, fontWeight = FontWeight.Bold, fontSize = 9.sp,
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                                        .background(IndigoSoft).padding(horizontal = 6.dp, vertical = 2.dp),
                                 )
                             }
                         }
@@ -785,6 +779,18 @@ private fun ReviewPoolList(
                                 fontWeight = if (a.peerReviewCount == 0) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 10.sp,
                             )
+                            // "Reviewed" sits on the meta line where there's room —
+                            // on the name line it got squeezed to a third chip and
+                            // wrapped letter-by-letter.
+                            if (a.reviewedByMe) {
+                                Text(
+                                    "✓ ${str.awReviewedByYou}", style = MaterialTheme.typography.labelSmall,
+                                    color = Indigo, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                    maxLines = 1, softWrap = false,
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                        .background(IndigoSoft).padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
                         }
                     }
                     Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.TextHint, modifier = Modifier.size(18.dp))
