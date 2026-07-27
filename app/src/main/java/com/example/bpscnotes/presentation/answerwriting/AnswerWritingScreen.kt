@@ -162,34 +162,77 @@ fun AnswerWritingScreen(
 @Composable
 private fun QuestionsTab(questions: List<AnswerQuestionDto>, navController: NavHostController) {
     val str = LocalStrings.current
-    val today = questions.firstOrNull { it.isToday }
 
     if (questions.isEmpty()) {
         EmptyBlock("📝", str.awEmpty, str.awEmptyBody)
         return
     }
 
+    // Today's questions (there can be several — admin may post more than one a
+    // day) sit at the top; everything older is history, grouped by its day.
+    val todays   = questions.filter { it.isToday }
+    val earlier  = questions.filter { !it.isToday }
+    // Group history by effective day, most recent first. The list already
+    // arrives ordered by day desc, so groupBy preserves that order.
+    val earlierByDay: Map<String, List<AnswerQuestionDto>> =
+        earlier.groupBy { it.effectiveDate ?: it.scheduledFor ?: it.createdAt?.take(10) ?: "" }
+
+    fun open(id: String) = navController.navigate(Screen.AnswerWritingDetail.createRoute(id))
+
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Today's question — hero card
-        if (today != null) {
-            item(key = "today") {
-                TodayQuestionCard(today) {
-                    navController.navigate(Screen.AnswerWritingDetail.createRoute(today.id))
-                }
+        // ── Today ────────────────────────────────────────────────
+        item(key = "today_header") { SectionHeader("📌", str.awTodayHeader) }
+        if (todays.isEmpty()) {
+            item(key = "today_empty") {
+                Text(
+                    str.awNoTodayQuestion,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = BpscColors.TextHint,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                )
+            }
+        } else {
+            // First today question as the hero; any others as normal cards.
+            item(key = "today_hero") {
+                TodayQuestionCard(todays.first()) { open(todays.first().id) }
+            }
+            items(todays.drop(1), key = { it.id }) { q ->
+                QuestionCard(q) { open(q.id) }
             }
         }
+
         // Peer review card — review others' answers, earn credits
         item(key = "peer_review") { PeerReviewCard(navController) }
 
-        items(questions.filter { it.id != today?.id }, key = { it.id }) { q ->
-            QuestionCard(q) {
-                navController.navigate(Screen.AnswerWritingDetail.createRoute(q.id))
+        // ── History (previous days) ──────────────────────────────
+        if (earlierByDay.isNotEmpty()) {
+            item(key = "history_header") { SectionHeader("🗓", str.awPreviousQuestions) }
+            earlierByDay.forEach { (day, dayQuestions) ->
+                item(key = "day_$day") {
+                    Text(
+                        day.takeIf { it.isNotBlank() }?.let { formatShortDate(it) } ?: "",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = BpscColors.TextSecondary, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                items(dayQuestions, key = { it.id }) { q ->
+                    QuestionCard(q) { open(q.id) }
+                }
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun SectionHeader(emoji: String, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(emoji, fontSize = 16.sp)
+        Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold)
     }
 }
 

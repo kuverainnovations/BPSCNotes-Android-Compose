@@ -25,6 +25,8 @@ data class AnswerQuestionDto(
     @SerializedName("word_limit")       val wordLimit: Int = 250,
     @SerializedName("scheduled_for")    val scheduledFor: String? = null,
     @SerializedName("created_at")       val createdAt: String? = null,
+    /** The day this question belongs to (IST): scheduled_for, else created day */
+    @SerializedName("effective_date")   val effectiveDate: String? = null,
     @SerializedName("is_today")         val isToday: Boolean = false,
     @SerializedName("is_pyq")           val isPyq: Boolean = false,
     @SerializedName("pyq_year")         val pyqYear: Int? = null,
@@ -280,7 +282,8 @@ interface AnswerWritingApiService {
     @GET("answer-writing")
     suspend fun getQuestions(
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 50,
+        // Higher default so the "Previous Questions" history isn't truncated.
+        @Query("limit") limit: Int = 100,
         @Query("subject") subject: String? = null,
     ): ApiResponse<AnswerQuestionsData>
 

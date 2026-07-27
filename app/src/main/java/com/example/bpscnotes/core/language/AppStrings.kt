@@ -160,6 +160,9 @@ data class QuizStrings(
     val awOverLimit: String = "over the limit",
     val awEmpty: String = "No questions yet",
     val awEmptyBody: String = "New answer-writing questions are posted regularly — check back soon!",
+    val awTodayHeader: String = "Today",
+    val awNoTodayQuestion: String = "No question for today yet — check back soon.",
+    val awPreviousQuestions: String = "Previous Questions",
     val awNoSubmissions: String = "You haven't written any answers yet",
     val awNoSubmissionsBody: String = "Pick a question and write your first Mains answer!",
     val awPendingNote: String = "Your answer is with the examiner — you'll get a notification once it's reviewed.",
@@ -1079,6 +1082,8 @@ data class AppStrings(
     val awSubmit get() = _qz.awSubmit; val awSubmitting get() = _qz.awSubmitting
     val awConfirmTitle get() = _qz.awConfirmTitle; val awConfirmBody get() = _qz.awConfirmBody
     val awOverLimit get() = _qz.awOverLimit
+    val awTodayHeader get() = _qz.awTodayHeader; val awNoTodayQuestion get() = _qz.awNoTodayQuestion
+    val awPreviousQuestions get() = _qz.awPreviousQuestions
     val awEmpty get() = _qz.awEmpty; val awEmptyBody get() = _qz.awEmptyBody
     val awNoSubmissions get() = _qz.awNoSubmissions; val awNoSubmissionsBody get() = _qz.awNoSubmissionsBody
     val awPendingNote get() = _qz.awPendingNote; val awDashSubtitle get() = _qz.awDashSubtitle
@@ -2561,6 +2566,9 @@ val HindiStrings: AppStrings = mkAppStrings(
         awConfirmTitle="अपना उत्तर जमा करें?",
         awConfirmBody="हर प्रश्न के लिए एक ही प्रयास मिलता है। जमा करने के बाद आदर्श उत्तर खुल जाएगा और मेंटर आपके उत्तर की समीक्षा करेंगे।",
         awOverLimit="सीमा से अधिक",
+        awTodayHeader="आज",
+        awNoTodayQuestion="आज के लिए अभी कोई प्रश्न नहीं — जल्द देखें।",
+        awPreviousQuestions="पिछले प्रश्न",
         awEmpty="अभी कोई प्रश्न नहीं",
         awEmptyBody="नए उत्तर-लेखन प्रश्न नियमित रूप से आते हैं — जल्द वापस देखें!",
         awNoSubmissions="आपने अभी तक कोई उत्तर नहीं लिखा",
