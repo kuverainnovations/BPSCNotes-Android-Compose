@@ -1,9 +1,18 @@
 package com.example.bpscnotes.presentation.navigation
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -27,8 +37,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.bpscnotes.core.ui.t.BpscColors
 
-// The Answer Writing accent — same indigo as the feature's own header.
-private val FabGradient = listOf(Color(0xFF1A237E), Color(0xFF3949AB))
+// Vibrant indigo→violet accent for the centre button.
+private val FabGradient = listOf(Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF7E57C2))
+private val FabHalo = Color(0xFF5C6BC0)
 
 /**
  * Bottom bar with a raised, gradient centre button (Answer Writing) flanked by
@@ -89,26 +100,63 @@ fun BpscBottomNav(
             }
         }
 
-        // ── Centre FAB (Answer Writing) ──────────────────────────
+        // ── Centre FAB (Answer Writing) — animated ───────────────
+        val interaction = remember { MutableInteractionSource() }
+        val pressed by interaction.collectIsPressedAsState()
+
+        val anim = rememberInfiniteTransition(label = "fab")
+        // Breathing glow: a halo that expands and fades, on a loop.
+        val haloScale by anim.animateFloat(
+            initialValue = 0.9f, targetValue = 1.7f,
+            animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Restart),
+            label = "halo",
+        )
+        val haloAlpha by anim.animateFloat(
+            initialValue = 0.45f, targetValue = 0f,
+            animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Restart),
+            label = "haloAlpha",
+        )
+        // Gentle idle breathing of the button itself.
+        val idleScale by anim.animateFloat(
+            initialValue = 1f, targetValue = 1.06f,
+            animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Reverse),
+            label = "idle",
+        )
+        // Springy press-in.
+        val pressScale by animateFloatAsState(
+            targetValue = if (pressed) 0.86f else 1f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "press",
+        )
+
         Column(
             modifier = Modifier.align(Alignment.TopCenter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(58.dp)
-                    .shadow(12.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Brush.verticalGradient(FabGradient))
-                    .border(3.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onCenterClick,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(centerIcon, centerLabel, tint = Color.White, modifier = Modifier.size(28.dp))
+            Box(contentAlignment = Alignment.Center) {
+                // Pulsing halo behind the button
+                Box(
+                    Modifier.size(58.dp).scale(haloScale).clip(CircleShape)
+                        .background(FabHalo.copy(alpha = haloAlpha))
+                )
+                // The button
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .scale(idleScale * pressScale)
+                        .shadow(if (pressed) 6.dp else 14.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(FabGradient))
+                        .border(3.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            onClick = onCenterClick,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(centerIcon, centerLabel, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
             }
             Text(
                 centerLabel,
