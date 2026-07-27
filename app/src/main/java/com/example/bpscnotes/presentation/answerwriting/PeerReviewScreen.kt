@@ -207,10 +207,16 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 .background(Color(0xFFFFF8E1)).padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("🤝", fontSize = 18.sp)
+            Text(if (assignment.reviewedByMe) "📖" else "🤝", fontSize = 18.sp)
             Column {
-                Text(str.awReviewBannerTitle, style = MaterialTheme.typography.labelLarge, color = Color(0xFF7A5B00), fontWeight = FontWeight.ExtraBold)
-                Text(str.awReviewBannerBody, style = MaterialTheme.typography.bodySmall, color = Color(0xFF9C7A1A))
+                Text(
+                    if (assignment.reviewedByMe) str.awAlreadyReviewedTitle else str.awReviewBannerTitle,
+                    style = MaterialTheme.typography.labelLarge, color = Color(0xFF7A5B00), fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    if (assignment.reviewedByMe) str.awAlreadyReviewedBody else str.awReviewBannerBody,
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFF9C7A1A)
+                )
             }
         }
 
@@ -311,6 +317,13 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 }
             }
         }
+
+        if (assignment.reviewedByMe) {
+            // Already reviewed → read-only. The answer above stays open so the
+            // student can re-read it and learn (client, 26 Jul); the review
+            // they gave is shown instead of the form.
+            ReviewGivenCard(assignment)
+        } else {
 
         // ── Your Review form ─────────────────────────────────────
         Card(
@@ -424,7 +437,78 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 Text(str.awSubmitReview, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
         }
+        }  // end else — form + submit shown only when not yet reviewed
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+// Read-only summary of the review the user already gave on this answer.
+@Composable
+private fun ReviewGivenCard(a: ReviewAssignmentDto) {
+    val str = LocalStrings.current
+    val cs = MaterialTheme.colorScheme
+    val areas = a.myImprovementAreas?.takeIf { it.isNotEmpty() } ?: listOfNotNull(a.myImprovementArea)
+    val (vLabel, vColor) = when (a.myVerdict) {
+        "yes"    -> str.yes to BpscColors.Success
+        "partly" -> str.awPartly to Color(0xFFB45309)
+        else     -> str.no to Color(0xFFE74C3C)
+    }
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier.size(30.dp).clip(CircleShape).background(IndigoSoft),
+                    contentAlignment = Alignment.Center
+                ) { Text("✍️", fontSize = 14.sp) }
+                Text(str.awYourReview, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
+            }
+            // Q1 — verdict
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(str.awReviewQ1, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(
+                    vLabel, style = MaterialTheme.typography.labelLarge, color = vColor, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(vColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+            // Q2 — rating
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(str.awReviewQ2, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "⭐".repeat(a.myRating.coerceIn(0, 5)) + "☆".repeat((5 - a.myRating).coerceIn(0, 5)),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            // Q3 — improvement areas
+            if (areas.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(str.awReviewQ3, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                    areas.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { key ->
+                                Text(
+                                    areaLabel(key), style = MaterialTheme.typography.labelSmall,
+                                    color = Indigo, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(IndigoSoft)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            // Q4 — suggestion
+            if (!a.mySuggestion.isNullOrBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(str.awReviewQ4, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                    Text("“${a.mySuggestion}”", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, lineHeight = 20.sp)
+                }
+            }
+        }
     }
 }
 
@@ -675,6 +759,14 @@ private fun ReviewPoolList(
                                     color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                     modifier = Modifier.clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                            if (a.reviewedByMe) {
+                                Text(
+                                    "✓ ${str.awReviewedByYou}", style = MaterialTheme.typography.labelSmall,
+                                    color = Indigo, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                        .background(IndigoSoft).padding(horizontal = 6.dp, vertical = 2.dp),
                                 )
                             }
                         }

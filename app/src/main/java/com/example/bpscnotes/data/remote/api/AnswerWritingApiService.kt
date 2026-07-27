@@ -202,6 +202,14 @@ data class ReviewAssignmentDto(
     val subject: String? = null,
     val marks: Int = 10,
     @SerializedName("word_limit")    val wordLimit: Int = 250,
+    // ── Already reviewed by me? The answer stays on the list so I can re-read
+    //    it to learn; the app opens it read-only with the review I gave. ──
+    @SerializedName("reviewed_by_me")      val reviewedByMe: Boolean = false,
+    @SerializedName("my_verdict")          val myVerdict: String? = null,
+    @SerializedName("my_rating")           val myRating: Int = 0,
+    @SerializedName("my_improvement_area") val myImprovementArea: String? = null,
+    @SerializedName("my_improvement_areas") val myImprovementAreas: List<String>? = null,
+    @SerializedName("my_suggestion")       val mySuggestion: String? = null,
 )
 data class NextReviewData(val submission: ReviewAssignmentDto? = null)
 data class ReviewListData(
@@ -221,6 +229,8 @@ data class ReviewQuestionDto(
     @SerializedName("pyq_year")            val pyqYear: Int? = null,
     /** Answers under this question I can review right now */
     @SerializedName("pending_count")       val pendingCount: Int = 0,
+    /** Answers I can open under this question — pending + already reviewed */
+    @SerializedName("answer_count")        val answerCount: Int = 0,
     /** Reviews I have already given on this question */
     @SerializedName("my_reviews_here")     val myReviewsHere: Int = 0,
     /** Reviews waiting on MY answer to this question */

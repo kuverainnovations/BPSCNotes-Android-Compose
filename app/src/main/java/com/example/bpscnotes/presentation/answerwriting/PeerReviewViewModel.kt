@@ -109,7 +109,9 @@ class PeerReviewViewModel @Inject constructor(
             }
             try {
                 val data = api.getReviewQuestions().data
-                val list = data?.questions.orEmpty().filter { it.pendingCount > 0 }
+                // Keep questions that still have answers to open — whether to
+                // review or to re-read after reviewing.
+                val list = data?.questions.orEmpty().filter { it.answerCount > 0 }
                 _uiState.update {
                     it.copy(
                         isLoading = false,
