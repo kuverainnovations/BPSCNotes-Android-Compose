@@ -14,6 +14,7 @@ data class CommonStrings(
 
 data class NavAuthStrings(
     val navDashboard: String, val navMyLearning: String, val navRooms: String, val navProfile: String,
+    val navAnswerWriting: String = "Write",
     val splashTagline: String,
     val langSelectTitle: String, val langSelectSubtitle: String, val langSelectContinue: String,
     val onboardingGetStarted: String, val onboardingSkip: String,
@@ -831,7 +832,7 @@ data class AppStrings(
     val tryAgain get() = _c.tryAgain; val version get() = _c.version
 
     val navDashboard get() = _n.navDashboard; val navMyLearning get() = _n.navMyLearning
-    val navRooms get() = _n.navRooms; val navProfile get() = _n.navProfile
+    val navRooms get() = _n.navRooms; val navProfile get() = _n.navProfile; val navAnswerWriting get() = _n.navAnswerWriting
     val splashTagline get() = _n.splashTagline
     val langSelectTitle get() = _n.langSelectTitle; val langSelectSubtitle get() = _n.langSelectSubtitle
     val langSelectContinue get() = _n.langSelectContinue
@@ -1555,7 +1556,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         goBack="Go Back", tryAgain="Try Again", version="v1.0.0",
     ),
     n = NavAuthStrings(
-        navDashboard="Dashboard", navMyLearning="My Courses", navRooms="Study Rooms", navProfile="Profile",
+        navDashboard="Dashboard", navMyLearning="My Courses", navRooms="Study Rooms", navProfile="Profile", navAnswerWriting="Write",
         splashTagline="Study Smart. Recall Better. Rank Higher.",
         langSelectTitle="Choose Your Language", langSelectSubtitle="You can change this anytime from Settings",
         langSelectContinue="Continue",
@@ -2396,7 +2397,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         start="शुरू करें", goBack="वापस जाएं", tryAgain="पुनः प्रयास करें", version="v1.0.0",
     ),
     n = NavAuthStrings(
-        navDashboard="होम", navMyLearning="मेरी पढ़ाई", navRooms="स्टडी रूम", navProfile="प्रोफ़ाइल",
+        navDashboard="होम", navMyLearning="मेरी पढ़ाई", navRooms="स्टडी रूम", navProfile="प्रोफ़ाइल", navAnswerWriting="लेखन",
         splashTagline="स्मार्ट पढ़ें। बेहतर याद करें। ऊंचा रैंक पाएं।",
         langSelectTitle="अपनी भाषा चुनें",
         langSelectSubtitle="आप इसे कभी भी सेटिंग से बदल सकते हैं",

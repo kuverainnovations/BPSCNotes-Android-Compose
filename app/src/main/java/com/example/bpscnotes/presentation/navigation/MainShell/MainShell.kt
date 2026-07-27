@@ -98,6 +98,8 @@ fun MainShell(
         val prefs = context.getSharedPreferences("bpsc_prefs", android.content.Context.MODE_PRIVATE)
         value = prefs.getInt("unread_notifications", 0)
     }
+    // Four side tabs; the raised centre FAB (between MyLearning and Rooms) opens
+    // Answer Writing full-screen.
     val items = listOf(
         BottomNavItem(route = Screen.Dashboard.route,  label = str.navDashboard,   icon = Icons.Rounded.Home,                       badgeCount = notifCount),
         BottomNavItem(route = Screen.MyLearning.route, label = str.navMyLearning,  icon = Icons.AutoMirrored.Rounded.MenuBook,      badgeCount = 0),
@@ -176,7 +178,11 @@ fun MainShell(
         bottomBar = {
             BpscBottomNav(
                 navController = bottomNavController,
-                items         = items
+                items         = items,
+                centerLabel   = str.navAnswerWriting,
+                onCenterClick = {
+                    rootNavController.navigate(Screen.AnswerWriting.route) { launchSingleTop = true }
+                },
             )
         }
     ) { innerPadding ->
