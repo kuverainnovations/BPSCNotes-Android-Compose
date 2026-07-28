@@ -324,17 +324,15 @@ class AnswerWritingViewModel @Inject constructor(
             try {
                 val parts = withContext(Dispatchers.IO) {
                     uris.mapIndexed { i, uri ->
-                        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
-                        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                            ?: throw Exception("Could not read photo ${i + 1}")
-                        val ext = when {
-                            mime.contains("png")  -> "png"
-                            mime.contains("webp") -> "webp"
-                            else                  -> "jpg"
-                        }
+                        // Downscale + recompress: a raw full-res camera photo is
+                        // 5-12 MB and times out on a weak connection. Compressed
+                        // it's a few hundred KB and always JPEG (EXIF rotation
+                        // baked in, so the answer isn't sideways).
+                        val bytes = com.example.bpscnotes.core.util.ImageCompressor
+                            .compressToJpeg(context, uri)
                         MultipartBody.Part.createFormData(
-                            "images", "answer_${i + 1}.$ext",
-                            bytes.toRequestBody(mime.toMediaTypeOrNull())
+                            "images", "answer_${i + 1}.jpg",
+                            bytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
                         )
                     }
                 }

@@ -234,7 +234,9 @@ object NetworkModule {
     @Provides @Singleton fun provideStudyRoomsApi(r: Retrofit): StudyRoomsApiService = r.create(StudyRoomsApiService::class.java)
     @Provides @Singleton fun provideCoinsApi(r: Retrofit): CoinsApiService = r.create(CoinsApiService::class.java)
     @Provides @Singleton fun provideNotebookApi(r: Retrofit): NotebookApiService = r.create(NotebookApiService::class.java)
-    @Provides @Singleton fun provideAnswerWritingApi(r: Retrofit): AnswerWritingApiService = r.create(AnswerWritingApiService::class.java)
+    // Upload client (long write timeout) — answer photos/PDFs can be large and
+    // must not hit the default 30s write timeout on a slow connection.
+    @Provides @Singleton fun provideAnswerWritingApi(@Named("upload") r: Retrofit): AnswerWritingApiService = r.create(AnswerWritingApiService::class.java)
     @Provides @Singleton fun provideFlashcardsApi(r: Retrofit): CoinsApiService.FlashcardsApiService = r.create(CoinsApiService.FlashcardsApiService::class.java)
     @Provides @Singleton fun provideTierRoomsApi(r: Retrofit): TierRoomsApiService = r.create(TierRoomsApiService::class.java)
     @Provides @Singleton fun provideAchievementsApi(r: Retrofit): AchievementsApiService = r.create(AchievementsApiService::class.java)
