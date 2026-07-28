@@ -251,7 +251,9 @@ private fun PeerReviewCard(
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surface),
+        // Light blue card (client request) — sets peer review apart from the
+        // white question cards around it.
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -267,10 +269,10 @@ private fun PeerReviewCard(
                 ) {
                     Box(
                         modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFE8FDF4)),
+                            .background(Color(0xFFBBDEFB)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Rounded.Groups, null, tint = BpscColors.Success, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Rounded.Groups, null, tint = Color(0xFF1565C0), modifier = Modifier.size(20.dp))
                     }
                     Column {
                         Text(str.awPeerReview, style = MaterialTheme.typography.titleSmall, color = cs.onSurface, fontWeight = FontWeight.ExtraBold)
@@ -284,14 +286,14 @@ private fun PeerReviewCard(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .border(1.5.dp, BpscColors.Success, RoundedCornerShape(12.dp))
+                            .background(Color(0xFF1565C0))
                             .clickable { navController.navigate(Screen.PeerReview.createRoute()) }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
-                        Text(str.awReviewNow, style = MaterialTheme.typography.labelMedium, color = BpscColors.Success, fontWeight = FontWeight.ExtraBold)
-                        Icon(Icons.Rounded.ChevronRight, null, tint = BpscColors.Success, modifier = Modifier.size(14.dp))
+                        Text(str.awReviewNow, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White, modifier = Modifier.size(14.dp))
                     }
                 }
             }
