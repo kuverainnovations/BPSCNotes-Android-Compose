@@ -549,10 +549,11 @@ private fun DetailContent(
                                 Text(str.awModelAnswer, style = MaterialTheme.typography.titleSmall, color = Indigo, fontWeight = FontWeight.ExtraBold)
                             }
                             Spacer(Modifier.height(8.dp))
-                            Text(
-                                q.modelAnswer!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = cs.onSurface, lineHeight = 22.sp
+                            // Rich HTML now (authored in the CA-style editor) —
+                            // render formatting instead of showing raw tags.
+                            com.example.bpscnotes.core.ui.RichHtmlWebView(
+                                html = q.modelAnswer!!,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
