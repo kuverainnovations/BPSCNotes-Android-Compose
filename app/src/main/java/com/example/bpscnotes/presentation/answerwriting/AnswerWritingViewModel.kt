@@ -53,6 +53,8 @@ data class AnswerWritingUiState(
     // ── Detail ────────────────────────────────────────────────
     val question: AnswerQuestionDetailDto?          = null,
     val submission: AnswerSubmissionDto?            = null,
+    /** House-authored sample answer — shown as a reference after I submit */
+    val sampleAnswer: com.example.bpscnotes.data.remote.api.SampleAnswerDto? = null,
     /** Anonymous reviews received on MY submission */
     val peerReviews: List<PeerReviewDto>            = emptyList(),
     /**
@@ -138,7 +140,7 @@ class AnswerWritingViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoadingDetail = true, detailError = null,
-                    question = null, submission = null, peerReviews = emptyList(),
+                    question = null, submission = null, sampleAnswer = null, peerReviews = emptyList(),
                     peerReviewsLocked = false, peerReviewCount = 0, reviewableCount = 0,
                     draftText = if (keepDraft) it.draftText else "",
                     selectedImages = if (keepDraft) it.selectedImages else emptyList(),
@@ -153,6 +155,7 @@ class AnswerWritingViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         question = data.question, submission = data.submission,
+                        sampleAnswer = data.sampleAnswer,
                         peerReviews = data.peerReviews, isLoadingDetail = false,
                         peerReviewsLocked = data.peerReviewsLocked,
                         peerReviewCount = data.peerReviewCount,
@@ -194,6 +197,7 @@ class AnswerWritingViewModel @Inject constructor(
                             modelAnswerTomorrow = data.modelAnswerTomorrow,
                         ),
                         justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
+                        sampleAnswer    = data.sampleAnswer ?: s.sampleAnswer,
                         draftText       = "",
                         // reflect the new status in the list without a reload
                         questions       = s.questions.map {
@@ -295,6 +299,7 @@ class AnswerWritingViewModel @Inject constructor(
                             modelAnswerTomorrow = data.modelAnswerTomorrow,
                         ),
                         justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
+                        sampleAnswer    = data.sampleAnswer ?: s.sampleAnswer,
                         selectedPdf     = null,
                         selectedPdfName = null,
                         questions       = s.questions.map {
@@ -350,6 +355,7 @@ class AnswerWritingViewModel @Inject constructor(
                             modelAnswerTomorrow = data.modelAnswerTomorrow,
                         ),
                         justEarnedCoins = data.coinsEarned.takeIf { it > 0 },
+                        sampleAnswer    = data.sampleAnswer ?: s.sampleAnswer,
                         selectedImages  = emptyList(),
                         questions       = s.questions.map {
                             if (it.id == questionId) it.copy(isSubmitted = true, myStatus = "submitted") else it

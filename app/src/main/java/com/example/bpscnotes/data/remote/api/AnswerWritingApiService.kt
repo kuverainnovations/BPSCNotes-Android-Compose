@@ -107,9 +107,19 @@ data class VoteReviewRequest(val helpful: Boolean)
 
 data class AnswerQuestionsData(val questions: List<AnswerQuestionDto> = emptyList())
 data class MyAnswerSubmissionsData(val submissions: List<AnswerSubmissionDto> = emptyList())
+/** The house-authored sample answer, shown as a readable reference after submit */
+data class SampleAnswerDto(
+    @SerializedName("answer_text")   val answerText: String? = null,
+    @SerializedName("answer_images") val answerImages: List<String>? = null,
+    @SerializedName("answer_pdf")    val answerPdf: String? = null,
+    @SerializedName("word_count")    val wordCount: Int = 0,
+)
+
 data class AnswerQuestionDetailData(
     val question: AnswerQuestionDetailDto = AnswerQuestionDetailDto(),
     val submission: AnswerSubmissionDto? = null,
+    /** Present only after the student submits — a reference to learn from */
+    val sampleAnswer: SampleAnswerDto? = null,
     val peerReviews: List<PeerReviewDto> = emptyList(),
     /**
      * Reciprocity (client rule): the reviews on my answer stay hidden until
@@ -286,6 +296,8 @@ data class SubmitAnswerData(
     val coinsEarned: Int = 0,
     val modelAnswer: String? = null,
     val modelAnswerTomorrow: Boolean = false,
+    /** Reference answer to learn from — unlocks the moment they submit */
+    val sampleAnswer: SampleAnswerDto? = null,
 )
 
 interface AnswerWritingApiService {

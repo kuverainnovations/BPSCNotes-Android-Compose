@@ -558,6 +558,54 @@ private fun DetailContent(
                     }
                 }
 
+                // ── Sample answer (house reference, readable after submit) ──
+                state.sampleAnswer?.let { sample ->
+                    val sImages = sample.answerImages.orEmpty()
+                    val sPdf = sample.answerPdf
+                    val hasSample = !sample.answerText.isNullOrBlank() || sImages.isNotEmpty() || !sPdf.isNullOrBlank()
+                    if (hasSample) {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("📘", fontSize = 15.sp)
+                                    Text(str.awSampleAnswer, style = MaterialTheme.typography.titleSmall, color = Color(0xFF1565C0), fontWeight = FontWeight.ExtraBold)
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    str.awSampleAnswerHint, style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF1565C0).copy(alpha = 0.8f), lineHeight = 15.sp
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                when {
+                                    !sPdf.isNullOrBlank() ->
+                                        OpenAnswerPdfButton(onClick = { pdfToView = sPdf }, modifier = Modifier.fillMaxWidth())
+                                    sImages.isNotEmpty() ->
+                                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            sImages.forEach { url ->
+                                                AsyncImage(
+                                                    model = url,
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.FillWidth,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                                )
+                                            }
+                                        }
+                                    else -> Text(
+                                        sample.answerText ?: "",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = cs.onSurface, lineHeight = 22.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = cs.surface),

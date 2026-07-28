@@ -245,6 +245,7 @@ data class QuizStrings(
     val awAlreadyReviewedTitle: String = "You've reviewed this answer",
     val awAlreadyReviewedBody: String = "Read it again to learn from it — the review you gave is below.",
     val awHelpfulQuestion: String = "Was this answer helpful?",
+    val awSampleAnswerHint: String = "A model reference by BPSCNotes — compare it with your own answer.",
     val awAreaContent: String = "Content",
     val awAreaStructure: String = "Structure",
     val awAreaAnalysis: String = "Analysis",
@@ -1120,6 +1121,7 @@ data class AppStrings(
     val awLowRepTitle get() = _qz.awLowRepTitle; val awLowRepBody get() = _qz.awLowRepBody; val awOf get() = _qz.awOf
     val awReviewedByYou get() = _qz.awReviewedByYou; val awAlreadyReviewedTitle get() = _qz.awAlreadyReviewedTitle
     val awAlreadyReviewedBody get() = _qz.awAlreadyReviewedBody; val awHelpfulQuestion get() = _qz.awHelpfulQuestion
+    val awSampleAnswerHint get() = _qz.awSampleAnswerHint
     val awAreaContent get() = _qz.awAreaContent; val awAreaStructure get() = _qz.awAreaStructure; val awAreaAnalysis get() = _qz.awAreaAnalysis
     val awAreaBihar get() = _qz.awAreaBihar; val awAreaPresentation get() = _qz.awAreaPresentation; val awAreaConclusion get() = _qz.awAreaConclusion
     val awInsightsTab get() = _qz.awInsightsTab; val awInsightsTitle get() = _qz.awInsightsTitle; val awInsightsSub get() = _qz.awInsightsSub
@@ -2648,6 +2650,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         awAlreadyReviewedTitle="आपने इस उत्तर की समीक्षा कर दी है",
         awAlreadyReviewedBody="इससे सीखने के लिए इसे फिर पढ़ें — आपकी दी गई समीक्षा नीचे है।",
         awHelpfulQuestion="क्या यह उत्तर उपयोगी था?",
+        awSampleAnswerHint="BPSCNotes द्वारा एक आदर्श संदर्भ — इसे अपने उत्तर से मिलाएं।",
         awAreaContent="विषय-वस्तु",
         awAreaStructure="संरचना",
         awAreaAnalysis="विश्लेषण",
