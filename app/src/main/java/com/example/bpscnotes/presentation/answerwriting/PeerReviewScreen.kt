@@ -315,6 +315,29 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                         )
                     }
                 }
+
+                // ── Quick "Helpful? 👍👎" on the answer (client Screen 3) ──
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = cs.outline.copy(0.25f))
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        str.awHelpfulQuestion, style = MaterialTheme.typography.labelLarge,
+                        color = cs.onSurface, fontWeight = FontWeight.Bold,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        HelpfulChip("👍", assignment.helpfulCount, assignment.myHelpfulVote == true, BpscColors.Success) {
+                            viewModel.voteAnswerHelpful(true)
+                        }
+                        HelpfulChip("👎", assignment.notHelpfulCount, assignment.myHelpfulVote == false, Color(0xFFE74C3C)) {
+                            viewModel.voteAnswerHelpful(false)
+                        }
+                    }
+                }
             }
         }
 
@@ -508,6 +531,30 @@ private fun ReviewGivenCard(a: ReviewAssignmentDto) {
                     Text("“${a.mySuggestion}”", style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, lineHeight = 20.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HelpfulChip(emoji: String, count: Int, selected: Boolean, tint: Color, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) tint.copy(alpha = 0.14f) else cs.surfaceVariant.copy(alpha = 0.5f))
+            .border(1.dp, if (selected) tint.copy(alpha = 0.6f) else Color.Transparent, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text(emoji, fontSize = 15.sp)
+        if (count > 0) {
+            Text(
+                "$count", style = MaterialTheme.typography.labelMedium,
+                color = if (selected) tint else BpscColors.TextHint,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

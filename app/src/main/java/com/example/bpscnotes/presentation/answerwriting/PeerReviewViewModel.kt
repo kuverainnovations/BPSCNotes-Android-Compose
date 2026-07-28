@@ -8,6 +8,7 @@ import com.example.bpscnotes.core.events.RefreshEventBus
 import com.example.bpscnotes.core.network.toUserMessage
 import com.example.bpscnotes.data.remote.api.AnswerWritingApiService
 import com.example.bpscnotes.data.remote.api.ReviewAssignmentDto
+import com.example.bpscnotes.data.remote.api.VoteReviewRequest
 import com.example.bpscnotes.data.remote.api.ReviewQuestionDto
 import com.example.bpscnotes.data.remote.api.SubmitPeerReviewRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -170,6 +171,42 @@ class PeerReviewViewModel @Inject constructor(
                 verdict = null, rating = 0, improvementAreas = emptySet(), suggestion = "",
                 submitError = null,
             )
+        }
+    }
+
+    /**
+     * "Helpful? 👍👎" on the answer currently open for review. Optimistic —
+     * the vote is trivially reversible (tapping again flips it). Updates both
+     * the open assignment and its row in the pool.
+     */
+    fun voteAnswerHelpful(helpful: Boolean) {
+        val target = _uiState.value.assignment ?: return
+        val before = _uiState.value
+        fun ReviewAssignmentDto.applyVote(): ReviewAssignmentDto {
+            val h = helpfulCount - (if (myHelpfulVote == true) 1 else 0) + (if (helpful) 1 else 0)
+            val n = notHelpfulCount - (if (myHelpfulVote == false) 1 else 0) + (if (!helpful) 1 else 0)
+            return copy(
+                helpfulCount = h.coerceAtLeast(0),
+                notHelpfulCount = n.coerceAtLeast(0),
+                myHelpfulVote = helpful,
+            )
+        }
+        _uiState.update { s ->
+            s.copy(
+                assignment = s.assignment?.applyVote(),
+                pool = s.pool.map { if (it.id == target.id) it.applyVote() else it },
+            )
+        }
+        viewModelScope.launch {
+            try {
+                api.voteAnswerHelpful(target.id, VoteReviewRequest(helpful))
+            } catch (e: Exception) {
+                Log.e("PeerReviewVM", "voteAnswerHelpful: ${e.message}", e)
+                _uiState.update {
+                    it.copy(assignment = before.assignment, pool = before.pool,
+                        submitError = e.toUserMessage("Could not save your rating"))
+                }
+            }
         }
     }
 

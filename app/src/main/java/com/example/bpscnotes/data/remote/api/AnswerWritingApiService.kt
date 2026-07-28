@@ -212,6 +212,17 @@ data class ReviewAssignmentDto(
     @SerializedName("my_improvement_area") val myImprovementArea: String? = null,
     @SerializedName("my_improvement_areas") val myImprovementAreas: List<String>? = null,
     @SerializedName("my_suggestion")       val mySuggestion: String? = null,
+    // ── "Helpful? 👍👎" on this answer (quick reaction while reviewing) ──
+    @SerializedName("helpful_count")       val helpfulCount: Int = 0,
+    @SerializedName("not_helpful_count")   val notHelpfulCount: Int = 0,
+    /** null = not voted, true = 👍, false = 👎 */
+    @SerializedName("my_helpful_vote")     val myHelpfulVote: Boolean? = null,
+)
+
+data class AnswerHelpfulData(
+    val helpfulCount: Int = 0,
+    val notHelpfulCount: Int = 0,
+    val myVote: Boolean = false,
 )
 data class NextReviewData(val submission: ReviewAssignmentDto? = null)
 data class ReviewListData(
@@ -356,4 +367,11 @@ interface AnswerWritingApiService {
         @Path("reviewId") reviewId: String,
         @Body body: VoteReviewRequest,
     ): ApiResponse<ReviewVoteData>
+
+    /** "Helpful? 👍👎" on an answer while reviewing it */
+    @POST("answer-writing/answer/{submissionId}/helpful")
+    suspend fun voteAnswerHelpful(
+        @Path("submissionId") submissionId: String,
+        @Body body: VoteReviewRequest,
+    ): ApiResponse<AnswerHelpfulData>
 }
