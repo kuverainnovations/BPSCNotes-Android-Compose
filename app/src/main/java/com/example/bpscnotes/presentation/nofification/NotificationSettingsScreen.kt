@@ -308,11 +308,16 @@ private fun navigateForNotification(nav: NavHostController, notif: NotificationD
             if (courseId != null) nav.navigate(Screen.CourseDetail.createRoute(courseId))
             else nav.navigate(Screen.MyLearning.route)
         }
-        "study_materials" -> nav.navigate(Screen.ELibrary.route)
+        "study_materials" -> nav.navigate(Screen.StudyMaterials.route)
         "library"         -> {
+            // Sent by the backend for upload approved/rejected, so this is
+            // always about the user's OWN upload — land them on My Uploads.
+            // (It used to open Screen.NotesReader, which is still a
+            // "Coming Soon" placeholder, and Screen.ELibrary, which just
+            // redirects to the Group Study rooms hub.)
             val noteId = data["noteId"]
-            if (noteId != null) nav.navigate(Screen.NotesReader.createRoute(noteId))
-            else nav.navigate(Screen.ELibrary.route)
+            if (noteId != null) nav.navigate(Screen.MyUploads.route)
+            else nav.navigate(Screen.StudyMaterials.route)
         }
         "quiz_list" -> {
             val quizId = data["quizId"]

@@ -124,6 +124,8 @@ fun StudyMaterialsScreen(
     navController: NavHostController,
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     initialTypeKey: String? = null,
+    /** 0 = Explore, 1 = My Uploads, 2 = Downloads. */
+    initialTab: Int = 0,
     viewModel:     StudyMaterialsViewModel = hiltViewModel()
 ) {
     val cs = MaterialTheme.colorScheme
@@ -333,7 +335,7 @@ fun StudyMaterialsScreen(
             val pullRefreshState = rememberPullToRefreshState()
 
             // ── Tab row: Explore | My Uploads ────────────────────
-            var selectedTab by remember { mutableIntStateOf(0) }
+            var selectedTab by remember { mutableIntStateOf(initialTab) }
 
             // Reload My Uploads every time user switches to that tab
             // Reload Downloads tab when switched to — keeps list fresh

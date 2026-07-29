@@ -122,6 +122,11 @@ sealed class Screen(val route: String) {
 
     object StudyMaterials : Screen("study_materials")
 
+    // Same screen as StudyMaterials, opened straight on the "My Uploads" tab.
+    // Used by the upload-approved / upload-rejected push, which is about a
+    // material the user themselves uploaded.
+    object MyUploads : Screen("study_materials_my_uploads")
+
     // Same screen as StudyMaterials, but opens pre-filtered to one material
     // type - used when navigating from a specific item (e.g. Premium
     // Content cards) so the user lands near what they tapped instead of

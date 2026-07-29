@@ -586,6 +586,16 @@ class QuizViewModel @Inject constructor(
     // ── 7. RESET ──────────────────────────────────────────────
 
     fun exitSession() {
+        // Tell the server the attempt was abandoned, but ONLY when the user is
+        // walking away from a quiz they never submitted. A submitted quiz has
+        // result != null and the backend already closed that session on submit.
+        // Without this the row stays 'in_progress' and the quiz keeps offering
+        // "Resume" forever — the half of the resume bug the submit-side fix
+        // couldn't reach.
+        val snapshot = _uiState.value
+        val abandonedQuizId = snapshot.activeSession?.id?.takeIf { snapshot.result == null }
+        val abandonedSessionId = snapshot.sessionId
+
         _uiState.update {
             it.copy(
                 activeSession   = null,
@@ -594,8 +604,24 @@ class QuizViewModel @Inject constructor(
                 isStartingQuiz  = false,
                 isSubmitting    = false,
                 submitError     = null,
-                startError      = null
+                startError      = null,
+                sessionId       = null
             )
+        }
+
+        if (abandonedQuizId != null) {
+            // Fire-and-forget: navigation has already happened by the time this
+            // lands, and a failed bookkeeping call must never block the user.
+            viewModelScope.launch {
+                try {
+                    quizzesApi.abandonQuiz(
+                        abandonedQuizId,
+                        abandonedSessionId?.let { mapOf("sessionId" to it) } ?: emptyMap()
+                    )
+                } catch (e: Exception) {
+                    Log.w("QuizVM", "abandonQuiz failed for $abandonedQuizId: ${e.message}")
+                }
+            }
         }
     }
 

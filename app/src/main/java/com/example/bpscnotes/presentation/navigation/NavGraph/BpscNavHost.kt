@@ -441,6 +441,7 @@ fun BpscNavHost(
 
 
             composable(Screen.StudyMaterials.route)   { StudyMaterialsScreen(navController, adManager = adManager) }
+            composable(Screen.MyUploads.route)        { StudyMaterialsScreen(navController, adManager = adManager, initialTab = 1) }
             composable(Screen.UploadMaterial.route)   { UploadMaterialScreen(navController) }
             composable(
                 route     = Screen.StudyMaterialsFiltered.route,

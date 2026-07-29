@@ -342,13 +342,13 @@ fun DailyTargetsScreen(
                             onFilterChange   = { selectedFilter = it },
                             onToggleComplete = { id ->  viewModel.toggleTargetComplete(id)*//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
                         onStartQuiz      = { subjectId -> navController.navigate(Screen.DailyQuiz.createRoute(subjectId)) },
-                        onViewNotes      = { navController.navigate(Screen.ELibrary.route) }
+                        onViewNotes      = { navController.navigate(Screen.StudyMaterials.route) }
                     )
                     1 -> CardsTabContent(
                         items            = allTargets,
                         onToggleComplete = { id ->  viewModel.toggleTargetComplete(id)*//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
                         onStartQuiz      = { subjectId -> navController.navigate(Screen.DailyQuiz.createRoute(subjectId)) },
-                        onViewNotes      = { navController.navigate(Screen.ELibrary.route) },
+                        onViewNotes      = { navController.navigate(Screen.StudyMaterials.route) },
                         onAddMore        = { showAddSheet = true }
                     )
                     2 -> TimelineTabContent(
@@ -356,7 +356,7 @@ fun DailyTargetsScreen(
                         onToggleComplete = { id ->     viewModel.toggleTargetComplete(id)
                             *//*if (completedIds.contains(id)) completedIds.remove(id) else completedIds.add(id)*//* },
                         onStartQuiz      = { subjectId -> navController.navigate(Screen.DailyQuiz.createRoute(subjectId)) },
-                        onViewNotes      = { navController.navigate(Screen.ELibrary.route) }
+                        onViewNotes      = { navController.navigate(Screen.StudyMaterials.route) }
                     )
                 }*/
                     ListTabContent(
