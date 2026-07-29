@@ -380,11 +380,40 @@ fun MockTestsScreen(
     if (showCustomSheet) {
         CustomTestSheet(
             onDismiss   = { showCustomSheet = false },
-            onStart     = { customTest ->
-                selectedTest = customTest
-                userAnswers.clear(); reviewMarked.clear()
-                showCustomSheet = false
-                screenState     = MockTestState.Instructions
+            isCreating  = state.isCreatingCustom,
+            // Only offer subjects the catalogue actually has questions for.
+            availableSubjects = state.allTests.map { it.subject }.filter { it.isNotBlank() }.distinct().sorted(),
+            onStart     = { subs, count, mins, negative ->
+                viewModel.createCustomTest(
+                    subjects         = subs,
+                    questionCount    = count,
+                    durationMins     = mins,
+                    negativeMarking  = negative,
+                    title            = str.quizCustomTest,
+                    allSubjectsLabel = str.mockAllSubjects,
+                )
+            }
+        )
+    }
+
+    // The generator answered — carry the real quiz through to Instructions.
+    LaunchedEffect(state.createdCustomTest) {
+        state.createdCustomTest?.let { built ->
+            selectedTest = built
+            userAnswers.clear(); reviewMarked.clear()
+            showCustomSheet = false
+            screenState     = MockTestState.Instructions
+            viewModel.consumeCreatedCustomTest()
+        }
+    }
+
+    state.customError?.let { msg ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearCustomError,
+            title   = { Text(str.quizCustomTest, fontWeight = FontWeight.Bold) },
+            text    = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearCustomError) { Text(str.ok) }
             }
         )
     }
@@ -1894,11 +1923,16 @@ private fun PodiumItem(entry: LeaderboardEntry, position: Int, height: Dp) {
 @Composable
 private fun CustomTestSheet(
     onDismiss: () -> Unit,
-    onStart: (MockTest) -> Unit,
+    /** (subjects, questionCount, durationMins, negativeMarking) */
+    onStart: (List<String>, Int, Int, Boolean) -> Unit,
+    isCreating: Boolean,
+    /** Subjects actually present in the catalogue, so the picker can't offer
+     *  a subject the generator has no questions for. */
+    availableSubjects: List<String>,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    val allSubjects    = listOf("Polity", "History", "Geography", "Economy", "Bihar GK", "Science")
+    val allSubjects    = availableSubjects
     val selectedSubs   = remember { mutableStateListOf<String>() }
     var questionCount  by remember { mutableIntStateOf(30) }
     var durationMins   by remember { mutableIntStateOf(45) }
@@ -1969,25 +2003,20 @@ private fun CustomTestSheet(
             Spacer(Modifier.height(4.dp))
 
             Button(
-                onClick = {
-                    val customTest = MockTest(
-                        id = "custom_${System.currentTimeMillis()}",
-                        title = str.quizCustomTest,
-                        subtitle = "$questionCount Questions · ${durationMins} min · ${if (selectedSubs.isEmpty()) "All Subjects" else selectedSubs.joinToString(", ")}",
-                        type = MockTestType.Custom,
-                        totalQuestions = questionCount,
-                        durationMinutes = durationMins,
-                        subject = if (selectedSubs.size == 1) selectedSubs.first() else null,
-                        isPaid = false,
-                        negativeMarking = if (negativeMarking) 0.33f else 0f
-                    )
-                    onStart(customTest)
-                },
+                // The server builds the test and returns a real quiz id; this
+                // used to mint `custom_<timestamp>` locally, which /start could
+                // never resolve because the column is a UUID.
+                enabled = !isCreating,
+                onClick = { onStart(selectedSubs.toList(), questionCount, durationMins, negativeMarking) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape    = RoundedCornerShape(14.dp),
                 colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
             ) {
-                Text(str.quizStartCustom, style = MaterialTheme.typography.titleMedium)
+                if (isCreating) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                } else {
+                    Text(str.quizStartCustom, style = MaterialTheme.typography.titleMedium)
+                }
             }
         }
     }

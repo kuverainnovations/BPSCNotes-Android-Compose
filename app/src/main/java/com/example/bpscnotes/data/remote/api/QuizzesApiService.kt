@@ -47,6 +47,15 @@ interface QuizzesApiService {
         @Body body: QuizSubmitRequest
     ): ApiResponse<QuizResultData>
 
+    /**
+     * POST /quizzes/custom — build a practice test from the question pool.
+     * Returns the id of a real quiz, which is then started like any other.
+     */
+    @POST("quizzes/custom")
+    suspend fun createCustomQuiz(
+        @Body body: CustomQuizRequest
+    ): ApiResponse<CustomQuizData>
+
     /** POST /quizzes/:id/abandon — mark session abandoned on back-press or app kill */
     @POST("quizzes/{id}/abandon")
     suspend fun abandonQuiz(
@@ -60,6 +69,21 @@ interface QuizzesApiService {
         @Path("id") id: String
     ): ApiResponse<QuizLeaderboardResponse>
 }
+
+/** Config the user picked in the "Create Custom Test" sheet. */
+data class CustomQuizRequest(
+    val subjects:        List<String> = emptyList(),   // empty = all subjects
+    val questionCount:   Int          = 30,
+    val durationMins:    Int          = 45,
+    val negativeMarking: Boolean      = true,
+)
+
+data class CustomQuizData(
+    val quizId:         String = "",
+    /** May be lower than requested when the pool is thin — worth surfacing. */
+    val totalQuestions: Int    = 0,
+    val durationMins:   Int    = 0,
+)
 
 data class QuizLeaderboardResponse(
     val leaderboard: List<QuizLeaderboardItemResponse> = emptyList()

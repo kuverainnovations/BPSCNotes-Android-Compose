@@ -5,6 +5,7 @@ import com.example.bpscnotes.core.network.toUserMessage
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bpscnotes.data.remote.api.CustomQuizRequest
 import com.example.bpscnotes.data.remote.api.QuizAnswerRequest
 import com.example.bpscnotes.data.remote.api.QuizPreviewDto
 import com.example.bpscnotes.data.remote.api.QuizQuestionDto
@@ -49,6 +50,11 @@ data class MockTestsUiState(
     // Question ids already saved this session (flips button to "Added ✓")
     val notebookSavedQuestionIds: Set<String>   = emptySet(),
     val notebookToast: String?                  = null,
+    // ── Custom test generation ─────────────────────────────────
+    val isCreatingCustom: Boolean               = false,
+    val customError: String?                    = null,
+    /** Set once the server has built the test; consumed by the screen. */
+    val createdCustomTest: MockTest?            = null,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
@@ -142,6 +148,75 @@ class MockTestsViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = e.toUserMessage("Failed to load tests")) }
             }
         }
+    }
+
+    /**
+     * Build a custom practice test server-side and hand back a REAL quiz id.
+     *
+     * This sheet used to fabricate `custom_<timestamp>` locally and feed it
+     * straight to /quizzes/:id/start, which could never work — the column is
+     * a UUID, so every attempt failed. The config now goes to the generator,
+     * which assembles a genuine quiz from the question pool.
+     */
+    fun createCustomTest(
+        subjects: List<String>,
+        questionCount: Int,
+        durationMins: Int,
+        negativeMarking: Boolean,
+        /** Localized label — resolved by the caller, which has LocalStrings. */
+        title: String,
+        allSubjectsLabel: String,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingCustom = true, customError = null, createdCustomTest = null) }
+            try {
+                val res = quizzesApi.createCustomQuiz(
+                    CustomQuizRequest(
+                        subjects        = subjects,
+                        questionCount   = questionCount,
+                        durationMins    = durationMins,
+                        negativeMarking = negativeMarking,
+                    )
+                )
+                val data = res.data
+                if (data == null || data.quizId.isBlank()) {
+                    throw IllegalStateException(res.message ?: "Could not build the test")
+                }
+                // The server decides the final question count — a thin pool
+                // yields fewer than asked, and the summary must not lie.
+                val built = MockTest(
+                    id              = data.quizId,
+                    title           = title,
+                    subtitle        = "${data.totalQuestions} Questions · ${data.durationMins} min · " +
+                        if (subjects.isEmpty()) allSubjectsLabel else subjects.joinToString(", "),
+                    type            = MockTestType.Custom,
+                    totalQuestions  = data.totalQuestions,
+                    durationMinutes = data.durationMins,
+                    subject         = subjects.singleOrNull(),
+                    isPaid          = false,
+                    negativeMarkingEnabled = negativeMarking,
+                    negativeMarking = if (negativeMarking) 0.33f else 0f,
+                )
+                _uiState.update { it.copy(isCreatingCustom = false, createdCustomTest = built) }
+            } catch (e: Exception) {
+                Log.e("MockTestsVM", "createCustomTest: ${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        isCreatingCustom = false,
+                        customError = e.toUserMessage("Could not build your custom test"),
+                    )
+                }
+            }
+        }
+    }
+
+    /** Screen consumed the generated test — don't re-navigate on recomposition. */
+    fun consumeCreatedCustomTest() {
+        _uiState.update { it.copy(createdCustomTest = null) }
+    }
+
+    fun clearCustomError() {
+        _uiState.update { it.copy(customError = null) }
     }
 
     /** Fetch questions for a quiz. POST /quizzes/:id/start (creates session, no GET fallback). */

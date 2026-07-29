@@ -132,6 +132,7 @@ data class QuizStrings(
     val quizCreateCustom: String, val quizSelectSubjects: String,
     val quizNegativeMarking: String, val quizCustomTest: String,
     val quizStartCustom: String, val quizSubmitTestTitle: String,
+    val mockAllSubjects: String,
     val quizLoadingQ: String, val quizSettingUp: String, val quizPreparingQ: String,
     val quizYourRank: String,
     // ── Answer Writing (Mains practice) — defaults are English so only
@@ -1071,6 +1072,7 @@ data class AppStrings(
     val quizBackToTests get() = _qz.quizBackToTests; val quizCreateCustom get() = _qz.quizCreateCustom
     val quizSelectSubjects get() = _qz.quizSelectSubjects; val quizNegativeMarking get() = _qz.quizNegativeMarking
     val quizCustomTest get() = _qz.quizCustomTest; val quizStartCustom get() = _qz.quizStartCustom
+    val mockAllSubjects get() = _qz.mockAllSubjects
     val quizSubmitTestTitle get() = _qz.quizSubmitTestTitle
     val quizLoadingQ get() = _qz.quizLoadingQ; val quizSettingUp get() = _qz.quizSettingUp
     val quizPreparingQ get() = _qz.quizPreparingQ; val quizYourRank get() = _qz.quizYourRank
@@ -1699,6 +1701,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         quizBackToTests="Back to Tests", quizCreateCustom="Create Custom Test",
         quizSelectSubjects="Select Subjects", quizNegativeMarking="Negative Marking",
         quizCustomTest="Custom Test", quizStartCustom="Start Custom Test 🚀",
+        mockAllSubjects="All Subjects",
         quizSubmitTestTitle="Submit Test?",
         quizLoadingQ="Loading questions…", quizSettingUp="Setting up your test",
         quizPreparingQ="Preparing questions…", quizYourRank="Your Rank",
@@ -2544,6 +2547,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         quizBackToTests="टेस्ट पर वापस जाएं", quizCreateCustom="कस्टम टेस्ट बनाएं",
         quizSelectSubjects="विषय चुनें", quizNegativeMarking="नेगेटिव मार्किंग",
         quizCustomTest="कस्टम टेस्ट", quizStartCustom="कस्टम टेस्ट शुरू करें 🚀",
+        mockAllSubjects="सभी विषय",
         quizSubmitTestTitle="टेस्ट जमा करें?",
         quizLoadingQ="प्रश्न लोड हो रहे हैं…", quizSettingUp="आपका टेस्ट सेट हो रहा है",
         quizPreparingQ="प्रश्न तैयार हो रहे हैं…", quizYourRank="आपकी रैंक",
