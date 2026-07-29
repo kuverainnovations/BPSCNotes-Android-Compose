@@ -198,7 +198,21 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
     val cs = MaterialTheme.colorScheme
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        // imePadding() is required, not optional: MainActivity calls
+        // enableEdgeToEdge(), which turns off decorFitsSystemWindows, and that
+        // makes the manifest's adjustResize a no-op. Without it this column
+        // keeps its full height behind the keyboard, so the comment field at
+        // the bottom of the form can never scroll into view — the reviewer
+        // types blind. Every other text-entry screen here does the same.
+        // Order matters: imePadding() must sit OUTSIDE verticalScroll so the
+        // scroll VIEWPORT shrinks by the keyboard height. Inside, it would
+        // only pad the scrolling content and the viewport would still run
+        // behind the keyboard.
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Guidance banner
