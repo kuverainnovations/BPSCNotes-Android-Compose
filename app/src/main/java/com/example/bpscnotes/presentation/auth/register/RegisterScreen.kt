@@ -60,6 +60,7 @@ fun RegisterScreen(
     val registerSuccess by viewModel.registerSuccess.observeAsState(false)
     val districts       by viewModel.districts.collectAsState()
     val districtsLoading by viewModel.districtsLoading.collectAsState()
+    val registrationsOpen by viewModel.registrationsOpen.collectAsState()
 
     LaunchedEffect(registerSuccess) {
         if (registerSuccess) {
@@ -239,6 +240,23 @@ fun RegisterScreen(
 
             Spacer(Modifier.weight(1f))
 
+            // Admin "New Registrations" switch is off — say so rather than
+            // letting the user fill the form and hit a server rejection.
+            if (!registrationsOpen) {
+                Surface(
+                    color = cs.errorContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Text(
+                        "New registrations are temporarily closed. Please try again later.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.onErrorContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
             // Submit
             Button(
                 onClick  = {
@@ -250,7 +268,7 @@ fun RegisterScreen(
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
-                enabled  = name.isNotBlank() && !isLoading,
+                enabled  = name.isNotBlank() && !isLoading && registrationsOpen,
                 shape    = RoundedCornerShape(16.dp),
                 colors   = ButtonDefaults.buttonColors(
                     containerColor = BpscColors.Primary,

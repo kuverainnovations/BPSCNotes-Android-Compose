@@ -56,9 +56,11 @@ fun UpdateGateDialog(config: AppConfigData) {
     val context = LocalContext.current
     val currentVersion = BuildConfig.VERSION_NAME
 
-    val mustUpdate = config.forceUpdate || isVersionLower(currentVersion, config.minAppVersion)
+    val mustUpdate = config.loaded &&
+        (config.forceUpdate || isVersionLower(currentVersion, config.minAppVersion))
     var softNudgeDismissed by rememberSaveable { mutableStateOf(false) }
-    val showSoftNudge = !mustUpdate &&
+    val showSoftNudge = config.loaded &&
+        !mustUpdate &&
         !softNudgeDismissed &&
         isVersionLower(currentVersion, config.latestAppVersion)
 

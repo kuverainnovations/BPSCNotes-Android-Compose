@@ -52,6 +52,7 @@ class SettingsViewModel @Inject constructor(
     private val authApi:    AuthApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
+    val appConfig: com.example.bpscnotes.core.config.AppConfigRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 

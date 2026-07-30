@@ -58,6 +58,9 @@ fun SettingsScreen(
 
     val settingsState by settingsViewModel.state.collectAsState()
     val profileState  by profileViewModel.uiState.collectAsState()
+    // Admin-controlled support address (app_settings.support_email) rather than
+    // a hardcoded one, so it can be changed without shipping a build.
+    val supportEmail  = settingsViewModel.appConfig.config.collectAsState().value.supportEmail
     val str = LocalStrings.current
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("settings") }
     val user = profileState.user
@@ -421,7 +424,7 @@ fun SettingsScreen(
                             title = str.settingsSupport, subtitle = str.settingsSupportSubtitle,
                             onClick = {
                                 val emailIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                    data = android.net.Uri.parse("mailto:admin@bpscnotes.in")
+                                    data = android.net.Uri.parse("mailto:$supportEmail")
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "BPSCNotes App Support")
                                     putExtra(android.content.Intent.EXTRA_TEXT,
                                         "App Version: ${str.version}\nDevice: ${android.os.Build.MODEL}\n\nDescribe your issue:\n")

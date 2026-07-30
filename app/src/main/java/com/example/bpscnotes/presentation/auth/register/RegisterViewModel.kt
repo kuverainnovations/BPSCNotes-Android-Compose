@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.bpscnotes.core.base.BaseViewModel
+import com.example.bpscnotes.core.config.AppConfigRepository
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.DistrictDto
 import com.example.bpscnotes.domain.repository.AuthRepository
@@ -12,6 +13,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,10 +23,19 @@ import javax.inject.Inject
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val authApi: AuthApiService,
+    appConfig: AppConfigRepository,
 ) : BaseViewModel() {
 
     private val _registerSuccess = MutableLiveData(false)
     val registerSuccess: LiveData<Boolean> = _registerSuccess
+
+    /**
+     * Admin "New Registrations" switch. Only closes signup once the config has
+     * actually loaded — an offline launch must not lock a genuine new user out.
+     */
+    val registrationsOpen: StateFlow<Boolean> = appConfig.config
+        .map { !it.loaded || it.newRegistrations }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // ── Districts (for the profile-creation dropdown) ─────────
     // Loaded from GET /districts. Falls back to an empty list on

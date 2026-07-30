@@ -37,8 +37,20 @@ import javax.inject.Singleton
 @Singleton
 class AdManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository
+    private val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
+    private val appConfig: com.example.bpscnotes.core.config.AppConfigRepository
 ) {
+    /**
+     * Admin ads master switch (`ads_enabled` on /app-config). The key was parsed
+     * into AppConfigData but read by nobody, so the switch served no purpose and
+     * ads showed regardless. Checked live rather than cached, so flipping it off
+     * takes effect on the next config fetch without an app update.
+     *
+     * Defaults to enabled until the config loads — matching the previous
+     * behaviour, so a slow network doesn't silently cost a day of revenue.
+     */
+    private val adsEnabled: Boolean get() = appConfig.config.value.adsEnabled
+
     companion object {
         private const val TAG = "AdManager"
 
@@ -127,6 +139,7 @@ class AdManager @Inject constructor(
     // ════════════════════════════════════════════════════════════
 
     fun loadRewardedAd() {
+        if (!adsEnabled) return
         if (isLoadingRewarded || rewardedAd != null) return
         isLoadingRewarded = true
         _rewardedReady.value = false
@@ -168,6 +181,7 @@ class AdManager @Inject constructor(
      * completes the ad. Calls [onFailed] if ad isn't available or daily cap hit.
      */
     fun showRewardedAd(activity: Activity, onRewarded: (coins: Int) -> Unit, onFailed: (reason: String) -> Unit) {
+        if (!adsEnabled) { onFailed("Ads are currently unavailable."); return }
         // No daily cap — every ad watched earns revenue, let users watch freely
         val ad = rewardedAd
         if (ad == null) {
@@ -296,6 +310,7 @@ class AdManager @Inject constructor(
     // ════════════════════════════════════════════════════════════
 
     fun loadInterstitialAd() {
+        if (!adsEnabled) return
         if (isLoadingInterstitial || interstitialAd != null) return
         isLoadingInterstitial = true
 
@@ -333,6 +348,7 @@ class AdManager @Inject constructor(
      * [onComplete] is called whether or not the ad was shown (so caller can proceed).
      */
     fun showInterstitialIfReady(activity: Activity, onComplete: () -> Unit) {
+        if (!adsEnabled) { onComplete(); return }
         val now = System.currentTimeMillis()
         val cooldownOk = (now - lastInterstitialShownMs) >= INTERSTITIAL_COOLDOWN_MS
 

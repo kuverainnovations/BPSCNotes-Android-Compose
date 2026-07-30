@@ -17,6 +17,14 @@ data class AppConfigData(
     val dailyQuizLimit: Int         = 5,
     val leaderboardEnabled: Boolean = true,
     val adsEnabled: Boolean         = true,
+    val studyRoomsEnabled: Boolean  = true,
+    val screenCaptureProtection: Boolean = true,
+    /**
+     * False until the first successful fetch. Gates the blocking dialogs so a
+     * cold start can't flash "Under Maintenance" for a frame before the real
+     * config lands — the defaults above are optimistic on purpose.
+     */
+    val loaded: Boolean             = false,
 )
 
 @Singleton
@@ -41,6 +49,9 @@ class AppConfigRepository @Inject constructor(
                 dailyQuizLimit        = c["daily_quiz_limit"]?.toIntOrNull() ?: 5,
                 leaderboardEnabled    = c["leaderboard_enabled"] != "false",
                 adsEnabled            = c["ads_enabled"] != "false",
+                studyRoomsEnabled     = c["study_rooms_enabled"] != "false",
+                screenCaptureProtection = c["screen_capture_protection"] != "false",
+                loaded                = true,
             )
         } catch (_: Exception) { /* keep defaults on network failure */ }
     }

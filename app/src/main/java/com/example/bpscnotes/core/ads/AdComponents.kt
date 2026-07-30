@@ -36,8 +36,26 @@ import com.google.android.gms.ads.nativead.NativeAdView
 // 1. BANNER AD — shown between content sections
 //    Usage: BannerAdView(adUnitId = adManager.getBannerAdUnitId())
 // ─────────────────────────────────────────────────────────────
+/**
+ * Admin `ads_enabled` switch, readable from any composable. The AdManager gates
+ * rewarded + interstitial; the inline ad views have to check it themselves or the
+ * "master" switch would still leave banners and native cards on screen.
+ */
+@Composable
+internal fun adsEnabled(): Boolean {
+    val context = LocalContext.current
+    val repo = remember(context) {
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            com.example.bpscnotes.di.AppConfigEntryPoint::class.java
+        ).appConfigRepository()
+    }
+    return repo.config.collectAsState().value.adsEnabled
+}
+
 @Composable
 fun BannerAdView(adUnitId: String) {
+    if (!adsEnabled()) return
     val str = LocalStrings.current
     AndroidView(
         modifier = Modifier
@@ -60,6 +78,7 @@ fun BannerAdView(adUnitId: String) {
 // ─────────────────────────────────────────────────────────────
 @Composable
 fun MediumRectangleAdView(adUnitId: String, modifier: Modifier = Modifier) {
+    if (!adsEnabled()) return
     AndroidView(
         modifier = modifier.wrapContentSize(),
         factory  = { context ->
@@ -87,6 +106,7 @@ fun WatchAdForCoinsCard(
     modifier:          Modifier = Modifier,
     watchedCount:      Int     = 0,    // passed from parent so it survives navigation
 ) {
+    if (!adsEnabled()) return   // no point offering "watch to earn" with ads off
     val str = LocalStrings.current
     val totalEarnable = coinsPerAd * watchedCount
 
@@ -300,6 +320,7 @@ fun NativeSponsoredJobCard(
 fun DashboardBannerStrip(adUnitId: String, isProUser: Boolean) {
     val str = LocalStrings.current
     if (isProUser) return  // Pro users see no ads
+    if (!adsEnabled()) return
     Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Box(
             Modifier.fillMaxWidth(),
@@ -331,6 +352,13 @@ fun PostSessionAdPrompt(
     onWatchAd:       () -> Unit,
     onSkip:          () -> Unit
 ) {
+    // Ads off — don't dangle a reward the user can never collect. onSkip() has to
+    // fire from an effect, not the composition body, or it mutates parent state
+    // mid-composition.
+    if (!adsEnabled()) {
+        LaunchedEffect(Unit) { onSkip() }
+        return
+    }
     val str = LocalStrings.current
     var dismissed by remember { mutableStateOf(false) }
     if (dismissed) return
