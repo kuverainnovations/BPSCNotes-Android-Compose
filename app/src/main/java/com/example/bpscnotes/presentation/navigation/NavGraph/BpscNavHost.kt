@@ -99,26 +99,19 @@ fun BpscNavHost(
     // FIX Issue 2: cold-start notification deep-link from MainActivity intent
     initialNotifScreen:   String = "",
     initialNotifType:     String = "",
-    initialNotifCourseId: String = "",
+    initialNotifIds:      Map<String, String> = emptyMap(),
 ) {
     // Navigate to the correct screen when app opened from a tray notification (cold start).
+    // Uses the SAME table as the in-app notification list. This used to match on
+    // `type` values ("quizzes", "new_course", "ca_update") that the backend never
+    // sends in `screen`, so 10 of the 12 real screen values fell through to the
+    // no-op and a tray tap went nowhere.
     androidx.compose.runtime.LaunchedEffect(initialNotifScreen) {
         if (initialNotifScreen.isBlank()) return@LaunchedEffect
         kotlinx.coroutines.delay(2000L) // wait for Splash + auth to settle
-        when (initialNotifScreen) {
-            "courses", "new_course", "course_update" ->
-                if (initialNotifCourseId.isNotBlank())
-                    navController.navigate(Screen.CourseDetail.createRoute(initialNotifCourseId)) { launchSingleTop = true }
-                else
-                    navController.navigate(Screen.Main.route) { launchSingleTop = true }
-            "quizzes", "quiz_result", "mock_result",
-            "jobs", "new_job",
-            "current_affairs", "ca_update" ->
-                navController.navigate(Screen.Main.route) { launchSingleTop = true }
-            "notifications" ->
-                navController.navigate(Screen.NotificationSettings.route) { launchSingleTop = true }
-            else -> { /* dashboard — no extra nav needed */ }
-        }
+        val route = com.example.bpscnotes.presentation.navigation
+            .notificationRoute(initialNotifScreen, initialNotifIds)
+        if (route != null) navController.navigate(route) { launchSingleTop = true }
     }
     val context = LocalContext.current
 

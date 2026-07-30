@@ -299,37 +299,12 @@ private fun NotifCard(n: NotificationDto, str: AppStrings, onClick: () -> Unit) 
 // actual in-app navigation. Falls back to doing nothing if the screen is
 // unrecognized — the notification still gets marked read either way.
 private fun navigateForNotification(nav: NavHostController, notif: NotificationDto) {
-    val data = notif.data ?: return
+    val data   = notif.data ?: return
     val screen = data["screen"] ?: return
-    when (screen) {
-        "my_courses" -> nav.navigate(Screen.MyLearningCourses.route)
-        "courses"    -> {
-            val courseId = data["courseId"]
-            if (courseId != null) nav.navigate(Screen.CourseDetail.createRoute(courseId))
-            else nav.navigate(Screen.MyLearning.route)
-        }
-        "study_materials" -> nav.navigate(Screen.StudyMaterials.route)
-        "library"         -> {
-            // Sent by the backend for upload approved/rejected, so this is
-            // always about the user's OWN upload — land them on My Uploads.
-            // (It used to open Screen.NotesReader, which is still a
-            // "Coming Soon" placeholder, and Screen.ELibrary, which just
-            // redirects to the Group Study rooms hub.)
-            val noteId = data["noteId"]
-            if (noteId != null) nav.navigate(Screen.MyUploads.route)
-            else nav.navigate(Screen.StudyMaterials.route)
-        }
-        "quiz_list" -> {
-            val quizId = data["quizId"]
-            if (quizId != null) nav.navigate(Screen.QuizDetail.createRoute(quizId))
-            else nav.navigate(Screen.QuizList.route)
-        }
-        "daily_targets"     -> nav.navigate(Screen.DailyTargets.route)
-        "jobs"              -> nav.navigate(Screen.JobVacancies.route)
-        "rooms_hub"         -> { /* Tier rooms hub — no dedicated Screen route yet */ }
-        "weekly_challenges" -> { /* No dedicated Screen route yet */ }
-        else -> { /* Unrecognized screen — no-op, notification still marked read */ }
-    }
+    // Shared with the cold-start handler in BpscNavHost — see notificationRoute().
+    val route  = com.example.bpscnotes.presentation.navigation.notificationRoute(screen, data)
+        ?: return  // nowhere to go — notification is still marked read
+    nav.navigate(route)
 }
 
 private fun notifStyle(type: String, str: AppStrings): Triple<ImageVector, Color, Color> = when (type) {

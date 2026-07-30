@@ -22,6 +22,7 @@ import com.example.bpscnotes.data.remote.api.CoinsApiService
 import com.example.bpscnotes.presentation.navigation.NavGraph.BpscNavHost
 import com.example.bpscnotes.presentation.payment.CashfreePaymentListener
 import com.example.bpscnotes.presentation.settings.SettingsViewModel
+import com.example.bpscnotes.presentation.shared.MaintenanceGateDialog
 import com.example.bpscnotes.presentation.shared.UpdateGateDialog
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -154,8 +155,11 @@ class MainActivity : ComponentActivity(),
         val initialScreen       = intent?.getStringExtra("screen") ?: ""
         val initialNotifType    = intent?.getStringExtra("type") ?: ""
         val initialNotifId      = intent?.getStringExtra("notifId") ?: ""
-        val initialCourseId     = intent?.getStringExtra("courseId") ?: ""
-        val initialDeepLink     = intent?.getStringExtra("deepLink") ?: ""
+        // All id extras the FCM service forwarded, not just courseId — the route
+        // table picks whichever one the target screen needs.
+        val initialNotifIds     = com.example.bpscnotes.presentation.navigation.NOTIFICATION_ID_KEYS
+            .mapNotNull { key -> intent?.getStringExtra(key)?.takeIf { it.isNotBlank() }?.let { key to it } }
+            .toMap()
         if (initialNotifId.isNotBlank()) Event.notificationTapped(initialNotifType, initialNotifId)
 
         setContent {
@@ -208,9 +212,16 @@ class MainActivity : ComponentActivity(),
                         // on cold start (app was closed when notification was tapped)
                         initialNotifScreen   = initialScreen,
                         initialNotifType     = initialNotifType,
-                        initialNotifCourseId = initialCourseId,
+                        initialNotifIds      = initialNotifIds,
                     )
                     val appConfig by appConfigRepo.config.collectAsState()
+                    // Maintenance first: if the app is down, an update prompt
+                    // is noise — the user can't get in either way.
+                    MaintenanceGateDialog(appConfig) {
+                        lifecycleScope.launch {
+                            try { appConfigRepo.fetch() } catch (_: Exception) {}
+                        }
+                    }
                     UpdateGateDialog(appConfig)
                 }
             }

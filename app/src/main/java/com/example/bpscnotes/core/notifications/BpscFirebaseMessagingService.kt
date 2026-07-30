@@ -56,12 +56,19 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
             notifId  = notifId,
             screen   = screen,
             deepLink = data["deepLink"],
+            // Every id the backend attaches. These were dropped entirely, so a
+            // cold-start course/quiz/answer deep-link had no id to navigate with
+            // and silently degraded to the dashboard.
+            ids      = com.example.bpscnotes.presentation.navigation.NOTIFICATION_ID_KEYS
+                .mapNotNull { key -> data[key]?.let { key to it } }
+                .toMap(),
         )
     }
 
     private fun showNotification(
         title: String, body: String, type: String,
-        notifId: String, screen: String, deepLink: String?
+        notifId: String, screen: String, deepLink: String?,
+        ids: Map<String, String>,
     ) {
         val channelId = when (type) {
             "tier_promotion", "demotion_warning",
@@ -83,6 +90,7 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
             putExtra("notifId",  notifId)
             putExtra("type",     type)
             deepLink?.let { putExtra("deepLink", it) }
+            ids.forEach { (key, value) -> putExtra(key, value) }
         }
         val pendingIntent = PendingIntent.getActivity(
             this, notifId.hashCode(), intent,
