@@ -25,8 +25,8 @@ android {
         applicationId = "com.bpscnotes.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.2"
+        versionCode = 13
+        versionName = "1.0.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

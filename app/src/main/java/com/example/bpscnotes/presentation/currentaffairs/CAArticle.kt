@@ -54,10 +54,20 @@ data class CAArticle(
     val id: String,
     val headline: String,
     val summary: String,
+    // The nine article sections, in the order the admin panel authors them and
+    // the detail screen renders them. All TipTap HTML; blank means "not written".
+    //   1 summary  2 keyPoints  3 fullContent (Multidimensional Analysis)
+    //   4 majorIssues  5 govtInitiatives  6 biharSpecific
+    //   7 examRelevance (Value Addition)  8 wayForward  9 quotes
     val fullContent: String,
-    val keyPoints: String,          // TipTap HTML — key takeaways
-    val examRelevance: String,      // TipTap HTML — which exam + why
-    val importantFacts: String,     // TipTap HTML — numbers/names/dates
+    val keyPoints: String,
+    val majorIssues: String = "",
+    val govtInitiatives: String = "",
+    val biharSpecific: String = "",
+    val examRelevance: String,      // labelled "Value Addition" in admin + PDF
+    val wayForward: String = "",
+    val quotes: String = "",
+    val importantFacts: String,     // legacy — retired from the admin form
     val category: String,
     val categories: List<String> = emptyList(),  // multi-category (Issue 19); category = first entry
     val rawDate: String,      // original ISO string — used for grouping/sorting
@@ -101,9 +111,14 @@ fun CurrentAffairDto.toUiModel(isBookmarked: Boolean = this.isBookmarked): CAArt
         headline    = title,
         summary     = summary,
         fullContent = fullContent ?: summary,
-        keyPoints      = keyPoints      ?: "",
-        examRelevance  = examRelevance  ?: "",
-        importantFacts = importantFacts ?: "",
+        keyPoints       = keyPoints       ?: "",
+        majorIssues     = majorIssues     ?: "",
+        govtInitiatives = govtInitiatives ?: "",
+        biharSpecific   = biharSpecific   ?: "",
+        examRelevance   = examRelevance   ?: "",
+        wayForward      = wayForward      ?: "",
+        quotes          = quotes          ?: "",
+        importantFacts  = importantFacts  ?: "",
         category    = category,
         categories  = categories?.filter { it.isNotBlank() }?.ifEmpty { null }
                       ?: if (category.isNotBlank()) listOf(category) else emptyList(),

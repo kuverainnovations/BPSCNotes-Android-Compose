@@ -189,8 +189,12 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
             if (!job.applyStartDate.isNullOrBlank())
                 InfoRow(Icons.Rounded.PlayCircleOutline,   "Apply From",        formatDate(job.applyStartDate))
             InfoRow(Icons.Rounded.EventBusy, "Last Date to Apply", formatDate(job.applyEndDate), highlight = true)
-            if (!job.examDate.isNullOrBlank())
-                InfoRow(Icons.Rounded.Event, "Exam Date", formatDate(job.examDate))
+            // Always shown: a missing exam date means the board hasn't announced one,
+            // which aspirants need to see. Hiding the row read as "no exam".
+            InfoRow(
+                Icons.Rounded.Event, "Exam Date",
+                if (!job.examDate.isNullOrBlank()) formatDate(job.examDate) else "To be announced",
+            )
         }
 
         // Description
@@ -209,7 +213,8 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
         }
 
         // Links card
-        val hasLinks = !job.officialLink.isNullOrBlank() || !job.notificationUrl.isNullOrBlank() || !job.pdfUrl.isNullOrBlank()
+        val hasLinks = !job.officialLink.isNullOrBlank() || !job.notificationUrl.isNullOrBlank() ||
+            !job.pdfUrl.isNullOrBlank() || !job.advertPdfUrl.isNullOrBlank()
         if (hasLinks) {
             InfoCard(title = str.jdLinks) {
                 if (!job.notificationUrl.isNullOrBlank()) {
@@ -234,6 +239,17 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                         label = str.jdDownloadPdf,
                         color = Color(0xFFE74C3C),
                         onClick = { openUrl(context, job.pdfUrl) },
+                    )
+                }
+                // Advertisement PDF — uploaded from the admin panel. The bottom sheet
+                // already showed it; this full screen never did, so admins saw
+                // "PDF already uploaded ✅" with nothing reaching the app.
+                if (!job.advertPdfUrl.isNullOrBlank()) {
+                    LinkRow(
+                        icon  = Icons.Rounded.PictureAsPdf,
+                        label = str.jvAdPdf,
+                        color = Color(0xFFE74C3C),
+                        onClick = { openUrl(context, job.advertPdfUrl) },
                     )
                 }
             }

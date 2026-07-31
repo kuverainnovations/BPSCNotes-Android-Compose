@@ -136,23 +136,17 @@ private fun buildArticleHtml(
     // rows are noise — the admin's own headings inside the content carry the
     // meaning; the tinted block + accent border still visually separates them.
     // Only rendered if the admin populated the field (non-empty after strip).
-    val keyPointsHtml = if (article.keyPoints.stripHtmlTags().isNotBlank()) {
-        """<div class="section-block key-points">
-          ${article.keyPoints}
-        </div>"""
-    } else ""
+    fun sectionBlock(html: String, cssClass: String) =
+        if (html.stripHtmlTags().isNotBlank()) """<div class="section-block $cssClass">$html</div>""" else ""
 
-    val examRelevanceHtml = if (article.examRelevance.stripHtmlTags().isNotBlank()) {
-        """<div class="section-block exam-relevance">
-          ${article.examRelevance}
-        </div>"""
-    } else ""
-
-    val importantFactsHtml = if (article.importantFacts.stripHtmlTags().isNotBlank()) {
-        """<div class="section-block important-facts">
-          ${article.importantFacts}
-        </div>"""
-    } else ""
+    val keyPointsHtml       = sectionBlock(article.keyPoints,       "key-points")
+    val majorIssuesHtml     = sectionBlock(article.majorIssues,     "major-issues")
+    val govtInitiativesHtml = sectionBlock(article.govtInitiatives, "govt-initiatives")
+    val biharSpecificHtml   = sectionBlock(article.biharSpecific,   "bihar-specific")
+    val examRelevanceHtml   = sectionBlock(article.examRelevance,   "exam-relevance")
+    val wayForwardHtml      = sectionBlock(article.wayForward,      "way-forward")
+    val quotesHtml          = sectionBlock(article.quotes,          "quotes")
+    val importantFactsHtml  = sectionBlock(article.importantFacts,  "important-facts")
 
     return """
         <!DOCTYPE html>
@@ -214,12 +208,24 @@ private fun buildArticleHtml(
                            border-radius: 10px; border-left: 4px solid; }
           .section-label { font-size: 0.78em; font-weight: 800; letter-spacing: 0.04em;
                            text-transform: uppercase; margin-bottom: 10px; opacity: 0.85; }
-          .key-points      { background: #F0F7FF; border-color: #1565C0; color: $onSurface; }
-          .key-points .section-label      { color: #1565C0; }
-          .exam-relevance  { background: #FFF8E6; border-color: #E65100; color: $onSurface; }
-          .exam-relevance .section-label  { color: #E65100; }
-          .important-facts { background: #F3F9F3; border-color: #2E7D32; color: $onSurface; }
-          .important-facts .section-label { color: #2E7D32; }
+          /* Section tints — must stay in step with SECTION_SPECS in the backend's
+             article-pdf-generator.util.ts so a downloaded PDF looks like the app. */
+          .key-points       { background: #F0F7FF; border-color: #1565C0; color: $onSurface; }
+          .key-points .section-label       { color: #1565C0; }
+          .major-issues     { background: #FDF2F2; border-color: #C62828; color: $onSurface; }
+          .major-issues .section-label     { color: #C62828; }
+          .govt-initiatives { background: #EFF7F6; border-color: #00695C; color: $onSurface; }
+          .govt-initiatives .section-label { color: #00695C; }
+          .bihar-specific   { background: #F7F1FA; border-color: #6A1B9A; color: $onSurface; }
+          .bihar-specific .section-label   { color: #6A1B9A; }
+          .exam-relevance   { background: #FFF8E6; border-color: #E65100; color: $onSurface; }
+          .exam-relevance .section-label   { color: #E65100; }
+          .way-forward      { background: #F1F3FB; border-color: #283593; color: $onSurface; }
+          .way-forward .section-label      { color: #283593; }
+          .quotes           { background: #F4F6F7; border-color: #455A64; color: $onSurface; font-style: italic; }
+          .quotes .section-label           { color: #455A64; }
+          .important-facts  { background: #F3F9F3; border-color: #2E7D32; color: $onSurface; }
+          .important-facts .section-label  { color: #2E7D32; }
           /* Lists inside section blocks */
           .section-block ul { list-style-type: disc !important; padding-left: 1.4em !important; margin: 6px 0; }
           .section-block ol { list-style-type: decimal !important; padding-left: 1.4em !important; margin: 6px 0; }
@@ -227,7 +233,12 @@ private fun buildArticleHtml(
           .section-block p  { margin: 0 0 8px; }
         </style>
         </head>
-        <body>$summaryHtml$keyPointsHtml${article.fullContent}$examRelevanceHtml$importantFactsHtml$sourceHtml$tagsHtml</body>
+        <!-- Section order is the contract with the admin panel's form and with the
+             PDF generator: Summary, Key Points, Multidimensional Analysis (fullContent),
+             Major Issues, Government Initiatives, Bihar Specific, Value Addition
+             (examRelevance), Way Forward & Conclusion, Quotes. Reorder all three
+             together or the app stops matching what the editor sees. -->
+        <body>$summaryHtml$keyPointsHtml${article.fullContent}$majorIssuesHtml$govtInitiativesHtml$biharSpecificHtml$examRelevanceHtml$wayForwardHtml$quotesHtml$importantFactsHtml$sourceHtml$tagsHtml</body>
         </html>
     """.trimIndent()
 }

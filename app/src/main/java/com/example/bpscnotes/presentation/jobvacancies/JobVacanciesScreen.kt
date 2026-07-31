@@ -667,7 +667,9 @@ private fun JobDetailSheet(
                         if (!job.notificationDate.isNullOrBlank()) add(Triple("📢", "Notification", job.notificationDate.formatDisplay()))
                         if (!job.applyStartDate.isNullOrBlank())   add(Triple("▶️", str.jobsApplyStart, job.applyStartDate.formatDisplay()))
                         add(Triple("🔴", str.jobsLastDate, job.applyEndDate.formatDisplay()))
-                        if (!job.examDate.isNullOrBlank())         add(Triple("📝", "Exam Date", job.examDate.formatDisplay()))
+                        // Blank exam date = not announced yet, not "no exam" — say so.
+                        add(Triple("📝", "Exam Date",
+                            if (!job.examDate.isNullOrBlank()) job.examDate.formatDisplay() else "To be announced"))
                     }
                     TimelineView(dates)
                 }

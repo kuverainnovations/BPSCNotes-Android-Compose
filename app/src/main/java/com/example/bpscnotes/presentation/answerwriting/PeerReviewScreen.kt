@@ -425,7 +425,7 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                     }
                 }
 
-                // Q4 — one suggestion (optional, 200 chars)
+                // Q4 — one suggestion (optional, 200 words)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(str.awReviewQ4, style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.Bold)
@@ -449,7 +449,7 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                             }
                         )
                         Text(
-                            "${state.suggestion.length}/200",
+                            "${PeerReviewViewModel.wordCount(state.suggestion)}/${PeerReviewViewModel.MAX_SUGGESTION_WORDS} words",
                             style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint,
                             modifier = Modifier.align(Alignment.End)
                         )

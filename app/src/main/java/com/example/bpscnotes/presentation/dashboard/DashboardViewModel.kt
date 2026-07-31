@@ -40,6 +40,9 @@ data class DashboardUiState(
     val weeklyActivity: List<DayProgress>     = emptyList(),
     val monthlyActivity: List<DayProgress>    = emptyList(),   // 28 days for "See All" detail
     val targetHistory:  List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto> = emptyList(),
+    // Expanded past days: date → that day's targets (loaded on tap, then cached)
+    val targetHistoryDays: Map<String, List<com.example.bpscnotes.data.remote.api.DailyTargetDto>> = emptyMap(),
+    val targetHistoryDayLoading: Set<String> = emptySet(),
     // Per-source breakdown for ActivityDetailSheet
     val monthlyQuizMins:    Map<String, Int>  = emptyMap(),   // date → mins
     val monthlyRoomMins:    Map<String, Int>  = emptyMap(),
@@ -623,6 +626,27 @@ class DashboardViewModel @Inject constructor(
                 val history = targetsApi.getHistory(30).data ?: emptyList()
                 _uiState.update { it.copy(targetHistory = history) }
             } catch (_: Exception) { /* non-blocking — history is optional UI */ }
+        }
+    }
+
+    /**
+     * Expand one past day into the targets planned for it, so the student can see
+     * which subjects/topics they studied. Cached per date — reopening a day is free.
+     */
+    fun loadTargetHistoryDay(date: String) {
+        if (_uiState.value.targetHistoryDays.containsKey(date)) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(targetHistoryDayLoading = it.targetHistoryDayLoading + date) }
+            try {
+                val day = targetsApi.getHistoryByDate(date).data
+                _uiState.update {
+                    it.copy(targetHistoryDays = it.targetHistoryDays + (date to (day?.targets ?: emptyList())))
+                }
+            } catch (_: Exception) {
+                // Leave the day uncached so a re-tap retries.
+            } finally {
+                _uiState.update { it.copy(targetHistoryDayLoading = it.targetHistoryDayLoading - date) }
+            }
         }
     }
 

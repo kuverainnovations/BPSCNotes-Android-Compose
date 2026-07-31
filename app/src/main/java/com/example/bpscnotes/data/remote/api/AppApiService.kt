@@ -364,10 +364,18 @@ data class CurrentAffairDto(
     val id: String,
     val title: String,
     val summary: String = "",
-    @SerializedName("full_content")     val fullContent:    String? = null,
-    @SerializedName("key_points")       val keyPoints:      String? = null,
-    @SerializedName("exam_relevance")   val examRelevance:  String? = null,
-    @SerializedName("important_facts")  val importantFacts: String? = null,
+    // The nine authored sections. full_content is "Multidimensional Analysis" and
+    // exam_relevance is "Value Addition" in the admin panel — the columns kept
+    // their original names so existing articles stay intact.
+    @SerializedName("full_content")     val fullContent:     String? = null,
+    @SerializedName("key_points")       val keyPoints:       String? = null,
+    @SerializedName("major_issues")     val majorIssues:     String? = null,
+    @SerializedName("govt_initiatives") val govtInitiatives: String? = null,
+    @SerializedName("bihar_specific")   val biharSpecific:   String? = null,
+    @SerializedName("exam_relevance")   val examRelevance:   String? = null,
+    @SerializedName("way_forward")      val wayForward:      String? = null,
+    @SerializedName("quotes")           val quotes:          String? = null,
+    @SerializedName("important_facts")  val importantFacts:  String? = null,
     val category: String = "",
     val categories: List<String>? = null,
     val source: String? = null,
@@ -892,12 +900,22 @@ data class DailyTargetHistoryDto(
     @SerializedName("completion_pct") val completionPct: Int
 )
 
+/** One past day expanded — the individual targets planned for [date], subject included. */
+data class DailyTargetHistoryDayDto(
+    val date:    String = "",
+    val targets: List<DailyTargetDto> = emptyList(),
+    val summary: DailyTargetsSummary = DailyTargetsSummary(),
+)
+
 interface DailyTargetsApiService {
     @GET("users/daily-targets")
     suspend fun getDailyTargets(): ApiResponse<DailyTargetsResponseData>
 
     @GET("users/daily-targets/history")
     suspend fun getHistory(@Query("days") days: Int = 30): ApiResponse<List<DailyTargetHistoryDto>>
+
+    @GET("users/daily-targets/history/{date}")
+    suspend fun getHistoryByDate(@Path("date") date: String): ApiResponse<DailyTargetHistoryDayDto>
 
     @POST("users/daily-targets")
     suspend fun createTargets(@Body body: CreateTargetRequest): ApiResponse<DailyTargetsResponseData>

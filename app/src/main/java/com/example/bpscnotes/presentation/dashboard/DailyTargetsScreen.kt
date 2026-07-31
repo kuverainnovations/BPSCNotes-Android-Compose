@@ -379,8 +379,11 @@ fun DailyTargetsScreen(
 
         if (showHistory) {
             DailyTargetHistorySheet(
-                history   = state.targetHistory,
-                onDismiss = { showHistory = false }
+                history      = state.targetHistory,
+                dayTargets   = state.targetHistoryDays,
+                loadingDays  = state.targetHistoryDayLoading,
+                onExpandDay  = { viewModel.loadTargetHistoryDay(it) },
+                onDismiss    = { showHistory = false }
             )
         }
     }
@@ -391,8 +394,11 @@ fun DailyTargetsScreen(
 // ─────────────────────────────────────────────────────────────
 @Composable
 private fun DailyTargetHistorySheet(
-    history:   List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto>,
-    onDismiss: () -> Unit
+    history:     List<com.example.bpscnotes.data.remote.api.DailyTargetHistoryDto>,
+    dayTargets:  Map<String, List<DailyTargetDto>>,
+    loadingDays: Set<String>,
+    onExpandDay: (String) -> Unit,
+    onDismiss:   () -> Unit
 ) {
     val str = com.example.bpscnotes.core.language.LocalStrings.current
     val cs   = MaterialTheme.colorScheme
@@ -482,31 +488,70 @@ private fun DailyTargetHistorySheet(
                             try { dfmt.format(java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(day.date)!!) }
                             catch (_: Exception) { day.date }
                         }
-                        Row(
+                        // Tapping a day reveals what was actually studied — the subject
+                        // and topic per target — so streaks can be traced back.
+                        var expanded by remember(day.date) { mutableStateOf(false) }
+                        val targets   = dayTargets[day.date]
+                        val isLoading = day.date in loadingDays
+
+                        Column(
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(cs.surface)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            Arrangement.SpaceBetween, Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(date, style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold, color = cs.onSurface)
-                                Text("${day.completed}/${day.total} targets",
-                                    style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                // Mini progress bar
-                                Box(Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp))
-                                    .background(cs.onSurface.copy(0.08f))) {
-                                    Box(Modifier.fillMaxWidth(day.completionPct / 100f).fillMaxHeight()
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary))
+                                .clickable {
+                                    expanded = !expanded
+                                    if (expanded) onExpandDay(day.date)
                                 }
-                                Text("${day.completionPct}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary)
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                Arrangement.SpaceBetween, Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(date, style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold, color = cs.onSurface)
+                                    Text("${day.completed}/${day.total} targets",
+                                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    // Mini progress bar
+                                    Box(Modifier.width(60.dp).height(6.dp).clip(RoundedCornerShape(3.dp))
+                                        .background(cs.onSurface.copy(0.08f))) {
+                                        Box(Modifier.fillMaxWidth(day.completionPct / 100f).fillMaxHeight()
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary))
+                                    }
+                                    Text("${day.completionPct}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (day.completionPct == 100) BpscColors.Success else BpscColors.Primary)
+                                    Icon(
+                                        if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                        null, tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(expanded) {
+                                Column(Modifier.fillMaxWidth().padding(top = 10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    HorizontalDivider(color = cs.onSurface.copy(0.06f))
+                                    when {
+                                        isLoading && targets == null -> {
+                                            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), Alignment.Center) {
+                                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                                                    color = BpscColors.Primary)
+                                            }
+                                        }
+                                        targets.isNullOrEmpty() -> {
+                                            Text(str.dtNoHistory, style = MaterialTheme.typography.bodySmall,
+                                                color = cs.onSurfaceVariant,
+                                                modifier = Modifier.padding(vertical = 8.dp))
+                                        }
+                                        else -> targets.forEach { t -> HistoryTargetRow(t) }
+                                    }
+                                }
                             }
                         }
                     }
@@ -517,6 +562,42 @@ private fun DailyTargetHistorySheet(
     } // outer column
   } // box
 } // function
+
+/** One target inside an expanded history day — topic, subject and whether it was done. */
+@Composable
+private fun HistoryTargetRow(target: DailyTargetDto) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            if (target.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+            null,
+            tint = if (target.isCompleted) BpscColors.Success else cs.onSurface.copy(0.25f),
+            modifier = Modifier.size(16.dp).padding(top = 2.dp)
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                target.title,
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurface,
+                fontWeight = FontWeight.Medium,
+                textDecoration = if (target.isCompleted) TextDecoration.LineThrough else null,
+                maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+            // Subject is the thing the client asked for — what was studied that day.
+            val meta = listOfNotNull(
+                target.subject.takeIf { it.isNotBlank() },
+                "${target.estimatedMinutes} min",
+            ).joinToString(" · ")
+            if (meta.isNotBlank()) {
+                Text(meta, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+            }
+        }
+    }
+}
 
 @Composable
 private fun HistoryStat(emoji: String, value: String, label: String) {

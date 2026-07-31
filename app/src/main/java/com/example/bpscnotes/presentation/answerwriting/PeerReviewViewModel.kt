@@ -222,7 +222,24 @@ class PeerReviewViewModel @Inject constructor(
         PeerReviewStep.QUESTIONS -> false
     }
 
-    companion object { const val MAX_AREAS = 3 }
+    companion object {
+        const val MAX_AREAS = 3
+        /** Suggestion cap is counted in words, not characters — 200 chars was barely two lines. */
+        const val MAX_SUGGESTION_WORDS = 200
+
+        /** Words in [s], splitting on any run of whitespace. */
+        fun wordCount(s: String): Int = if (s.isBlank()) 0 else s.trim().split(WHITESPACE).size
+
+        /** Trim [s] to at most [MAX_SUGGESTION_WORDS] words, keeping a trailing space so
+         *  the user can keep typing the next word once they are under the limit. */
+        fun capToWordLimit(s: String): String {
+            if (wordCount(s) <= MAX_SUGGESTION_WORDS) return s
+            val words = s.trim().split(WHITESPACE)
+            return words.take(MAX_SUGGESTION_WORDS).joinToString(" ")
+        }
+
+        private val WHITESPACE = Regex("\\s+")
+    }
 
     fun setVerdict(v: String) { _uiState.update { it.copy(verdict = v) } }
     fun setRating(r: Int)     { _uiState.update { it.copy(rating = r) } }
@@ -237,7 +254,7 @@ class PeerReviewViewModel @Inject constructor(
             })
         }
     }
-    fun setSuggestion(s: String) { _uiState.update { it.copy(suggestion = s.take(200)) } }
+    fun setSuggestion(s: String) { _uiState.update { it.copy(suggestion = capToWordLimit(s)) } }
 
     val canSubmit: Boolean
         get() = _uiState.value.let { it.verdict != null && it.rating in 1..5 && !it.isSubmitting }
