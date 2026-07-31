@@ -58,7 +58,17 @@ data class NotificationDto(
 
 data class NotificationsResponseData(
     val notifications: List<NotificationDto> = emptyList(),
-    @SerializedName("unread_count") val unreadCount: Int = 0
+    /**
+     * The server sends `unreadCount`, camelCase. This was annotated
+     * `unread_count`, which never matched, so the count silently fell back to
+     * the default 0 — the header's "N unread" line and the Mark-all-read action
+     * (both gated on unreadCount > 0) could never render. The dashboard's own
+     * copy of this DTO had it right, which is why the bell badge worked while
+     * this screen did not. `alternate` accepts the snake_case spelling too, in
+     * case an older/other endpoint sends it.
+     */
+    @SerializedName("unreadCount", alternate = ["unread_count"])
+    val unreadCount: Int = 0
 )
 
 data class MarkReadRequest(val ids: List<String> = emptyList())
