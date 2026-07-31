@@ -107,9 +107,12 @@ class NotificationsViewModel @Inject constructor(
                         unreadCount = unread,
                         isLoading = false, isRefreshing = false, error = null)
                 }
-                // Opening the notifications screen marks everything as read —
-                // a single bulk call, not one-by-one as the user taps items.
-                if (unread > 0) markAllRead(showToast = false)
+                // Deliberately NOT marking everything read here. Opening the screen
+                // used to bulk-mark on arrival, which zeroed unreadCount before the
+                // first frame — so the "Mark all read" action in the header, which
+                // renders only when unreadCount > 0, could never appear, and unread
+                // items never looked unread. Reading is now the user's call: tap an
+                // item, or use the header action.
             } catch (e: Exception) {
                 Log.e("NotifVM", e.toUserMessage(""), e)
                 _state.update { it.copy(isLoading = false, isRefreshing = false, error = e.toUserMessage("Failed to load notifications")) }
@@ -215,9 +218,21 @@ fun NotificationSettingsScreen(
                                     color = Color.White.copy(0.7f))
                         }
                     }
+                    // Mark-all-read: a tinted pill rather than a bare text button, so it
+                    // reads as an action against the gradient. Shown only when there is
+                    // something to mark.
                     if (state.unreadCount > 0)
-                        TextButton(onClick = viewModel::markAllRead) {
-                            Text(str.notifMarkRead, color = Color.White.copy(0.85f),
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(0.15f))
+                                .clickable { viewModel.markAllRead() }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Rounded.DoneAll, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                            Text(str.notifMarkRead, color = Color.White,
                                 style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }
                 }
