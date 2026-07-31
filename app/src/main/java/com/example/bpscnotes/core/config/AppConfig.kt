@@ -19,6 +19,12 @@ data class AppConfigData(
     val adsEnabled: Boolean         = true,
     val studyRoomsEnabled: Boolean  = true,
     val screenCaptureProtection: Boolean = true,
+    // Social channels. Blank = not configured; the UI hides that icon rather
+    // than opening a dead link, so these ship safely before anyone sets them.
+    val socialInstagram: String     = "",
+    val socialTelegram: String      = "",
+    val socialFacebook: String      = "",
+    val socialWhatsapp: String      = "",
     /**
      * False until the first successful fetch. Gates the blocking dialogs so a
      * cold start can't flash "Under Maintenance" for a frame before the real
@@ -51,6 +57,10 @@ class AppConfigRepository @Inject constructor(
                 adsEnabled            = c["ads_enabled"] != "false",
                 studyRoomsEnabled     = c["study_rooms_enabled"] != "false",
                 screenCaptureProtection = c["screen_capture_protection"] != "false",
+                socialInstagram       = c["social_instagram"].orEmpty(),
+                socialTelegram        = c["social_telegram"].orEmpty(),
+                socialFacebook        = c["social_facebook"].orEmpty(),
+                socialWhatsapp        = c["social_whatsapp"].orEmpty(),
                 loaded                = true,
             )
         } catch (_: Exception) { /* keep defaults on network failure */ }

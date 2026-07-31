@@ -465,6 +465,7 @@ data class MiscStrings(
 )
 
 data class MiscStrings3(
+    val socialConnect: String,
     val notifTitle: String, val notifMarkRead: String, val notifNone: String,
     val notifToday: String, val notifYesterday: String, val notifJustNow: String,
     val chatRoomChat: String, val chatLive: String, val chatConnecting: String,
@@ -1021,6 +1022,7 @@ data class AppStrings(
     val walletCheckedIn get() = _m.walletCheckedIn; val walletCheckingIn get() = _m.walletCheckingIn
     val walletNoTasks get() = _m.walletNoTasks; val walletNoTransactions get() = _m.walletNoTransactions
     val walletInviteFriend get() = _m.walletInviteFriend; val walletWatchAd get() = _m.walletWatchAd
+    val socialConnect get() = _m3.socialConnect
     val notifTitle get() = _m3.notifTitle; val notifMarkRead get() = _m3.notifMarkRead; val notifNone get() = _m3.notifNone
     val notifToday get() = _m3.notifToday; val notifYesterday get() = _m3.notifYesterday; val notifJustNow get() = _m3.notifJustNow
     val chatRoomChat get() = _m3.chatRoomChat; val chatLive get() = _m3.chatLive
@@ -1921,6 +1923,7 @@ val EnglishStrings: AppStrings = mkAppStrings(
         notifAllRead="All notifications marked as read ✓",
     ),
     m3 = MiscStrings3(
+        socialConnect="Connect with us",
         notifTitle="Notifications", notifMarkRead="Mark all read", notifNone="No notifications yet",
         notifToday="Today", notifYesterday="Yesterday", notifJustNow="Just now",
         chatRoomChat="Room Chat", chatLive="Live", chatConnecting="Connecting…",
@@ -2912,6 +2915,7 @@ val HindiStrings: AppStrings = mkAppStrings(
         notifAllRead="सभी सूचनाएं पढ़ी चिह्नित ✓",
     ),
     m3 = MiscStrings3(
+        socialConnect="हमसे जुड़ें",
         notifTitle="सूचनाएं", notifMarkRead="सभी पढ़ा चिह्नित करें",
         notifNone="अभी कोई सूचना नहीं",
         notifToday="आज", notifYesterday="कल", notifJustNow="अभी",

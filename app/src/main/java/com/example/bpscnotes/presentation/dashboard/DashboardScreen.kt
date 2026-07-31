@@ -2547,6 +2547,9 @@ private fun BpscDrawer(
                     .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
                     Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)
                 }
+                Spacer(Modifier.height(16.dp))
+                com.example.bpscnotes.presentation.shared.SocialLinksRow()
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
