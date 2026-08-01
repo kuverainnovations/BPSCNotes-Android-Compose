@@ -881,6 +881,51 @@ private fun StatPill(icon: String, value: String, label: String, color: Color) {
     }
 }
 
+/**
+ * Flashcard image with a visible loading and error state.
+ *
+ * Plain AsyncImage draws nothing at all until the bytes arrive, so a card with
+ * an image opened onto a blank white panel for however long the fetch took —
+ * which reads as a broken card rather than a slow one. SubcomposeAsyncImage
+ * lets us hold the space with a spinner and say something useful if it fails.
+ *
+ * crossfade softens the swap so the image doesn't pop in.
+ */
+@Composable
+private fun FlashcardImage(
+    url: String?,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    val cs = MaterialTheme.colorScheme
+    coil.compose.SubcomposeAsyncImage(
+        model = coil.request.ImageRequest.Builder(LocalContext.current)
+            .data(url)
+            .crossfade(true)
+            .build(),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+        loading = {
+            Box(Modifier.fillMaxSize().background(cs.surfaceVariant.copy(alpha = 0.35f)), Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.5.dp,
+                    color = BpscColors.Primary,
+                )
+            }
+        },
+        error = {
+            Box(Modifier.fillMaxSize().background(cs.surfaceVariant.copy(alpha = 0.35f)), Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("🖼", fontSize = 26.sp)
+                    Text("Image unavailable", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
+                }
+            }
+        },
+    )
+}
+
 // ─────────────────────────────────────────────────────────────
 // CARD FRONT
 // ─────────────────────────────────────────────────────────────
@@ -900,7 +945,11 @@ private fun CardFrontFace(card: CoinsApiService.FlashcardDto) {
                         FlashSubjectChip(card.subject); Spacer(Modifier.weight(1f))
                         Text(card.topic, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    AsyncImage(model = card.imageUrl, contentDescription = "Question image", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp).clip(RoundedCornerShape(16.dp)))
+                    FlashcardImage(
+                        url = card.imageUrl,
+                        contentDescription = "Question image",
+                        modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp).clip(RoundedCornerShape(16.dp)),
+                    )
                     if (card.question.isNotBlank()) {
                         Text(card.question, style = MaterialTheme.typography.titleMedium, color = cs.onSurface, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))
                     }
@@ -986,7 +1035,11 @@ private fun CardBackFace(card: CoinsApiService.FlashcardDto, onRate: (CardRating
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(str.recallAnswer, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
                     if (hasBackImage) {
-                        AsyncImage(model = card.backImageUrl, contentDescription = "Answer image", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF5F5F5)))
+                        FlashcardImage(
+                            url = card.backImageUrl,
+                            contentDescription = "Answer image",
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF5F5F5)),
+                        )
                         if (card.answer.isNotBlank()) { Text(card.answer, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, lineHeight = 22.sp) }
                     } else {
                         Text(card.answer, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface, lineHeight = 24.sp)
