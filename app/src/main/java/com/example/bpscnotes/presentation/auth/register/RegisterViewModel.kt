@@ -74,7 +74,9 @@ class RegisterViewModel @Inject constructor(
         tempToken: String,
         name: String,
         email: String?,
-        district: String?
+        district: String?,
+        /** Optional friend's referral code. Blank = no referrer. */
+        referralCode: String? = null
     ) {
         if (name.isBlank()) {
             // error surfaced through BaseViewModel._error
@@ -87,7 +89,8 @@ class RegisterViewModel @Inject constructor(
                 tempToken = tempToken,
                 name      = name.trim(),
                 email     = email?.trim()?.takeIf { it.isNotEmpty() },
-                district  = district?.trim()?.takeIf { it.isNotEmpty() }
+                district  = district?.trim()?.takeIf { it.isNotEmpty() },
+                referralCode = referralCode
             )
             if (response.success) {
                 _registerSuccess.postValue(true)

@@ -49,9 +49,16 @@ class AuthRepositoryImpl @Inject constructor(
 
     // ── Registration ────────────────────────────────────────────
     override suspend fun register(
-        tempToken: String, name: String, email: String?, district: String?
+        tempToken: String, name: String, email: String?, district: String?,
+        referralCode: String?,
     ): RegisterResponse {
-        val response = api.register(RegisterRequest(tempToken, name, email, district))
+        // The referral code was never sent — RegisterRequest's 5th parameter was
+        // left at its null default, so no signup could ever be attributed to a
+        // referrer and the whole refer-to-earn loop was dead on arrival.
+        // Normalised here: the backend matches referral_code exactly, and codes
+        // are generated uppercase.
+        val code = referralCode?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+        val response = api.register(RegisterRequest(tempToken, name, email, district, code))
         if (response.success) {
             val data = response.data
             if (data != null) {

@@ -189,6 +189,16 @@ class CoinWalletViewModel @Inject constructor(
         _uiState.update { it.copy(successMessage = msg) }
     }
 
+    /**
+     * Shown instead of sharing when the referral code hasn't arrived yet.
+     * Also retries the fetch, since a failed /users/referrals call is the usual
+     * reason it is missing.
+     */
+    fun showReferralCodeUnavailable() {
+        _uiState.update { it.copy(error = "Referral code not loaded yet — please try again in a moment") }
+        loadReferrals()
+    }
+
     fun checkIn() {
         if (_uiState.value.checkedInToday || _uiState.value.isCheckingIn) return
         viewModelScope.launch {
@@ -259,10 +269,17 @@ class CoinWalletViewModel @Inject constructor(
 
     fun clearMessage() { _uiState.update { it.copy(successMessage = null, error = null) } }
 
-    /** Returns the current user's referral code for sharing */
-    fun getReferralCode(): String = _uiState.value.referralCode.ifBlank {
-        _uiState.value.referralStats?.referralCode?.ifBlank { "BPSCNOTES" } ?: "BPSCNOTES"
-    }
+    /**
+     * The current user's referral code, or blank if it hasn't loaded yet.
+     *
+     * This used to fall back to the literal "BPSCNOTES" when the code was
+     * missing — which, combined with the DTO field-name bug that made it always
+     * missing, meant every user in the app was sharing a code that belonged to
+     * nobody. Every signup through those shares was credited to no one. A blank
+     * result is the honest answer; callers disable sharing until it arrives.
+     */
+    fun getReferralCode(): String =
+        _uiState.value.referralCode.ifBlank { _uiState.value.referralStats?.referralCode.orEmpty() }
 
     fun loadSellerWallet() {
         viewModelScope.launch {

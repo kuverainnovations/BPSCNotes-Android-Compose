@@ -17,7 +17,11 @@ interface AuthRepository {
     suspend fun validateForgotMpinOtp(mobile: String, otp: String): Boolean
 
     // ── Registration ────────────────────────────────────────────
-    suspend fun register(tempToken: String, name: String, email: String?, district: String?): RegisterResponse
+    suspend fun register(
+        tempToken: String, name: String, email: String?, district: String?,
+        /** Optional friend's code. Blank/null registers with no referrer. */
+        referralCode: String? = null,
+    ): RegisterResponse
 
     // ── MPIN ────────────────────────────────────────────────────
     /** Check if user has MPIN set — determines login screen to show */

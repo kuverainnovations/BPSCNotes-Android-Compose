@@ -48,6 +48,34 @@ import androidx.compose.ui.platform.LocalContext
 enum class TransactionType { EARNED, SPENT }
 enum class CheckInStatus    { DONE, BONUS, TODAY, LOCKED }
 
+/**
+ * Opens the system share sheet with an invite message.
+ *
+ * Three copies of this existed inline, and all three hardcoded the Play Store
+ * link as `id=com.example.bpscnotes` — the source package, not the published
+ * applicationId (`com.bpscnotes.app`). Every invite ever shared pointed at a
+ * listing that does not exist. Built from the running package name now, so it
+ * cannot drift from whatever the app is actually published under.
+ *
+ * Refuses to share a blank code: an invite reading "Use my referral code:" with
+ * nothing after it earns the sender nothing and confuses the recipient.
+ */
+private fun shareReferral(
+    context: android.content.Context,
+    code: String,
+    message: (code: String, storeUrl: String) -> String,
+    chooserTitle: String,
+): Boolean {
+    if (code.isBlank()) return false
+    val storeUrl = "https://play.google.com/store/apps/details?id=${context.packageName}"
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_TEXT, message(code, storeUrl))
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, chooserTitle))
+    return true
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN SCREEN
 // ─────────────────────────────────────────────────────────────
@@ -228,28 +256,13 @@ fun CoinWalletScreen(
 
                                             // Referral
                                             "referral_signup" -> {
-                                                val code = viewModel.getReferralCode()
-
-                                                val msg = """
-            Join BPSCNotes and ace your BPSC exam!
-            Use my referral code: $code
-            
-            https://play.google.com/store/apps/details?id=com.example.bpscnotes
-        """.trimIndent()
-
-                                                val intent = android.content.Intent(
-                                                    android.content.Intent.ACTION_SEND
-                                                ).apply {
-                                                    type = "text/plain"
-                                                    putExtra(android.content.Intent.EXTRA_TEXT, msg)
-                                                }
-
-                                                context.startActivity(
-                                                    android.content.Intent.createChooser(
-                                                        intent,
-                                                        str.walletInviteFriend
-                                                    )
+                                                val shared = shareReferral(
+                                                    context,
+                                                    viewModel.getReferralCode(),
+                                                    { code, url -> "Join BPSCNotes and ace your BPSC exam!\nUse my referral code: $code\n\n$url" },
+                                                    str.walletInviteFriend,
                                                 )
+                                                if (!shared) viewModel.showReferralCodeUnavailable()
                                             }
 
                                             // Watch Ad
@@ -449,14 +462,12 @@ fun CoinWalletScreen(
                                 totalPerFriend = refTotal,
                                 isLoading    = state.isLoadingReferrals,
                                 onShare      = {
-                                    val code = viewModel.getReferralCode()
-                                    val msg = "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn $refJoined bonus coins when you sign up.\n\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
-                                    context.startActivity(android.content.Intent.createChooser(
-                                        android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_TEXT, msg)
-                                        }, "Invite a friend"
-                                    ))
+                                    val shared = shareReferral(
+                                        context, viewModel.getReferralCode(),
+                                        { code, url -> "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn $refJoined bonus coins when you sign up.\n\n$url" },
+                                        "Invite a friend",
+                                    )
+                                    if (!shared) viewModel.showReferralCodeUnavailable()
                                 }
                             )
                         }
@@ -466,13 +477,12 @@ fun CoinWalletScreen(
                         val referees = state.referralStats?.referees ?: emptyList()
                         if (referees.isEmpty() && !state.isLoadingReferrals) {
                             item { ReferralEmptyState(totalPerFriend = refTotal, onShare = {
-                                val code = viewModel.getReferralCode()
-                                val msg = "Join BPSCNotes! Use code: $code\nhttps://play.google.com/store/apps/details?id=com.example.bpscnotes"
-                                context.startActivity(android.content.Intent.createChooser(
-                                    android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                        type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, msg)
-                                    }, "Invite a friend"
-                                ))
+                                val shared = shareReferral(
+                                    context, viewModel.getReferralCode(),
+                                    { code, url -> "Join BPSCNotes! Use code: $code\n$url" },
+                                    "Invite a friend",
+                                )
+                                if (!shared) viewModel.showReferralCodeUnavailable()
                             }) }
                         } else {
                             item {

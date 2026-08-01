@@ -24,6 +24,8 @@ import javax.inject.Inject
 // ════════════════════════════════════════════════════════════
 
 data class SettingsUiState(
+    /** The user's own referral code; blank until /users/referrals returns. */
+    val referralCode:       String  = "",
     // Toggles — loaded from SharedPreferences on init
     val darkMode:           Boolean = false,
     val studyReminder:      Boolean = true,
@@ -50,6 +52,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val tokenStore: TokenStore,
     private val authApi:    AuthApiService,
+    private val statsApi:   com.example.bpscnotes.data.remote.api.UserStatsApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     val coinsConfig: com.example.bpscnotes.core.config.CoinsConfigRepository,
     val appConfig: com.example.bpscnotes.core.config.AppConfigRepository,
@@ -61,9 +64,24 @@ class SettingsViewModel @Inject constructor(
 
     companion object { private const val TAG = "SettingsVM" }
 
+    /**
+     * The Share row advertises "earn N coins", but the message it sent carried
+     * no referral code, so nobody could ever be credited for a signup that came
+     * through it. Fetch the code so the invite can actually pay out.
+     */
+    private fun loadReferralCode() {
+        viewModelScope.launch {
+            try {
+                val code = statsApi.getReferrals().data?.referralCode.orEmpty()
+                if (code.isNotBlank()) _state.update { it.copy(referralCode = code) }
+            } catch (_: Exception) { /* share still works, just without a code */ }
+        }
+    }
+
     init {
         loadPersistedPreferences()
         computeStorageSizes()
+        loadReferralCode()
     }
 
     // ── Load preferences from SharedPreferences ───────────────

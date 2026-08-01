@@ -597,6 +597,8 @@ data class MiscStrings5(
     val permOpenSettings: String,
     // Register
     val registerEmailHint: String,
+    val registerReferralLabel: String, val registerReferralHint: String,
+    val registerReferralHelp: String,
     // Exam Setup
     val examBack: String,
     // Marketplace
@@ -1333,6 +1335,9 @@ data class AppStrings(
     val courseAboutInstructor   get() = _m5.courseAboutInstructor
     val permOpenSettings        get() = _m5.permOpenSettings
     val registerEmailHint       get() = _m5.registerEmailHint
+    val registerReferralLabel   get() = _m5.registerReferralLabel
+    val registerReferralHint    get() = _m5.registerReferralHint
+    val registerReferralHelp    get() = _m5.registerReferralHelp
     val examBack                get() = _m5.examBack
     val marketOwned             get() = _m5.marketOwned
     val roomsReset              get() = _m5.roomsReset
@@ -2062,6 +2067,9 @@ val EnglishStrings: AppStrings = mkAppStrings(
         courseAboutInstructor="👨‍🏫 About the Instructor",
         permOpenSettings="Open App Settings",
         registerEmailHint="e.g. rahul@gmail.com",
+        registerReferralLabel="Referral Code (Optional)",
+        registerReferralHint="e.g. RAHUL1234",
+        registerReferralHelp="Have a friend's code? Both of you earn coins.",
         examBack="← Back",
         marketOwned="Owned",
         roomsReset="Reset",
@@ -3055,6 +3063,9 @@ val HindiStrings: AppStrings = mkAppStrings(
         courseAboutInstructor="👨‍🏫 प्रशिक्षक के बारे में",
         permOpenSettings="ऐप सेटिंग खोलें",
         registerEmailHint="जैसे rahul@gmail.com",
+        registerReferralLabel="रेफरल कोड (वैकल्पिक)",
+        registerReferralHint="जैसे RAHUL1234",
+        registerReferralHelp="दोस्त का कोड है? आप दोनों को कॉइन मिलेंगे।",
         examBack="← वापस",
         marketOwned="खरीदा हुआ",
         roomsReset="रीसेट",

@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Lock
@@ -53,6 +54,7 @@ fun RegisterScreen(
     var name     by remember { mutableStateOf("") }
     var email    by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
+    var referralCode by remember { mutableStateOf("") }
     var showDistrictMenu by remember { mutableStateOf(false) }
 
     val isLoading       by viewModel.isLoading.observeAsState(false)
@@ -220,6 +222,29 @@ fun RegisterScreen(
                     enabled     = districts.isNotEmpty() && !districtsLoading,
                     leadingIcon = { Icon(Icons.Rounded.LocationOn, null, tint = cs.outline) }
                 )
+
+                // Referral code — optional. Until now there was no way to enter
+                // one at all, so no signup could ever be credited to a referrer
+                // and refer-to-earn never paid out to anybody.
+                OutlinedTextField(
+                    value         = referralCode,
+                    onValueChange = { referralCode = it.uppercase().filter { c -> !c.isWhitespace() } },
+                    modifier      = Modifier.fillMaxWidth(),
+                    leadingIcon   = { Icon(Icons.Rounded.CardGiftcard, null, tint = cs.outline) },
+                    label         = { Text(str.registerReferralLabel) },
+                    placeholder   = { Text(str.registerReferralHint) },
+                    supportingText = { Text(str.registerReferralHelp, style = MaterialTheme.typography.labelSmall) },
+                    shape         = RoundedCornerShape(14.dp),
+                    singleLine    = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction    = ImeAction.Done
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = BpscColors.Primary,
+                        unfocusedBorderColor = cs.outline
+                    )
+                )
             }
 
             // Error
@@ -264,7 +289,8 @@ fun RegisterScreen(
                         tempToken = tempToken,
                         name      = name,
                         email     = email.trim().takeIf { it.isNotEmpty() },
-                        district  = district.trim().takeIf { it.isNotEmpty() }
+                        district  = district.trim().takeIf { it.isNotEmpty() },
+                        referralCode = referralCode.trim().takeIf { it.isNotEmpty() }
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp),

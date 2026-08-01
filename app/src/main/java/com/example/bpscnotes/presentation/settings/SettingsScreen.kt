@@ -390,8 +390,15 @@ fun SettingsScreen(
                                 str.settingsShareSubtitle.replace("{coins}", "${settingsViewModel.coinsConfig.coins("referral_signup", 50)}")
                             else "Invite friends to BPSCNotes",
                             onClick = {
+                                // Include the referral code — the subtitle above promises
+                                // coins for sharing, but the message never carried a code,
+                                // so no signup from this button could ever be credited.
+                                val refCode = settingsState.referralCode
+                                val codeLine = if (refCode.isNotBlank())
+                                    "Use my referral code: $refCode — we both earn coins.\n\n" else ""
                                 val shareText = "🎯 I'm preparing for BPSC on BPSCNotes!\n\n" +
                                         "Best app for BPSC exam prep — Daily quizzes, Current Affairs, Mock Tests & more.\n\n" +
+                                        codeLine +
                                         "Download now: https://play.google.com/store/apps/details?id=$packageName"
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "text/plain"

@@ -1323,10 +1323,15 @@ data class CoinsConfigDto(
 )
 
 // ── Referral milestone DTOs ─────────────────────────────────
+// GET /users/referrals returns camelCase throughout. Every field below was
+// annotated with a snake_case name that never matched, so the whole tab read as
+// zeros: no code, no friends, no earnings — regardless of what the user had
+// actually earned. `alternate` keeps the snake_case spelling working in case an
+// older endpoint sends it.
 data class ReferralMilestoneDto(
     val earned:    Boolean = false,
     val coins:     Int     = 0,
-    @SerializedName("awarded_at") val awardedAt: String? = null
+    @SerializedName("awardedAt", alternate = ["awarded_at"]) val awardedAt: String? = null
 )
 data class ReferralMilestonesDto(
     val signup:     ReferralMilestoneDto = ReferralMilestoneDto(),
@@ -1336,15 +1341,20 @@ data class ReferralMilestonesDto(
 data class RefereeDto(
     val id:          String               = "",
     val name:        String               = "",
-    @SerializedName("joined_at")          val joinedAt:         String               = "",
-    val milestones:                       ReferralMilestonesDto = ReferralMilestonesDto(),
-    @SerializedName("total_coins_earned") val totalCoinsEarned: Int                  = 0
+    @SerializedName("joinedAt", alternate = ["joined_at"])
+    val joinedAt:    String               = "",
+    val milestones:  ReferralMilestonesDto = ReferralMilestonesDto(),
+    @SerializedName("totalCoinsEarned", alternate = ["total_coins_earned"])
+    val totalCoinsEarned: Int             = 0
 )
 data class ReferralStatsDto(
-    @SerializedName("referral_code")   val referralCode:   String           = "",
-    @SerializedName("total_referrals") val totalReferrals: Int              = 0,
-    @SerializedName("total_earned")    val totalEarned:    Int              = 0,
-    val referees:                                         List<RefereeDto>  = emptyList()
+    @SerializedName("referralCode", alternate = ["referral_code"])
+    val referralCode:   String           = "",
+    @SerializedName("totalReferrals", alternate = ["total_referrals"])
+    val totalReferrals: Int              = 0,
+    @SerializedName("totalEarned", alternate = ["total_earned"])
+    val totalEarned:    Int              = 0,
+    val referees:       List<RefereeDto> = emptyList()
 )
 
 interface CoinsApiService {
