@@ -41,7 +41,15 @@ import dagger.hilt.android.EntryPointAccessors
  * is configured, the whole block renders nothing.
  */
 @Composable
-fun SocialLinksRow(modifier: Modifier = Modifier) {
+fun SocialLinksRow(
+    modifier: Modifier = Modifier,
+    /**
+     * Drops the "Connect with us" caption and uses smaller circles. The drawer
+     * footer is fixed height and eats directly into the scrollable menu, so it
+     * pays for itself there; Settings has room for the full version.
+     */
+    compact: Boolean = false,
+) {
     val context = LocalContext.current
     val str     = LocalStrings.current
     val repo = remember(context) {
@@ -68,23 +76,28 @@ fun SocialLinksRow(modifier: Modifier = Modifier) {
 
     if (channels.isEmpty()) return
 
+    val circle = if (compact) 34.dp else 42.dp
+    val glyph  = if (compact) 17.dp else 20.dp
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(if (compact) 0.dp else 10.dp)
     ) {
-        Text(
-            str.socialConnect,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (!compact) {
+            Text(
+                str.socialConnect,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp)) {
             channels.forEach { ch ->
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(circle)
                         .clip(CircleShape)
                         .background(ch.color.copy(alpha = 0.12f))
                         .clickable { openExternal(context, ch.url) },
@@ -94,7 +107,7 @@ fun SocialLinksRow(modifier: Modifier = Modifier) {
                         painter = painterResource(ch.iconRes),
                         contentDescription = ch.label,
                         tint = ch.color,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(glyph)
                     )
                 }
             }

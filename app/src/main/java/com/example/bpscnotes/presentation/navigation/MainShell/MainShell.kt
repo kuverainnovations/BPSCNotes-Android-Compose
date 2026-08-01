@@ -14,6 +14,15 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Home
@@ -128,7 +137,18 @@ fun MainShell(
 
     val activity = context as? Activity
 
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerScope = androidx.compose.runtime.rememberCoroutineScope()
+
     BackHandler(enabled = true) {
+        // Drawer first. This handler is registered above the drawer's own, so
+        // without this branch back would jump tabs or exit the app while the
+        // drawer sat open on top.
+        if (drawerState.isOpen) {
+            drawerScope.launch { drawerState.close() }
+            return@BackHandler
+        }
+
         val currentBottomRoute = bottomNavController.currentDestination?.route
 
         // Non-Dashboard tab → go home first
@@ -171,6 +191,43 @@ fun MainShell(
     }
 
     val scaffoldBg = MaterialTheme.colorScheme.background
+
+    // The menu drawer is hosted HERE, wrapping the entire Scaffold, rather than
+    // inside DashboardScreen. Nested in the Scaffold's content it could never
+    // cover the bottom navigation bar, because Scaffold always paints bottomBar
+    // above its content — the drawer's Logout button and social row were clipped.
+    // Rendering the bar behind the NavHost instead fixed the overlay but broke
+    // the tabs: drawing order is the inverse of hit-test order, so the
+    // full-screen NavHost swallowed every tap meant for the bar underneath.
+    // Hoisting the drawer above the Scaffold satisfies both — the bar is a
+    // normal bottomBar and stays tappable, and the drawer sheet is above it.
+
+    // One DashboardViewModel shared by the drawer and the Dashboard screen —
+    // scoped to the Screen.Main back stack entry, the same trick RoomsHub uses
+    // for its session/tier view models. A plain hiltViewModel() here would build
+    // a SECOND instance and duplicate every dashboard fetch.
+    val mainEntryForVm = remember(rootNavController) {
+        runCatching { rootNavController.getBackStackEntry(Screen.Main.route) }.getOrNull()
+    }
+    val dashboardVm: com.example.bpscnotes.presentation.dashboard.DashboardViewModel =
+        if (mainEntryForVm != null) hiltViewModel(mainEntryForVm) else hiltViewModel()
+    val dashboardState by dashboardVm.uiState.collectAsState()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        // Only openable from the Dashboard's menu button; edge-swiping from any
+        // tab would be surprising, and would fight the horizontal gestures on
+        // screens that have their own pagers.
+        gesturesEnabled = drawerState.isOpen,
+        drawerContent = {
+            com.example.bpscnotes.presentation.dashboard.BpscDrawer(
+                user          = dashboardState.user,
+                notifCount    = dashboardState.unreadNotifCount,
+                onClose       = { drawerScope.launch { drawerState.close() } },
+                navController = rootNavController,
+            )
+        }
+    ) {
     Scaffold(
         containerColor = scaffoldBg,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -187,11 +244,11 @@ fun MainShell(
         }
     ) { innerPadding ->
         val cs = MaterialTheme.colorScheme
+        val bottomPad = innerPadding.calculateBottomPadding()
         Box(
             Modifier
                 .fillMaxSize()
                 .background(cs.background)
-                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // ── Hide NavHost until inner nav is ready (eliminates white flash) ──
             // innerEntry is NULL for ~50ms when MainShell re-enters composition
@@ -206,8 +263,17 @@ fun MainShell(
                     alpha = if (innerEntry != null) 1f else 0f
                 }
             ) {
-                composable(Screen.Dashboard.route)  { DashboardScreen(rootNavController, adManager = adManager) }
-                composable(Screen.MyLearning.route) { MyLearningScreen(rootNavController, startTab = 0, fromScreen = "main-shell") }
+                composable(Screen.Dashboard.route)  {
+                    BottomInset(bottomPad) {
+                        DashboardScreen(
+                            rootNavController,
+                            adManager          = adManager,
+                            drawerState        = drawerState,
+                            dashboardViewModel = dashboardVm,
+                        )
+                    }
+                }
+                composable(Screen.MyLearning.route) { BottomInset(bottomPad) { MyLearningScreen(rootNavController, startTab = 0, fromScreen = "main-shell") } }
                 //composable(Screen.ELibrary.route)   { ELibraryScreen(rootNavController) }
                 composable(Screen.RoomsHub.route) { backStackEntry ->
                     val parentEntry = remember(backStackEntry) {
@@ -218,19 +284,24 @@ fun MainShell(
                     val sessionVM: StudySessionViewModel = hiltViewModel(parentEntry)
                     val tiersVM: TierRoomsViewModel = hiltViewModel(parentEntry)
 
-                    RoomsHubScreen(
-                        navController    = rootNavController,
-                        sessionViewModel = sessionVM,
-                        tiersViewModel   = tiersVM,
-                        adManager        = adManager
-                    )
+                    BottomInset(bottomPad) {
+                        RoomsHubScreen(
+                            navController    = rootNavController,
+                            sessionViewModel = sessionVM,
+                            tiersViewModel   = tiersVM,
+                            adManager        = adManager
+                        )
+                    }
                 }
-                composable(Screen.Profile.route)    { ProfileScreen(rootNavController) }
+                composable(Screen.Profile.route)    { BottomInset(bottomPad) { ProfileScreen(rootNavController) } }
             }
 
             // ── STUDY ROOM PIP OVERLAY ─────────────────────────────────
             // Floating mini-session card when user navigates away from the room.
             // Session keeps running and earning coins in the background.
+            // Wrapped so it keeps clearing the bottom nav now that the container
+            // itself is no longer inset.
+            BottomInset(bottomPad) {
             StudyRoomPipOverlay(
                 isVisible    = showPip,
                 tierName     = sessionStateForPip.tierName ?: str.roomsTitle,
@@ -247,6 +318,20 @@ fun MainShell(
                     sessionViewModel.endSession()
                 }
             )
+            }
         }
     }
+    }  // ModalNavigationDrawer
+}
+
+/**
+ * Reserves space for the bottom navigation bar around a single screen.
+ *
+ * Applied per screen rather than to the shared container, so a screen that needs
+ * the full display height — the Dashboard, whose navigation drawer must run edge
+ * to edge — can opt out simply by not being wrapped.
+ */
+@Composable
+private fun BottomInset(bottom: Dp, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().padding(bottom = bottom)) { content() }
 }

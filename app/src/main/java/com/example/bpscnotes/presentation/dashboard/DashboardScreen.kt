@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,6 +85,11 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     navController: NavHostController,
     adManager: AdManager? = null,
+    /**
+     * The menu drawer, owned by MainShell so its sheet renders above the bottom
+     * navigation bar. This screen only opens it from the header's menu button.
+     */
+    drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     bookmarkViewModel: BookmarkViewModel   = hiltViewModel()
 ) {
@@ -93,7 +99,6 @@ fun DashboardScreen(
     val context = LocalContext.current
     val bookmarkedIds by bookmarkViewModel.bookmarkedIds.collectAsState()
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showTargetSheet by remember { mutableStateOf(false) }
     var showActivityDetail by remember { mutableStateOf(false) }
@@ -117,19 +122,11 @@ fun DashboardScreen(
     ) {
 
 
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            gesturesEnabled = true,
-            //windowInsets = WindowInsets(0, 0, 0, 0),
-            drawerContent = {
-                BpscDrawer(
-                    user = state.user,
-                    notifCount = state.unreadNotifCount,
-                    onClose = { scope.launch { drawerState.close() } },
-                    navController = navController
-                )
-            }
-        ) {
+        // The drawer itself is NOT here — MainShell hosts it, wrapped around the
+        // whole Scaffold, so the drawer sheet can cover the bottom navigation bar
+        // while the bar stays a normal bottomBar and stays tappable. This screen
+        // only opens it, via the drawerState handed down.
+        Box(Modifier.fillMaxSize()) {
             // ── FIX: outer Box so full-screen overlays (e.g. activity history) can sit on top ──
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(
@@ -2274,8 +2271,10 @@ fun CreateTargetSheet(onDismiss: () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 // DRAWER
 // ─────────────────────────────────────────────────────────────────────────────
+// Called from MainShell, which owns the drawer so it can sit above the bottom
+// navigation bar. See the comment on DashboardScreen's drawerState parameter.
 @Composable
-private fun BpscDrawer(
+fun BpscDrawer(
     user: UserDto?,
     notifCount: Int = 0,
     onClose: () -> Unit,
@@ -2483,16 +2482,22 @@ private fun BpscDrawer(
                     }
                 }
             }
+            // Footer is fixed height, so every dp here is a dp the menu list loses.
+            // Kept deliberately tight: brand + version on one line, a slimmer
+            // logout button, and the compact social row.
             Column(modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                HorizontalDivider(color = cs.outline); Spacer(Modifier.height(8.dp))
+                .padding(horizontal = 20.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                HorizontalDivider(color = cs.outline); Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("BPSCNotes", style = MaterialTheme.typography.titleMedium, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
-                    Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, color = BpscColors.TextHint)
+                    Text("BPSCNotes", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                    // Was hardcoded "v1.0.0" — it kept claiming 1.0.0 on every
+                    // release. Read the real build so support gets a true answer.
+                    Text("v${com.bpscnotes.app.BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.labelMedium, color = BpscColors.TextHint)
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 // Confirmation dialog before logging out — same dialog the
                 // Settings/Profile page shows; the drawer used to log out
                 // immediately on tap (QA 18-07 issue 2).
@@ -2544,12 +2549,12 @@ private fun BpscDrawer(
                 }
                 OutlinedButton(onClick = { showLogoutConfirm = true }, modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
-                    Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleMedium)
+                    .height(38.dp), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(0.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE74C3C)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE74C3C))) {
+                    Icon(Icons.Rounded.Logout, null, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(8.dp)); Text(str.drawerLogout, style = MaterialTheme.typography.titleSmall)
                 }
-                Spacer(Modifier.height(16.dp))
-                com.example.bpscnotes.presentation.shared.SocialLinksRow()
                 Spacer(Modifier.height(8.dp))
+                com.example.bpscnotes.presentation.shared.SocialLinksRow(compact = true)
             }
         }
     }
