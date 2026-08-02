@@ -22,7 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.nativead.NativeAd
@@ -66,6 +68,16 @@ fun BannerAdView(adUnitId: String) {
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
                 setAdUnitId(adUnitId)
+                // Banners had no listener, so a failure was silent — the space
+                // just stayed empty with no way to tell a config problem from
+                // "no fill". code=3 is no fill, 1 is a bad request/unit id,
+                // 2 is network, 0 is internal.
+                adListener = object : AdListener() {
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        android.util.Log.e("AdBanner",
+                            "Banner failed: code=${error.code} ${error.message} | unit=$adUnitId")
+                    }
+                }
                 loadAd(AdRequest.Builder().build())
             }
         }
@@ -85,6 +97,12 @@ fun MediumRectangleAdView(adUnitId: String, modifier: Modifier = Modifier) {
             AdView(context).apply {
                 setAdSize(AdSize.MEDIUM_RECTANGLE)
                 setAdUnitId(adUnitId)
+                adListener = object : AdListener() {
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        android.util.Log.e("AdBanner",
+                            "MREC failed: code=${error.code} ${error.message} | unit=$adUnitId")
+                    }
+                }
                 loadAd(AdRequest.Builder().build())
             }
         }

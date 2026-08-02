@@ -167,7 +167,7 @@ class AdManager @Inject constructor(
                 }
             }
             override fun onAdFailedToLoad(error: LoadAdError) {
-                Log.e(TAG, "Rewarded load failed: ${error.message}")
+                Log.e(TAG, "Rewarded load failed: code=${error.code} ${error.message} | domain=${error.domain} | cause=${error.cause}")
                 isLoadingRewarded = false
                 _rewardedReady.value = false
                 // Retry after 60 seconds
@@ -335,7 +335,7 @@ class AdManager @Inject constructor(
                     }
                 }
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    Log.e(TAG, "Interstitial load failed: ${error.message}")
+                    Log.e(TAG, "Interstitial load failed: code=${error.code} ${error.message} | domain=${error.domain} | cause=${error.cause}")
                     isLoadingInterstitial = false
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(::loadInterstitialAd, 60_000)
                 }
