@@ -1240,10 +1240,14 @@ private fun ReferralStatChip(emoji: String, value: String, label: String) {
 @Composable
 private fun MilestoneExplainer(signup: Int, engagement: Int, active: Int, joined: Int) {
     val str = com.example.bpscnotes.core.language.LocalStrings.current
+    // "You get" is explicit on purpose. Every line here pays the REFERRER, but
+    // the friend also gets a joining bonus, and listing "Friend Signs Up — 50"
+    // next to a share message promising the friend 25 read as a contradiction.
     val milestones = listOf(
-        Triple("✍️", "Friend Signs Up", "$signup 🪙"),
-        Triple("📚", "Friend Enrolls / Uploads", "$engagement 🪙"),
-        Triple("🏆", "Friend Completes 5 Quizzes", "$active 🪙"),
+        Triple("✍️", "Friend signs up · you get", "$signup 🪙"),
+        Triple("📚", "Friend enrolls / uploads · you get", "$engagement 🪙"),
+        Triple("🏆", "Friend completes 5 quizzes · you get", "$active 🪙"),
+        Triple("🎁", "Your friend's joining bonus", "$joined 🪙"),
     )
     Card(
         modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
