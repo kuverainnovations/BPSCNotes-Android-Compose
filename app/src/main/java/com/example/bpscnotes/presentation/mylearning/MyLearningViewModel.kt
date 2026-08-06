@@ -6,7 +6,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bpscnotes.app.BuildConfig
+import com.bpscnotes.eduapp.BuildConfig
 import com.example.bpscnotes.core.network.CacheInvalidator
 import com.example.bpscnotes.data.remote.api.CourseDto
 import com.example.bpscnotes.core.events.RefreshEvent

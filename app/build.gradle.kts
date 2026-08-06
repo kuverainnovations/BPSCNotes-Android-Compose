@@ -18,11 +18,11 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.bpscnotes.app"
+    namespace = "com.bpscnotes.eduapp"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.bpscnotes.app"
+        applicationId = "com.bpscnotes.eduapp"
         minSdk = 24
         targetSdk = 36
         versionCode = 18

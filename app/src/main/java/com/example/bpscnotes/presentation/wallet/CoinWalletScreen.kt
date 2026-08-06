@@ -53,7 +53,7 @@ enum class CheckInStatus    { DONE, BONUS, TODAY, LOCKED }
  *
  * Three copies of this existed inline, and all three hardcoded the Play Store
  * link as `id=com.example.bpscnotes` — the source package, not the published
- * applicationId (`com.bpscnotes.app`). Every invite ever shared pointed at a
+ * applicationId (`com.bpscnotes.eduapp`). Every invite ever shared pointed at a
  * listing that does not exist. Built from the running package name now, so it
  * cannot drift from whatever the app is actually published under.
  *

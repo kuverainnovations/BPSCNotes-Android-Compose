@@ -62,13 +62,13 @@ class AdManager @Inject constructor(
         // AndroidManifest) only serve once the app is live on Play and the
         // ad units are approved in AdMob — that part is an AdMob-side
         // waiting game, not a code bug.
-        private val REWARDED_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+        private val REWARDED_AD_UNIT_ID = if (com.bpscnotes.eduapp.BuildConfig.DEBUG)
             "ca-app-pub-3940256099942544/5224354917" else "ca-app-pub-9485599840415539/2379060365"
-        private val INTERSTITIAL_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+        private val INTERSTITIAL_AD_UNIT_ID = if (com.bpscnotes.eduapp.BuildConfig.DEBUG)
             "ca-app-pub-3940256099942544/1033173712" else "ca-app-pub-9485599840415539/2187488673"
-        val BANNER_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+        val BANNER_AD_UNIT_ID = if (com.bpscnotes.eduapp.BuildConfig.DEBUG)
             "ca-app-pub-3940256099942544/6300978111" else "ca-app-pub-9485599840415539/4785696463"
-        private val NATIVE_AD_UNIT_ID = if (com.bpscnotes.app.BuildConfig.DEBUG)
+        private val NATIVE_AD_UNIT_ID = if (com.bpscnotes.eduapp.BuildConfig.DEBUG)
             "ca-app-pub-3940256099942544/2247696110" else "ca-app-pub-9485599840415539/5667533293"
         // Medium-rectangle unit shown inside the custom 15s timer overlay
         // before a Current Affairs article opens (CaAdGateScreen). Reuses the

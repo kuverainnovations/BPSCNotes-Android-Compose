@@ -858,7 +858,7 @@ private fun DashboardHeader(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(com.bpscnotes.app.R.drawable.ic_bpsc_logo),
+                        painter = androidx.compose.ui.res.painterResource(com.bpscnotes.eduapp.R.drawable.ic_bpsc_logo),
                         contentDescription = "BPSCNotes",
                         modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
                     )
@@ -2503,7 +2503,7 @@ fun BpscDrawer(
                     Text("BPSCNotes", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                     // Was hardcoded "v1.0.0" — it kept claiming 1.0.0 on every
                     // release. Read the real build so support gets a true answer.
-                    Text("v${com.bpscnotes.app.BuildConfig.VERSION_NAME}",
+                    Text("v${com.bpscnotes.eduapp.BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.labelMedium, color = BpscColors.TextHint)
                 }
                 Spacer(Modifier.height(6.dp))

@@ -7,7 +7,7 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bpscnotes.app.BuildConfig
+import com.bpscnotes.eduapp.BuildConfig
 import com.example.bpscnotes.data.remote.api.AuthApiService
 import com.example.bpscnotes.data.remote.api.Chapter
 import com.example.bpscnotes.data.remote.api.CompleteLessonRequest

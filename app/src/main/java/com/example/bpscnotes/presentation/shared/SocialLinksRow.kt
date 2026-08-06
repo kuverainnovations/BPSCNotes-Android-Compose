@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bpscnotes.app.R
+import com.bpscnotes.eduapp.R
 import com.example.bpscnotes.di.AppConfigEntryPoint
 import com.example.bpscnotes.core.language.LocalStrings
 import dagger.hilt.android.EntryPointAccessors

@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import com.bpscnotes.app.BuildConfig
+import com.bpscnotes.eduapp.BuildConfig
 import com.example.bpscnotes.core.config.AppConfigData
 import com.example.bpscnotes.core.ui.t.BpscColors
 

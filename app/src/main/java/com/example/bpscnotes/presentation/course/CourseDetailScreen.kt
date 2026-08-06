@@ -1,6 +1,6 @@
 package com.example.bpscnotes.presentation.course
 
-import com.bpscnotes.app.BuildConfig
+import com.bpscnotes.eduapp.BuildConfig
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
