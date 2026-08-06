@@ -1422,22 +1422,47 @@ interface CoinsApiService {
         @SerializedName("correct_index") val correctIndex: Int
     )
 
+    /**
+     * NOTE ON NULLABILITY — this class crashed the app once already.
+     *
+     * Gson instantiates DTOs reflectively and assigns fields directly, so a
+     * Kotlin default like `val subject: String = ""` is NOT a guarantee: an
+     * explicit `"subject": null` in the response overwrites the default and
+     * leaves a null sitting in a field the type system says can never be null.
+     * Nothing complains until that value reaches a non-null parameter — for
+     * these fields, Compose's `Text(String)` — which throws
+     * NullPointerException inside the layout pass and takes the process down.
+     *
+     * Every text field is therefore declared nullable and read through a
+     * non-null accessor. Renderers use the accessors; the raw fields exist only
+     * so Gson has somewhere to put whatever the server actually sent.
+     */
     data class FlashcardDto(
         val id: String = "",
-        val subject: String = "",
-        val topic: String = "",
-        val question: String = "",
-        val answer: String = "",
-        val hint: String = "",
-        val example: String = "",
-        val difficulty: String = "medium",
+        @SerializedName("subject")    private val subjectRaw: String? = "",
+        @SerializedName("topic")      private val topicRaw: String? = "",
+        @SerializedName("question")   private val questionRaw: String? = "",
+        @SerializedName("answer")     private val answerRaw: String? = "",
+        @SerializedName("hint")       private val hintRaw: String? = "",
+        @SerializedName("example")    private val exampleRaw: String? = "",
+        @SerializedName("difficulty") private val difficultyRaw: String? = "medium",
         /** 'text' (default) or 'image' — drives rendering in ActiveRecallScreen */
-        @SerializedName("card_type")  val cardType: String = "text",
+        @SerializedName("card_type")  private val cardTypeRaw: String? = "text",
         /** Cloudinary URL — non-null only when cardType == 'image' */
         @SerializedName("image_url")  val imageUrl: String? = null,
         @SerializedName("back_image_url")  val backImageUrl: String? = null,
         @SerializedName("related_mcq") val relatedMcq: FlashMcqDto? = null
-    )
+    ) {
+        // Safe accessors — always use these when rendering.
+        val subject:    String get() = subjectRaw.orEmpty()
+        val topic:      String get() = topicRaw.orEmpty()
+        val question:   String get() = questionRaw.orEmpty()
+        val answer:     String get() = answerRaw.orEmpty()
+        val hint:       String get() = hintRaw.orEmpty()
+        val example:    String get() = exampleRaw.orEmpty()
+        val difficulty: String get() = difficultyRaw?.ifBlank { null } ?: "medium"
+        val cardType:   String get() = cardTypeRaw?.ifBlank { null } ?: "text"
+    }
 
     data class FlashcardsResponseData(
         val flashcards: List<FlashcardDto> = emptyList()

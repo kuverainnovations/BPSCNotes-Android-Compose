@@ -115,7 +115,16 @@ object NetworkModule {
             // /notebook: the list is mutated in place from its own screen
             // (save/pin/delete → immediate reload) — a 5-min cached copy
             // means edits don't appear until the cache expires.
-            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs/alert-prefs", "/notebook")
+            // "/jobs" covers the list AND every job detail, because both carry
+            // is_saved — per-user state that must never be served from a stale
+            // shared cache. Saving a job POSTs, which evicts nothing, so for the
+            // next 5 minutes every re-entry replayed the pre-save body: the
+            // bookmark looked un-saved again on reopening, Unsave appeared to do
+            // nothing, and once the entry finally expired the real saved set
+            // arrived all at once, which read as jobs "saving themselves".
+            // General rule: if a response embeds per-user mutable state, it does
+            // not belong in this cache.
+            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs", "/notebook")
             // Course LIST is admin-curated: a course deleted in the admin panel
             // must disappear promptly (QA 09-Jul issue 1), and no app-side
             // mutation ever evicts this URL. endsWith only — course DETAIL

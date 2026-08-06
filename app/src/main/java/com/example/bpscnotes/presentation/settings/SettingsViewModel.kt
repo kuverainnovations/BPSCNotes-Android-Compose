@@ -104,11 +104,23 @@ class SettingsViewModel @Inject constructor(
     fun setAutoPlay(v: Boolean)      { _state.update { it.copy(autoPlay = v) };      tokenStore.setBoolPref("auto_play", v) }
     fun setSound(v: Boolean)         { _state.update { it.copy(sound = v) };         tokenStore.setBoolPref("sound", v);         Event.settingsChanged("sound", v.toString()) }
     fun setHaptics(v: Boolean)       { _state.update { it.copy(haptics = v) };       tokenStore.setBoolPref("haptics", v) }
+    /**
+     * Turning biometric login ON is a request, not a fact.
+     *
+     * The toggle used to write the flag straight to prefs, so a phone with no
+     * fingerprint saved could sit there showing "Biometric Login: on" while
+     * nothing was set up and the next login still asked for the MPIN. The
+     * caller (SettingsScreen) now verifies first — hardware present, biometric
+     * enrolled, and one successful prompt — and only a verified enable reaches
+     * here. Turning it OFF needs no proof and never fails.
+     */
     fun setBiometricEnabled(v: Boolean) {
         tokenStore.setBiometricEnabled(v)
         _state.update { it.copy(biometricEnabled = v) }
         Event.settingsChanged("biometric_enabled", v.toString())
     }
+
+    fun showMessage(msg: String) { _state.update { it.copy(successMessage = msg) } }
 
     // ── Real storage sizes ────────────────────────────────────
     fun computeStorageSizes() {

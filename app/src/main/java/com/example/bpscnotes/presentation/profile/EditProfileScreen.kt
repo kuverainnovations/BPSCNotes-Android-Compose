@@ -113,11 +113,14 @@ fun EditProfileScreen(
     }
 
     val doSave = {
+        // Pass the field values through as-is. `.ifEmpty { null }` turned a
+        // cleared box into a null the request then dropped entirely, so wiping
+        // an optional field never saved — see ProfileViewModel.updateProfile.
         viewModel.updateProfile(
             name      = name,
-            email     = email.ifEmpty { null },
-            bio       = bio.ifEmpty { null },
-            district  = district.ifEmpty { null },
+            email     = email,
+            bio       = bio,
+            district  = district,
             targetYear = null,
             prepLevel = null
         )
@@ -169,7 +172,15 @@ fun EditProfileScreen(
                 }
             }
 
-            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            // imePadding() BEFORE verticalScroll, so the scrollable area shrinks
+            // to the space above the keyboard and can scroll the focused field
+            // into view. Without it the keyboard simply covered the lower fields —
+            // Bio is the last one on the page, so typing a bio meant typing blind.
+            // enableEdgeToEdge in MainActivity disables the window's own
+            // adjustResize, which is why this has to be done per screen.
+            Column(modifier = Modifier.fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(top = 20.dp, bottom = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
@@ -250,8 +261,15 @@ fun EditProfileScreen(
                     EditField(value = name, label = str.editFullName,
                         icon = Icons.Rounded.Person, onValueChange = { name = it })
                     Spacer(Modifier.height(10.dp))
+                    // Flagged as you type, so a malformed address is caught before
+                    // Save rather than only by the check in the view model.
+                    // Blank stays valid — email is optional.
+                    val emailLooksWrong = email.isNotBlank() &&
+                        !Regex("^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$").matches(email.trim())
                     EditField(value = email, label = str.editEmail,
                         icon = Icons.Rounded.Email, keyboardType = KeyboardType.Email,
+                        isError = emailLooksWrong,
+                        supportingText = if (emailLooksWrong) "e.g. name@gmail.com" else null,
                         onValueChange = { email = it })
                     Spacer(Modifier.height(10.dp))
                     // District dropdown — same source as registration screen
@@ -265,9 +283,15 @@ fun EditProfileScreen(
                         leadingIcon = { Icon(Icons.Rounded.LocationOn, null, tint = BpscColors.Primary, modifier = Modifier.size(20.dp)) }
                     )
                     Spacer(Modifier.height(10.dp))
+                    // minLines 3, not 1: at one line the box was the same height
+                    // as Name, so an About/Bio being typed scrolled out of its
+                    // own field a few words in. Three lines of visible text plus
+                    // a live character count make it behave like a text area.
                     EditField(value = bio, label = str.editBio,
                         icon = Icons.Rounded.Info, singleLine = false,
-                        minLines = 1, maxLines = 6, onValueChange = { bio = it })
+                        minLines = 3, maxLines = 6,
+                        supportingText = "${bio.length}/300",
+                        onValueChange = { if (it.length <= 300) bio = it })
                 }
 
                 // ── Mobile (read-only) ─────────────────────────
@@ -351,7 +375,9 @@ private fun EditField(
     singleLine: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
     minLines: Int = 1,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    isError: Boolean = false,
+    supportingText: String? = null,
 ) {
     OutlinedTextField(
         value         = value,
@@ -363,6 +389,8 @@ private fun EditField(
         singleLine    = singleLine,
         minLines      = minLines,
         maxLines      = maxLines,
+        isError       = isError,
+        supportingText = supportingText?.let { { Text(it, style = MaterialTheme.typography.labelSmall) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor   = BpscColors.Primary,

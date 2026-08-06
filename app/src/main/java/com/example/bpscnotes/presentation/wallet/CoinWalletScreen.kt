@@ -217,7 +217,6 @@ fun CoinWalletScreen(
                         item { SectionHeader(str.walletEarnCoins, "Complete tasks to earn coins") }
                         state.earnTasks.forEachIndexed { idx, task ->
                             item(key = task.id) {
-                                Log.e("TASK_ACTION", task.action)
                                 EarnTaskRow(
                                     index    = idx + 1,
                                     task     = task,
@@ -230,13 +229,17 @@ fun CoinWalletScreen(
 
                                             // Daily Quiz
                                             "daily_quiz" -> {
-                                                val today = java.text.SimpleDateFormat(
-                                                    "yyyy-MM-dd",
-                                                    java.util.Locale.getDefault()
-                                                ).format(java.util.Date())
-
+                                                // Open the lobby. Despite the name, this route's
+                                                // argument is a QUIZ ID, not a date — anything other
+                                                // than "today" is fed straight to startQuiz(). This
+                                                // used to pass a formatted date, so the app asked the
+                                                // server to start a quiz whose id was "2026-08-04",
+                                                // got a failure, and showed "Something went wrong"
+                                                // every single time. Try Again then merely cleared
+                                                // the error, which is why it appeared to "redirect"
+                                                // to the quiz list — that was the lobby all along.
                                                 navController.navigate(
-                                                    Screen.DailyQuiz.createRoute(today)
+                                                    Screen.DailyQuiz.createRoute(Screen.DailyQuiz.LOBBY)
                                                 )
                                             }
 
@@ -249,8 +252,13 @@ fun CoinWalletScreen(
 
                                             // Upload Notes
                                             "material_upload" -> {
+                                                // Straight to the upload form. This used to open
+                                                // Student Hub, which lands on its Explore tab — a
+                                                // browsing list, with the task's Upload button
+                                                // nowhere in sight. The task says "Upload Study
+                                                // Notes", so take them there.
                                                 navController.navigate(
-                                                    Screen.StudyMaterials.route
+                                                    Screen.UploadMaterial.route
                                                 )
                                             }
 
@@ -903,7 +911,9 @@ private fun EarnTaskRow(
                         style      = MaterialTheme.typography.bodyMedium,
                         color      = if (task.isCompleted) BpscColors.TextSecondary else BpscColors.TextPrimary,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines   = 1,
+                        // Two lines: "Complete Study Session" and "Complete Daily
+                        // Quiz" both lost their last word to a single-line clamp.
+                        maxLines   = 2,
                         overflow   = TextOverflow.Ellipsis,
                         modifier   = Modifier.weight(1f, fill = false)
                     )
@@ -921,7 +931,18 @@ private fun EarnTaskRow(
                         )
                     }
                 }
-                Text(task.subtitle.orEmpty(), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1)
+                // maxLines=1 with the default Clip overflow chopped mid-word:
+                // "Share notes with the community" rendered as "Share notes with
+                // the", which reads as a bug rather than as truncation. Two lines
+                // fit every subtitle the server sends, and Ellipsis makes any
+                // future longer one degrade honestly.
+                Text(
+                    task.subtitle.orEmpty(),
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = cs.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 // Coin reward pill
                 Row(
                     modifier = Modifier
@@ -932,7 +953,6 @@ private fun EarnTaskRow(
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text("🪙", fontSize = 10.sp)
-                    Log.e("TAG", "EarnTaskRow:${task.coinsReward} ", )
                     Text(
                         "+${task.coinsReward} coins",
                         style      = MaterialTheme.typography.labelSmall,

@@ -436,6 +436,7 @@ fun RoomsHubScreen(
 // Feed) now lives in normal scrollable cards in the LazyColumn below,
 // not inside this gradient block.
 // ════════════════════════════════════════════════════════════
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RoomsHeroHeader(
     state: TierRoomsUiState,
@@ -541,14 +542,27 @@ private fun RoomsHeroHeader(
                         Column {
                             Text(myTier.name ?: str.roomsTierSilver + " Room",
                                 style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // FlowRow with non-wrapping items. As a plain Row all
+                            // three shared the leftover width beside the coins/hr
+                            // pill, so the last one broke inside itself — "0" on
+                            // one line and "online" on the next, sitting out of
+                            // line with its neighbours. Now each label stays whole
+                            // and a label that will not fit moves down as a unit.
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement   = Arrangement.spacedBy(2.dp),
+                                itemVerticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Text("👥 ${myTier.displayMembers}",
-                                    style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f))
+                                    style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.65f),
+                                    maxLines = 1, softWrap = false)
                                 Text("🟢 ${myTier.displayActive} studying",
-                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.Success)
+                                    style = MaterialTheme.typography.labelSmall, color = BpscColors.Success,
+                                    maxLines = 1, softWrap = false)
                                 state.roomStats?.let {
                                     Text("📶 ${it.onlineMembers} online",
-                                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFA726))
+                                        style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFA726),
+                                        maxLines = 1, softWrap = false)
                                 }
                             }
                         }
@@ -645,13 +659,30 @@ private fun MyRoomProgressCard(state: TierRoomsUiState) {
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatPillLight("⏱️", "${stats.totalStudyHours.toInt()}h", str.roomsStudied)
+                    // toInt() on hours turned every session under an hour into a
+                    // flat "0h", so six minutes of study read as nothing studied
+                    // while the leaderboard on the next screen said "6m".
+                    StatPillLight("⏱️", studyDurationLabel(stats.totalStudyHours), str.roomsStudied)
                     StatPillLight("🔥", "${stats.streak}", "Streak")
                     StatPillLight("📝", "${stats.quizzesAttempted}", "Quizzes")
                     StatPillLight("🎯", "${stats.accuracy.toInt()}%", "Accuracy")
                 }
             }
         }
+    }
+}
+
+/**
+ * Formats a duration given in hours the way the rest of the app does:
+ * "42m" under an hour, "2h" on the hour, "2h 15m" otherwise. Matches the
+ * Dashboard's "Today" stat, so the two screens agree about the same minutes.
+ */
+private fun studyDurationLabel(hours: Double): String {
+    val totalMinutes = kotlin.math.round(hours * 60).toInt().coerceAtLeast(0)
+    return when {
+        totalMinutes < 60      -> "${totalMinutes}m"
+        totalMinutes % 60 == 0 -> "${totalMinutes / 60}h"
+        else                   -> "${totalMinutes / 60}h ${totalMinutes % 60}m"
     }
 }
 

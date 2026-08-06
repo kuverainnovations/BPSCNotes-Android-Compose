@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.notebook
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,8 +15,9 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +38,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -70,8 +73,18 @@ import java.util.Locale
 // subject taxonomy (live-classes, quizzes).
 private val NoteSubjects = listOf(
     "Polity", "History", "Geography", "Economy", "Science",
-    "Environment", "Bihar GK", "Current Affairs",
+    "Mathematics", "Environment", "Bihar GK", "Current Affairs",
 )
+
+/** Images the gallery may return in one pick. See the picker comment below. */
+private const val NoteImagePickLimit = 10
+
+/**
+ * Every note card in the grid is exactly this tall. Uniform by construction —
+ * the previous content-sized cards made the two columns drift out of step and
+ * put each card's date on a different line.
+ */
+private val NoteCardHeight = 200.dp
 
 // Palette names must match NOTE_COLORS in backend notebook.module.ts
 private val NoteColors = listOf(
@@ -294,10 +307,15 @@ private fun NotesList(
                 }
             }
         } else {
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Fixed(2),
+            // A uniform grid, not a staggered one. Staggered sized every card to
+            // its own content, so a one-line note sat beside a note with an image
+            // and the two columns drifted out of step down the page. A plain grid
+            // gives every card the same width and levels each row to its tallest
+            // card, which is what the rest of the app's card lists look like.
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalItemSpacing = 10.dp,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(bottom = 90.dp),
             ) {
                 items(notes, key = { it.id }) { note ->
@@ -309,9 +327,22 @@ private fun NotesList(
 }
 
 @Composable
-private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit) {
+private fun NoteCard(
+    note: NoteDto,
+    onClick: () -> Unit,
+    onTogglePin: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Fixed height, not content height. Levelling rows with fillMaxHeight was
+    // not enough: a note holding three images made its whole row enormous, and
+    // the short card beside it stretched while its date/subject footer stayed
+    // glued under the text — so the footer sat at a different height on every
+    // card. Pinning the height makes the grid uniform, and the three-part
+    // layout below (title / flexible body / footer) puts the footer on the same
+    // baseline in every card.
     Column(
-        Modifier
+        modifier
+            .height(NoteCardHeight)
             .clip(RoundedCornerShape(16.dp))
             .background(noteBg(note.color))
             .clickable(onClick = onClick)
@@ -333,39 +364,53 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
             )
         }
 
-        // Block-aware preview (falls back to plain content for legacy notes)
-        val blocks = note.blocks
-        if (!blocks.isNullOrEmpty()) {
+        // Body takes whatever space is left between title and footer and clips
+        // anything that does not fit, so a long note simply shows less of itself
+        // instead of pushing the card out of shape.
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds(),
+        ) {
             Spacer(Modifier.height(6.dp))
-            blocks.take(6).forEach { b -> NoteCardBlockLine(b) }
-            if (blocks.size > 6) {
-                Text("…", style = MaterialTheme.typography.bodySmall, color = BpscColors.TextHint)
+            val blocks = note.blocks
+            if (!blocks.isNullOrEmpty()) {
+                blocks.take(4).forEach { b -> NoteCardBlockLine(b) }
+            } else if (note.content.isNotBlank()) {
+                Text(
+                    note.content,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = BpscColors.TextSecondary,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-        } else if (note.content.isNotBlank()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                note.content,
-                style = MaterialTheme.typography.bodySmall,
-                color = BpscColors.TextSecondary,
-                maxLines = 6, overflow = TextOverflow.Ellipsis,
-            )
         }
 
         Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Footer sits on the card's bottom edge in every card. The date is
+        // fixed-width and never wraps — it used to carry weight(1f) and get
+        // squeezed by a long subject chip, breaking "5 Aug 2026" across two
+        // lines on some cards and not others.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 formatNoteDate(note.updatedAt),
                 style = MaterialTheme.typography.labelSmall,
                 color = BpscColors.TextHint,
-                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                softWrap = false,
             )
+            Spacer(Modifier.weight(1f).widthIn(min = 6.dp))
             note.subject?.takeIf { it.isNotBlank() }?.let { subject ->
                 Text(
                     subject,
                     style = MaterialTheme.typography.labelSmall,
                     color = BpscColors.Primary,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
+                        .weight(1f, fill = false)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.White.copy(alpha = 0.7f))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
@@ -379,19 +424,21 @@ private fun NoteCard(note: NoteDto, onClick: () -> Unit, onTogglePin: () -> Unit
 private fun NoteCardBlockLine(b: NoteBlockDto) {
     when (b.type) {
         "image" -> if (!b.url.isNullOrBlank()) {
-            // Card preview: cap the height so one tall image can't dominate
-            // the card, but Fit (not Crop) so the whole image is still visible.
+            // Fixed 72.dp, and Crop rather than Fit. Inside a fixed-height card
+            // a Fit image with a max height still reserved whatever it wanted up
+            // to that max, so a portrait photo pushed everything else out of the
+            // preview; a fixed band keeps every image block the same size and
+            // leaves room for the text under it.
             AsyncImage(
                 model = b.url,
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.CenterStart,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 120.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .padding(vertical = 2.dp),
+                    .height(72.dp)
+                    .clip(RoundedCornerShape(8.dp)),
             )
+            Spacer(Modifier.height(4.dp))
         }
         "heading" -> Text(
             b.text, style = MaterialTheme.typography.labelLarge,
@@ -438,8 +485,15 @@ private fun BlockEditor(
     // Where a new block/image is inserted: after the focused block, else end.
     fun anchorId(): String? = focusedId ?: state.editorBlocks.lastOrNull()?.id
 
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) viewModel.addImage(anchorId(), uri)
+    // Multi-select. GetContent() returns exactly one Uri, so adding three photos
+    // to a note meant three round trips through the gallery. The photo picker
+    // also needs no storage permission on any API level, same as GetContent did.
+    // 10 per trip is well under the system picker's own cap on every device, and
+    // the user can pick again for more — there is no limit on a note's images.
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(NoteImagePickLimit)
+    ) { uris ->
+        if (uris.isNotEmpty()) viewModel.addImages(anchorId(), uris)
     }
 
     Column(Modifier.fillMaxSize().imePadding()) {
@@ -532,7 +586,13 @@ private fun BlockEditor(
                     item { AddChip("• Bullet")  { viewModel.toolbarBlock(anchorId(), BlockType.Bullet) } }
                     item { AddChip("1. List")   { viewModel.toolbarBlock(anchorId(), BlockType.Numbered) } }
                     item { AddChip("☑ Checklist") { viewModel.toolbarBlock(anchorId(), BlockType.Check) } }
-                    item { AddChip("🖼 Image")  { imagePicker.launch("image/*") } }
+                    item {
+                        AddChip("🖼 Image") {
+                            imagePicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

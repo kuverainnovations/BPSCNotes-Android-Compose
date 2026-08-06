@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bpscnotes.core.language.AppLanguage
 import com.example.bpscnotes.core.language.LanguageManager
 import com.example.bpscnotes.core.language.LanguagePickerRow
+import com.example.bpscnotes.core.auth.AppBiometricManager
 import com.example.bpscnotes.core.language.LocalStrings
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.t.BpscColors
@@ -192,19 +193,61 @@ fun SettingsScreen(
 
                         // Biometric toggle
                         val biometricContext = androidx.compose.ui.platform.LocalContext.current
-                        val biometricAvailable = remember(biometricContext) {
-                            com.example.bpscnotes.core.auth.AppBiometricManager.isAvailable(biometricContext)
-                        }
-                        if (biometricAvailable) {
+                        // Re-read on every recomposition, not remember{}: the user
+                        // can leave to add a fingerprint and come straight back,
+                        // and a cached "no hardware" would keep the row hidden.
+                        val biometricStatus = AppBiometricManager.status(biometricContext)
+                        // Shown whenever the phone HAS a sensor. Gating on
+                        // isAvailable() hid the row entirely when no fingerprint
+                        // was enrolled — which is the state where the user most
+                        // needs to be told where to add one ("Where can we add
+                        // biometric?"). Only a phone with no sensor at all hides it.
+                        if (biometricStatus != AppBiometricManager.Status.NoHardware &&
+                            biometricStatus != AppBiometricManager.Status.Unsupported) {
+                            val notEnrolled = biometricStatus == AppBiometricManager.Status.NotEnrolled
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                             SettingsToggleRow(
                                 icon     = Icons.Rounded.Fingerprint,
                                 iconBg   = Color(0xFFE3F2FD),
                                 iconTint = Color(0xFF1565C0),
                                 title    = str.biometricLogin,
-                                subtitle = "Use fingerprint or face to login",
-                                checked  = settingsState.biometricEnabled,
-                                onChange = { settingsViewModel.setBiometricEnabled(it) }
+                                subtitle = if (notEnrolled) "Add a fingerprint or face in phone settings first"
+                                           else "Use fingerprint or face to login",
+                                // Never show ON while no biometric is enrolled: the
+                                // setting cannot work in that state, whatever was
+                                // saved earlier.
+                                checked  = settingsState.biometricEnabled && !notEnrolled,
+                                onChange = { wantOn ->
+                                    when {
+                                        // Switching off needs no proof.
+                                        !wantOn -> settingsViewModel.setBiometricEnabled(false)
+
+                                        // Nothing enrolled — take them to the system
+                                        // screen where a fingerprint can be added.
+                                        // The app cannot enrol one itself.
+                                        notEnrolled -> {
+                                            settingsViewModel.showMessage(
+                                                "Add a fingerprint or face unlock in phone settings, then turn this on."
+                                            )
+                                            AppBiometricManager.openEnrollment(biometricContext)
+                                        }
+
+                                        // Enrolled — prove it works before saving, so
+                                        // the switch can never claim to be on while
+                                        // biometric login would actually fail.
+                                        else -> AppBiometricManager.authenticate(
+                                            context    = biometricContext,
+                                            title      = str.biometricLogin,
+                                            subtitle   = "Confirm to turn on biometric login",
+                                            onSuccess  = {
+                                                settingsViewModel.setBiometricEnabled(true)
+                                                settingsViewModel.showMessage("Biometric login is on")
+                                            },
+                                            onError    = { msg -> settingsViewModel.showMessage(msg) },
+                                            onFallback = { /* cancelled — leave it off */ },
+                                        )
+                                    }
+                                }
                             )
                         }
                     }

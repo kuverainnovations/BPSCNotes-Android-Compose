@@ -339,7 +339,11 @@ class TokenStore @Inject constructor(
             .remove("user_id")
             .remove("user_mobile")
             .remove("has_mpin")
-            .remove("biometric_enabled")
+            // biometric_enabled deliberately NOT removed. It is a device
+            // preference, not a credential (see the class header), and wiping it
+            // meant the switch a user had turned on in Settings was off again
+            // after every logout. clearAll() still removes it — deleting the
+            // account should leave nothing behind.
             .remove("exam_setup_done")
             .remove("primary_exam")
             .remove("prep_level")

@@ -1144,9 +1144,16 @@ private fun SummaryItem(icon: String, value: String, label: String, color: Color
     }
 }
 
+/**
+ * Renders nothing for a card with no subject, rather than an empty coloured pill.
+ * Flashcards are one undivided deck now and the admin form has no subject field,
+ * so most new cards have none at all.
+ */
 @Composable
-private fun FlashSubjectChip(subject: String) {
+private fun FlashSubjectChip(subject: String?) {
+    val label = subject?.trim().orEmpty()
+    if (label.isEmpty()) return
     val colors = mapOf("Polity" to Pair(Color(0xFF9B59B6), Color(0xFFF3E8FD)), "History" to Pair(Color(0xFFE74C3C), Color(0xFFFEE8E8)), "Geography" to Pair(Color(0xFF1ABC9C), Color(0xFFE8FDF8)), "Economy" to Pair(Color(0xFFE67E22), Color(0xFFFFF0EA)), "Bihar GK" to Pair(Color(0xFFF39C12), Color(0xFFFFF8E1)), "Science" to Pair(Color(0xFF2ECC71), Color(0xFFE8FDF4)))
-    val (fg, bg) = colors[subject] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
-    Text(subject, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 8.dp, vertical = 3.dp))
+    val (fg, bg) = colors[label] ?: Pair(BpscColors.Primary, BpscColors.PrimaryLight)
+    Text(label, style = MaterialTheme.typography.labelSmall, color = fg, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bg).padding(horizontal = 8.dp, vertical = 3.dp))
 }

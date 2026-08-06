@@ -127,13 +127,21 @@ fun JobVacanciesScreen(
         var selectedCategory by remember { mutableStateOf<JobCategory?>(null) }
         // QA issue 14: saved jobs had no page to view them — the 🔖 Saved
         // chip below filters the list to bookmarked jobs.
-        var showSavedOnly    by remember { mutableStateOf(false) }
-        val savedJobs = remember(vmState.jobs) {
-            vmState.jobs
-                .filter { it.isSaved == true }
-                .map { it.id }
-                .toMutableStateList()
-        }
+        //
+        // One piece of state drives both the header tiles and the Saved chip.
+        // They used to be independent — the tiles were inert labels and the chip
+        // owned a private boolean — which is why the two could disagree about
+        // what was on screen and the Saved filter felt stuck. Selecting the tile
+        // that is already active clears it, so every filter is its own off switch.
+        var quickFilter by remember { mutableStateOf(JobQuickFilter.None) }
+        val showSavedOnly = quickFilter == JobQuickFilter.Saved
+        // Derived, not a second copy. This was a MutableStateList rebuilt from
+        // vmState.jobs, so the card's bookmark icon read from one source while
+        // the Saved filter read job.isSaved from another — two versions of the
+        // same fact that could disagree after any reload. The view model already
+        // updates jobs[].isSaved optimistically and reverts on failure, so that
+        // is the only source worth reading.
+        val savedJobs = vmState.jobs.filter { it.isSaved }.map { it.id }.toSet()
         var showAlertSheet   by remember { mutableStateOf(false) }
         val focusManager     = LocalFocusManager.current
 
@@ -144,16 +152,21 @@ fun JobVacanciesScreen(
             allJobs.map { it.category?.toJobCategory() }.distinct().sortedBy { it?.label }
         }
 
-        val filtered = remember(allJobs, searchQuery, selectedCategory, showSavedOnly) {
+        val filtered = remember(allJobs, searchQuery, selectedCategory, quickFilter) {
             allJobs.filter { job ->
                 val matchCat    = selectedCategory == null || (job.category ?: "").toJobCategory() == selectedCategory
-                val matchSaved  = !showSavedOnly || job.isSaved
+                val matchQuick  = when (quickFilter) {
+                    JobQuickFilter.None        -> true
+                    JobQuickFilter.New         -> job.isNew
+                    JobQuickFilter.ClosingSoon -> job.applyEndDate.parseToMillis().daysUntil() in 0..7
+                    JobQuickFilter.Saved       -> job.isSaved
+                }
                 val matchSearch = searchQuery.isEmpty() ||
                         job.title.contains(searchQuery, true) ||
                         job.department?.contains(searchQuery, true) == true ||
                         job.location?.contains(searchQuery, true) == true ||
                         job.qualification?.contains(searchQuery, true) == true
-                matchCat && matchSaved && matchSearch
+                matchCat && matchQuick && matchSearch
             }.sortedWith(compareBy { it.applyEndDate.parseToMillis() })
         }
 
@@ -236,13 +249,29 @@ fun JobVacanciesScreen(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(0.1f)).padding(horizontal = 4.dp, vertical = 10.dp),
                             Arrangement.SpaceEvenly
                         ) {
-                            JobStatChip("📋", "${allJobs.size}", "Total")
+                            // Tapping a tile filters the list to exactly the jobs
+                            // it counts; tapping the active one clears it. Total
+                            // is the "show everything" tile, so it also drops any
+                            // category chip — it is the reset.
+                            JobStatChip(
+                                "📋", "${allJobs.size}", str.filterAll,
+                                selected = quickFilter == JobQuickFilter.None && selectedCategory == null,
+                            ) { quickFilter = JobQuickFilter.None; selectedCategory = null }
                             Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                            JobStatChip("🆕", "${allJobs.count { it.isNew }}", "New")
+                            JobStatChip(
+                                "🆕", "${allJobs.count { it.isNew }}", "New",
+                                selected = quickFilter == JobQuickFilter.New,
+                            ) { quickFilter = quickFilter.toggle(JobQuickFilter.New) }
                             Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                            JobStatChip("🔴", "${allJobs.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon")
+                            JobStatChip(
+                                "🔴", "${allJobs.count { (it.applyEndDate.parseToMillis().daysUntil()) in 0..7 }}", "Closing Soon",
+                                selected = quickFilter == JobQuickFilter.ClosingSoon,
+                            ) { quickFilter = quickFilter.toggle(JobQuickFilter.ClosingSoon) }
                             Box(Modifier.width(1.dp).height(28.dp).background(Color.White.copy(0.2f)))
-                            JobStatChip("🔖", "${savedJobs.size}", str.jobsSaved)
+                            JobStatChip(
+                                "🔖", "${savedJobs.size}", str.jobsSaved,
+                                selected = quickFilter == JobQuickFilter.Saved,
+                            ) { quickFilter = quickFilter.toggle(JobQuickFilter.Saved) }
                         }
                     }
                 }
@@ -253,12 +282,12 @@ fun JobVacanciesScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        val sel = selectedCategory == null && !showSavedOnly
+                        val sel = selectedCategory == null && quickFilter == JobQuickFilter.None
                         Box(
                             Modifier.clip(RoundedCornerShape(20.dp))
                                 .background(if (sel) BpscColors.Primary else Color.White)
                                 .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                                .clickable { selectedCategory = null; showSavedOnly = false }
+                                .clickable { selectedCategory = null; quickFilter = JobQuickFilter.None }
                                 .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(str.filterAll, style = MaterialTheme.typography.bodyMedium,
@@ -272,7 +301,7 @@ fun JobVacanciesScreen(
                             Modifier.clip(RoundedCornerShape(20.dp))
                                 .background(if (sel) BpscColors.Primary else Color.White)
                                 .border(1.dp, if (sel) BpscColors.Primary else cs.outline, RoundedCornerShape(20.dp))
-                                .clickable { showSavedOnly = !showSavedOnly }
+                                .clickable { quickFilter = quickFilter.toggle(JobQuickFilter.Saved) }
                                 .padding(horizontal = 12.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -907,11 +936,49 @@ private fun DeadlineBar(daysLeft: Long, isPassed: Boolean, applyEndDate: String?
     }
 }
 
+/**
+ * One tile in the header strip. Tapping it applies its filter to the list —
+ * these were display-only, so the counts described a list the user had no way
+ * to actually see. [selected] draws the active tile so the strip and the
+ * category chips never disagree about what is being shown.
+ */
+/**
+ * The header strip's filters. Exactly one can be active, and re-selecting the
+ * active one returns to [None] — so any filter can be cleared from the control
+ * that set it, which is what "Saved is not unselecting" was about.
+ */
+private enum class JobQuickFilter { None, New, ClosingSoon, Saved }
+
+private fun JobQuickFilter.toggle(target: JobQuickFilter) =
+    if (this == target) JobQuickFilter.None else target
+
 @Composable
-private fun JobStatChip(icon: String, value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.width(64.dp)) {
+private fun JobStatChip(
+    icon: String,
+    value: String,
+    label: String,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier
+            .width(64.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) Color.White.copy(0.22f) else Color.Transparent)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 4.dp),
+    ) {
         Text(icon, fontSize = 13.sp)
         Text(value, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(0.6f), fontSize = 9.sp)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) Color.White else Color.White.copy(0.6f),
+            fontSize = 9.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

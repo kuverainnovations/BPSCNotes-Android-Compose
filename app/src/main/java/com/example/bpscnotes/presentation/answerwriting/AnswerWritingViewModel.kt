@@ -250,7 +250,13 @@ class AnswerWritingViewModel @Inject constructor(
 
     // ── Handwritten answer photos ──────────────────────────────
 
-    companion object { const val MAX_PHOTOS = 5 }
+    companion object {
+        const val MAX_PHOTOS = 5
+
+        /** Must match MAX_PDF_BYTES in the backend's answer-writing module. */
+        const val MAX_PDF_MB    = 25
+        const val MAX_PDF_BYTES = MAX_PDF_MB * 1024 * 1024
+    }
 
     fun addImage(uri: Uri) {
         _uiState.update {
@@ -263,8 +269,24 @@ class AnswerWritingViewModel @Inject constructor(
         _uiState.update { it.copy(selectedImages = it.selectedImages - uri) }
     }
 
-    fun selectPdf(uri: Uri, name: String?) {
-        _uiState.update { it.copy(selectedPdf = uri, selectedPdfName = name ?: "answer.pdf") }
+    /**
+     * @param sizeBytes from OpenableColumns.SIZE, or -1 when the provider does
+     *        not report one. An unknown size is allowed through and caught by
+     *        the byte-count check in [submitPdf].
+     */
+    fun selectPdf(uri: Uri, name: String?, sizeBytes: Long = -1L) {
+        if (sizeBytes > MAX_PDF_BYTES) {
+            _uiState.update { it.copy(submitError = pdfTooLargeMessage(sizeBytes)) }
+            return
+        }
+        _uiState.update {
+            it.copy(selectedPdf = uri, selectedPdfName = name ?: "answer.pdf", submitError = null)
+        }
+    }
+
+    private fun pdfTooLargeMessage(sizeBytes: Long): String {
+        val mb = sizeBytes / (1024.0 * 1024.0)
+        return "That PDF is ${"%.1f".format(mb)} MB. Please upload one under $MAX_PDF_MB MB."
     }
 
     fun clearPdf() {
@@ -280,6 +302,10 @@ class AnswerWritingViewModel @Inject constructor(
                 val part = withContext(Dispatchers.IO) {
                     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                         ?: throw Exception("Could not read the PDF")
+                    // Second gate, for providers that report no size at the
+                    // picker. Same limit the backend enforces (MAX_PDF_BYTES in
+                    // answer-writing.module.ts) — keep the two in step.
+                    if (bytes.size > MAX_PDF_BYTES) throw Exception(pdfTooLargeMessage(bytes.size.toLong()))
                     MultipartBody.Part.createFormData(
                         "pdf", _uiState.value.selectedPdfName ?: "answer.pdf",
                         bytes.toRequestBody("application/pdf".toMediaTypeOrNull())

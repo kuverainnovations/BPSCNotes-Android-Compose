@@ -273,12 +273,29 @@ class NotebookViewModel @Inject constructor(
     }
 
     /** Pick → upload → insert an image block after [afterId]. */
-    fun addImage(afterId: String?, uri: android.net.Uri) {
-        val placeholder = EditableBlock(type = BlockType.Image, uploading = true)
+    fun addImage(afterId: String?, uri: android.net.Uri) = addImages(afterId, listOf(uri))
+
+    /**
+     * Inserts one block per picked image, in the order they were picked, and
+     * uploads them concurrently.
+     *
+     * The editor used to accept a single image per visit to the gallery, so
+     * illustrating a note meant reopening the picker once per photo. Placeholders
+     * are all inserted up front, before any upload finishes, so the blocks keep
+     * the order the user chose no matter which upload completes first.
+     */
+    fun addImages(afterId: String?, uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        val placeholders = uris.map { EditableBlock(type = BlockType.Image, uploading = true) }
         updateBlocks { list ->
             val idx = list.indexOfFirst { it.id == afterId }
-            if (idx < 0) list + placeholder else list.toMutableList().apply { add(idx + 1, placeholder) }
+            if (idx < 0) list + placeholders
+            else list.toMutableList().apply { addAll(idx + 1, placeholders) }
         }
+        placeholders.forEachIndexed { i, placeholder -> uploadImageInto(placeholder.id, uris[i]) }
+    }
+
+    private fun uploadImageInto(blockId: String, uri: android.net.Uri) {
         viewModelScope.launch {
             try {
                 val bytes = if (uri.scheme == "file") java.io.File(uri.path!!).readBytes()
@@ -291,10 +308,11 @@ class NotebookViewModel @Inject constructor(
                 val part = MultipartBody.Part.createFormData("image", "note.$ext", body)
                 val url  = api.uploadImage(part).data?.url
                 if (url.isNullOrBlank()) throw Exception("No URL returned")
-                updateBlocks { list -> list.map { if (it.id == placeholder.id) it.copy(url = url, uploading = false) else it } }
+                updateBlocks { list -> list.map { if (it.id == blockId) it.copy(url = url, uploading = false) else it } }
             } catch (e: Exception) {
-                // Drop the placeholder and surface the error
-                updateBlocks { list -> list.filterNot { it.id == placeholder.id } }
+                // Drop this placeholder and surface the error. The other images in
+                // the same batch keep uploading — one bad file must not lose them.
+                updateBlocks { list -> list.filterNot { it.id == blockId } }
                 _state.update { it.copy(error = e.toUserMessage("Image upload failed")) }
             }
         }

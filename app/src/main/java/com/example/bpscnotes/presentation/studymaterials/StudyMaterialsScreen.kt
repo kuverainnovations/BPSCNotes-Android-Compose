@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -254,9 +253,14 @@ fun StudyMaterialsScreen(
         )
     }
 
-    // Marketplace rules — auto-shows on first visit, or via (i) info button
+    // Marketplace rules — auto-shows on first visit, or via (i) info button.
+    // Closing by scrim/swipe/back does not persist "seen", so the sheet still
+    // greets a user who dismissed it without reading; only "Got it" settles it.
     if (state.showRulesSheet) {
-        MarketplaceRulesSheet(onDismiss = viewModel::dismissRules)
+        MarketplaceRulesSheet(
+            onDismiss     = viewModel::closeRules,
+            onAcknowledge = viewModel::dismissRules,
+        )
     }
 
     // Negotiation sheet — accept/counter an admin's price offer
@@ -1397,28 +1401,38 @@ private fun LibraryItemCard(
 // ════════════════════════════════════════════════════════════
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MarketplaceRulesSheet(onDismiss: () -> Unit) {
+private fun MarketplaceRulesSheet(
+    /** Scrim tap, swipe-down or back — closes without marking the rules as seen. */
+    onDismiss: () -> Unit,
+    /** The "Got it" button — closes AND persists the seen flag. */
+    onAcknowledge: () -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
-    // confirmValueChange blocks swipe-to-dismiss reaching Hidden (which would
-    // leave a ghost scrim intercepting taps, since onDismissRequest={} below
-    // means the composable never leaves the tree on its own). Only the
-    // explicit "Got it" button (which sets showRulesSheet=false directly)
-    // removes this from composition.
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange    = { it != SheetValue.Hidden }
-    )
+    // Plain state, like every other sheet in this file. The previous version
+    // rejected SheetValue.Hidden in confirmValueChange to stop a swipe leaving a
+    // ghost scrim — but the ghost scrim was caused by onDismissRequest={}, which
+    // kept this composable in the tree after the sheet had hidden. With a real
+    // onDismissRequest the sheet leaves composition normally, so nothing needs
+    // blocking. Rejecting Hidden also meant every downward drag was refused and
+    // sprung back, which is what read as the sheet flickering.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
-        onDismissRequest = {},  // require explicit "Got it" tap - scrim/swipe/back shouldn't silently mark rules as seen
+        onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = cs.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
+        // Scrollable: five rule cards plus header and button overflow the sheet on
+        // a short screen, and more so in Hindi. Unscrolled, "Got it" — the only
+        // way to acknowledge — was pushed past the bottom edge and untappable.
+        val rulesScroll = rememberScrollState()
         Column(
             modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(horizontal = 24.dp).padding(bottom = 24.dp, top = 8.dp),
+                .padding(horizontal = 24.dp).padding(bottom = 24.dp, top = 8.dp)
+                .sheetFlickerFix(rulesScroll)
+                .verticalScroll(rulesScroll),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -1480,7 +1494,7 @@ private fun MarketplaceRulesSheet(onDismiss: () -> Unit) {
             Spacer(Modifier.height(4.dp))
 
             Button(
-                onClick = onDismiss,
+                onClick = onAcknowledge,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BpscColors.Primary)
@@ -1814,7 +1828,7 @@ private fun WalletSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun MaterialDetailSheet(
     material:     MaterialDetailData,
@@ -1850,7 +1864,13 @@ private fun MaterialDetailSheet(
                 .background(Brush.linearGradient(listOf(color.copy(0.7f), color)))
                 .padding(20.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // FlowRow, not Row: with the subject badge added this is five
+                    // chips wide and a fixed Row pushed the last one off-screen.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement   = Arrangement.spacedBy(6.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(material.type.emoji, fontSize = 22.sp)
                         TypeBadgeWhite(material.type.label)
                         if (!material.isPremium) FreeBadgeWhite() else ProBadge()
@@ -1865,6 +1885,20 @@ private fun MaterialDetailSheet(
                             .background(dlBg).padding(horizontal = 6.dp, vertical = 3.dp)) {
                             Text(detailLang, style = MaterialTheme.typography.labelSmall,
                                 color = dlFg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                        // Subject. The uploader picks one and it is required, the
+                        // admin panel shows it and so does the Downloads list —
+                        // this sheet was the one place it went missing, so the
+                        // person deciding whether to spend coins on a PDF could
+                        // not see what it was even about.
+                        val detailSubject = material.subject.trim()
+                        if (detailSubject.isNotEmpty()) {
+                            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFE8F5E9)).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                                Text(detailSubject, style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF2E7D32), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                     Text(material.title, style = MaterialTheme.typography.titleLarge,

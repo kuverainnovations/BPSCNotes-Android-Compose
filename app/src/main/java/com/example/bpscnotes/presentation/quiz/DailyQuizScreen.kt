@@ -264,6 +264,47 @@ private fun QuizLobbyScreen(
 
 
 
+/** The "·" separator between meta items. Never wraps or shrinks. */
+@Composable
+private fun QuizMetaDot() {
+    Text("·", style = MaterialTheme.typography.labelSmall,
+        color = BpscColors.TextHint, maxLines = 1, softWrap = false)
+}
+
+/**
+ * "Today", "Tomorrow" or "12 Aug" for a quiz's scheduled_for timestamp.
+ *
+ * Returns null when the quiz has no schedule (topic and mock tests are always
+ * available), so those cards stay as they were rather than gaining a blank line,
+ * and null again if the timestamp will not parse — showing nothing beats showing
+ * a wrong date, which is the whole complaint being fixed here.
+ *
+ * Calendar rather than java.time: minSdk is 24 and core library desugaring is
+ * off, so java.time.LocalDate would throw NoClassDefFoundError on Android 7.
+ * Locale.US on both formatters because these are machine-readable ISO dates —
+ * a locale-sensitive formatter can emit non-Latin digits and never match.
+ */
+private fun quizScheduleLabel(scheduledFor: String?): String? {
+    val day = scheduledFor?.takeIf { it.length >= 10 }?.substring(0, 10) ?: return null
+    val iso = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val cal = java.util.Calendar.getInstance()
+    val today     = iso.format(cal.time)
+    val tomorrow  = iso.format(cal.apply { add(java.util.Calendar.DAY_OF_YEAR,  1) }.time)
+    val yesterday = iso.format(cal.apply { add(java.util.Calendar.DAY_OF_YEAR, -2) }.time)
+    return when (day) {
+        today     -> "Today"
+        tomorrow  -> "Tomorrow"
+        yesterday -> "Yesterday"
+        else -> try {
+            iso.isLenient = false
+            val parsed = iso.parse(day) ?: return null
+            java.text.SimpleDateFormat("d MMM", java.util.Locale.US).format(parsed)
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
 @Composable
 private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
     val cs = MaterialTheme.colorScheme
@@ -283,7 +324,13 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                 modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(BpscColors.PrimaryLight),
                 contentAlignment = Alignment.Center
             ) {
-                Text(when (quiz.type) { "daily"->"📅"; "topic"->"📝"; "mock"->"📋"; else->"🎯" }, fontSize = 24.sp)
+                // NOT 📅 for daily quizzes. That emoji is drawn by the system
+                // font as a calendar page reading "JUL 17", so every daily quiz
+                // card looked like it was stamped with a fixed 17 July date —
+                // reported as "the Daily Quiz page displays an incorrect date".
+                // ⏱ carries no date of its own. The real scheduled date is now
+                // spelled out in the meta row below.
+                Text(when (quiz.type) { "daily"->"⏱️"; "topic"->"📝"; "mock"->"📋"; else->"🎯" }, fontSize = 24.sp)
             }
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -294,16 +341,39 @@ private fun QuizPreviewCard(quiz: QuizPreviewDto, onStart: () -> Unit) {
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(quiz.subject, style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    Text("·", color = BpscColors.TextHint)
-                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
-                    Text("·", color = BpscColors.TextHint)
-                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint)
+                // Every item is softWrap=false and only the subject may shrink.
+                // Previously all six shared the width equally, so on a long
+                // subject the coin chip was squeezed to a few dp and broke
+                // *inside itself* — the 🪙 landed on one line and "40" on the
+                // next, which is the "coin value not aligned" report.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        quiz.subject,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.TextHint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    QuizMetaDot()
+                    Text("${quiz.totalQuestions}Q", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.TextHint, maxLines = 1, softWrap = false)
+                    QuizMetaDot()
+                    Text("${quiz.durationMins}min", style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.TextHint, maxLines = 1, softWrap = false)
                     if (quiz.coinsReward > 0) {
-                        Text("·", color = BpscColors.TextHint)
-                        Text("🪙${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold)
+                        QuizMetaDot()
+                        Text("🪙 ${quiz.coinsReward}", style = MaterialTheme.typography.labelSmall,
+                            color = BpscColors.CoinGold, maxLines = 1, softWrap = false)
                     }
+                }
+                // The quiz's own scheduled day, which the card never showed.
+                quizScheduleLabel(quiz.scheduledFor)?.let { label ->
+                    Text(label, style = MaterialTheme.typography.labelSmall,
+                        color = BpscColors.TextHint, maxLines = 1, softWrap = false)
                 }
                 if (quiz.isAttempted) {
                     val lastScore = quiz.myLastScore ?: quiz.avgScore.toInt()

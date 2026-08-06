@@ -600,6 +600,10 @@ private fun navigateBanner(banner: BannerDto, nav: NavHostController) {
         link == "/achievements"    -> nav.navigate(Screen.Achievements.route)
         link == "/challenges"      -> nav.navigate(Screen.WeeklyChallenges.route)
         link == "/courses"         -> nav.navigate(Screen.MyLearningCourses.route)
+        // A discount banner must land on the discounted courses. Pointed at
+        // /courses it opened the whole catalogue, so "20% on the course
+        // purchase" read as applying to every course listed.
+        link == "/offers"          -> nav.navigate(Screen.CourseOffers.route)
 
         // No recognized route set — fall back to banner.type, then to
         // My Learning as a last resort.
@@ -2308,19 +2312,24 @@ fun BpscDrawer(
             activity.overridePendingTransition(0, 0)
         }
     }
+    // Every label here must come from AppStrings. Three were hardcoded English
+    // and stayed English with the app switched to Hindi; a fourth built its
+    // label by string concatenation, which produced "दैनिक क्विज़zes" — the
+    // English plural suffix glued onto a Devanagari word. The keys reused below
+    // are the plain nouns and already carry both translations.
     val menuItems = listOf(
         // ── Study (0-4) ──────────────────────────────────────
         Triple(Icons.Rounded.TrackChanges,  str.targetTitle,          Screen.DailyTargets.route),
-        Triple(Icons.Rounded.Quiz,          str.quizDaily + "zes",    Screen.QuizList.route),
+        Triple(Icons.Rounded.Quiz,          str.quizTitle,            Screen.QuizList.route),
         Triple(Icons.Rounded.Newspaper,     str.caTitle,              Screen.CurrentAffairs.route),
         Triple(Icons.Rounded.Psychology,    str.dashboardActiveRecall,Screen.ActiveRecall.route),
         Triple(Icons.Rounded.EmojiEvents,   str.profileAchievements,  Screen.Achievements.route),
         // ── Explore (5-8) ────────────────────────────────────
-        Triple(Icons.Rounded.Leaderboard,   "Leaderboard",            Screen.GlobalLeaderboard.route),
-        Triple(Icons.Rounded.Download,      "Downloads",              Screen.Downloads.route),
+        Triple(Icons.Rounded.Leaderboard,   str.mockLeaderboard,      Screen.GlobalLeaderboard.route),
+        Triple(Icons.Rounded.Download,      str.downloadsTitle,       Screen.Downloads.route),
         Triple(Icons.Rounded.Work,          str.jobsTitle,            Screen.JobVacancies.route),
         // ── Account (9-10) ───────────────────────────────────
-        Triple(Icons.Rounded.Notifications, "Notifications",          Screen.NotificationSettings.route),
+        Triple(Icons.Rounded.Notifications, str.notifTitle,           Screen.NotificationSettings.route),
         Triple(Icons.Rounded.Settings,      str.drawerSettings,       Screen.Settings.route),
     )
     val scrollState = rememberScrollState()

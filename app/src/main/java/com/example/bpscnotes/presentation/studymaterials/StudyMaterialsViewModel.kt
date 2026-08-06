@@ -543,6 +543,12 @@ class StudyMaterialsViewModel @Inject constructor(
         _state.update { it.copy(showRulesSheet = false) }
     }
 
+    // Close without persisting — scrim tap, swipe-down or back. Someone who
+// waved the sheet away hasn't read the rules, so it should greet them again
+// next visit. Keeping these separate is why the sheet can allow an ordinary
+// dismiss at all; it used to block every route except the button.
+    fun closeRules() = _state.update { it.copy(showRulesSheet = false) }
+
     fun hideUpload() {
         // If upload is in progress, show confirmation dialog instead of closing
         if (_state.value.isUploading) {

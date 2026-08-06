@@ -546,6 +546,8 @@ fun BpscNavHost(
             composable(Screen.ReadingRooms.route)  { ReadingRoomsScreen(navController) }
             composable(Screen.MyLearning.route)         { MyLearningScreen(navController, startTab = 0, fromScreen = "nav-host") }
             composable(Screen.MyLearningCourses.route)  { MyLearningScreen(navController, fromScreen = "nav-host") }
+            // Offer banners land here: the Marketplace tab, discounted courses only.
+            composable(Screen.CourseOffers.route)       { MyLearningScreen(navController, startTab = 1, fromScreen = "nav-host", offersOnly = true) }
 
             // ── Placeholders ─────────────────────────────────────────
             composable(Screen.ELibrary.route)      { ELibraryScreen(navController) }

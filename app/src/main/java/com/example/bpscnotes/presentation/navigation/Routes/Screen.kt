@@ -27,6 +27,13 @@ sealed class Screen(val route: String) {
     object Dashboard    : Screen("dashboard")
     object MyLearning        : Screen("my_learning")
     object MyLearningCourses : Screen("my_learning_courses")  // opens directly on My Courses tab
+
+    /**
+     * Marketplace, filtered to courses that carry a discount. Where an offer
+     * banner ("20% off course purchase") lands — sending it to the full course
+     * list made the offer look like it applied to everything.
+     */
+    object CourseOffers : Screen("course_offers")
     object ELibrary     : Screen("elibrary")
     object Profile      : Screen("profile")
 
@@ -50,7 +57,15 @@ sealed class Screen(val route: String) {
         fun createRoute(id: String) = "ca_article_detail/$id"
     }
     object DailyQuiz      : Screen("daily_quiz/{date}") {
-        fun createRoute(date: String) = "daily_quiz/$date"
+        /**
+         * Pass [LOBBY] to open the quiz list, or a quiz id to start that quiz
+         * straight away. The path segment is historically called "date" but a
+         * date has never been a valid value — DailyQuizScreen hands anything
+         * that isn't [LOBBY] to startQuiz() as an id.
+         */
+        fun createRoute(quizIdOrLobby: String) = "daily_quiz/$quizIdOrLobby"
+
+        const val LOBBY = "today"
     }
 
     // Quiz module (NEW — PRODUCTION FLOW)

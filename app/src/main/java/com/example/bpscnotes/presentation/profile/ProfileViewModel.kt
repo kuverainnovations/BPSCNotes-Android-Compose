@@ -219,6 +219,17 @@ class ProfileViewModel @Inject constructor(
     }
 
     // ── Update profile ─────────────────────────────────────────
+    /**
+     * Accepts anything with one @, a dot in the domain and no whitespace.
+     * android.util.Patterns.EMAIL_ADDRESS would need a device to run, which
+     * makes this untestable off-device; this is the same practical rule.
+     */
+    private fun isValidEmail(value: String): Boolean =
+        Regex("^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$").matches(value)
+
+    /**
+     * @param email/[bio]/[district] "" clears the field, null leaves it as it is.
+     */
     fun updateProfile(
         name: String, email: String?, bio: String?,
         district: String?, targetYear: Int?, prepLevel: String?
@@ -227,15 +238,29 @@ class ProfileViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Name cannot be empty") }
             return
         }
+        // Email is optional, but if one is given it has to be an email. The box
+        // accepted anything, so a typo silently became the address on the account.
+        val trimmedEmail = email?.trim()
+        if (!trimmedEmail.isNullOrEmpty() && !isValidEmail(trimmedEmail)) {
+            _uiState.update { it.copy(error = "Enter a valid email address, e.g. name@gmail.com") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, error = null, successMessage = null) }
             try {
                 val res = authApi.updateProfile(
                     UpdateProfileRequest(
                         name       = name.trim(),
-                        email      = email?.trim()?.ifEmpty { null },
-                        bio        = bio?.trim()?.ifEmpty { null },
-                        district   = district?.trim()?.ifEmpty { null },
+                        // Empty string, NOT null. Gson omits null fields, so a
+                        // cleared email or bio arrived at the server as an absent
+                        // key — and the server only writes a column when the key
+                        // is present. Clearing an optional field therefore did
+                        // nothing and the old text came straight back. "" is
+                        // present in the JSON and the server maps it to NULL.
+                        // A genuine null still means "leave this field alone".
+                        email      = trimmedEmail,
+                        bio        = bio?.trim(),
+                        district   = district?.trim(),
                         targetYear = targetYear,
                         prepLevel  = prepLevel?.ifEmpty { null }
                     )

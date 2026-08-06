@@ -1052,29 +1052,51 @@ private fun QuizResultScreen(
                         Text(str.quizReviewAll, style = MaterialTheme.typography.labelLarge)
                     }
                     Spacer(Modifier.height(8.dp))
-                    // Secondary: Retake + Home side by side
+                    // Secondary: Retake + Home side by side.
+                    // Three things clipped these labels. The height was fixed at
+                    // 44.dp, so any label that wrapped had its second line cut
+                    // off. The default contentPadding then ate ~24.dp of an
+                    // already-halved width. And the retake key carried a trailing
+                    // 🔄 next to a refresh icon that already says the same thing —
+                    // quizRetakeQuiz is the same label without the emoji.
+                    // heightIn keeps 44.dp as a floor, so nothing can be clipped
+                    // even in Hindi, where both labels are longer.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onRetake,
-                            modifier = Modifier.weight(1f).height(44.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, BpscColors.Primary),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.Primary)
                         ) {
                             Icon(Icons.Rounded.Refresh, null, Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(str.quizRetake, style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                str.quizRetakeQuiz,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
                         }
                         OutlinedButton(
                             onClick = onExit,
-                            modifier = Modifier.weight(1f).height(44.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, BpscColors.TextSecondary.copy(0.4f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = BpscColors.TextSecondary)
                         ) {
                             Icon(Icons.Rounded.Home, null, Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(str.quizBackToQuizzes, style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                str.quizBackToQuizzes,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
                         }
                     }
                     Spacer(Modifier.height(4.dp))

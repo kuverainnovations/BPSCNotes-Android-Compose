@@ -139,13 +139,25 @@ private fun DetailContent(
     // ── PDF picker ────────────────────────────────────────────────
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            val name = runCatching {
+            // Read name AND size in one cursor pass. The size was never read, so
+            // the screen promised "max 25 MB" and then happily accepted a 58 MB
+            // file: the whole thing was loaded into a ByteArray and posted, only
+            // for the server's own 25 MB multer limit to cut it off — after the
+            // student had spent the upload. Checking here fails in a millisecond
+            // and says why.
+            val (name, size) = runCatching {
                 context.contentResolver.query(uri, null, null, null, null)?.use { c ->
-                    val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+                    val nameIdx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val sizeIdx = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    if (c.moveToFirst()) {
+                        val n = if (nameIdx >= 0) c.getString(nameIdx) else null
+                        // isNull guards a provider that reports an unknown size.
+                        val s = if (sizeIdx >= 0 && !c.isNull(sizeIdx)) c.getLong(sizeIdx) else -1L
+                        n to s
+                    } else null
                 }
-            }.getOrNull()
-            viewModel.selectPdf(uri, name)
+            }.getOrNull() ?: (null to -1L)
+            viewModel.selectPdf(uri, name, size)
         }
     }
 

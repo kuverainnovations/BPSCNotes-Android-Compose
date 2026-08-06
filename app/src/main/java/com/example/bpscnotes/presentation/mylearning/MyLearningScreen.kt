@@ -141,7 +141,17 @@ data class StoreItem(
     val offerEndsHours: Int = 0, val tags: List<String> = emptyList(),
     val trialLessonTitle: String = "", val description: String = "",
     val reviews: List<CourseReview> = emptyList(), val syllabus: List<String> = emptyList(),
-)
+) {
+    /**
+     * Whole-percent discount off [originalPrice], or 0 when there is none.
+     * Single definition so the "% OFF" badge on a card and the offers filter
+     * always agree — they were computed separately before.
+     */
+    val discountPercent: Int
+        get() = if (originalPrice > 0 && price < originalPrice)
+            ((1f - price.toFloat() / originalPrice) * 100).toInt().coerceIn(1, 99)
+        else 0
+}
 
 data class CourseReview(val name: String, val rating: Float, val comment: String, val date: String)
 
@@ -184,7 +194,10 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     // API can send explicit null for list fields — orEmpty() guards every one
     tags              = exam_tags.orEmpty(),
     trialLessonTitle  = trial_lesson_title ?: "",
-    description       = description ?: title,
+    // Blank stays blank. This used to fall back to the course title, which just
+    // repeated the heading back at the reader; the detail sheet now hides the
+    // whole "About this Course" block when there is nothing to say.
+    description       = description.orEmpty(),
     syllabus          = chapters.orEmpty().mapNotNull { it.title.takeIf { t -> t.isNotBlank() } }
         .ifEmpty { whatYouLearn.orEmpty() },
     reviews           = reviews.orEmpty().map { r ->
@@ -306,7 +319,9 @@ fun MyLearningScreen(
     adManager: com.example.bpscnotes.core.ads.AdManager? = null,
     startTab: Int = 1,   // default to My Courses tab — Marketplace accessible by switching
     viewModel: MyLearningViewModel = hiltViewModel(),
-    fromScreen: String=""
+    fromScreen: String="",
+    /** Opens the Marketplace showing only discounted courses (offer banners). */
+    offersOnly: Boolean = false,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -469,7 +484,8 @@ fun MyLearningScreen(
                 savedCourseIds = state.savedCourseIds,
                 viewModel      = viewModel,
                 subjects       = state.subjects.ifEmpty { listOf("All") },
-                adManager=adManager
+                adManager=adManager,
+                offersOnly     = offersOnly,
             )
         }
     }
@@ -487,6 +503,12 @@ private fun StoreTab(
     viewModel:      MyLearningViewModel,
     subjects:       List<String> = listOf("All"),
     adManager:      com.example.bpscnotes.core.ads.AdManager? = null,
+    /**
+     * Show only courses that are actually discounted. Set when arriving from a
+     * promotional banner: tapping "20% off course purchase" used to open the
+     * whole catalogue, so the offer appeared to cover courses it did not.
+     */
+    offersOnly:     Boolean = false,
 ) {
     val cs = MaterialTheme.colorScheme
     val str = LocalStrings.current
@@ -503,7 +525,10 @@ private fun StoreTab(
                 course.title.contains(searchQuery, ignoreCase = true) ||
                 course.tags.any { it.contains(searchQuery, ignoreCase = true) }
         val matchesSaved = !showSavedOnly || savedCourseIds.contains(course.id)
-        matchesSub && matchesSearch && matchesSaved
+        // Same rule the card's "% OFF" badge uses, so the list and the badges
+        // can never disagree about which courses are on offer.
+        val matchesOffer = !offersOnly || course.discountPercent > 0
+        matchesSub && matchesSearch && matchesSaved && matchesOffer
     }
     // Sections must be mutually exclusive — a free featured course used to
     // appear under BOTH "Featured" and "Free", and saved courses showed once
@@ -1429,8 +1454,7 @@ private fun StoreCourseCard(
         BpscColors.Primary,
         BpscColors.PrimaryLight
     )
-    val discount =
-        if (course.originalPrice > 0) ((1f - course.price.toFloat() / course.originalPrice) * 100).toInt() else 0
+    val discount = course.discountPercent
 
     Card(
         modifier = Modifier
@@ -1989,18 +2013,24 @@ private fun CourseDetailSheet(
                     DetailStat("📊", if (course.syllabusCoverage > 0) "${course.syllabusCoverage}%" else "—", "Syllabus")
                     DetailStat("🎯", if (course.bpscRelevance > 0) "${course.bpscRelevance}%" else "—", "BPSC Rel.")
                 }
-                Text(
-                    str.courseAbout,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cs.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    course.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = cs.onSurfaceVariant,
-                    lineHeight = 24.sp
-                )
+                // Heading AND body, or neither. Description is optional in the
+                // admin form and arrives as "", which left a bold "About this
+                // Course" sitting above an empty gap on every course without one.
+                val about = course.description.trim()
+                if (about.isNotEmpty()) {
+                    Text(
+                        str.courseAbout,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cs.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        about,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = cs.onSurfaceVariant,
+                        lineHeight = 24.sp
+                    )
+                }
                 if (course.trialLessonTitle.isNotEmpty()) {
                     Row(
                         modifier = Modifier
