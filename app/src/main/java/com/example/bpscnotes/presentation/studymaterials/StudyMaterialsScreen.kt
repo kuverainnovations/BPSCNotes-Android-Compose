@@ -51,6 +51,7 @@ import com.example.bpscnotes.core.ui.t.BpscPalette
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.data.remote.api.*
+import com.example.bpscnotes.presentation.moderation.ReportIconButton
 import com.example.bpscnotes.presentation.payment.launchCashfree
 
 // ════════════════════════════════════════════════════════════
@@ -2072,6 +2073,32 @@ private fun MaterialDetailSheet(
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Report this upload. Materials are user-submitted and sold to
+            // other users, so Play's UGC policy applies: anyone must be able
+            // to flag one (copyright is the common case here) and block the
+            // uploader, which also hides their other uploads from Explore.
+            // Not offered on your own upload — self-reports are rejected.
+            if (material.uploaderId != currentUserId) {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Something wrong with this material?",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ReportIconButton(
+                        contentType      = ReportContentType.STUDY_MATERIAL,
+                        contentId        = material.id,
+                        reportedUserId   = material.uploaderId?.takeIf { it.isNotBlank() },
+                        reportedUserName = material.uploaderName,
                     )
                 }
             }

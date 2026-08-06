@@ -201,6 +201,9 @@ sealed class Screen(val route: String) {
     object Settings             : Screen("settings")
     object EditProfile          : Screen("edit_profile")
     object ChangeMpin           : Screen("change_mpin")
+    // Undo surface for blocking — the blocked user's content is hidden
+    // everywhere else, so Settings is the only place left to reach them.
+    object BlockedUsers         : Screen("blocked_users")
 
     // ── MPIN Auth ─────────────────────────────────────────────
     object MpinLogin  : Screen("mpin_login/{mobile}") {

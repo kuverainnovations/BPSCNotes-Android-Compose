@@ -557,6 +557,11 @@ fun BpscNavHost(
             composable(Screen.EditProfile.route)    { EditProfileScreen(navController) }
             composable(Screen.Downloads.route)     { DownloadsScreen(navController) }
             composable(Screen.Settings.route)      { SettingsScreen(navController) }
+            composable(Screen.BlockedUsers.route)  {
+                com.example.bpscnotes.presentation.moderation.BlockedUsersScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(Screen.NotificationSettings.route) { NotificationSettingsScreen(navController) }
             composable(Screen.StudySessionHistory.route)  { StudySessionHistoryScreen(navController) }
 

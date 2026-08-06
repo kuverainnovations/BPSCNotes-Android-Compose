@@ -34,6 +34,8 @@ import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.ReportContentType
+import com.example.bpscnotes.presentation.moderation.ReportIconButton
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
@@ -870,6 +872,21 @@ private fun PeerReviewReceivedRow(
             .background(cs.surfaceVariant.copy(alpha = 0.4f)).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Report/block on the review itself. The reviewer stays anonymous —
+        // no name is passed — but Play's UGC policy still requires a way to
+        // act on abusive feedback, and a blocked reviewer's future reviews
+        // are filtered server-side.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            ReportIconButton(
+                contentType    = ReportContentType.PEER_REVIEW,
+                contentId      = review.id,
+                reportedUserId = review.reviewerId,
+                tint           = cs.onSurfaceVariant.copy(alpha = 0.6f),
+            )
+        }
         // Q1 — did it address the demand?
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(str.awReviewQ1, style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant, fontWeight = FontWeight.SemiBold)

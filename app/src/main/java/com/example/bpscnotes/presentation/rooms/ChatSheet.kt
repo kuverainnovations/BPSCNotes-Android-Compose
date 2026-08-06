@@ -21,7 +21,9 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bpscnotes.core.ui.t.BpscColors
+import com.example.bpscnotes.data.remote.api.ReportContentType
 import com.example.bpscnotes.data.remote.api.TierMemberDto
+import com.example.bpscnotes.presentation.moderation.ReportIconButton
 
 // ════════════════════════════════════════════════════════════
 // ChatSheet — Real-time room chat bottom sheet
@@ -424,6 +426,20 @@ fun ChatBubble(message: ChatUiMessage) {
                         Icons.Rounded.Schedule, null,
                         tint     = Color.White.copy(0.35f),
                         modifier = Modifier.size(10.dp)
+                    )
+                }
+                // Report/block sits on the message itself — Play's UGC policy
+                // wants it reachable from the content, not only from a menu
+                // elsewhere. Never on your own message: there is nothing to
+                // report and the backend rejects self-reports anyway. Pending
+                // messages have no server id yet.
+                if (!isMe && !isPending) {
+                    ReportIconButton(
+                        contentType      = ReportContentType.ROOM_MESSAGE,
+                        contentId        = message.id,
+                        reportedUserId   = message.senderId,
+                        reportedUserName = message.senderName,
+                        tint             = Color.White.copy(0.35f),
                     )
                 }
             }

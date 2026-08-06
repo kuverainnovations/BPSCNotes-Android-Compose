@@ -77,18 +77,46 @@ fun LiveClassViewerScreen(
     var canGoBack       by remember { mutableStateOf(false) }
     var elapsedSecs     by remember { mutableIntStateOf(0) }
 
-    // Permissions for camera + microphone (needed for video calls in WebView)
+    // Permissions for camera + microphone (needed for video calls in WebView).
+    //
+    // Asked behind a rationale rather than fired the moment the screen opens.
+    // Two reasons: the system dialog appearing with no explanation is the
+    // pattern Play reviewers flag on sensitive permissions, and someone who
+    // only wants to watch the class has no reason to grant either — denying
+    // still leaves the class viewable, so the prompt must be refusable
+    // without it looking like the screen is broken.
     var permissionsGranted by remember { mutableStateOf(false) }
+    var showPermissionRationale by remember { mutableStateOf(true) }
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         permissionsGranted = results.values.all { it }
     }
-    LaunchedEffect(Unit) {
-        permLauncher.launch(arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
-        ))
+
+    if (showPermissionRationale && !permissionsGranted) {
+        AlertDialog(
+            onDismissRequest = { showPermissionRationale = false },
+            title = { Text("Join with camera and mic?") },
+            text = {
+                Text(
+                    "To speak or appear on camera in this live class, BPSCNotes needs " +
+                        "access to your camera and microphone. They are used only while " +
+                        "you are in the class and nothing is recorded by the app.\n\n" +
+                        "You can skip this and still watch and listen."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    permLauncher.launch(
+                        arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+                    )
+                }) { Text("Allow") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionRationale = false }) { Text("Just watch") }
+            },
+        )
     }
 
     // Elapsed timer — shows how long user has been in the class

@@ -451,6 +451,14 @@ fun SettingsScreen(
                             }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                        // Blocking hides the blocked person everywhere, so this
+                        // is the only place their block can be undone.
+                        SettingsActionRow(
+                            icon = Icons.Rounded.Block, iconBg = Color(0xFFFDECEA), iconTint = Color(0xFFE74C3C),
+                            title = "Blocked users", subtitle = "Manage people you've blocked",
+                            onClick = { navController.navigate(Screen.BlockedUsers.route) }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
                             icon = Icons.Rounded.PrivacyTip, iconBg = Color(0xFFE8EAF6), iconTint = Color(0xFF3949AB),
                             title = str.settingsPrivacy, subtitle = str.settingsPrivacySubtitle,

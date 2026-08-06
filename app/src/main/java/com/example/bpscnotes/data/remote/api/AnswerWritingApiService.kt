@@ -83,6 +83,12 @@ data class AnswerSubmissionDto(
 /** One anonymous peer review received on my submission */
 data class PeerReviewDto(
     val id: String = "",
+    /**
+     * Author of the review. Never rendered — peer reviews stay anonymous to
+     * the answer's author — but needed so a review can be reported or its
+     * writer blocked.
+     */
+    @SerializedName("reviewer_id") val reviewerId: String? = null,
     /** "yes" | "partly" | "no" — did it address the question demand */
     val verdict: String = "yes",
     val rating: Int = 0,

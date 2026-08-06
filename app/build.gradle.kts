@@ -154,10 +154,16 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-analytics")
 //    implementation("com.posthog.android:posthog:3.4.0")
-    implementation("com.posthog:posthog-android:3.+")
+    // Pinned, was "3.+". A dynamic version means two builds of the same commit
+    // can ship different code, and a transitive bump can add a permission or a
+    // Data Safety obligation between the build you tested and the build you
+    // upload — which Play compares against the declarations you filed.
+    implementation("com.posthog:posthog-android:3.58.0")
 //    implementation("com.posthog.android:posthog-android:3.4.0")
 
-    implementation("com.cashfree.pg:api:2.+")
+    // Pinned, was "2.+" — same reason. This one is a payments SDK, so an
+    // unreviewed version change is also a compliance risk.
+    implementation("com.cashfree.pg:api:2.5.0")
 
     // Testing
     testImplementation(libs.junit)

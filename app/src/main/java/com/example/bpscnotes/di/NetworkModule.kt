@@ -124,7 +124,11 @@ object NetworkModule {
             // arrived all at once, which read as jobs "saving themselves".
             // General rule: if a response embeds per-user mutable state, it does
             // not belong in this cache.
-            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs", "/notebook")
+            // "/moderation": the blocked-user list is edited from its own
+            // screen, and a stale copy would show someone as still blocked
+            // after they were unblocked (or the reverse) — the one place
+            // where a wrong answer is a safety problem, not a refresh bug.
+            val volatilePaths = listOf("/users/stats", "/coins/balance", "/users/leaderboard", "/jobs", "/notebook", "/moderation")
             // Course LIST is admin-curated: a course deleted in the admin panel
             // must disappear promptly (QA 09-Jul issue 1), and no app-side
             // mutation ever evicts this URL. endsWith only — course DETAIL
@@ -260,4 +264,5 @@ object NetworkModule {
     @Provides @Singleton fun provideSearchApi(r: Retrofit): SearchApiService = r.create(SearchApiService::class.java)
     @Provides @Singleton fun provideBookmarksApi(r: Retrofit): BookmarksApiService = r.create(BookmarksApiService::class.java)
     @Provides @Singleton fun provideCoinStoreApi(r: Retrofit): CoinStoreApiService = r.create(CoinStoreApiService::class.java)
+    @Provides @Singleton fun provideModerationApi(r: Retrofit): ModerationApiService = r.create(ModerationApiService::class.java)
 }
