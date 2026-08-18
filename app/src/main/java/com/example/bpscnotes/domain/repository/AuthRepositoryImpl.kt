@@ -75,8 +75,23 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val response = api.checkMpin("+91$mobile")
             response.data ?: CheckMpinData()
+        } catch (e: java.io.IOException) {
+            // Transport failure — we do NOT know whether this user has an MPIN.
+            //
+            // This used to be swallowed like everything else and reported as
+            // "no MPIN", which is wrong twice over: an existing MPIN user on a
+            // bad network was silently rerouted into OTP registration, and the
+            // caller went on to fire a send-otp that was equally doomed. The
+            // 18 Aug logcat shows exactly that — three failed check-mpin
+            // attempts, then a failed send-otp, ~4 seconds of the Send OTP
+            // button apparently doing nothing before any message appeared.
+            // Let it propagate so the caller reports the real failure at once.
+            throw e
         } catch (e: Exception) {
-            CheckMpinData()  // network error → show OTP flow (safe fallback)
+            // Server answered but the payload was unusable (bad JSON, 4xx).
+            // Falling through to the OTP flow is a reasonable recovery here,
+            // because the server IS reachable.
+            CheckMpinData()
         }
     }
 

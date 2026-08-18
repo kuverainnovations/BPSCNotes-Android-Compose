@@ -859,11 +859,11 @@ private fun DashboardHeader(
                 ) {
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(com.bpscnotes.eduapp.R.drawable.ic_bpsc_logo),
-                        contentDescription = "BPSCNotes",
+                        contentDescription = "BNotes+",
                         modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
                     )
                     Text(
-                        "BPSCNotes",
+                        "BNotes+",
                         style = MaterialTheme.typography.titleSmall,
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold,
@@ -1857,7 +1857,7 @@ private fun CourseCard(course: CourseDto, onClick: () -> Unit) {
                 )
                 // Instructor
                 Text(
-                    course.instructor ?: "BPSCNotes",
+                    course.instructor ?: "BNotes+",
                     style    = MaterialTheme.typography.labelSmall,
                     color    = cs.onSurfaceVariant,
                     maxLines = 1,
@@ -2115,15 +2115,36 @@ private fun MyScheduleSection(
     }
 }
 
+/**
+ * Calendar/SimpleDateFormat rather than java.time: minSdk is 24 and core
+ * library desugaring is off, so java.time.Instant throws NoClassDefFoundError
+ * on Android 7 — and that is an Error, not an Exception, so the catch below
+ * never stopped it taking the app down. Same convention as quizScheduleLabel().
+ *
+ * Locale.US on the parsers because the input is a machine-readable ISO string;
+ * the output formatter stays on the default locale and zone, which is what
+ * .withZone(ZoneId.systemDefault()) did before.
+ */
 fun formatDateTime(iso: String): String {
-    return try {
-        val instant = java.time.Instant.parse(iso)
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("EEE, hh:mm a")
-            .withZone(java.time.ZoneId.systemDefault())
-        formatter.format(instant)
-    } catch (e: Exception) {
-        iso
+    val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss",
+    )
+    for (pattern in patterns) {
+        try {
+            val parser = java.text.SimpleDateFormat(pattern, java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+                isLenient = false
+            }
+            val parsed = parser.parse(iso) ?: continue
+            return java.text.SimpleDateFormat("EEE, hh:mm a", java.util.Locale.getDefault())
+                .format(parsed)
+        } catch (_: Exception) {
+            // Wrong pattern for this input — try the next one.
+        }
     }
+    return iso
 }
 @Composable
 private fun AchievementsSection(achievements: List<AchievementItem>) {
@@ -2500,7 +2521,7 @@ fun BpscDrawer(
                 .padding(horizontal = 20.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 HorizontalDivider(color = cs.outline); Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("BPSCNotes", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
+                    Text("BNotes+", style = MaterialTheme.typography.titleSmall, color = BpscColors.Primary, fontWeight = FontWeight.ExtraBold)
                     // Was hardcoded "v1.0.0" — it kept claiming 1.0.0 on every
                     // release. Read the real build so support gets a true answer.
                     Text("v${com.bpscnotes.eduapp.BuildConfig.VERSION_NAME}",

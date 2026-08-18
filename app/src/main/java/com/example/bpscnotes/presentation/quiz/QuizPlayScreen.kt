@@ -1105,7 +1105,7 @@ private fun QuizResultScreen(
                         onClick = {
                             val shareEmoji = if (accuracy >= 80) "🏆" else if (accuracy >= 50) "👍" else "💪"
                             val rankText   = if (result.rank > 0) " · Rank #${result.rank}" else ""
-                            val shareText  = "$shareEmoji I scored ${accuracy.toInt()}% on \"${session.title}\"$rankText!\n\nPractice BPSC with BPSCNotes app 📚"
+                            val shareText  = "$shareEmoji I scored ${accuracy.toInt()}% on \"${session.title}\"$rankText!\n\nPractice BPSC with BNotes+ app 📚"
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)

@@ -41,7 +41,7 @@ class BpscFirebaseMessagingService : FirebaseMessagingService() {
         val notifId = data["notifId"] ?: data["notification_id"] ?: ""
         val screen  = data["screen"] ?: ""
 
-        val title = notif?.title ?: data["title"] ?: "BPSCNotes"
+        val title = notif?.title ?: data["title"] ?: "BNotes+"
         val body  = notif?.body  ?: data["body"]  ?: ""
 
         // Track notification received

@@ -83,9 +83,9 @@ fun UpdateGateDialog(config: AppConfigData) {
         text = {
             Text(
                 if (mustUpdate)
-                    "Please update BPSCNotes to continue. This version is no longer supported."
+                    "Please update BNotes+ to continue. This version is no longer supported."
                 else
-                    "A new version of BPSCNotes is available with improvements and fixes.",
+                    "A new version of BNotes+ is available with improvements and fixes.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

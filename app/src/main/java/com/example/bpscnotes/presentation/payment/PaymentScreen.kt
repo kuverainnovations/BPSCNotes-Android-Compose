@@ -2,6 +2,7 @@ package com.example.bpscnotes.presentation.payment
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import com.example.bpscnotes.core.network.toUserMessage
 import androidx.compose.foundation.background
@@ -514,6 +515,19 @@ fun SuccessScreen(title: String, message: String, bonusCoins: Int = 0, onDone: (
  *                which does server-side verification via GET /pg/orders/{orderId}/payments
  * [onFailure]  — receives (errorCode, errorMessage); code 0 = user cancelled
  */
+/**
+ * Walk the ContextWrapper chain to the hosting Activity.
+ *
+ * LocalContext is not always the Activity itself — anything that wraps it
+ * (ContextThemeWrapper being the usual culprit) makes a direct `as Activity`
+ * cast throw. Returns null when there genuinely is no Activity behind it.
+ */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity       -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else              -> null
+}
+
 fun launchCashfree(
     context: Context,
     sessionId: String,
@@ -523,7 +537,12 @@ fun launchCashfree(
     onFailure: (Int, String) -> Unit
 ){
     try {
-        val activity = context as Activity
+        // `context as Activity` threw whenever the caller handed us a wrapped
+        // Context (ContextThemeWrapper is the common one). That landed in the
+        // catch below and surfaced as a generic payment failure, so walk the
+        // wrapper chain instead of assuming the cast holds.
+        val activity = context.findActivity()
+            ?: return onFailure(-1, "Couldn't open the payment screen. Please try again.")
 
         // Register callbacks on the Activity before opening the SDK
         (activity as? com.example.bpscnotes.presentation.payment.CashfreePaymentListener)

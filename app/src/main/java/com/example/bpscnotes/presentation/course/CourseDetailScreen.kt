@@ -1087,7 +1087,7 @@ private fun HeroHeader(
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_SUBJECT, "Check this BPSC course: $courseTitle")
                                 putExtra(android.content.Intent.EXTRA_TEXT,
-                                    "I'm studying \"$courseTitle\" on BPSCNotes app! Join me → https://bpscnotes.in/courses/${course.id}")
+                                    "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://bpscnotes.in/courses/${course.id}")
                             }
                             shareContext.startActivity(android.content.Intent.createChooser(shareIntent, str.caShare))
                         },
@@ -1220,7 +1220,7 @@ private fun CertificateBanner(
                 if (isComplete) {
                     Button(
                         onClick = {
-                            val shareText = "I just completed '$courseName' on BPSCNotes! 🎓"
+                            val shareText = "I just completed '$courseName' on BNotes+! 🎓"
                             // FIX: previously this ALWAYS shared plain text only.
                             // Now: if the certificate PDF has been generated,
                             // download it and attach the real file. Falls back

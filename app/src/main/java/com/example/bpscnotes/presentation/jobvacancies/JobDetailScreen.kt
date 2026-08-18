@@ -267,7 +267,7 @@ private fun JobDetailContent(job: JobVacancyDto, modifier: Modifier, context: an
                 Spacer(Modifier.height(6.dp))
                 Text(
                     str.jdSourceText +
-                    "BPSCNotes is not a government app and is not affiliated with any government entity. " +
+                    "BNotes+ is not a government app and is not affiliated with any government entity. " +
                     "Please verify all details (dates, eligibility, fees) on the official website before applying.",
                     fontSize = 12.sp, color = Color(0xFF6D4C41), lineHeight = 18.sp,
                 )

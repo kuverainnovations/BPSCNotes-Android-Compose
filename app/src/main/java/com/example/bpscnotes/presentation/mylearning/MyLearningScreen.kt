@@ -177,7 +177,7 @@ data class LibraryItem(
 private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
     id                = id,
     title             = title,
-    instructor        = instructor ?: "BPSCNotes",
+    instructor        = instructor ?: "BNotes+",
     subject           = subject,
     price             = price,
     originalPrice     = originalPrice,
@@ -209,7 +209,7 @@ private fun CourseDto.toStoreItem(): StoreItem = StoreItem(
 private fun CourseDto.toLearningCourse(certUrls: Map<String, String> = emptyMap()): LearningCourse = LearningCourse(
     id = id,
     title = title,
-    instructor = instructor ?: "BPSCNotes",
+    instructor = instructor ?: "BNotes+",
     subject = subject,
     totalLessons = totalLessons,
     completedLessons = enrollment?.completed_lessons?:0,
@@ -2244,9 +2244,9 @@ private fun CourseDetailSheet(
         fun shareCertificate() {
             val url       = course.certificateUrl
             val shareText = if (!url.isNullOrBlank())
-                "I completed ${course.title} on BPSCNotes! 🏆\n$url"
+                "I completed ${course.title} on BNotes+! 🏆\n$url"
             else
-                "I completed ${course.title} on BPSCNotes! 🏆"
+                "I completed ${course.title} on BNotes+! 🏆"
             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(android.content.Intent.EXTRA_TEXT, shareText)

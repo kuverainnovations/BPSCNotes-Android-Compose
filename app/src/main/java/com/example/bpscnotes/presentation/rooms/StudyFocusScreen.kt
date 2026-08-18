@@ -750,7 +750,7 @@ private fun LiveMemberRow(member: TierMemberDto, onClick: () -> Unit) {
             Box(modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.fillMaxSize().clip(CircleShape)
                     .background(BpscColors.Primary.copy(0.2f)), contentAlignment = Alignment.Center) {
-                    Text(member.name.first().uppercaseChar().toString(),
+                    Text(member.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                         style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                 }
                 Box(modifier = Modifier.size(12.dp).align(Alignment.BottomEnd)
@@ -847,7 +847,7 @@ private fun LiveMemberCard(member: TierMemberDto) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        member.name.first().uppercase(),
+                        member.name.firstOrNull()?.uppercase() ?: "?",
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 20.sp
@@ -901,7 +901,7 @@ private fun InactiveMemberCard(member: TierMemberDto) {
                     .background(Color.White.copy(0.08f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(member.name.first().uppercase(), color = Color.White.copy(0.6f),
+                Text(member.name.firstOrNull()?.uppercase() ?: "?", color = Color.White.copy(0.6f),
                     fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
             }
             Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -1000,7 +1000,7 @@ private fun ChatSheetOld(member: TierMemberDto, onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(BpscColors.Primary.copy(0.3f)),
                     contentAlignment = Alignment.Center) {
-                    Text(member.name.first().uppercaseChar().toString(),
+                    Text(member.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                         style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.ExtraBold)
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -1072,7 +1072,7 @@ private fun ChatBubble(message: ChatMessage) {
         if (!message.isMe) {
             Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(BpscColors.Primary.copy(0.3f)),
                 contentAlignment = Alignment.Center) {
-                Text(message.senderName.first().uppercaseChar().toString(),
+                Text(message.senderName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                     style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(6.dp))

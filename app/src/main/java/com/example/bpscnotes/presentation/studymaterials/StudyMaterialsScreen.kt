@@ -1266,7 +1266,7 @@ private fun LibraryItemCard(
                     Text(item.title, style = MaterialTheme.typography.titleMedium,
                         color = cs.onSurface, fontWeight = FontWeight.ExtraBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
-                    Text(item.author ?: item.uploaderName ?: "BPSCNotes Team",
+                    Text(item.author ?: item.uploaderName ?: "BNotes+ Team",
                         style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                 }
                 // FIX: Increased touch target from 28dp → 44dp (min recommended: 48dp)
@@ -1905,7 +1905,7 @@ private fun MaterialDetailSheet(
                     Text(material.title, style = MaterialTheme.typography.titleLarge,
                         color = Color.White, fontWeight = FontWeight.ExtraBold, lineHeight = 26.sp)
                     // FIX: uploaderName from backend, with sensible fallback
-                    Text("By ${material.uploaderName?.ifBlank { null } ?: material.author?.ifBlank { null } ?: "BPSCNotes"} · ${material.uploadedDate?.take(10) ?: ""}",
+                    Text("By ${material.uploaderName?.ifBlank { null } ?: material.author?.ifBlank { null } ?: "BNotes+"} · ${material.uploadedDate?.take(10) ?: ""}",
                         style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(0.75f))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         if (material.pageCount > 0) SheetStatWhite("📄", "${material.pageCount} pages")

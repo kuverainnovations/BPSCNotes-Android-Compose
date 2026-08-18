@@ -61,7 +61,7 @@ fun MaintenanceGateDialog(config: AppConfigData, onRetry: () -> Unit) {
         },
         text = {
             Text(
-                "BPSCNotes is briefly down for maintenance. We'll be back shortly — " +
+                "BNotes+ is briefly down for maintenance. We'll be back shortly — " +
                     "your progress and coins are safe.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

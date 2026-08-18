@@ -1,3 +1,17 @@
 <resources>
-    <string name="app_name">BPSCNotes</string>
+    <!--
+      Launcher label and Play title basis.
+
+      Renamed from "BPSCNotes" after the Aug 2026 Impersonation enforcement:
+      a title carrying a government commission's acronym reads as an official
+      Bihar Public Service Commission app. "BNotes+" carries no entity name or
+      acronym. The exams themselves are still described accurately in content
+      and store copy — referring to an exam is fine, branding as the examiner
+      is not.
+    -->
+    <string name="app_name">BNotes+</string>
+
+    <!-- Shown in Settings > About. States independence explicitly, which is
+         what the Impersonation policy asks an exam-prep app to make clear. -->
+    <string name="affiliation_disclaimer">BNotes+ is an independent exam preparation app. It is not affiliated with, endorsed by, or connected to the Bihar Public Service Commission (BPSC) or any government body. All exam names are used only to describe the content they relate to.</string>
 </resources>

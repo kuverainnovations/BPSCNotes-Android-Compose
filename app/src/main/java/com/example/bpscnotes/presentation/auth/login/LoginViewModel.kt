@@ -22,7 +22,10 @@ class LoginViewModel @Inject constructor(
 
     fun proceed(mobile: String) {
         if (!isValidMobile(mobile)) {
-            // BaseViewModel exposes error via _error LiveData
+            // Previously returned silently, so on any path that reached it the
+            // Send OTP tap produced no visible response at all — the exact
+            // "unresponsive button" shape Play flags. Always say something.
+            setError("Enter a valid 10-digit mobile number")
             return
         }
         launchWithLoading {
@@ -46,6 +49,10 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onDestinationConsumed() { _destination.value = null }
+
+    /** Drop a stale failure once the user edits the number, so a previous
+     *  error does not sit under the field looking like a permanent state. */
+    fun clearError() { setError(null) }
 
     private fun isValidMobile(mobile: String) = mobile.length == 10 && mobile.all { it.isDigit() }
 }

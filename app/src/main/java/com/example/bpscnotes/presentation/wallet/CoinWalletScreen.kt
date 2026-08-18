@@ -267,7 +267,7 @@ fun CoinWalletScreen(
                                                 val shared = shareReferral(
                                                     context,
                                                     viewModel.getReferralCode(),
-                                                    { code, url -> "Join BPSCNotes and ace your BPSC exam!\nUse my referral code: $code\n\n$url" },
+                                                    { code, url -> "Join BNotes+ and ace your BPSC exam!\nUse my referral code: $code\n\n$url" },
                                                     str.walletInviteFriend,
                                                 )
                                                 if (!shared) viewModel.showReferralCodeUnavailable()
@@ -472,7 +472,7 @@ fun CoinWalletScreen(
                                 onShare      = {
                                     val shared = shareReferral(
                                         context, viewModel.getReferralCode(),
-                                        { code, url -> "Join BPSCNotes and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn $refJoined bonus coins when you sign up.\n\n$url" },
+                                        { code, url -> "Join BNotes+ and ace your BPSC exam! 🎯\n\nUse my referral code: $code and earn $refJoined bonus coins when you sign up.\n\n$url" },
                                         "Invite a friend",
                                     )
                                     if (!shared) viewModel.showReferralCodeUnavailable()
@@ -487,7 +487,7 @@ fun CoinWalletScreen(
                             item { ReferralEmptyState(totalPerFriend = refTotal, onShare = {
                                 val shared = shareReferral(
                                     context, viewModel.getReferralCode(),
-                                    { code, url -> "Join BPSCNotes! Use code: $code\n$url" },
+                                    { code, url -> "Join BNotes+! Use code: $code\n$url" },
                                     "Invite a friend",
                                 )
                                 if (!shared) viewModel.showReferralCodeUnavailable()

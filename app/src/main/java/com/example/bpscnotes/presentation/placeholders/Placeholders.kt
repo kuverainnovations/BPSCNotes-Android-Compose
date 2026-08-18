@@ -80,7 +80,7 @@ class DownloadsViewModel @Inject constructor(
 
     // FIX: Scan the root Downloads directory — that's where DownloadManager saves files
     // by default (setDestinationInExternalPublicDir(DIRECTORY_DOWNLOADS, fileName)).
-    // The BPSCNotes subfolder doesn't exist / is never populated by our download code.
+    // The BNotes+ subfolder doesn't exist / is never populated by our download code.
     init { load() }
 
     fun load(refresh: Boolean = false) {
@@ -540,7 +540,7 @@ fun SubscriptionScreen(
 
                     // FIX: Dynamic plan card from API
                     val featuredPlan = state.plans.firstOrNull() ?: SubscriptionPlanItem(
-                        "monthly", "BPSCNotes Pro", 199.0, 299.0, "1 Month", str.placeholdersBilledMonthly, 20, 100)
+                        "monthly", "BNotes+ Pro", 199.0, 299.0, "1 Month", str.placeholdersBilledMonthly, 20, 100)
                     if (state.isPremiumUser) {
                         val planLabel = state.plans.find { it.id == state.activePlan }?.name
                             ?: state.activePlan?.replaceFirstChar { it.uppercase() } ?: "Pro"
@@ -616,7 +616,7 @@ fun SubscriptionScreen(
                                     modifier = Modifier.weight(1f).padding(end = 12.dp),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Text("BPSCNotes ${featuredPlan.name}",
+                                    Text("BNotes+ ${featuredPlan.name}",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = Color.White, fontWeight = FontWeight.ExtraBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -793,7 +793,7 @@ private fun PremiumCourseCard(course: CourseDto, onClick: () -> Unit) {
                 Text(course.title, style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurface, fontWeight = FontWeight.SemiBold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(course.instructor ?: "BPSCNotes Team",
+                Text(course.instructor ?: "BNotes+ Team",
                     style = MaterialTheme.typography.labelSmall, color = BpscColors.TextHint, fontSize = 10.sp)
             }
             Column(horizontalAlignment = Alignment.End) {

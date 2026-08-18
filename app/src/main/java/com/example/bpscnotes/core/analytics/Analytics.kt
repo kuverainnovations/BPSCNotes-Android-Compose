@@ -207,7 +207,7 @@ object Event {
         Analytics.track(FirebaseAnalytics.Event.PURCHASE, mapOf(
             FirebaseAnalytics.Param.VALUE        to amount.toDouble(),
             FirebaseAnalytics.Param.CURRENCY     to "INR",
-            FirebaseAnalytics.Param.ITEM_NAME    to "BPSCNotes $plan Plan",
+            FirebaseAnalytics.Param.ITEM_NAME    to "BNotes+ $plan Plan",
             FirebaseAnalytics.Param.PAYMENT_TYPE to method,
         ))
     }

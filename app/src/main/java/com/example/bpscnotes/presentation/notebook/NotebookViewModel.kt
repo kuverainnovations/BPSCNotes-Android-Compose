@@ -390,7 +390,7 @@ class NotebookViewModel @Inject constructor(
             if (note.title.isNotBlank()) appendLine(note.title).appendLine()
             append(body)
             appendLine().appendLine()
-            append("— my BPSCNotes notebook")
+            append("— my BNotes+ notebook")
         }
     }
 

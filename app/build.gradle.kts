@@ -25,8 +25,11 @@ android {
         applicationId = "com.bpscnotes.eduapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.0.5"
+        // Bumped for the resubmission after the Aug 2026 Play rejection.
+        // Play refuses an upload whose versionCode is already used on the
+        // track, and the rejected build consumed 1.
+        versionCode = 2
+        versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -91,6 +94,13 @@ dependencies {
 
     // Activity
     implementation("androidx.activity:activity-compose:1.9.0")
+
+    // Play In-App Updates — prompts when a higher versionCode is live on Play.
+    // Complements the server-driven UpdateGateDialog: that one needs the
+    // backend's min-version setting to be bumped by hand each release, this
+    // one needs nothing but the upload.
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")

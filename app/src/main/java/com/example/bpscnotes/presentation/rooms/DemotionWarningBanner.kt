@@ -53,7 +53,11 @@ fun DemotionWarningBanner(
     if (!state.isAtRisk) return
 
     val deficit = (state.threshold - state.progress).coerceAtLeast(0f)
-    val animProg by animateFloatAsState(state.progress / 100f, tween(800), label = "demotion_prog")
+    // Coerced: these are fill fractions, and the server has no hard cap keeping
+    // progress at or under 100.
+    val animProg by animateFloatAsState(
+        (state.progress / 100f).coerceIn(0f, 1f), tween(800), label = "demotion_prog"
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -102,8 +106,11 @@ fun DemotionWarningBanner(
                     // Threshold marker
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(state.threshold / 100f)
-                            .fillMaxHeight(3f)
+                            .fillMaxWidth((state.threshold / 100f).coerceIn(0f, 1f))
+                            // Was fillMaxHeight(3f) — a fraction over 1 made this
+                            // wrapper 3x the 8.dp bar, so the threshold marker sat
+                            // centred in 24.dp and no longer lined up with the bar.
+                            .fillMaxHeight()
                             .align(Alignment.CenterStart)
                             .padding(end = 0.dp)
                     ) {

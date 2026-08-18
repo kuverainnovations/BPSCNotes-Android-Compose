@@ -42,7 +42,18 @@ fun MpinLoginScreen(
             TokenStoreEntryPoint::class.java
         ).tokenStore()
     }
-    val biometricEnabled = remember { tokenStore.isBiometricEnabled() }
+    // Biometric here UNLOCKS an existing session — loginWithMpinViaBiometric()
+    // only revalidates a JWT that is already on the device, it never
+    // authenticates against the backend. So the preference alone is not enough
+    // to offer it: logout() clears auth_token but deliberately keeps
+    // biometric_enabled, and the screen then auto-fired the fingerprint prompt
+    // with no token to unlock. The user authenticated successfully and got
+    // "Please enter your MPIN to continue." — biometric looked broken every
+    // time after a logout. Require a token to be present as well; after one
+    // MPIN login the token is back and biometric works again.
+    val biometricEnabled = remember {
+        tokenStore.isBiometricEnabled() && !tokenStore.getToken().isNullOrBlank()
+    }
 
     // Blue status bar to match header
     val systemUiController = rememberSystemUiController()
@@ -67,7 +78,7 @@ fun MpinLoginScreen(
             kotlinx.coroutines.delay(200)
             AppBiometricManager.authenticate(
                 context   = context,
-                title     = "BPSCNotes",
+                title     = "BNotes+",
                 subtitle  = "Use fingerprint to login",
                 onSuccess = { viewModel.loginWithMpinViaBiometric(mobile) },
                 onError    = {},
@@ -235,7 +246,7 @@ fun MpinLoginScreen(
                 onBiometric    = if (biometricEnabled) {{
                     AppBiometricManager.authenticate(
                         context    = context,
-                        title      = "BPSCNotes",
+                        title      = "BNotes+",
                         subtitle   = "Use fingerprint to login",
                         onSuccess  = { viewModel.loginWithMpinViaBiometric(mobile) },
                         onError    = {},

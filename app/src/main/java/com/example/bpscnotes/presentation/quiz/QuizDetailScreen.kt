@@ -310,7 +310,11 @@ private fun QuizIntroContent(
             val isFutureScheduled = quiz.scheduledFor?.let { scheduled ->
                 try {
                     val scheduledDate = scheduled.substring(0, 10) // "YYYY-MM-DD"
-                    val today = java.time.LocalDate.now().toString()
+                    // Not java.time.LocalDate: minSdk 24 with desugaring off
+                    // means NoClassDefFoundError on Android 7, and an Error
+                    // slips straight through the catch below.
+                    val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                        .format(java.util.Date())
                     scheduledDate > today
                 } catch (e: Exception) { false }
             } ?: false

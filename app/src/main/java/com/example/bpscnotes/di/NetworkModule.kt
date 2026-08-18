@@ -36,6 +36,13 @@ object NetworkModule {
                 val response = chain.proceed(request)
                 if (response.isSuccessful || response.code in 400..499) return@Interceptor response
                 response.close()
+            } catch (e: javax.net.ssl.SSLHandshakeException) {
+                // A rejected certificate chain is not a transient fault — the
+                // next two attempts fail identically. Retrying only added ~3s
+                // of dead time before the user saw any message, which is a big
+                // part of why the Send OTP button read as unresponsive during
+                // the expired-cert outage. Fail fast.
+                throw e
             } catch (e: IOException) {
                 lastException = e
             }

@@ -9,7 +9,45 @@
       "client_info": {
         "mobilesdk_app_id": "1:133585364580:android:17652ac19896295330e171",
         "android_client_info": {
+          "package_name": "com.bpscnotes.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAue6C1fVoi2D05y-19aHD2GuGzLoou368"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133585364580:android:7ea9c4e4ebcb8c0c30e171",
+        "android_client_info": {
           "package_name": "com.bpscnotes.eduapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAue6C1fVoi2D05y-19aHD2GuGzLoou368"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133585364580:android:d3b9e4b73f05d76c30e171",
+        "android_client_info": {
+          "package_name": "com.kuvera.bpscnotes"
         }
       },
       "oauth_client": [],

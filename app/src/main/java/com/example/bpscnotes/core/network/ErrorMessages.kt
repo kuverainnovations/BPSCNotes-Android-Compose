@@ -4,8 +4,11 @@ import com.google.gson.JsonParser
 import com.google.gson.stream.MalformedJsonException
 import retrofit2.HttpException
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 /**
  * Maps a caught [Throwable] to a short, user-facing message - never the raw
@@ -25,9 +28,33 @@ fun Throwable.toUserMessage(default: String = "Something went wrong"): String = 
     // (e.g. a 503 nginx error page) instead of JSON. Must be checked
     // before the generic IOException branch below.
     is MalformedJsonException -> "Server is temporarily unavailable. Please try again."
-    is UnknownHostException    -> "No internet connection"
+
+    // SSLException is an IOException, so it MUST be matched before the generic
+    // branches below or it disappears into them.
+    //
+    // This mattered: when the api.bpscnotes.in certificate expired on 14 Aug
+    // 2026, every request failed with SSLHandshakeException and the app told
+    // users "No internet connection" on a perfectly good connection. The Play
+    // reviewer saw exactly that under a working network, concluded the Send OTP
+    // button did nothing, and filed a Broken Functionality violation. Blaming
+    // the user's connection for a server-side TLS fault also hid the real cause
+    // from us. Say what actually failed.
+    is SSLException            -> "Couldn't establish a secure connection to the server. " +
+                                  "This is a problem on our end — please try again shortly."
+
+    // DNS lookup failed: almost always genuinely offline (or airplane mode).
+    is UnknownHostException    -> "No internet connection. Please check your network and try again."
+
     is SocketTimeoutException  -> "Request timed out. Please try again."
-    is IOException             -> "No internet connection"
+
+    // The network is up but the server refused or could not be routed to.
+    is ConnectException,
+    is NoRouteToHostException  -> "Can't reach the server right now. Please try again shortly."
+
+    // Anything else at the transport layer. Deliberately does not assert that
+    // the user is offline, because most of the time they are not.
+    is IOException             -> "Network error. Please check your connection and try again."
+
     else                        -> message ?: default
 }
 

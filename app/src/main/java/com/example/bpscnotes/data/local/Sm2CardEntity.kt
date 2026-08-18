@@ -5,14 +5,19 @@ import androidx.room.PrimaryKey
 import java.text.SimpleDateFormat
 import java.util.*
 
-private val SDF = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+// SimpleDateFormat is not thread-safe, and these run on Dispatchers.IO — a
+// shared instance can interleave between two card ratings and emit a corrupt
+// date (or throw), which would poison nextReviewDate. One instance per thread.
+private val SDF = object : ThreadLocal<SimpleDateFormat>() {
+    override fun initialValue() = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+}
 
-private fun todayString(): String = SDF.format(Date())
+private fun todayString(): String = SDF.get()!!.format(Date())
 
 private fun daysFromNow(days: Int): String {
     val cal = Calendar.getInstance()
     cal.add(Calendar.DAY_OF_YEAR, days)
-    return SDF.format(cal.time)
+    return SDF.get()!!.format(cal.time)
 }
 
 @Entity(tableName = "sm2_cards")

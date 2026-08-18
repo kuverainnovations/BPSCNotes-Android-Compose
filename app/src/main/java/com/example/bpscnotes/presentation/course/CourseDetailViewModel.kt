@@ -474,7 +474,7 @@ class CourseDetailViewModel @Inject constructor(
 
     // ── Certificate sharing ─────────────────────────────────────
     // FIX: previously "Share Certificate" only ever shared a plain text
-    // message ("I just completed '...' on BPSCNotes!") regardless of
+    // message ("I just completed '...' on BNotes+!") regardless of
     // whether a certificate existed. Now download the actual generated
     // PDF and hand back a content:// URI (via FileProvider) so the
     // share sheet attaches the real certificate file.

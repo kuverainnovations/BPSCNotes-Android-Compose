@@ -37,6 +37,7 @@ import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.core.ads.BannerAdView
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppEmptyState
+import com.example.bpscnotes.core.ui.destroyWebView
 import com.example.bpscnotes.core.ui.AppErrorDialog
 import com.example.bpscnotes.core.ui.AppErrorState
 import com.example.bpscnotes.core.ui.AppLoader
@@ -1204,6 +1205,9 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
             // update is empty: key(html) handles recreation on content change;
             // height changes apply automatically via the modifier below.
             update = { },
+            // key(html) recreates this WebView for every question, so without an
+            // explicit teardown a long quiz leaks one renderer per question.
+            onRelease = { it.destroyWebView() },
             modifier = modifier.height(with(density) { webViewHeight.toDp() })
         )
     }

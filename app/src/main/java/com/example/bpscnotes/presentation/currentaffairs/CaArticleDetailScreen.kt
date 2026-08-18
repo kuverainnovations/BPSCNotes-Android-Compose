@@ -63,6 +63,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppErrorState
+import com.example.bpscnotes.core.ui.destroyWebView
 import com.example.bpscnotes.core.ui.AppLoader
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
@@ -278,6 +279,7 @@ private fun ArticleContentWebView(html: String, modifier: Modifier = Modifier) {
                 loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
             }
         },
+        onRelease = { it.destroyWebView() },
         modifier = modifier
     )
 }

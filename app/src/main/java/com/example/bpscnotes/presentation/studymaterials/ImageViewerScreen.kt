@@ -161,11 +161,19 @@ fun ImageViewerScreen(
     BackHandler { navigateBack() }
 }
 
+/**
+ * Ripple-less click.
+ *
+ * Was `this.then(clickable(...))`, where the inner call took `this` as an
+ * implicit receiver — so the whole upstream chain was concatenated onto itself
+ * and every modifier before this one applied twice. Chain directly instead.
+ */
 @Composable
-private fun Modifier.clickable(onClick: () -> Unit) = this.then(
-    clickable(
+private fun Modifier.clickable(onClick: () -> Unit) =
+    // Resolves to foundation's Modifier.clickable, not this function: the
+    // overload above takes onClick alone and cannot match these three args.
+    this.clickable(
         indication = null,
         interactionSource = remember { MutableInteractionSource() },
         onClick = onClick
     )
-)

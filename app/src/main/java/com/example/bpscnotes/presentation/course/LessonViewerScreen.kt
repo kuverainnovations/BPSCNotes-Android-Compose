@@ -42,6 +42,7 @@ import com.bpscnotes.eduapp.R
 import androidx.browser.customtabs.CustomTabsIntent
 import com.example.bpscnotes.core.language.LocalStrings
 import com.example.bpscnotes.core.ui.AppLoader
+import com.example.bpscnotes.core.ui.destroyWebView
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 
@@ -485,6 +486,12 @@ private fun VideoPlayer(videoUrl: String?) {
                 }
             },
             update = { view -> webViewRef = view },
+            // Without this the lesson video keeps playing (audible) after the
+            // user leaves the screen, and the WebView leaks the Activity.
+            onRelease = { view ->
+                webViewRef = null
+                view.destroyWebView()
+            },
             modifier = Modifier.fillMaxSize()
         )
         if (loading) {
@@ -571,7 +578,7 @@ private fun LiveClassView(lesson: com.example.bpscnotes.data.remote.api.Lesson) 
             if (!lesson.video_url.isNullOrBlank()) {
                 Button(
                     onClick = {
-                        // Chrome Custom Tabs — in-app browser, user stays in BPSCNotes
+                        // Chrome Custom Tabs — in-app browser, user stays in BNotes+
                         try {
                             val uri = android.net.Uri.parse(lesson.video_url)
                             val intent = CustomTabsIntent.Builder()

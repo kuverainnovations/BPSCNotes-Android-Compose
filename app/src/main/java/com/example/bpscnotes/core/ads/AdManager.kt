@@ -16,7 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // ════════════════════════════════════════════════════════════
-// AdManager — Central ad controller for BPSCNotes
+// AdManager — Central ad controller for BNotes+
 //
 // Placements:
 //  1. Rewarded ads    → CoinWalletScreen (Watch Ad → earn 10 coins)

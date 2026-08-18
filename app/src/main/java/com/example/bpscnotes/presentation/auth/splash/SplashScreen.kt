@@ -113,7 +113,7 @@ fun SplashScreen(navController: NavHostController) {
                 // Replace with your actual Lottie or Image asset
                 Image(
                     painter = painterResource(R.drawable.ic_bpsc_logo),
-                    contentDescription = "BPSCNotes Logo",
+                    contentDescription = "BNotes+ Logo",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -122,7 +122,7 @@ fun SplashScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "BPSCNotes",
+                text = "BNotes+",
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White,
                 fontWeight = FontWeight.ExtraBold,

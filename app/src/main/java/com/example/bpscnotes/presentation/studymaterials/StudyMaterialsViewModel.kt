@@ -459,7 +459,7 @@ class StudyMaterialsViewModel @Inject constructor(
     // ── Download to app-private storage ───────────────────────
 // Files saved to context.filesDir/materials/ — NOT accessible to
 // other apps, file managers, or gallery. Cannot be shared externally.
-// User can only open the file through BPSCNotes in-app viewers.
+// User can only open the file through BNotes+ in-app viewers.
     fun downloadMaterial(material: StudyMaterialDto) {
         if (_state.value.downloadedIds.contains(material.id)) {
             val localPath = tokenStore.getLocalPath(material.id)
@@ -809,7 +809,12 @@ class StudyMaterialsViewModel @Inject constructor(
                     audioInfo.size = extractor.readSampleData(audioBuf, 0)
                     if (audioInfo.size < 0) break
                     audioInfo.presentationTimeUs = extractor.sampleTime
-                    audioInfo.flags = extractor.sampleFlags
+                    // MediaExtractor.SAMPLE_FLAG_* and MediaCodec.BUFFER_FLAG_*
+                    // are different enums that only happen to agree on the sync
+                    // bit. Assigning across them means SAMPLE_FLAG_ENCRYPTED (2)
+                    // arrives as BUFFER_FLAG_CODEC_CONFIG (2), which corrupts the
+                    // muxed track. Translate the one flag that transfers.
+                    audioInfo.flags = keyFrameFlag(extractor.sampleFlags)
                     val copy = java.nio.ByteBuffer.allocate(audioInfo.size)
                     audioBuf.rewind(); audioBuf.limit(audioInfo.size)
                     copy.put(audioBuf); copy.rewind()
@@ -931,7 +936,7 @@ class StudyMaterialsViewModel @Inject constructor(
             while (true) {
                 info.size = extractor.readSampleData(buf, 0)
                 if (info.size < 0) break
-                info.presentationTimeUs = extractor.sampleTime; info.flags = extractor.sampleFlags
+                info.presentationTimeUs = extractor.sampleTime; info.flags = keyFrameFlag(extractor.sampleFlags)
                 trackMap[extractor.sampleTrackIndex]?.let { muxer.writeSampleData(it, buf, info) }
                 extractor.advance()
             }
@@ -1415,3 +1420,15 @@ class StudyMaterialsViewModel @Inject constructor(
     }
 
 }
+/**
+ * Translate MediaExtractor sample flags into MediaCodec buffer flags.
+ *
+ * The two sets are unrelated constants that only coincide on the sync/key-frame
+ * bit; copying the raw int across mislabels an encrypted sample (SAMPLE_FLAG_
+ * ENCRYPTED == BUFFER_FLAG_CODEC_CONFIG == 2) and corrupts the muxed output.
+ * Key-frame is the only flag the muxer needs, so map just that one.
+ */
+private fun keyFrameFlag(sampleFlags: Int): Int =
+    if (sampleFlags and android.media.MediaExtractor.SAMPLE_FLAG_SYNC != 0)
+        android.media.MediaCodec.BUFFER_FLAG_KEY_FRAME
+    else 0

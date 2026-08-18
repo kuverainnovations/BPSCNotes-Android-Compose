@@ -65,6 +65,12 @@ class MainActivity : ComponentActivity(),
     private var onPaymentSuccessCallback: ((String) -> Unit)? = null
     private var onPaymentFailureCallback: ((Int, String) -> Unit)? = null
 
+    // Play In-App Updates. Independent of the server-driven UpdateGateDialog
+    // below: this one fires purely on a higher versionCode being live on Play.
+    private val inAppUpdateManager by lazy {
+        com.example.bpscnotes.core.update.InAppUpdateManager(this)
+    }
+
     // ── CashfreePaymentListener ──────────────────────────────
     override fun setPaymentCallbacks(
         onSuccess: (cfPaymentId: String) -> Unit,
@@ -104,6 +110,19 @@ class MainActivity : ComponentActivity(),
                 tokenStore.saveDeviceId(fid)
             }
         }
+
+        // Ask Play whether a newer versionCode is live. Flexible by default, so
+        // it downloads in the background without interrupting the user; the
+        // toast below is the prompt to apply it.
+        inAppUpdateManager.onReadyToInstall = {
+            android.widget.Toast.makeText(
+                this,
+                "Update downloaded — reopening to finish install.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            inAppUpdateManager.completeUpdate()
+        }
+        inAppUpdateManager.checkForUpdate()
 
         // Fetch admin-controlled settings on startup
         lifecycleScope.launch {
@@ -226,6 +245,18 @@ class MainActivity : ComponentActivity(),
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Play requires an interrupted IMMEDIATE update to be resumed, and a
+        // FLEXIBLE download may have finished while we were backgrounded.
+        inAppUpdateManager.resumeIfInterrupted()
+    }
+
+    override fun onDestroy() {
+        inAppUpdateManager.unregister()
+        super.onDestroy()
     }
 
     override fun onPaymentVerify(orderId: String) {

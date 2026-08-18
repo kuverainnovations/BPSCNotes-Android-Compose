@@ -370,7 +370,7 @@ fun JobVacanciesScreen(
                             ) {
                                 Text(
                                     str.jvDisclaimer +
-                                    "BPSCNotes is not a government app. Verify on the official site before applying.",
+                                    "BNotes+ is not a government app. Verify on the official site before applying.",
                                     fontSize = 11.sp, color = Color(0xFF6D4C41), lineHeight = 16.sp,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                 )

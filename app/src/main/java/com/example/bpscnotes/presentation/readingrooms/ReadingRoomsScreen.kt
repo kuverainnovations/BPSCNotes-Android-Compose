@@ -219,7 +219,7 @@ val mockRooms = listOf(
         "r1", "BPSC 70th Prep — Polity Focus",
         RoomSubject.Polity, RoomType.Official, 24, 50,
         "Fundamental Rights — Articles 12–35", 12,
-        "BPSCNotes Official", isFeatured = true,
+        "BNotes+ Official", isFeatured = true,
         tags = listOf("Official", "Beginner Friendly", "Notes Shared"),
         members = mockMembers, messages = mockMessages, pomodoroMinutes = 25
     ),
@@ -255,7 +255,7 @@ val mockRooms = listOf(
         "r5", "Silent Study Room 📵",
         RoomSubject.Mixed, RoomType.Public, 42, 100,
         "Individual Study — No Distractions", 30,
-        "BPSCNotes Official",
+        "BNotes+ Official",
         tags = listOf("No Chat", "Focus Mode", "Pomodoro"),
         members = mockMembers, pomodoroMinutes = 50
     ),
@@ -344,7 +344,7 @@ private fun RoomLobbyScreen(
             maxUsers = dto.maxMembers,
             todayFocus = dto.todayFocus?: "General Study Discussion",
             streak = 0,
-            adminName = dto.hostName ?: "BPSCNotes Official",
+            adminName = dto.hostName ?: "BNotes+ Official",
             isFeatured = dto.isFeatured,
             tags = dto.tags ?: emptyList(),
             members = emptyList(),

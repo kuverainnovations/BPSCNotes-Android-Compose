@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.example.bpscnotes.core.ui.AppLoader
+import com.example.bpscnotes.core.ui.destroyWebView
 import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import kotlinx.coroutines.delay
@@ -99,7 +100,7 @@ fun LiveClassViewerScreen(
             title = { Text("Join with camera and mic?") },
             text = {
                 Text(
-                    "To speak or appear on camera in this live class, BPSCNotes needs " +
+                    "To speak or appear on camera in this live class, BNotes+ needs " +
                         "access to your camera and microphone. They are used only while " +
                         "you are in the class and nothing is recorded by the app.\n\n" +
                         "You can skip this and still watch and listen."
@@ -239,6 +240,13 @@ fun LiveClassViewerScreen(
                     webViewRef = this
                     loadUrl(if (meetingUrl.startsWith("http")) meetingUrl else "https://$meetingUrl")
                 }
+            },
+            // The meeting page holds camera and mic (granted automatically in
+            // onPermissionRequest above). Without an explicit teardown they stay
+            // live and the class audio keeps playing after leaving the screen.
+            onRelease = { view ->
+                webViewRef = null
+                view.destroyWebView()
             }
         )
 

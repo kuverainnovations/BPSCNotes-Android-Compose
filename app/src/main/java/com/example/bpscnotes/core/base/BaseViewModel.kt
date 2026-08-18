@@ -16,10 +16,19 @@ abstract class BaseViewModel : ViewModel() {
     private val _error = MutableLiveData<String?>(null)
     val error: LiveData<String?> = _error
 
+    /** Report a validation failure without making a network call. */
+    protected fun setError(message: String?) { _error.value = message }
+
     protected fun launchWithLoading(block: suspend () -> Unit) {
+        // Rapid taps: the submit buttons are disabled while isLoading, but a
+        // burst of taps can land before recomposition applies that. Dropping
+        // re-entrant calls here stops duplicate OTP sends and double
+        // registrations. Checked before launching, so the guard is set on the
+        // caller's (main) thread rather than a dispatch later.
+        if (_isLoading.value == true) return
+        _isLoading.value = true
+        _error.value = null
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
             try {
                 block()
             } catch (e: Exception) {

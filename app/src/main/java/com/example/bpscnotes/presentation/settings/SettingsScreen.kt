@@ -402,8 +402,23 @@ fun SettingsScreen(
                     Column {
                         SettingsActionRow(
                             icon = Icons.Rounded.Info, iconBg = Color(0xFFE3F2FD), iconTint = Color(0xFF1565C0),
-                            title = str.settingsVersion, subtitle = str.settingsVersionSubtitle,
-                            trailingLabel = str.version, showArrow = false, onClick = {}
+                            // Read from BuildConfig, not AppStrings. The strings
+                            // hardcoded "v1.0.0" in both locales and had already
+                            // drifted from the shipped versionName.
+                            title = str.settingsVersion,
+                            subtitle = "BNotes+ v${com.bpscnotes.eduapp.BuildConfig.VERSION_NAME}",
+                            trailingLabel = "v${com.bpscnotes.eduapp.BuildConfig.VERSION_NAME}",
+                            showArrow = false, onClick = {}
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
+                        // Independence statement. The Impersonation policy asks
+                        // an exam-prep app to distance itself from the examining
+                        // body; saying so in-app backs up the rename.
+                        Text(
+                            text  = androidx.compose.ui.res.stringResource(com.bpscnotes.eduapp.R.string.affiliation_disclaimer),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cs.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
                         SettingsActionRow(
@@ -431,7 +446,7 @@ fun SettingsScreen(
                             title = str.settingsShare,
                             subtitle = if (settingsViewModel.coinsConfig.config.collectAsState().value.enabled)
                                 str.settingsShareSubtitle.replace("{coins}", "${settingsViewModel.coinsConfig.coins("referral_signup", 50)}")
-                            else "Invite friends to BPSCNotes",
+                            else "Invite friends to BNotes+",
                             onClick = {
                                 // Include the referral code — the subtitle above promises
                                 // coins for sharing, but the message never carried a code,
@@ -439,7 +454,7 @@ fun SettingsScreen(
                                 val refCode = settingsState.referralCode
                                 val codeLine = if (refCode.isNotBlank())
                                     "Use my referral code: $refCode — we both earn coins.\n\n" else ""
-                                val shareText = "🎯 I'm preparing for BPSC on BPSCNotes!\n\n" +
+                                val shareText = "🎯 I'm preparing for BPSC on BNotes+!\n\n" +
                                         "Best app for BPSC exam prep — Daily quizzes, Current Affairs, Mock Tests & more.\n\n" +
                                         codeLine +
                                         "Download now: https://play.google.com/store/apps/details?id=$packageName"
@@ -447,7 +462,7 @@ fun SettingsScreen(
                                     type = "text/plain"
                                     putExtra(android.content.Intent.EXTRA_TEXT, shareText)
                                 }
-                                context.startActivity(android.content.Intent.createChooser(intent, "Share BPSCNotes"))
+                                context.startActivity(android.content.Intent.createChooser(intent, "Share BNotes+"))
                             }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = cs.outline, thickness = 0.5.dp)
@@ -483,7 +498,7 @@ fun SettingsScreen(
                             onClick = {
                                 val emailIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
                                     data = android.net.Uri.parse("mailto:$supportEmail")
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "BPSCNotes App Support")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "BNotes+ App Support")
                                     putExtra(android.content.Intent.EXTRA_TEXT,
                                         "App Version: ${str.version}\nDevice: ${android.os.Build.MODEL}\n\nDescribe your issue:\n")
                                 }

@@ -127,14 +127,14 @@ fun LoginScreen(navController: NavHostController) {
                 ) {
                     Image(
                         painter = painterResource(R.drawable.ic_bpsc_logo),
-                        contentDescription = "BPSCNotes Logo",
+                        contentDescription = "BNotes+ Logo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "BPSCNotes",
+                    "BNotes+",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold
@@ -177,6 +177,7 @@ fun LoginScreen(navController: NavHostController) {
                 onValueChange = {
                     if (it.length <= 10 && it.all(Char::isDigit)) {
                         mobile = it
+                        if (error != null) viewModel.clearError()
 
                         if (it.length == 10) {
                             focusManager.clearFocus()

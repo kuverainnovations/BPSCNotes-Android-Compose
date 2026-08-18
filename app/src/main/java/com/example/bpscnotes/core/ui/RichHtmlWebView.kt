@@ -62,7 +62,16 @@ fun RichHtmlWebView(html: String, modifier: Modifier = Modifier) {
                 }
             }
         },
-        update = { it.loadDataWithBaseURL(null, doc, "text/html", "UTF-8", null) },
+        update = { view ->
+            // Only reload when the document actually changed. `update` runs on
+            // every recomposition, and an unconditional load restarts the render
+            // (visible flicker, lost scroll position) for identical content.
+            if (view.tag != doc) {
+                view.tag = doc
+                view.loadDataWithBaseURL(null, doc, "text/html", "UTF-8", null)
+            }
+        },
+        onRelease = { it.destroyWebView() },
     )
 }
 

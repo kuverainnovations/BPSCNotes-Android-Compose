@@ -24,7 +24,6 @@ import com.example.bpscnotes.core.ui.t.BpscColors
 import com.example.bpscnotes.core.ui.t.LocalDarkMode
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
-import java.time.LocalDate
 
 data class SubjectProgress(
     val name: String, val emoji: String,
@@ -98,7 +97,7 @@ fun ProfileScreen(
                 onEditClick = { navController.navigate(Screen.EditProfile.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onShareClick = {
-                    val shareText = "I'm preparing for BPSC on BPSCNotes! 🎯\nhttps://bpscnotes.in"
+                    val shareText = "I'm preparing for BPSC on BNotes+! 🎯\nhttps://bpscnotes.in"
                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(android.content.Intent.EXTRA_TEXT, shareText)

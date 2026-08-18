@@ -320,7 +320,7 @@ fun CurrentAffairsScreen(
                                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                                 type = "text/plain"
                                                 putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
-                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BPSCNotes app")
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BNotes+ app")
                                             }
                                             context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                         },

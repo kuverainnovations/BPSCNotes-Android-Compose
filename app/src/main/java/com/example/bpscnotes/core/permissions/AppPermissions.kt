@@ -254,7 +254,7 @@ private fun PermissionRationaleDialog(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Text(
-                            "BPSCNotes will send you:\n\n" +
+                            "BNotes+ will send you:\n\n" +
                             "📅  Daily quiz reminders\n" +
                             str.permStreakWarn + "\n" +
                             "🎯  Study target nudges\n" +
@@ -372,7 +372,7 @@ private fun NotificationSettingsPrompt(
                         textAlign  = TextAlign.Center,
                     )
                     Text(
-                        "You've blocked notifications for BPSCNotes. " +
+                        "You've blocked notifications for BNotes+. " +
                         "To receive study reminders and exam alerts, " +
                         "enable them in your device settings.",
                         style      = MaterialTheme.typography.bodyMedium,

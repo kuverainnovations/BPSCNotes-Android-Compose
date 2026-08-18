@@ -118,7 +118,7 @@ fun LanguageSelectionScreen(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                "BPSCNotes",
+                "BNotes+",
                 fontSize   = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color      = Color.White,

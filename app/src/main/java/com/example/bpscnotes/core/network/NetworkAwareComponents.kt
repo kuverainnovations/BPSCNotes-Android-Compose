@@ -136,5 +136,9 @@ fun OfflineBanner() {
 fun rememberIsOnline(): Boolean {
     val context = LocalContext.current
     val initial = remember { isNetworkCurrentlyAvailable(context) }
-    return networkStateFlow(context).collectAsState(initial = initial).value
+    // The flow must be remembered. collectAsState keys its subscription on the
+    // flow instance, so building a new one inline on every recomposition tore
+    // down and re-registered a ConnectivityManager callback each time.
+    val flow = remember(context) { networkStateFlow(context) }
+    return flow.collectAsState(initial = initial).value
 }

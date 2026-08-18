@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 /**
  * Generic API response wrapper.
  *
- * Every endpoint from the BPSCNotes backend returns this shape:
+ * Every endpoint from the BNotes+ backend returns this shape:
  * {
  *   "success": true,
  *   "message": "OK",
