@@ -1049,6 +1049,8 @@ private fun HeroHeader(
             drawCircle(Color.White.copy(0.06f), 160.dp.toPx(), Offset(size.width + 20.dp.toPx(), -50.dp.toPx()))
             drawCircle(Color.White.copy(0.04f), 80.dp.toPx(), Offset(-20.dp.toPx(), size.height * 0.7f))
         }
+        val context = LocalContext.current
+
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Top row: back + compact title (on collapse) + share
             val shareContext = androidx.compose.ui.platform.LocalContext.current
@@ -1086,8 +1088,11 @@ private fun HeroHeader(
                             val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_SUBJECT, "Check this BPSC course: $courseTitle")
+//                                putExtra(android.content.Intent.EXTRA_TEXT,
+//                                    "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://bpscnotes.in/courses/${course.id}")
                                 putExtra(android.content.Intent.EXTRA_TEXT,
-                                    "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://bpscnotes.in/courses/${course.id}")
+                                   "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://play.google.com/store/apps/details?id=${context.packageName}")
+
                             }
                             shareContext.startActivity(android.content.Intent.createChooser(shareIntent, str.caShare))
                         },

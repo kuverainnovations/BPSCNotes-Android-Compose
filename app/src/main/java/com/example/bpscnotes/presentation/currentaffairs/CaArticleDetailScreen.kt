@@ -418,7 +418,10 @@ fun CaArticleDetailScreen(
                                                 }
                                                 if (tags.isNotBlank()) appendLine(tags)
                                                 appendLine()
-                                                append(str.caShareTagline)
+                                               // append(str.caShareTagline)
+                                                appendLine(str.caShareTagline)
+                                                appendLine()
+                                                append("📲 Download BNotes+ app:\nhttps://play.google.com/store/apps/details?id=${context.packageName}")
                                             }
                                             val intent = Intent(Intent.ACTION_SEND).apply {
                                                 type = "text/plain"

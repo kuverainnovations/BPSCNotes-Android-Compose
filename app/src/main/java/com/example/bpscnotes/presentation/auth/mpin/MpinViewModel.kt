@@ -100,7 +100,17 @@ class MpinViewModel @Inject constructor(
                             "+91$savedMobile" == mobile || savedMobile == mobile.removePrefix("+91"))
 
             if (!tokenBelongsToThisUser) {
-                // No token or different user — must enter MPIN
+                // No usable session — this is the post-logout case, which is
+                // most of what "biometric login" is actually for. If the user
+                // has biometric on we hold their MPIN encrypted, so replay it
+                // through the normal login call and sign them in for real.
+                val savedMpin = tokenStore.getMpinForBiometric()
+                if (tokenStore.isBiometricEnabled() && !savedMpin.isNullOrBlank()) {
+                    loginWithMpin(mobile, savedMpin)
+                    return@launch
+                }
+                // Nothing stored (biometric enabled on a device that never
+                // completed an MPIN login) — fall back to typing it.
                 _state.update { it.copy(error = "Please enter your MPIN to continue.") }
                 return@launch
             }
@@ -148,6 +158,12 @@ class MpinViewModel @Inject constructor(
                 val response = authRepository.loginMpin(mobile, actualPin)
                 if (response.success) {
                     tokenStore.saveUserMobile(mobile)
+                    // Keep the MPIN for biometric login, but only for users who
+                    // asked for it. This is what lets biometric survive a
+                    // logout — see TokenStore.saveMpinForBiometric.
+                    if (tokenStore.isBiometricEnabled()) {
+                        tokenStore.saveMpinForBiometric(actualPin)
+                    }
                     try { fcmTokenManager.syncTokenIfNeeded() } catch (_: Exception) {}
                     cacheInvalidator.evictAll()
                     _state.update { it.copy(isLoading = false, navigateToMain = true) }
@@ -183,6 +199,11 @@ class MpinViewModel @Inject constructor(
             try {
                 val result = authRepository.createMpin(pin)
                 if (result.mpinCreated) {
+                    // A changed MPIN invalidates any copy held for biometric.
+                    // Replace it if biometric is on, drop it otherwise, so a
+                    // stale PIN can never be replayed.
+                    if (tokenStore.isBiometricEnabled()) tokenStore.saveMpinForBiometric(pin)
+                    else tokenStore.clearMpinForBiometric()
                     _state.update { it.copy(isLoading = false, mpinCreated = true) }
                 } else {
                     _state.update { it.copy(isLoading = false, error = "Failed to create MPIN") }
@@ -210,6 +231,9 @@ class MpinViewModel @Inject constructor(
             try {
                 val response = authRepository.resetMpin(mobile, otp, pin)
                 if (response.success) {
+                    // The old MPIN is dead — never leave it replayable.
+                    if (tokenStore.isBiometricEnabled()) tokenStore.saveMpinForBiometric(pin)
+                    else tokenStore.clearMpinForBiometric()
                     try { fcmTokenManager.syncTokenIfNeeded() } catch (_: Exception) {}
                     cacheInvalidator.evictAll()
                     _state.update { it.copy(isLoading = false, mpinCreated = true) }

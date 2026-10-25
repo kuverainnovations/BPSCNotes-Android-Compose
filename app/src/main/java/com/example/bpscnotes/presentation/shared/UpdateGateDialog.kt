@@ -58,16 +58,26 @@ fun UpdateGateDialog(config: AppConfigData) {
 
     val mustUpdate = config.loaded &&
         (config.forceUpdate || isVersionLower(currentVersion, config.minAppVersion))
-    var softNudgeDismissed by rememberSaveable { mutableStateOf(false) }
-    val showSoftNudge = config.loaded &&
-        !mustUpdate &&
-        !softNudgeDismissed &&
-        isVersionLower(currentVersion, config.latestAppVersion)
 
-    if (!mustUpdate && !showSoftNudge) return
+    // The soft "new version available" nudge is gone.
+    //
+    // It compared the build against app_version in the backend's app_settings,
+    // a value nobody remembers to bump at release time. In practice it fired on
+    // every single launch for users already on the newest build (shipping 1.0.2
+    // while the setting still said 1.0.4), and rememberSaveable meant dismissing
+    // it only lasted until the next app open.
+    //
+    // Play In-App Updates now covers this properly — see
+    // core/update/InAppUpdateManager. It compares against what is actually live
+    // on Play, so it cannot nag about a version that does not exist.
+    //
+    // The hard gate below stays: it is the one thing Play cannot do, letting an
+    // admin block a build that must not keep running.
+    if (!mustUpdate) return
 
+    // Hard gate only — not dismissible, no back-press or tap-outside escape.
     AlertDialog(
-        onDismissRequest = { if (!mustUpdate) softNudgeDismissed = true },
+        onDismissRequest = { },
         icon = {
             Icon(
                 Icons.Rounded.SystemUpdate, null,
@@ -76,16 +86,13 @@ fun UpdateGateDialog(config: AppConfigData) {
         },
         title = {
             Text(
-                if (mustUpdate) "Update Required" else "New Version Available",
+                "Update Required",
                 fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
             )
         },
         text = {
             Text(
-                if (mustUpdate)
-                    "Please update BNotes+ to continue. This version is no longer supported."
-                else
-                    "A new version of BNotes+ is available with improvements and fixes.",
+                "Please update BNotes+ to continue. This version is no longer supported.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -98,16 +105,9 @@ fun UpdateGateDialog(config: AppConfigData) {
                 shape = RoundedCornerShape(10.dp)
             ) { Text(str.updateNow) }
         },
-        dismissButton = if (mustUpdate) null else {
-            @Composable {
-                TextButton(onClick = { softNudgeDismissed = true }) {
-                    Text(str.roomsLater, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        },
         properties = DialogProperties(
-            dismissOnBackPress = !mustUpdate,
-            dismissOnClickOutside = !mustUpdate
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
         ),
         shape = RoundedCornerShape(16.dp)
     )

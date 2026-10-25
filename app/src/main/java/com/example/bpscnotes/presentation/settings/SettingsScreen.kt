@@ -9,6 +9,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
@@ -193,6 +196,60 @@ fun SettingsScreen(
 
                         // Biometric toggle
                         val biometricContext = androidx.compose.ui.platform.LocalContext.current
+                        var askMpinForBiometric by remember { mutableStateOf(false) }
+
+                        if (askMpinForBiometric) {
+                            var pin by remember { mutableStateOf("") }
+                            AlertDialog(
+                                onDismissRequest = {
+                                    askMpinForBiometric = false
+                                    settingsViewModel.cancelBiometricSetup()
+                                },
+                                title = { Text("Confirm your MPIN", fontWeight = FontWeight.Bold) },
+                                text = {
+                                    Column {
+                                        Text(
+                                            "Enter your MPIN once so fingerprint can sign you in " +
+                                                "after you log out.",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        OutlinedTextField(
+                                            value = pin,
+                                            onValueChange = {
+                                                if (it.length <= 4 && it.all(Char::isDigit)) pin = it
+                                            },
+                                            singleLine = true,
+                                            visualTransformation = PasswordVisualTransformation(),
+                                            keyboardOptions = KeyboardOptions(
+                                                keyboardType = KeyboardType.NumberPassword
+                                            ),
+                                            placeholder = { Text("4-digit MPIN") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        enabled = pin.length == 4 &&
+                                            !settingsState.isVerifyingBiometricMpin,
+                                        onClick = {
+                                            settingsViewModel.enableBiometricWithMpin(pin)
+                                            askMpinForBiometric = false
+                                        }
+                                    ) { Text("Confirm") }
+                                },
+                                dismissButton = {
+                                    // Cancelling leaves biometric off. A
+                                    // half-configured state that cannot log the
+                                    // user in is worse than a clear "not on".
+                                    TextButton(onClick = {
+                                        askMpinForBiometric = false
+                                        settingsViewModel.cancelBiometricSetup()
+                                    }) { Text("Cancel") }
+                                }
+                            )
+                        }
                         // Re-read on every recomposition, not remember{}: the user
                         // can leave to add a fingerprint and come straight back,
                         // and a cached "no hardware" would keep the row hidden.
@@ -240,8 +297,11 @@ fun SettingsScreen(
                                             title      = str.biometricLogin,
                                             subtitle   = "Confirm to turn on biometric login",
                                             onSuccess  = {
-                                                settingsViewModel.setBiometricEnabled(true)
-                                                settingsViewModel.showMessage("Biometric login is on")
+                                                // Not enabled yet. The switch is
+                                                // flipped only once the MPIN is
+                                                // verified below, so it can never
+                                                // read ON while setup failed.
+                                                askMpinForBiometric = true
                                             },
                                             onError    = { msg -> settingsViewModel.showMessage(msg) },
                                             onFallback = { /* cancelled — leave it off */ },

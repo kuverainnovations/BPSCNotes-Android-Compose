@@ -51,8 +51,14 @@ fun MpinLoginScreen(
     // "Please enter your MPIN to continue." — biometric looked broken every
     // time after a logout. Require a token to be present as well; after one
     // MPIN login the token is back and biometric works again.
+    // Offer biometric when it can actually complete: either a live session to
+    // revalidate, or a stored MPIN to replay after logout. Gating on the
+    // preference alone used to fire the prompt with nothing behind it, so the
+    // fingerprint succeeded and the user still got an error.
     val biometricEnabled = remember {
-        tokenStore.isBiometricEnabled() && !tokenStore.getToken().isNullOrBlank()
+        tokenStore.isBiometricEnabled() &&
+            (!tokenStore.getToken().isNullOrBlank() ||
+                !tokenStore.getMpinForBiometric().isNullOrBlank())
     }
 
     // Blue status bar to match header

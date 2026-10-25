@@ -28,8 +28,13 @@ android {
         // Bumped for the resubmission after the Aug 2026 Play rejection.
         // Play refuses an upload whose versionCode is already used on the
         // track, and the rejected build consumed 1.
-        versionCode = 2
-        versionName = "1.0.2"
+        //
+        // versionName must stay AHEAD of app_version in the backend's
+        // app_settings (1.0.4 at time of writing), or UpdateGateDialog shows
+        // its "New Version Available" nudge on every launch. Bump the admin
+        // setting to match whenever this changes.
+        versionCode = 4
+        versionName = "1.0.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -46,6 +46,8 @@ data class SettingsUiState(
     val error:              String? = null,
     val loggedOut:          Boolean = false,   // triggers navigation to Login
     val biometricEnabled:   Boolean = false,
+    /** MPIN check in flight while turning biometric on. */
+    val isVerifyingBiometricMpin: Boolean = false,
 )
 
 @HiltViewModel
@@ -116,8 +118,67 @@ class SettingsViewModel @Inject constructor(
      */
     fun setBiometricEnabled(v: Boolean) {
         tokenStore.setBiometricEnabled(v)
+        // Switching off must not leave the MPIN behind.
+        if (!v) tokenStore.clearMpinForBiometric()
         _state.update { it.copy(biometricEnabled = v) }
         Event.settingsChanged("biometric_enabled", v.toString())
+    }
+
+    /**
+     * Finish turning biometric on: verify the MPIN, then store it so biometric
+     * can sign the user in after a logout rather than only unlocking a live
+     * session. Settings never otherwise sees the MPIN.
+     *
+     * The switch is only flipped on once this succeeds. Enabling it earlier —
+     * on the fingerprint check alone — left it reading ON while setup had
+     * actually failed, promising a login that would not work.
+     */
+    fun enableBiometricWithMpin(pin: String) {
+        val mobile = tokenStore.getUserMobile()
+        if (mobile.isNullOrBlank()) {
+            cancelBiometricSetup("Couldn't confirm your account. Try again from Settings.")
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isVerifyingBiometricMpin = true) }
+            try {
+                val normalised = "+91" + mobile.removePrefix("+91")
+                val resp = authApi.loginMpin(
+                    com.example.bpscnotes.data.remote.api.LoginMpinRequest(normalised, pin)
+                )
+                if (resp.success) {
+                    tokenStore.saveMpinForBiometric(pin)
+                    tokenStore.setBiometricEnabled(true)
+                    _state.update {
+                        it.copy(
+                            biometricEnabled = true,
+                            isVerifyingBiometricMpin = false,
+                            successMessage = "Biometric login is ready",
+                        )
+                    }
+                    Event.settingsChanged("biometric_enabled", "true")
+                } else {
+                    _state.update { it.copy(isVerifyingBiometricMpin = false) }
+                    cancelBiometricSetup("That MPIN didn't match. Biometric login is still off.")
+                }
+            } catch (_: Exception) {
+                _state.update { it.copy(isVerifyingBiometricMpin = false) }
+                cancelBiometricSetup("Couldn't verify your MPIN right now. Biometric login is still off.")
+            }
+        }
+    }
+
+    /** Setup was abandoned or failed — leave nothing half-configured. */
+    fun cancelBiometricSetup(message: String? = null) {
+        tokenStore.setBiometricEnabled(false)
+        tokenStore.clearMpinForBiometric()
+        _state.update {
+            it.copy(
+                biometricEnabled = false,
+                isVerifyingBiometricMpin = false,
+                successMessage = message ?: it.successMessage,
+            )
+        }
     }
 
     fun showMessage(msg: String) { _state.update { it.copy(successMessage = msg) } }

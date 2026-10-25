@@ -219,9 +219,40 @@ class TokenStore @Inject constructor(
     fun saveUserPrepLevel(level: String) = prefs.edit().putString("prep_level", level).apply()
     fun getUserPrepLevel(): String? = prefs.getString("prep_level", null)
 
-    // ── MPIN state (flag only — MPIN itself NEVER stored locally) ──
+    // ── MPIN state ─────────────────────────────────────────────
     fun hasMpin(): Boolean = prefs.getBoolean("has_mpin", false)
     fun setHasMpin(value: Boolean) = prefs.edit().putBoolean("has_mpin", value).apply()
+
+    // ── MPIN held for biometric login ──────────────────────────
+    //
+    // Biometric used to be a session *unlock*: it only revalidated a JWT that
+    // was already on the device. logout() clears that JWT, so biometric could
+    // never work after an explicit logout — which is not what the setting
+    // promises, and logout() deliberately keeps biometric_enabled precisely so
+    // the preference survives.
+    //
+    // To make biometric an actual login method we keep the MPIN, and replay it
+    // through the normal /auth/login-mpin call once the fingerprint check
+    // passes. Same pattern banking apps use for quick login.
+    //
+    // Only ever written when the user has biometric switched on, only ever read
+    // after AppBiometricManager reports success, and always in the Keystore-
+    // backed encrypted store — never the plaintext prefs, unlike the auth token
+    // which has a plaintext fallback. If encryption is unavailable on the
+    // device we simply do not offer biometric login rather than degrade.
+    //
+    // Cleared when biometric is turned off, when the MPIN changes, and by
+    // clearAll() on account deletion. Deliberately survives logout().
+    fun saveMpinForBiometric(mpin: String) {
+        try { securePrefs?.edit()?.putString("biometric_mpin", mpin)?.apply() } catch (_: Exception) {}
+    }
+
+    fun getMpinForBiometric(): String? =
+        try { securePrefs?.getString("biometric_mpin", null) } catch (_: Exception) { null }
+
+    fun clearMpinForBiometric() {
+        try { securePrefs?.edit()?.remove("biometric_mpin")?.apply() } catch (_: Exception) {}
+    }
 
     // ── Biometric preference ────────────────────────────────────
     // Stored in standard prefs (not EncryptedSharedPreferences) until

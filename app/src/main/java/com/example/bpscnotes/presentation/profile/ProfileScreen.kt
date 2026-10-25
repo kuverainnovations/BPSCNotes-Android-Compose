@@ -97,7 +97,7 @@ fun ProfileScreen(
                 onEditClick = { navController.navigate(Screen.EditProfile.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onShareClick = {
-                    val shareText = "I'm preparing for BPSC on BNotes+! 🎯\nhttps://bpscnotes.in"
+                    val shareText = "I'm preparing for BPSC on BNotes+! 🎯\nhttps://play.google.com/store/apps/details?id=${context.packageName}"
                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(android.content.Intent.EXTRA_TEXT, shareText)

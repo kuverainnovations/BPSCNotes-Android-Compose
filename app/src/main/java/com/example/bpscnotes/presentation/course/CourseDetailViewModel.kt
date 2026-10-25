@@ -371,7 +371,18 @@ class CourseDetailViewModel @Inject constructor(
                 // attach before the billing callbacks can fire.
                 val outcomeDeferred = async { gplay.awaitPurchaseOrUserChoice(courseId) }
                 kotlinx.coroutines.yield()
-                val result = gplay.launchPurchase(activity, details, obfuscatedAccountId = tokenStore.getUserId() ?: "")
+
+                val userId = tokenStore.getUserId()
+
+                Log.d("GPLAY_ACCOUNT", "Launching purchase: userId=$userId")
+
+                val result = gplay.launchPurchase(
+                    activity,
+                    details,
+                    obfuscatedAccountId = userId ?: ""
+                )
+
+               // val result = gplay.launchPurchase(activity, details, obfuscatedAccountId = tokenStore.getUserId() ?: "")
                 if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
                     outcomeDeferred.cancel()
                     _uiState.update { it.copy(isGPlayPurchasing = false, error = "Could not open Google Play checkout (${result.debugMessage})") }

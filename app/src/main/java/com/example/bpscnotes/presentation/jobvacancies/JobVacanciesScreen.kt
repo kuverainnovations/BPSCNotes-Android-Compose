@@ -7,6 +7,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -21,9 +22,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.*
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -38,6 +42,7 @@ import com.example.bpscnotes.data.remote.api.JobVacancyDto
 import com.example.bpscnotes.presentation.navigation.popBackStackSafe
 import com.example.bpscnotes.presentation.navigation.Routes.Screen
 import java.text.SimpleDateFormat
+import java.time.format.TextStyle
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -363,19 +368,73 @@ fun JobVacanciesScreen(
                     ) {
                         // Source disclaimer — Play policy: govt info must cite official sources
                         item {
+                            val context = LocalContext.current
+
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = Color(0xFFFFF8E1),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(
-                                    str.jvDisclaimer +
-                                    "BNotes+ is not a government app. Verify on the official site before applying.",
-                                    fontSize = 11.sp, color = Color(0xFF6D4C41), lineHeight = 16.sp,
+                                val annotatedDisclaimer = buildAnnotatedString {
+                                    append("ℹ️ Job details are sourced from official government websites:\n")
+
+                                    pushStringAnnotation(tag = "URL", annotation = "https://bpsc.bihar.gov.in/")
+                                    withStyle(style = SpanStyle(
+                                        color = Color.Blue,
+                                        textDecoration = TextDecoration.Underline
+                                    )
+                                    ) {
+                                        append("bpsc.bihar.gov.in")
+                                    }
+                                    pop()
+
+                                    append(", ")
+
+                                    pushStringAnnotation(tag = "URL", annotation = "https://bssc.bihar.gov.in/")
+                                    withStyle(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)) {
+                                        append("bssc.bihar.gov.in")
+                                    }
+                                    pop()
+
+                                    append(", ")
+
+                                    pushStringAnnotation(tag = "URL", annotation = "https://bpssc.bih.nic.in/")
+                                    withStyle(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)) {
+                                        append("bpssc.bih.nic.in")
+                                    }
+                                    pop()
+
+                                    append(", ")
+
+                                    pushStringAnnotation(tag = "URL", annotation = "https://patnahighcourt.gov.in/")
+                                    withStyle(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)) {
+                                        append("patnahighcourt.gov.in")
+                                    }
+                                    pop()
+
+                                    append(". Always verify on the official site before applying.\n")
+                                    append("BNotes+ is not a government app.")
+                                }
+
+                                ClickableText(
+                                    text = annotatedDisclaimer,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF6D4C41),
+                                        lineHeight = 16.sp
+                                    ),
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    onClick = { offset ->
+                                        annotatedDisclaimer.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                            .firstOrNull()?.let { annotation ->
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
+                                                context.startActivity(intent)
+                                            }
+                                    }
                                 )
                             }
                         }
+
                         // Featured
                         val featured = filtered.filter { it.isFeatured }
                         if (featured.isNotEmpty() && selectedCategory == null && searchQuery.isEmpty()) {

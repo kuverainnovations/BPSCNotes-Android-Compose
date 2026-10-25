@@ -22,8 +22,8 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.bpscnotes.app" />
-                  <option name="mobileSdkAppId" value="1:133585364580:android:17652ac19896295330e171" />
+                  <option name="appId" value="com.bpscnotes.eduapp" />
+                  <option name="mobileSdkAppId" value="1:133585364580:android:7ea9c4e4ebcb8c0c30e171" />
                   <option name="projectId" value="bpscnotes-b02f7" />
                   <option name="projectNumber" value="133585364580" />
                 </ConnectionSetting>

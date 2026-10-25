@@ -155,7 +155,7 @@ fun CurrentAffairsScreen(
     val grouped = filtered.groupBy { it.rawDate }.entries.sortedByDescending { it.key }
 
     val pullRefreshState = rememberPullToRefreshState()
-
+    val packageName = context.packageName
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = state.isLoading && allArticles.isNotEmpty(),
@@ -320,7 +320,8 @@ fun CurrentAffairsScreen(
                                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                                 type = "text/plain"
                                                 putExtra(android.content.Intent.EXTRA_SUBJECT, article.headline.stripHtmlTags())
-                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BNotes+ app")
+//                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\nRead more on BNotes+ app")
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "${article.headline.stripHtmlTags()}\n\n${article.summary.stripHtmlTags()}\n\n📲 Download BNotes+ app:\nhttps://play.google.com/store/apps/details?id=${packageName}")
                                             }
                                             context.startActivity(android.content.Intent.createChooser(intent, str.caShare))
                                         },
