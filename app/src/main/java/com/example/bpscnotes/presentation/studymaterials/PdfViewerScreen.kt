@@ -100,6 +100,18 @@ fun PdfViewerScreen(
 
     var pdfPages   by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var totalPages by remember { mutableIntStateOf(0) }
+
+    // ── Zoom ──────────────────────────────────────────────────
+    // Base pages are rasterised at PDF_BASE_WIDTH, which is about 1:1 with a
+    // phone screen, so zooming the bitmap alone would just enlarge pixels.
+    // Past ~1.5x the page currently being read is re-rendered at a matching
+    // resolution and swapped in; only that one page, because a whole document
+    // at 3x would run to gigabytes.
+    val zoomState = com.example.bpscnotes.core.ui.rememberZoomState()
+    var hiResScale   by remember { mutableFloatStateOf(1f) }
+    var hiResPage    by remember { mutableIntStateOf(-1) }
+    var hiResBitmap  by remember { mutableStateOf<Bitmap?>(null) }
+    var pdfFile      by remember { mutableStateOf<java.io.File?>(null) }
     var isLoading  by remember { mutableStateOf(true) }
     var error      by remember { mutableStateOf<String?>(null) }
     // FIX: collect purchase state from ViewModel
@@ -123,12 +135,43 @@ fun PdfViewerScreen(
             }
             pdfPages   = bitmaps
             totalPages = bitmaps.size
+            pdfFile    = cachedFile
         } catch (e: Exception) {
             Log.e("PdfViewer", "Failed: ${e.message}", e)
             error = e.toUserMessage("Could not open PDF")
         } finally {
             isLoading = false
         }
+    }
+
+    // ── Re-rasterise the page being read, at the zoomed-in resolution ──
+    // Keyed on the rounded zoom step and the top visible page, so it reruns
+    // when either changes and not on every frame of the pinch.
+    val focusedPage = (listState.firstVisibleItemIndex - 1).coerceAtLeast(0)
+    LaunchedEffect(hiResScale, focusedPage, pdfFile) {
+        val file = pdfFile
+        if (file == null || hiResScale <= 1.4f) {
+            // Back to fit — drop the hi-res copy so it stops holding memory.
+            hiResBitmap?.recycle()
+            hiResBitmap = null
+            hiResPage   = -1
+            return@LaunchedEffect
+        }
+        if (focusedPage >= pdfPages.size) return@LaunchedEffect
+        val rendered = withContext(Dispatchers.Default) {
+            com.example.bpscnotes.core.pdf.renderPdfPageAtScale(file, focusedPage, hiResScale)
+        }
+        if (rendered != null) {
+            hiResBitmap?.recycle()
+            hiResBitmap = rendered
+            hiResPage   = focusedPage
+        }
+        // A null render (unsupported page, or OOM at high zoom on a small
+        // device) just leaves the base bitmap on screen — soft, but working.
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { hiResBitmap?.recycle(); hiResBitmap = null }
     }
 
     // FIX: Show the exact same PurchaseConfirmDialog used in the materials list.
@@ -270,6 +313,12 @@ fun PdfViewerScreen(
 
                 else -> {
                     Box(Modifier.fillMaxSize()) {
+                    // Pinch to zoom. Bound to multi-touch, so a one-finger
+                    // drag still scrolls the page list underneath.
+                    com.example.bpscnotes.core.ui.ZoomableBox(
+                        state         = zoomState,
+                        onZoomChanged = { hiResScale = it },
+                    ) {
                     LazyColumn(
                         state               = listState,
                         modifier            = Modifier.fillMaxSize(),
@@ -305,7 +354,11 @@ fun PdfViewerScreen(
                                     .clip(RoundedCornerShape(8.dp))
                             ) {
                                 // ── The page bitmap ──────────────────────────
-                                val bmp = pdfPages[pageIndex]
+                                // Swap in the hi-res render for whichever page
+                                // the reader has zoomed into; everything else
+                                // keeps the lighter base bitmap.
+                                val hiRes = hiResBitmap?.takeIf { hiResPage == pageIndex && !it.isRecycled }
+                                val bmp = hiRes ?: pdfPages[pageIndex]
                                 if (bmp.width > 0 && bmp.height > 0) {
                                 Image(
                                     bitmap              = bmp.asImageBitmap(),
@@ -451,6 +504,8 @@ fun PdfViewerScreen(
                             }
                         }
                     }
+                    }   // ZoomableBox — the fast scroller below stays outside
+                        // it so the thumb keeps its real size while zoomed.
 
                     // ── Fast scroller (QA 09-Jul issue 7) ─────────────────
                     // Drag the right-edge thumb to jump through pages; a

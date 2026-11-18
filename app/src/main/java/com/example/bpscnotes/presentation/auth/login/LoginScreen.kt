@@ -122,14 +122,17 @@ fun LoginScreen(navController: NavHostController) {
                     modifier = Modifier
                         .size(80.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        // Solid white — the logo asset no longer carries its
+                        // own opaque white box, so the tile provides the
+                        // ground the dark wordmark needs. See SplashScreen.
+                        .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(R.drawable.ic_bpsc_logo),
                         contentDescription = "BNotes+ Logo",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))

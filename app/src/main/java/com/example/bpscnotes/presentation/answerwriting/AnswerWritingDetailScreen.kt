@@ -116,6 +116,17 @@ private fun DetailContent(
     var pdfToView by remember { mutableStateOf<String?>(null) }
     pdfToView?.let { AnswerPdfDialog(url = it, onDismiss = { pdfToView = null }) }
 
+    // Submitted answer photos open full-screen and zoomable — handwriting
+    // shot on a phone is not readable at fit-width.
+    var imageToView by remember { mutableStateOf<String?>(null) }
+    imageToView?.let { url ->
+        com.example.bpscnotes.core.ui.ZoomableImageDialog(
+            url       = url,
+            caption   = "Pinch or double-tap to zoom",
+            onDismiss = { imageToView = null },
+        )
+    }
+
     // Elapsed writing timer — only ticks pre-submit; tappable pause/resume
     var elapsedSecs by rememberSaveable(questionId) { mutableStateOf(0) }
     var timerRunning by rememberSaveable(questionId) { mutableStateOf(true) }
@@ -599,14 +610,15 @@ private fun DetailContent(
                                         OpenAnswerPdfButton(onClick = { pdfToView = sPdf }, modifier = Modifier.fillMaxWidth())
                                     sImages.isNotEmpty() ->
                                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            sImages.forEach { url ->
+                                            sImages.forEachIndexed { index, url ->
                                                 AsyncImage(
                                                     model = url,
-                                                    contentDescription = null,
+                                                    contentDescription = "Sample answer page ${index + 1}. Tap to enlarge.",
                                                     contentScale = ContentScale.FillWidth,
                                                     modifier = Modifier.fillMaxWidth()
                                                         .clip(RoundedCornerShape(12.dp))
                                                         .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                                        .clickable { imageToView = url }
                                                 )
                                             }
                                         }
@@ -646,14 +658,15 @@ private fun DetailContent(
                                 OpenAnswerPdfButton(onClick = { pdfToView = myPdf }, modifier = Modifier.fillMaxWidth())
                             myImages.isNotEmpty() ->
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    myImages.forEach { url ->
+                                    myImages.forEachIndexed { index, url ->
                                         AsyncImage(
                                             model = url,
-                                            contentDescription = null,
+                                            contentDescription = "Your answer page ${index + 1}. Tap to enlarge.",
                                             contentScale = ContentScale.FillWidth,
                                             modifier = Modifier.fillMaxWidth()
                                                 .clip(RoundedCornerShape(12.dp))
                                                 .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                                .clickable { imageToView = url }
                                         )
                                     }
                                 }

@@ -58,6 +58,73 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              App Links for shared content URLs (e.g. a shared course:
+              https://bpscnotes.in/courses/<uuid>).
+
+              android:autoVerify makes Android fetch
+              https://bpscnotes.in/.well-known/assetlinks.json at install time
+              and, if this app's signing fingerprint is listed there, open
+              these links directly instead of showing a chooser or going to
+              the browser. WITHOUT that file published, the filter still
+              works but Android treats the app as one option among many.
+
+              The fingerprint that must appear in assetlinks.json is the
+              PLAY APP SIGNING key from Play Console (Setup > App integrity),
+              not the upload key — Play re-signs the app before it reaches
+              devices.
+
+              Paths are listed explicitly so marketing and policy pages
+              (/privacy-policy, /terms-of-service, /support, ...) keep opening
+              in the browser. WebLink.routeFor() applies the same rule in code
+              and returns null for anything it does not recognise.
+            -->
+            <!--
+              VERIFIED links: api.bpscnotes.in only.
+
+              assetlinks.json is served by the API itself (AppLinksModule,
+              mapped by nginx to /.well-known/assetlinks.json), so this host
+              can actually be verified. bpscnotes.in cannot: it is on
+              WordPress.com, which will not serve that file on the plan in
+              use — see the second filter below.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="api.bpscnotes.in" />
+                <data android:pathPrefix="/c/" />
+            </intent-filter>
+
+            <!--
+              LEGACY links shared before the move to api.bpscnotes.in.
+
+              Deliberately NOT autoVerify. On Android 12+ verification is
+              all-or-nothing across every host in an autoVerify filter, so
+              leaving bpscnotes.in in the filter above would fail
+              verification for api.bpscnotes.in too and break the links that
+              CAN work.
+
+              Without autoVerify these open a chooser rather than going
+              straight to the app, and a user can still make the app the
+              default by hand. That is the most these can do while the site
+              stays on WordPress.com.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="bpscnotes.in" />
+                <data android:scheme="https" android:host="www.bpscnotes.in" />
+                <data android:pathPrefix="/courses/" />
+                <data android:pathPrefix="/course/" />
+                <data android:pathPrefix="/quizzes/" />
+                <data android:pathPrefix="/quiz/" />
+                <data android:pathPrefix="/answer-writing/" />
+                <data android:pathPrefix="/study-materials/" />
+                <data android:pathPrefix="/jobs" />
+            </intent-filter>
         </activity>
 
         <!-- Firebase Cloud Messaging Service -->

@@ -1355,6 +1355,11 @@ private fun LibraryItemCard(
                     item.isPremium && !isPurchased -> { { onPurchase() } }  // Unlock = purchase
                     else                           -> { { onDownload() } }  // Free/purchased = download
                 }
+                // Admin can switch downloads off per material. Only the download
+                // action goes away — Read stays, and an unpurchased premium item
+                // still shows Unlock, since that is a purchase, not a download.
+                val showSecondAction = (item.isPremium && !isPurchased) || item.allowDownload
+                if (showSecondAction) {
                 Button(
                     onClick  = buttonAction,
                     modifier = Modifier.weight(1f).height(38.dp),
@@ -1388,6 +1393,7 @@ private fun LibraryItemCard(
                         },
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold
                     )
+                }
                 }
             }
         }
@@ -2042,7 +2048,14 @@ private fun MaterialDetailSheet(
                         else -> onDownload
                     },
                     modifier = Modifier.weight(2f).height(52.dp), shape = RoundedCornerShape(14.dp),
-                    enabled = !isDownloading,
+                    // With downloads switched off and no viewable URL there is
+                    // no action left to offer, so the button goes inert rather
+                    // than silently doing nothing on tap.
+                    enabled = !isDownloading && (
+                        isPremiumLocked ||
+                        !material.resolvedUrl.isNullOrBlank() ||
+                        material.allowDownload
+                    ),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = when {
                             isDownloaded    -> BpscColors.Success
@@ -2069,6 +2082,7 @@ private fun MaterialDetailSheet(
                             isDownloaded    -> str.materialsDownloadedDone
                             isPremiumLocked -> "Unlock  ${fmtRs(price)}"
                             !material.resolvedUrl.isNullOrBlank() -> "Open PDF"
+                            !material.allowDownload -> "Download turned off"
                             else            -> str.materialsDownloadFree
                         },
                         style = MaterialTheme.typography.titleMedium,

@@ -216,9 +216,20 @@ data class QuizPreviewDto(
     @SerializedName("marks_per_correct")        val marksPerCorrect: Double = 1.0,
     @SerializedName("marks_per_wrong")          val marksPerWrong: Double = 0.0,
     @SerializedName("is_exam_mode")             val isExamMode: Boolean = false,
+    // ── Paid mock tests ──────────────────────────────────────────
+    // isPaid is the master switch; a test with isPaid=false is free no
+    // matter what the prices say. Either price may be 0, meaning that
+    // payment method is not offered for this test.
+    @SerializedName("is_paid")       val isPaid: Boolean = false,
+    @SerializedName("price")         val price: Int = 0,
+    @SerializedName("coin_price")    val coinPrice: Int = 0,
+    @SerializedName("is_purchased")  val isPurchased: Boolean = false,
 ) {
     /** Total Marks shown on the test details screen = questions × marks/correct */
     val totalMarks: Double get() = totalQuestions * marksPerCorrect
+
+    /** True when this test must be unlocked before it can be attempted. */
+    val isLocked: Boolean get() = isPaid && !isPurchased
 }
 
 data class QuizzesResponseData(val quizzes: List<QuizPreviewDto> = emptyList())
@@ -741,7 +752,21 @@ data class CaMcqDto(
 }
 
 data class CaMcqsResponseData(
-    val mcqs: List<CaMcqDto> = emptyList()
+    val mcqs: List<CaMcqDto> = emptyList(),
+    // Set when the admin has put a coin price on CA quizzes and this user
+    // hasn't paid it. The server sends an EMPTY mcqs list in that case —
+    // the questions carry their own correct answers, so a locked set is
+    // never put on the wire. Defaults keep older responses behaving as free.
+    val locked: Boolean = false,
+    @com.google.gson.annotations.SerializedName("coinCost") val coinCost: Int = 0,
+    @com.google.gson.annotations.SerializedName("questionCount") val questionCount: Int = 0,
+)
+
+/** Result of spending coins to open an article's MCQ set. */
+data class CaMcqUnlockData(
+    val unlocked: Boolean = false,
+    @com.google.gson.annotations.SerializedName("coinsSpent") val coinsSpent: Int = 0,
+    val balance: Int = 0,
 )
 
 /**
@@ -805,6 +830,10 @@ interface CurrentAffairsApiService {
 
     @GET("current-affairs/{id}/mcqs")
     suspend fun getMcqs(@Path("id") id: String): ApiResponse<CaMcqsResponseData>
+
+    /** POST /current-affairs/{id}/mcqs/unlock — spend coins to open a priced quiz. */
+    @POST("current-affairs/{id}/mcqs/unlock")
+    suspend fun unlockMcqs(@Path("id") id: String): ApiResponse<CaMcqUnlockData>
 
     /** POST /current-affairs/{id}/mcqs/submit — persists a completed attempt; server re-scores from the submitted answers */
     @POST("current-affairs/{id}/mcqs/submit")

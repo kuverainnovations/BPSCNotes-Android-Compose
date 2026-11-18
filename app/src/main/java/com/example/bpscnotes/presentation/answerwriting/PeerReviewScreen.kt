@@ -306,15 +306,26 @@ private fun ReviewBody(assignment: ReviewAssignmentDto, viewModel: PeerReviewVie
                 if (!pdf.isNullOrBlank()) {
                     OpenAnswerPdfButton(onClick = { pdfToView = pdf }, modifier = Modifier.fillMaxWidth())
                 } else if (images.isNotEmpty()) {
+                    // Handwriting photographed on a phone is unreadable at
+                    // fit-width, so each page opens full-screen and zoomable.
+                    var imageToView by remember(assignment.id) { mutableStateOf<String?>(null) }
+                    imageToView?.let { url ->
+                        com.example.bpscnotes.core.ui.ZoomableImageDialog(
+                            url     = url,
+                            caption = "Pinch or double-tap to zoom",
+                            onDismiss = { imageToView = null },
+                        )
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        images.forEach { url ->
+                        images.forEachIndexed { index, url ->
                             AsyncImage(
                                 model = url,
-                                contentDescription = null,
+                                contentDescription = "Answer page ${index + 1}. Tap to enlarge.",
                                 contentScale = ContentScale.FillWidth,
                                 modifier = Modifier.fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .border(1.dp, cs.outline.copy(0.4f), RoundedCornerShape(12.dp))
+                                    .clickable { imageToView = url }
                             )
                         }
                     }

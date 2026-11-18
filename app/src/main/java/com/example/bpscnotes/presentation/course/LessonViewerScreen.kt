@@ -243,6 +243,14 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
     if (notesUrl.isNullOrBlank()) { NoContentState(str.lessonNoPdf); return }
 
     var pdfPages   by remember { mutableStateOf<List<android.graphics.Bitmap>>(emptyList()) }
+
+    // Zoom state + the one hi-res page. Mirrors PdfViewerScreen; see the
+    // comment there for why only a single page is re-rasterised.
+    val zoomState   = com.example.bpscnotes.core.ui.rememberZoomState()
+    var hiResScale  by remember { mutableFloatStateOf(1f) }
+    var hiResPage   by remember { mutableIntStateOf(-1) }
+    var hiResBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var pdfFile     by remember { mutableStateOf<java.io.File?>(null) }
     var isLoading  by remember { mutableStateOf(true) }
     var error      by remember { mutableStateOf<String?>(null) }
 
@@ -270,11 +278,33 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
             val file    = withContext(kotlinx.coroutines.Dispatchers.IO) { downloadPdf(notesUrl, context.cacheDir) }
             val bitmaps = withContext(kotlinx.coroutines.Dispatchers.Default) { renderPdfPages(file) }
             pdfPages = bitmaps
+            pdfFile  = file
         } catch (e: Exception) {
             error = e.toUserMessage("Could not open PDF")
         } finally {
             isLoading = false
         }
+    }
+
+    // Re-rasterise the page being read once zoomed past ~1.5x.
+    val focusedPage = listState.firstVisibleItemIndex
+    LaunchedEffect(hiResScale, focusedPage, pdfFile) {
+        val file = pdfFile
+        if (file == null || hiResScale <= 1.4f) {
+            hiResBitmap?.recycle(); hiResBitmap = null; hiResPage = -1
+            return@LaunchedEffect
+        }
+        if (focusedPage >= pdfPages.size) return@LaunchedEffect
+        val rendered = withContext(kotlinx.coroutines.Dispatchers.Default) {
+            com.example.bpscnotes.core.pdf.renderPdfPageAtScale(file, focusedPage, hiResScale)
+        }
+        if (rendered != null) {
+            hiResBitmap?.recycle(); hiResBitmap = rendered; hiResPage = focusedPage
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { hiResBitmap?.recycle(); hiResBitmap = null }
     }
 
     // Fire onReachEnd when user scrolls to last page
@@ -312,7 +342,13 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
                 ) { Text(str.retry) }
             }
             pdfPages.isEmpty() -> NoContentState(str.lessonNoPdf)
-            else -> LazyColumn(
+            // Pinch to zoom. Multi-touch only, so one-finger scrolling of the
+            // page list is untouched. Same treatment as the Student Hub viewer.
+            else -> com.example.bpscnotes.core.ui.ZoomableBox(
+                state         = zoomState,
+                onZoomChanged = { hiResScale = it },
+            ) {
+            LazyColumn(
                 state               = listState,
                 modifier            = Modifier.fillMaxSize(),
                 contentPadding      = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
@@ -324,9 +360,11 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                     ) {
-                        // Page bitmap
+                        // Page bitmap — hi-res copy for the page being zoomed
+                        // into, base bitmap for all the others.
+                        val hiRes = hiResBitmap?.takeIf { hiResPage == pageIndex && !it.isRecycled }
                         Image(
-                            bitmap             = pdfPages[pageIndex].asImageBitmap(),
+                            bitmap             = (hiRes ?: pdfPages[pageIndex]).asImageBitmap(),
                             contentDescription = null,
                             modifier           = Modifier.fillMaxWidth(),
                             contentScale       = ContentScale.FillWidth
@@ -360,6 +398,7 @@ private fun PdfViewer(notesUrl: String?, lessonId: String = "", onReachEnd: () -
                     }
                 }
             }
+            }   // ZoomableBox
         }
     }
 }

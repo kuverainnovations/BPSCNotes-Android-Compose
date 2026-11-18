@@ -55,6 +55,10 @@ data class MockTestsUiState(
     val customError: String?                    = null,
     /** Set once the server has built the test; consumed by the screen. */
     val createdCustomTest: MockTest?            = null,
+    // ── Paid mock test unlock ──────────────────────────────────
+    val isUnlocking: Boolean                    = false,
+    val unlockError: String?                    = null,
+    val unlockedMessage: String?                = null,
 ) {
     val fullTests     get() = allTests.filter { it.type == "mock" }
     val topicTests    get() = allTests.filter { it.type == "topic" }
@@ -217,6 +221,33 @@ class MockTestsViewModel @Inject constructor(
 
     fun clearCustomError() {
         _uiState.update { it.copy(customError = null) }
+    }
+
+    /**
+     * Unlock a paid mock test with coins. The server settles the balance and
+     * records the entitlement; we reload the list so the card flips from a
+     * price to "Unlocked" and becomes startable.
+     */
+    fun unlockTest(quizId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlocking = true, unlockError = null) }
+            try {
+                val res = quizzesApi.purchaseQuiz(quizId)
+                if (res.success) {
+                    _uiState.update { it.copy(isUnlocking = false, unlockedMessage = res.message ?: "Test unlocked") }
+                    load()   // refresh entitlement + coin-dependent state
+                } else {
+                    _uiState.update { it.copy(isUnlocking = false, unlockError = res.message ?: "Could not unlock this test") }
+                }
+            } catch (e: Exception) {
+                Log.e("MockTestsVM", "unlockTest: ${e.message}", e)
+                _uiState.update { it.copy(isUnlocking = false, unlockError = e.toUserMessage("Could not unlock this test")) }
+            }
+        }
+    }
+
+    fun clearUnlockState() {
+        _uiState.update { it.copy(unlockError = null, unlockedMessage = null) }
     }
 
     /** Fetch questions for a quiz. POST /quizzes/:id/start (creates session, no GET fallback). */

@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import com.example.bpscnotes.core.ads.AdManager
 import com.example.bpscnotes.presentation.activerecall.ActiveRecallScreen
 import com.example.bpscnotes.presentation.notebook.NotebookScreen
@@ -92,6 +94,30 @@ import com.example.bpscnotes.presentation.auth.mpin.CreateMpinScreen
 import com.example.bpscnotes.presentation.auth.mpin.ResetMpinScreen
 import com.example.bpscnotes.presentation.settings.ChangeMpinScreen
 
+/**
+ * Screens shown before the user reaches the app proper.
+ *
+ * A deep link must not open while one of these is on top: Splash redirects
+ * with popUpTo(Splash, inclusive = true) and would pop the destination
+ * straight back off, and pushing a course over Login or OTP would show
+ * content to someone who has not signed in yet.
+ *
+ * Routes that take arguments are listed by their PATTERN
+ * ("otp/{mobile}?context={context}"), because that is what
+ * NavDestination.route returns — not the filled-in path.
+ */
+private val PRE_HOME_ROUTES: Set<String> = setOf(
+    Screen.Splash.route,
+    Screen.LanguageSelection.route,
+    Screen.Onboarding.route,
+    Screen.Login.route,
+    Screen.Otp.route,
+    Screen.Register.route,
+    Screen.MpinLogin.route,
+    Screen.ExamSetup.route,
+    Screen.OnboardingWizard.route,
+)
+
 @Composable
 fun BpscNavHost(
     navController:        NavHostController,
@@ -100,6 +126,12 @@ fun BpscNavHost(
     initialNotifScreen:   String = "",
     initialNotifType:     String = "",
     initialNotifIds:      Map<String, String> = emptyMap(),
+    // Resolved from a tapped https://bpscnotes.in/... link. Already a route,
+    // because WebLink feeds the same notificationRoute() table rather than
+    // routing separately. The nonce changes on every tap so re-opening the
+    // same link still navigates.
+    deepLinkRoute:        String? = null,
+    deepLinkNonce:        Int = 0,
 ) {
     // Navigate to the correct screen when app opened from a tray notification (cold start).
     // Uses the SAME table as the in-app notification list. This used to match on
@@ -113,6 +145,32 @@ fun BpscNavHost(
             .notificationRoute(initialNotifScreen, initialNotifIds)
         if (route != null) navController.navigate(route) { launchSingleTop = true }
     }
+
+    // Web deep link.
+    //
+    // This waited a fixed 2s, which lost a race it could never win: Splash
+    // ALSO sleeps 2000ms and only then runs its auth checks and redirects
+    // with popUpTo(Splash, inclusive = true). That pops everything stacked
+    // above Splash — including the course we had just pushed — so a shared
+    // link opened the app on the dashboard instead of the course.
+    //
+    // Waiting for a destination rather than a duration removes the guess.
+    // Once the current destination is no longer a pre-home screen, Splash
+    // has already run its redirect and been removed from the graph, so
+    // nothing is left to pop us.
+    //
+    // Suspending also handles the signed-out case for free: the link opens
+    // once the user gets through login instead of being thrown away.
+    androidx.compose.runtime.LaunchedEffect(deepLinkRoute, deepLinkNonce) {
+        val route = deepLinkRoute ?: return@LaunchedEffect
+
+        navController.currentBackStackEntryFlow
+            .map { it.destination.route }
+            .first { it != null && it !in PRE_HOME_ROUTES }
+
+        navController.navigate(route) { launchSingleTop = true }
+    }
+
     val context = LocalContext.current
 
     // ── Session expired (401) → redirect to Login ───────────────────────

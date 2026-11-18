@@ -66,7 +66,16 @@ data class MockTest(
     val isExamMode: Boolean = false,
     val isAttempted: Boolean = false,
     val myLastScore: Int? = null,
-)
+    // ── Paid mock tests ──────────────────────────────────────
+    // isPaid above is the master switch. Either price may be 0, meaning
+    // that payment method is not offered for this test.
+    val price: Int = 0,
+    val coinPrice: Int = 0,
+    val isPurchased: Boolean = false,
+) {
+    /** Must be unlocked before it can be attempted. */
+    val isLocked: Boolean get() = isPaid && !isPurchased
+}
 
 data class MockQuestion(
     val id: String,
@@ -119,7 +128,10 @@ private fun QuizPreviewDto.toMockTest(): MockTest {
         totalQuestions  = totalQuestions,
         durationMinutes = durationMins,
         subject         = subject.takeIf { it.isNotBlank() },
-        isPaid          = false,
+        isPaid          = isPaid,
+        price           = price,
+        coinPrice       = coinPrice,
+        isPurchased     = isPurchased,
         negativeMarkingEnabled = negativeMarkingEnabled,
         negativeMarking         = marksPerWrong.toFloat(),
         marksPerCorrect          = marksPerCorrect.toFloat(),
@@ -200,6 +212,65 @@ fun MockTestsScreen(
 
 
 
+    // ── Paid mock test: unlock prompt ─────────────────────────
+    // Tapping a locked test opens this instead of the instructions screen.
+    var unlockTarget by remember { mutableStateOf<MockTest?>(null) }
+
+    unlockTarget?.let { target ->
+        val canUseCoins = target.coinPrice > 0
+        AlertDialog(
+            onDismissRequest = { if (!state.isUnlocking) unlockTarget = null },
+            icon  = { Icon(Icons.Rounded.Lock, null, tint = BpscColors.CoinGold) },
+            title = { Text(target.title, fontWeight = FontWeight.Bold) },
+            text  = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (canUseCoins)
+                            "Unlock this mock test for ${target.coinPrice} coins."
+                        else
+                            "This test is ₹${target.price}. Coin unlock isn't available for it yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "${target.totalQuestions} questions · ${target.durationMinutes} minutes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = canUseCoins && !state.isUnlocking,
+                    onClick = { viewModel.unlockTest(target.id) },
+                ) {
+                    if (state.isUnlocking) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Unlock 🪙 ${target.coinPrice}", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !state.isUnlocking, onClick = { unlockTarget = null }) { Text(str.cancel) }
+            },
+        )
+    }
+
+    // Unlock finished — close the prompt and tell the user what happened.
+    if (state.unlockedMessage != null) {
+        LaunchedEffect(state.unlockedMessage) {
+            unlockTarget = null
+            viewModel.clearUnlockState()
+        }
+    }
+    if (state.unlockError != null) {
+        com.example.bpscnotes.core.ui.AppErrorDialog(
+            message      = state.unlockError!!,
+            dismissLabel = str.ok,
+            onDismiss    = { viewModel.clearUnlockState() },
+        )
+    }
+
     // ── Questions loading overlay ─────────────────────────────
     if (state.isLoadingQuestions) {
         AppLoader(message = str.quizLoadingQ)
@@ -236,9 +307,16 @@ fun MockTestsScreen(
             MockTestLobbyScreen(
                 navController   = navController,
                 onStartTest     = { test ->
-                    selectedTest = test
-                    userAnswers.clear(); reviewMarked.clear()
-                    screenState  = MockTestState.Instructions
+                    // A paid test that hasn't been bought goes to the unlock
+                    // prompt rather than the instructions screen. The server
+                    // enforces this too — /start refuses a locked test.
+                    if (test.isLocked) {
+                        unlockTarget = test
+                    } else {
+                        selectedTest = test
+                        userAnswers.clear(); reviewMarked.clear()
+                        screenState  = MockTestState.Instructions
+                    }
                 },
                 onCustomTest    = { showCustomSheet = true },
                 viewModel       = viewModel
@@ -727,9 +805,19 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                         // Type badge
                         Text(typeLabel, style = MaterialTheme.typography.labelSmall, color = typeColor.first, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                             modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(typeColor.second).padding(horizontal = 6.dp, vertical = 2.dp))
-                        // Free/Paid
-                        if (test.isPaid) {
-                            Text(str.badgePro, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                        // Free / locked / owned. A paid test the user already
+                        // bought reads as unlocked, not as a sales pitch.
+                        if (test.isPaid && test.isPurchased) {
+                            Text("✓ Unlocked", style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8FDF4)).padding(horizontal = 6.dp, vertical = 2.dp))
+                        } else if (test.isPaid) {
+                            val priceLabel = when {
+                                test.price > 0 && test.coinPrice > 0 -> "₹${test.price} / 🪙${test.coinPrice}"
+                                test.price > 0                       -> "₹${test.price}"
+                                test.coinPrice > 0                   -> "🪙 ${test.coinPrice}"
+                                else                                 -> str.badgePro
+                            }
+                            Text(priceLabel, style = MaterialTheme.typography.labelSmall, color = BpscColors.CoinGold, fontWeight = FontWeight.Bold, fontSize = 9.sp,
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFF8E1)).padding(horizontal = 6.dp, vertical = 2.dp))
                         } else {
                             Text(str.badgeFree, style = MaterialTheme.typography.labelSmall, color = BpscColors.Success, fontWeight = FontWeight.Bold, fontSize = 9.sp,
@@ -752,13 +840,13 @@ private fun MockTestCard(test: MockTest, isFeatured: Boolean, onStart: () -> Uni
                     imageVector = when {
                         test.isScheduledFuture -> Icons.Rounded.Schedule
                         hasNoQuestions         -> Icons.Rounded.LockClock
+                        test.isLocked          -> Icons.Rounded.Lock
                         else                   -> Icons.Rounded.ChevronRight
                     },
                     contentDescription = null,
                     tint     = when {
-                        test.isScheduledFuture -> BpscColors.TextHint
-                        hasNoQuestions         -> BpscColors.TextHint
-                        else                   -> BpscColors.TextHint
+                        test.isLocked -> BpscColors.CoinGold
+                        else          -> BpscColors.TextHint
                     },
                     modifier = Modifier.size(20.dp)
                 )

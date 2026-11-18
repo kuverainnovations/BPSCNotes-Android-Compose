@@ -857,10 +857,19 @@ private fun DashboardHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // The logo sits on the dark header pill, so it needs its own
+                    // white chip behind it — the asset no longer ships with a
+                    // baked-in white box. Only the logo gets the light ground;
+                    // the pill stays translucent so the white "BNotes+" beside
+                    // it still reads.
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(com.bpscnotes.eduapp.R.drawable.ic_bpsc_logo),
                         contentDescription = "BNotes+",
-                        modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(Color.White)
+                            .padding(1.dp)
                     )
                     Text(
                         "BNotes+",

@@ -1088,10 +1088,19 @@ private fun HeroHeader(
                             val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(android.content.Intent.EXTRA_SUBJECT, "Check this BPSC course: $courseTitle")
-//                                putExtra(android.content.Intent.EXTRA_TEXT,
-//                                    "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://bpscnotes.in/courses/${course.id}")
+                                // Shares the course URL again, now that the app
+                                // declares App Links for bpscnotes.in and opens
+                                // /courses/<id> directly. It previously had to
+                                // fall back to the bare Play Store listing,
+                                // which worked but dropped the course.
+                                //
+                                // Requires BOTH to be live or the recipient
+                                // gets a 404: assetlinks.json published on the
+                                // domain, and a /courses/<id> web page for
+                                // people who do not have the app.
                                 putExtra(android.content.Intent.EXTRA_TEXT,
-                                   "I'm studying \"$courseTitle\" on BNotes+ app! Join me → https://play.google.com/store/apps/details?id=${context.packageName}")
+                                   "I'm studying \"$courseTitle\" on BNotes+ app! Join me → " +
+                                       com.example.bpscnotes.presentation.navigation.WebLink.courseUrl(course.id))
 
                             }
                             shareContext.startActivity(android.content.Intent.createChooser(shareIntent, str.caShare))

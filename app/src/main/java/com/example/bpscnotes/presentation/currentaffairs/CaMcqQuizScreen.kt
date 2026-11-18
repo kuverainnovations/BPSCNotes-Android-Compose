@@ -161,6 +161,9 @@ fun CaMcqQuizScreen(
     val mcqError   by viewModel.mcqError.collectAsState()
     val mcqAnswers by viewModel.mcqAnswers.collectAsState()
     val mcqMarkingConfig by viewModel.mcqMarkingConfig.collectAsState()
+    val mcqLockedCost  by viewModel.mcqLockedCost.collectAsState()
+    val mcqLockedCount by viewModel.mcqLockedCount.collectAsState()
+    val mcqUnlocking   by viewModel.mcqUnlocking.collectAsState()
 
     LaunchedEffect(affairId) { viewModel.loadMcqs(affairId) }
 
@@ -240,6 +243,18 @@ fun CaMcqQuizScreen(
     Box(modifier = Modifier.fillMaxSize().background(BpscColors.Surface)) {
         when {
             mcqLoading -> AppLoader(message = str.caLoadingQ)
+
+            // Priced quiz the user hasn't paid for. Must be tested before
+            // the empty-state branch below — a locked set arrives with an
+            // empty question list by design, and would otherwise read as
+            // "no questions for this article".
+            mcqLockedCost != null -> CaQuizLockedState(
+                coinCost      = mcqLockedCost!!,
+                questionCount = mcqLockedCount,
+                isUnlocking   = mcqUnlocking,
+                onUnlock      = { viewModel.unlockMcqs(affairId) },
+                onBack        = { navController.popBackStackSafe() },
+            )
 
             mcqs.isEmpty() && mcqError == null -> AppEmptyState(
                 emoji       = "❓",
@@ -1019,14 +1034,17 @@ private fun ReviewScreen(
                             }
                         }
                         McqQuestionHtml(html = q.question, modifier = Modifier.fillMaxWidth())
-                        // Show options: only reveal correct answer if user got it right
+                        // Show options: the correct answer is ALWAYS marked, whether or not
+                        // the user got it right. It used to be gated on r.isCorrect, which
+                        // meant a wrong answer highlighted nothing green — the student saw
+                        // their own choice in red and was never told what the answer was.
                         val showNotAttemptOpt = true
                         (listOf("a" to q.optionA, "b" to q.optionB, "c" to q.optionC, "d" to q.optionD, "e" to q.optionE)
                             .filter { it.second.isNotBlank() } +
                                 (if (showNotAttemptOpt) listOf("skip" to "Not Attempting This Question") else emptyList()))
                             .forEach { (letter, text) ->
                                 val isUser = letter == userAnswer
-                                val isCrct = r.isCorrect && letter == correctLetter
+                                val isCrct = letter == correctLetter
                                 val bg = when { isCrct -> Color(0xFFE8FDF4); isUser && !isCrct -> Color(0xFFFEE8E8); else -> Color.Transparent }
                                 val tc = when { isCrct -> Color(0xFF2ECC71); isUser && !isCrct -> Color(0xFFE74C3C); else -> BpscColors.TextSecondary }
                                 Row(
@@ -1049,9 +1067,11 @@ private fun ReviewScreen(
                                 )
                             }
                         }
-                        // Explanation only shown when user answered correctly
+                        // Explanation is shown for EVERY question, right or wrong. It was
+                        // previously gated on r.isCorrect, which withheld the teaching at
+                        // exactly the moment it mattered most — when the student got it wrong.
                         val explanation = serverAnswers[q.id]?.explanation ?: q.explanation
-                        if (!explanation.isNullOrBlank() && r.isCorrect) {
+                        if (!explanation.isNullOrBlank()) {
                             HorizontalDivider(color = cs.outline)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("💡", fontSize = 13.sp)
@@ -1210,5 +1230,81 @@ private fun McqQuestionHtml(html: String, modifier: Modifier = Modifier) {
             onRelease = { it.destroyWebView() },
             modifier = modifier.height(with(density) { webViewHeight.toDp() })
         )
+    }
+}
+/**
+ * Shown when an admin has put a coin price on Current Affairs quizzes and
+ * this user hasn't paid it for this article.
+ *
+ * The question count comes from the server rather than the (deliberately
+ * empty) question list — locked questions are never sent, because each one
+ * carries its own correct answer.
+ */
+@Composable
+private fun CaQuizLockedState(
+    coinCost: Int,
+    questionCount: Int,
+    isUnlocking: Boolean,
+    onUnlock: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(86.dp).clip(CircleShape).background(Color(0xFFFFF8E1)),
+            contentAlignment = Alignment.Center,
+        ) { Text("🔒", fontSize = 38.sp) }
+
+        Spacer(Modifier.height(18.dp))
+        Text(
+            "Unlock this quiz",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = cs.onSurface,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            if (questionCount > 0)
+                "$questionCount questions on this article, for $coinCost coins."
+            else
+                "Costs $coinCost coins.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = cs.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "One-time — you can retake it as often as you like.",
+            style = MaterialTheme.typography.bodySmall,
+            color = BpscColors.TextHint,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick  = onUnlock,
+            enabled  = !isUnlocking,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape    = RoundedCornerShape(14.dp),
+            colors   = ButtonDefaults.buttonColors(containerColor = BpscColors.CoinGold),
+        ) {
+            if (isUnlocking) {
+                CircularProgressIndicator(
+                    color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                )
+            } else {
+                Text(
+                    "Unlock for 🪙 $coinCost",
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF1A1A1A),
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        TextButton(onClick = onBack, enabled = !isUnlocking) { Text("Not now") }
     }
 }

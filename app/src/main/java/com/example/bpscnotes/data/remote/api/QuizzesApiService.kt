@@ -31,6 +31,16 @@ interface QuizzesApiService {
     ): ApiResponse<QuizDetailData>
 
     /**
+     * POST /quizzes/:id/purchase — unlock a paid mock test with coins.
+     * The server settles the balance; on success re-fetch the list so the
+     * card flips to "Unlocked".
+     */
+    @POST("quizzes/{id}/purchase")
+    suspend fun purchaseQuiz(
+        @Path("id") id: String
+    ): ApiResponse<QuizPurchaseData>
+
+    /**
      * POST /quizzes/:id/start
      * Creates an attempt session and returns questions.
      * Only called when user taps "Start Quiz".
@@ -98,4 +108,12 @@ data class QuizLeaderboardItemResponse(
     @com.google.gson.annotations.SerializedName("total_questions") val totalQuestions: Int = 0,
     @com.google.gson.annotations.SerializedName("time_taken_secs") val timeTakenSecs: Int = 0,
     @com.google.gson.annotations.SerializedName("is_current_user") val isCurrentUser: Boolean = false
+)
+/** Result of unlocking a paid mock test with coins. */
+data class QuizPurchaseData(
+    @com.google.gson.annotations.SerializedName("quizId")      val quizId: String = "",
+    @com.google.gson.annotations.SerializedName("coinsSpent")  val coinsSpent: Int = 0,
+    /** Coin balance after the debit — lets the wallet chip update without a refetch. */
+    @com.google.gson.annotations.SerializedName("balance")     val balance: Int = 0,
+    @com.google.gson.annotations.SerializedName("alreadyOwned") val alreadyOwned: Boolean = false,
 )

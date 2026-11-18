@@ -57,6 +57,48 @@ suspend fun downloadPdf(url: String, cacheDir: File, authToken: String = ""): Fi
     return file
 }
 
+/** Width every page is rasterised at for normal, unzoomed reading. */
+const val PDF_BASE_WIDTH = 1080
+
+/**
+ * Re-render ONE page at a higher resolution, for when the user zooms in.
+ *
+ * The base pass rasterises at [PDF_BASE_WIDTH], which is roughly 1:1 with a
+ * phone screen — so magnifying those bitmaps just enlarges their pixels and
+ * the text goes soft exactly when someone is trying to read it closer.
+ *
+ * Only ever called for a single visible page. Doing the whole document at
+ * this resolution is not an option: a page is width × height × 4 bytes, so
+ * at 3x a fifty-page PDF would run to gigabytes.
+ *
+ * Returns null if the page can't be rendered (including OOM, which is a real
+ * possibility at high zoom on a low-memory device — the caller keeps showing
+ * the base bitmap in that case).
+ */
+fun renderPdfPageAtScale(file: File, pageIndex: Int, scale: Float): Bitmap? {
+    val targetWidth = (PDF_BASE_WIDTH * scale.coerceIn(1f, 3f)).toInt()
+    return try {
+        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+                if (pageIndex !in 0 until renderer.pageCount) return null
+                renderer.openPage(pageIndex).use { page ->
+                    if (page.width <= 0 || page.height <= 0) return null
+                    val pageScale = targetWidth.toFloat() / page.width.toFloat()
+                    val bmpHeight = (page.height * pageScale).toInt().coerceIn(1, 8192)
+                    val bitmap = Bitmap.createBitmap(targetWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+                    bitmap.eraseColor(android.graphics.Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bitmap
+                }
+            }
+        }
+    } catch (_: OutOfMemoryError) {
+        null
+    } catch (_: Exception) {
+        null
+    }
+}
+
 /** Render all pages of a PDF file to Bitmaps at exactly 1080px wide.
  *  Height is capped at 8192px to prevent Compose Constraints overflow:
  *  keeping bmpWidth fixed at 1080 means ContentScale.FillWidth never

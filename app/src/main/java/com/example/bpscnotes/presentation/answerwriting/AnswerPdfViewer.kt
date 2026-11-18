@@ -71,18 +71,23 @@ fun AnswerPdfDialog(url: String, onDismiss: () -> Unit) {
                 when {
                     loading -> CircularProgressIndicator(color = Color.White)
                     error != null -> Text(error!!, color = Color.White, modifier = Modifier.padding(24.dp))
-                    else -> LazyColumn(
-                        Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(pages) { bmp ->
-                            Image(
-                                bitmap = bmp.asImageBitmap(),
-                                contentDescription = null,
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                    // Pinch to zoom. Handwritten answers are photographed or
+                    // scanned, so reviewers routinely need to get closer than
+                    // fit-width to read them at all.
+                    else -> com.example.bpscnotes.core.ui.ZoomableBox {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(pages) { bmp ->
+                                Image(
+                                    bitmap = bmp.asImageBitmap(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                     }
                 }

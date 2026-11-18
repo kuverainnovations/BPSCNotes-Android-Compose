@@ -107,15 +107,19 @@ fun SplashScreen(navController: NavHostController) {
                 modifier = Modifier
                     .size(110.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.15f)),
+                    // Solid white, not a 15% scrim. The logo asset used to
+                    // carry its own baked-in opaque white box, which is what
+                    // made the black wordmark readable on this blue gradient.
+                    // Now that the asset is properly transparent, the tile
+                    // has to supply that ground itself.
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
-                // Replace with your actual Lottie or Image asset
                 Image(
                     painter = painterResource(R.drawable.ic_bpsc_logo),
                     contentDescription = "BNotes+ Logo",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Fit
                 )
             }
 

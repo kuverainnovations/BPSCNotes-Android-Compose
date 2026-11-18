@@ -56,6 +56,12 @@ data class StudyMaterialDto(
     @SerializedName("is_premium")
     val isPremium: Boolean = false,
 
+    // Admin switch: false hides the download action. Reading in-app is
+    // unaffected. Defaults true so material served by an older backend
+    // (which omits the field entirely) stays downloadable.
+    @SerializedName("allow_download")
+    val allowDownload: Boolean = true,
+
     @SerializedName("language")
     val language: String = "English",
 
@@ -172,6 +178,7 @@ data class MaterialDetailData(
     @SerializedName("file_size_bytes") val fileSizeBytes: Long = 0,
     @SerializedName("page_count")      val pageCount: Int = 0,
     @SerializedName("is_premium")      val isPremium: Boolean = false,
+    @SerializedName("allow_download")  val allowDownload: Boolean = true,
     @SerializedName("is_featured")     val isFeatured: Boolean = false,
     @SerializedName("is_trending")     val isTrending: Boolean = false,
     @SerializedName("is_new")          val isNew: Boolean = false,

@@ -239,6 +239,18 @@ class CurrentAffairsViewModel @Inject constructor(
     private val _mcqError = MutableStateFlow<String?>(null)
     val mcqError: StateFlow<String?> = _mcqError.asStateFlow()
 
+    // ── Coin-priced CA quizzes ────────────────────────────────
+    // Null = free or already unlocked. Non-null = the coin price the user
+    // must pay before the questions are sent.
+    private val _mcqLockedCost = MutableStateFlow<Int?>(null)
+    val mcqLockedCost: StateFlow<Int?> = _mcqLockedCost.asStateFlow()
+
+    private val _mcqLockedCount = MutableStateFlow(0)
+    val mcqLockedCount: StateFlow<Int> = _mcqLockedCount.asStateFlow()
+
+    private val _mcqUnlocking = MutableStateFlow(false)
+    val mcqUnlocking: StateFlow<Boolean> = _mcqUnlocking.asStateFlow()
+
     private val _mcqAnswers = MutableStateFlow<Map<String, CaMcqAnswerDto>>(emptyMap())
     val mcqAnswers: StateFlow<Map<String, CaMcqAnswerDto>> = _mcqAnswers.asStateFlow()
 
@@ -268,6 +280,9 @@ class CurrentAffairsViewModel @Inject constructor(
             try {
                 val data = api.getMcqs(affairId).data
                 _mcqs.value = data?.mcqs ?: emptyList()
+                // A priced quiz comes back locked with an empty question list.
+                _mcqLockedCost.value    = if (data?.locked == true) data.coinCost else null
+                _mcqLockedCount.value   = data?.questionCount ?: 0
             } catch (e: Exception) {
                 _mcqError.value = e.toUserMessage("Failed to load questions")
                 _mcqs.value = emptyList()
@@ -275,6 +290,29 @@ class CurrentAffairsViewModel @Inject constructor(
             _mcqLoading.value = false
         }
         loadMcqMarkingConfig()
+    }
+
+    /**
+     * Spend coins to open a priced CA quiz, then reload so the questions
+     * arrive. The debit is settled server-side inside one transaction.
+     */
+    fun unlockMcqs(affairId: String) {
+        viewModelScope.launch {
+            _mcqUnlocking.value = true
+            try {
+                val res = api.unlockMcqs(affairId)
+                if (res.success) {
+                    _mcqUnlocking.value = false
+                    loadMcqs(affairId)
+                } else {
+                    _mcqUnlocking.value = false
+                    _mcqError.value = res.message ?: "Could not unlock this quiz"
+                }
+            } catch (e: Exception) {
+                _mcqUnlocking.value = false
+                _mcqError.value = e.toUserMessage("Could not unlock this quiz")
+            }
+        }
     }
 
     /** After user taps — resolve correct answer from already-loaded mcqs */

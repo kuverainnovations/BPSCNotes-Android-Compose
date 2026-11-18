@@ -1,5 +1,6 @@
 package com.example.bpscnotes
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -100,6 +101,29 @@ class MainActivity : ComponentActivity(),
         onPaymentFailureCallback = null
     }
 
+    // ── Web deep links (App Links for bpscnotes.in) ──────────────────
+    // Held as Compose state rather than a plain field so a link tapped while
+    // the app is already running recomposes the NavHost. The nonce exists
+    // because tapping the SAME link twice leaves the route string unchanged,
+    // and a LaunchedEffect keyed only on the route would not re-fire.
+    private var pendingDeepLinkRoute by mutableStateOf<String?>(null)
+    private var deepLinkNonce        by mutableIntStateOf(0)
+
+    /**
+     * launchMode is singleTop, so a link tapped while the app is in the
+     * foreground is delivered here instead of through a fresh onCreate.
+     * Without this, warm taps did nothing at all.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val route = com.example.bpscnotes.presentation.navigation.WebLink.routeFor(intent.data)
+        if (route != null) {
+            pendingDeepLinkRoute = route
+            deepLinkNonce += 1
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Dismiss system splash instantly (no crossfade) so composable splash takes over
         installSplashScreen().setOnExitAnimationListener { it.remove() }
@@ -181,6 +205,13 @@ class MainActivity : ComponentActivity(),
             .toMap()
         if (initialNotifId.isNotBlank()) Event.notificationTapped(initialNotifType, initialNotifId)
 
+        // A tapped https://bpscnotes.in/... link arrives as the intent's data
+        // rather than as extras. Resolve it to a route up front so a cold
+        // start lands on the shared content; onNewIntent below covers the
+        // case where the app was already open (launchMode is singleTop).
+        pendingDeepLinkRoute = com.example.bpscnotes.presentation.navigation
+            .WebLink.routeFor(intent?.data)
+
         setContent {
             val settingsState by settingsViewModel.state.collectAsState()
             val currentLanguage by com.example.bpscnotes.core.language.LanguageManager.language.collectAsState()
@@ -232,6 +263,8 @@ class MainActivity : ComponentActivity(),
                         initialNotifScreen   = initialScreen,
                         initialNotifType     = initialNotifType,
                         initialNotifIds      = initialNotifIds,
+                        deepLinkRoute        = pendingDeepLinkRoute,
+                        deepLinkNonce        = deepLinkNonce,
                     )
                     val appConfig by appConfigRepo.config.collectAsState()
                     // Maintenance first: if the app is down, an update prompt

@@ -98,11 +98,10 @@ fun LanguageSelectionScreen(
                     .offset(y = floatY.dp)
                     .size(100.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(Color(0xFF1976D2), Color(0xFF0D47A1))
-                        )
-                    )
+                    // White disc, not the blue radial gradient. The logo asset
+                    // is now genuinely transparent, and its black wordmark is
+                    // unreadable over dark blue. See SplashScreen.
+                    .background(Color.White)
                     .border(2.dp, Color.White.copy(0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
