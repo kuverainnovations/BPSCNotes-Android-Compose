@@ -136,6 +136,10 @@ data class AnswerQuestionDetailData(
     val peerReviewCount: Int = 0,
     /** How many answers on this question I could review right now */
     val reviewableCount: Int = 0,
+    // Free peer-answer reads remaining before the reciprocity gate applies.
+    // Null when the server predates the quota, which reads as "no quota".
+    val freeReadsLeft: Int? = null,
+    val usedFreeRead: Boolean = false,
 )
 
 // ── Insights — GET /answer-writing/insights ───────────────────

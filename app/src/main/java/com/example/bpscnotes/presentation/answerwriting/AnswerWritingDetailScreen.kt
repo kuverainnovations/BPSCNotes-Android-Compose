@@ -683,6 +683,37 @@ private fun DetailContent(
                 // Client rule: the reviews on your answer unlock once you
                 // have reviewed someone else's answer to this same question.
                 // The count is shown while locked — it is the reason to go.
+                // Opened on the free quota rather than by reciprocating. Say so,
+                // and say how many are left — otherwise the gate reappears out
+                // of nowhere once the allowance runs out and reads as a bug.
+                // TODO: move these strings into AppStrings with the rest of the
+                // i18n migration; left literal here like the other 200-odd.
+                if (state.usedFreeRead) {
+                    val left = state.freeReadsLeft ?: 0
+                    Card(
+                        shape  = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F0FE))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("🎁", fontSize = 18.sp)
+                            Text(
+                                if (left > 0)
+                                    "Free read used · $left left. Review an answer here to keep reading without using one."
+                                else
+                                    "Last free read used. Review an answer to unlock the rest.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF1A3C7A),
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
                 if (state.peerReviewsLocked) {
                     Card(
                         shape = RoundedCornerShape(16.dp),

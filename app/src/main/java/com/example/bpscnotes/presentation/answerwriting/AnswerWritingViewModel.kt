@@ -66,6 +66,8 @@ data class AnswerWritingUiState(
     val peerReviewsLocked: Boolean                  = false,
     val peerReviewCount: Int                        = 0,
     val reviewableCount: Int                        = 0,
+    val freeReadsLeft: Int?                         = null,
+    val usedFreeRead: Boolean                       = false,
     val isLoadingDetail: Boolean                    = false,
     val detailError: String?                        = null,
 
@@ -142,6 +144,7 @@ class AnswerWritingViewModel @Inject constructor(
                     isLoadingDetail = true, detailError = null,
                     question = null, submission = null, sampleAnswer = null, peerReviews = emptyList(),
                     peerReviewsLocked = false, peerReviewCount = 0, reviewableCount = 0,
+                    freeReadsLeft = null, usedFreeRead = false,
                     draftText = if (keepDraft) it.draftText else "",
                     selectedImages = if (keepDraft) it.selectedImages else emptyList(),
                     // a PDF picked for another question must not ride along
@@ -160,6 +163,8 @@ class AnswerWritingViewModel @Inject constructor(
                         peerReviewsLocked = data.peerReviewsLocked,
                         peerReviewCount = data.peerReviewCount,
                         reviewableCount = data.reviewableCount,
+                        freeReadsLeft = data.freeReadsLeft,
+                        usedFreeRead = data.usedFreeRead,
                     )
                 }
             } catch (e: Exception) {
