@@ -76,6 +76,7 @@ fun LessonViewerScreen(
     val state by viewModel.uiState.collectAsState()
     val str = LocalStrings.current
     val cs = MaterialTheme.colorScheme
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { com.example.bpscnotes.core.analytics.Event.screenView("lesson_viewer") }
 
     // Track whether user has scrolled to the last page (for PDF lessons).
@@ -92,7 +93,18 @@ fun LessonViewerScreen(
                 // Show "Mark Complete" only after reaching last page
                 // Show "Completed ✓" badge always (so user knows status on entry)
                 showMarkBtn   = state.lesson != null && state.isEnrolled && (reachedEnd || state.lesson?.is_completed == true),
+                // Downloadable only when the course allows it AND the lesson
+                // actually has a PDF — a video lesson has nothing to save.
+                showDownload  = state.allowDownload && state.isEnrolled
+                                    && !state.lesson?.notes_url.isNullOrBlank(),
                 onBack        = { nav.popBackStackSafe() },
+                onDownload    = {
+                    downloadLessonPdf(
+                        context  = ctx,
+                        url      = state.lesson?.notes_url.orEmpty(),
+                        fileName = state.lesson?.title.orEmpty(),
+                    )
+                },
                 onMarkComplete = { viewModel.markComplete() }
             )
         },
@@ -156,7 +168,9 @@ private fun LessonTopBar(
     isCompleted:    Boolean,
     isMarking:      Boolean,
     showMarkBtn:    Boolean,
+    showDownload:   Boolean,
     onBack:         () -> Unit,
+    onDownload:     () -> Unit,
     onMarkComplete: () -> Unit
 ) {
     val str = LocalStrings.current
@@ -175,6 +189,16 @@ private fun LessonTopBar(
             }
         },
         actions = {
+            // Save the notes PDF. Only shown when the admin has allowed it
+            // for this course: the file lands in the phone's Downloads
+            // folder, where any PDF app can open or print it — and from
+            // where it can equally be forwarded to someone who has not paid.
+            if (showDownload) {
+                IconButton(onClick = onDownload) {
+                    Icon(Icons.Rounded.Download, "Save PDF", tint = Color.White)
+                }
+            }
+
             AnimatedVisibility(
                 visible = showMarkBtn,
                 enter   = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
@@ -719,5 +743,62 @@ private fun NoContentState(message: String) {
             Text("📄", fontSize = 48.sp)
             Text(message, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
         }
+    }
+}
+
+
+/**
+ * Save a lesson's notes PDF to the phone's public Downloads folder.
+ *
+ * DownloadManager rather than our own OkHttp call: it writes to shared
+ * storage on every API level from 24 up without the storage-permission
+ * dance, survives the app being closed, and puts a progress entry in the
+ * notification shade. Lesson notes are served without an Authorization
+ * header — the in-app viewer fetches them the same way — so it can take the
+ * URL directly.
+ *
+ * Landing in Downloads rather than app-private storage is the point: that is
+ * what lets a student open the file in a PDF app and print it, which is what
+ * was actually asked for.
+ */
+private fun downloadLessonPdf(context: android.content.Context, url: String, fileName: String) {
+    if (url.isBlank()) return
+
+    // Strip anything that is not safe in a file name, and never produce an
+    // empty one — Android rejects those outright.
+    val safeName = fileName
+        .replace(Regex("[^A-Za-z0-9 ._-]"), "")
+        .trim()
+        .ifBlank { "BNotes-lesson" }
+        .take(80)
+
+    try {
+        val request = android.app.DownloadManager.Request(android.net.Uri.parse(url))
+            .setTitle(safeName)
+            .setDescription("Saving notes from BNotes+")
+            .setNotificationVisibility(
+                android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            )
+            .setDestinationInExternalPublicDir(
+                android.os.Environment.DIRECTORY_DOWNLOADS,
+                "$safeName.pdf",
+            )
+            .setMimeType("application/pdf")
+            .setAllowedOverMetered(true)
+
+        val manager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE)
+            as android.app.DownloadManager
+        manager.enqueue(request)
+
+        android.widget.Toast
+            .makeText(context, "Saving to Downloads…", android.widget.Toast.LENGTH_SHORT)
+            .show()
+    } catch (e: Exception) {
+        // A malformed URL or a device with DownloadManager disabled (some
+        // custom ROMs) must not take the reader down with it.
+        android.util.Log.e("LessonViewer", "downloadLessonPdf: ${e.message}", e)
+        android.widget.Toast
+            .makeText(context, "Could not start the download", android.widget.Toast.LENGTH_SHORT)
+            .show()
     }
 }

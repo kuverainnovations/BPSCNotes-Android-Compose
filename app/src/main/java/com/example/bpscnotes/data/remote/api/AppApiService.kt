@@ -426,7 +426,12 @@ data class Lesson(
 // ── Lesson detail response ────────────────────────────────────
 data class LessonDetailResponseData(
     val lesson: Lesson,
-    @SerializedName("isEnrolled") val isEnrolled: Boolean = false
+    @SerializedName("isEnrolled") val isEnrolled: Boolean = false,
+    // Whether this course's notes may be saved to the device. Set per course
+    // by an admin and OFF by default — course PDFs are sold, and a saved file
+    // can be forwarded to anyone. Defaulting to false here too means an older
+    // backend that omits the field can never accidentally enable downloads.
+    @SerializedName("allowDownload") val allowDownload: Boolean = false
 )
 
 // ── Complete lesson request / response ───────────────────────

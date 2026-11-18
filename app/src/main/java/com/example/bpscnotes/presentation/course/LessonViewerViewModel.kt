@@ -24,6 +24,7 @@ data class LessonViewerUiState(
     val error:     String? = null,
     val watchSecs: Int     = 0,
     val isEnrolled: Boolean = false,
+    val allowDownload: Boolean = false,
 )
 
 @HiltViewModel
@@ -51,7 +52,12 @@ class LessonViewerViewModel @Inject constructor(
                 val res    = api.getLessonDetail(courseId, lessonId)
                 val lesson = res.data?.lesson
                     ?: throw Exception("Lesson not found")
-                _uiState.update { it.copy(lesson = lesson, isLoading = false, isEnrolled = res.data?.isEnrolled == true) }
+                _uiState.update { it.copy(
+                    lesson        = lesson,
+                    isLoading     = false,
+                    isEnrolled    = res.data?.isEnrolled == true,
+                    allowDownload = res.data?.allowDownload == true,
+                ) }
                 if (!lesson.is_locked) startTimer()
             } catch (e: Exception) {
                 Log.e(TAG, "load: ${e.message}", e)
