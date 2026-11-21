@@ -218,6 +218,9 @@ fun MockTestsScreen(
 
     unlockTarget?.let { target ->
         val canUseCoins = target.coinPrice > 0
+        // Play Billing needs a real Activity to host its sheet.
+        val activity = LocalContext.current as? android.app.Activity
+        val canPayMoney = target.price > 0 && activity != null
         AlertDialog(
             onDismissRequest = { if (!state.isUnlocking) unlockTarget = null },
             icon  = { Icon(Icons.Rounded.Lock, null, tint = BpscColors.CoinGold) },
@@ -225,10 +228,16 @@ fun MockTestsScreen(
             text  = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        if (canUseCoins)
-                            "Unlock this mock test for ${target.coinPrice} coins."
-                        else
-                            "This test is ₹${target.price}. Coin unlock isn't available for it yet.",
+                        when {
+                            canUseCoins && canPayMoney ->
+                                "Unlock for ${target.coinPrice} coins, or pay ₹${target.price}."
+                            canUseCoins  -> "Unlock this mock test for ${target.coinPrice} coins."
+                            canPayMoney  -> "Unlock this mock test for ₹${target.price}."
+                            // Neither path is usable. The admin panel now
+                            // refuses to save this, but tests priced before
+                            // that guard can still be in this state.
+                            else -> "This test can't be unlocked yet. Please contact support."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
@@ -239,14 +248,22 @@ fun MockTestsScreen(
                 }
             },
             confirmButton = {
-                TextButton(
-                    enabled = canUseCoins && !state.isUnlocking,
-                    onClick = { viewModel.unlockTest(target.id) },
-                ) {
-                    if (state.isUnlocking) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text("Unlock 🪙 ${target.coinPrice}", fontWeight = FontWeight.Bold)
+                if (state.isUnlocking) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // Coins first when both are offered: it costs the
+                        // student nothing they have not already earned.
+                        if (canUseCoins) {
+                            TextButton(onClick = { viewModel.unlockTest(target.id) }) {
+                                Text("🪙 ${target.coinPrice}", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (canPayMoney) {
+                            TextButton(onClick = { viewModel.buyTestWithMoney(activity!!, target.id) }) {
+                                Text("Pay ₹${target.price}", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             },

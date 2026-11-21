@@ -41,6 +41,17 @@ interface QuizzesApiService {
     ): ApiResponse<QuizPurchaseData>
 
     /**
+     * Money path. Called after Play Billing reports a successful purchase;
+     * the server re-verifies the token with Google before granting access,
+     * so a forged token gets nothing.
+     */
+    @POST("quizzes/{id}/purchase/gplay/verify")
+    suspend fun verifyGplayQuizPurchase(
+        @Path("id") id: String,
+        @Body body: GplayQuizVerifyRequest
+    ): ApiResponse<QuizPurchaseData>
+
+    /**
      * POST /quizzes/:id/start
      * Creates an attempt session and returns questions.
      * Only called when user taps "Start Quiz".
@@ -116,4 +127,9 @@ data class QuizPurchaseData(
     /** Coin balance after the debit — lets the wallet chip update without a refetch. */
     @com.google.gson.annotations.SerializedName("balance")     val balance: Int = 0,
     @com.google.gson.annotations.SerializedName("alreadyOwned") val alreadyOwned: Boolean = false,
+)
+
+data class GplayQuizVerifyRequest(
+    val purchaseToken: String,
+    val clientPriceInr: Double? = null,
 )

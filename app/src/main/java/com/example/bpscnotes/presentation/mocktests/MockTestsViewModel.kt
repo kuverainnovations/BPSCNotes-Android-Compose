@@ -101,6 +101,8 @@ class MockTestsViewModel @Inject constructor(
     private val notebookApi: com.example.bpscnotes.data.remote.api.NotebookApiService,
     private val cacheInvalidator: com.example.bpscnotes.core.network.CacheInvalidator,
     private val bus: com.example.bpscnotes.core.events.RefreshEventBus,
+    private val gplay: com.example.bpscnotes.presentation.payment.GPlayQuizPurchaseManager,
+    private val tokenStore: com.example.bpscnotes.data.local.TokenStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MockTestsUiState())
@@ -228,6 +230,100 @@ class MockTestsViewModel @Inject constructor(
      * records the entitlement; we reload the list so the card flips from a
      * price to "Unlocked" and becomes startable.
      */
+    /**
+     * Buy a paid mock test with money, through Google Play Billing.
+     *
+     * Mirrors startGPlayCoursePurchase in CourseDetailViewModel. Coins stay
+     * as the other path; this is the one for tests priced in rupees, which
+     * previously could not be bought at all.
+     */
+    fun buyTestWithMoney(activity: android.app.Activity, quizId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUnlocking = true, unlockError = null) }
+            try {
+                val details = gplay.queryProductDetails(quizId)
+                if (details == null) {
+                    _uiState.update { it.copy(
+                        isUnlocking = false,
+                        unlockError = "This test isn't available on Google Play yet. Please try again shortly.",
+                    ) }
+                    return@launch
+                }
+
+                // Subscribe BEFORE launching: the billing flows have
+                // replay=0, so an emission landing before a collector
+                // attaches is dropped and the await would hang forever.
+                // yield() gives the collector a chance to attach first.
+                val outcomeDeferred = async { gplay.awaitPurchaseOrUserChoice(quizId) }
+                kotlinx.coroutines.yield()
+
+                val result = gplay.launchPurchase(
+                    activity,
+                    details,
+                    obfuscatedAccountId = tokenStore.getUserId() ?: "",
+                )
+                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                    outcomeDeferred.cancel()
+                    _uiState.update { it.copy(
+                        isUnlocking = false,
+                        unlockError = "Could not open Google Play checkout (${result.debugMessage})",
+                    ) }
+                    return@launch
+                }
+
+                val clientPriceInr = gplay.priceInrOf(details)
+                when (val outcome = outcomeDeferred.await()) {
+                    is com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome.Cancelled -> {
+                        // Silent on a plain cancel — the user chose to back out.
+                        _uiState.update { it.copy(
+                            isUnlocking = false,
+                            unlockError =
+                                if (outcome.responseCode == com.android.billingclient.api.BillingClient.BillingResponseCode.USER_CANCELED) null
+                                else "Payment could not be completed. Please try again.",
+                        ) }
+                    }
+
+                    is com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome.PlayPurchase -> {
+                        val res = quizzesApi.verifyGplayQuizPurchase(
+                            quizId,
+                            com.example.bpscnotes.data.remote.api.GplayQuizVerifyRequest(
+                                purchaseToken = outcome.purchase.purchaseToken,
+                                clientPriceInr = clientPriceInr,
+                            ),
+                        )
+                        if (res.success) {
+                            _uiState.update { it.copy(isUnlocking = false, unlockedMessage = res.message ?: "Test unlocked") }
+                            load()
+                        } else {
+                            // Google took the money but we could not record
+                            // it. Say so plainly rather than implying the
+                            // payment failed — support needs to hear about
+                            // this, and the user should not pay twice.
+                            _uiState.update { it.copy(
+                                isUnlocking = false,
+                                unlockError = res.message
+                                    ?: "Payment went through but unlocking failed. Contact support — do not pay again.",
+                            ) }
+                        }
+                    }
+
+                    is com.example.bpscnotes.presentation.payment.GPlayPurchaseOutcome.AlternativeBillingChosen -> {
+                        // Courses fall back to a pending Cashfree session
+                        // here. Mock tests have no such flow, so rather than
+                        // pretend, tell the user what will work.
+                        _uiState.update { it.copy(
+                            isUnlocking = false,
+                            unlockError = "Please choose Google Play to pay for a mock test.",
+                        ) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MockTestsVM", "buyTestWithMoney: ${e.message}", e)
+                _uiState.update { it.copy(isUnlocking = false, unlockError = e.toUserMessage("Could not complete the purchase")) }
+            }
+        }
+    }
+
     fun unlockTest(quizId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUnlocking = true, unlockError = null) }
