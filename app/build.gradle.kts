@@ -33,8 +33,8 @@ android {
         // app_settings (1.0.4 at time of writing), or UpdateGateDialog shows
         // its "New Version Available" nudge on every launch. Bump the admin
         // setting to match whenever this changes.
-        versionCode = 4
-        versionName = "1.0.4"
+        versionCode = 5
+        versionName = "1.0.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
